@@ -75,7 +75,14 @@ def alltests():
 
 tests_require = ['zope.testing', 'manuel']
 
+long_description = (
+    open('README.txt').read()
+    + '\n' +
+    open('CHANGES.txt').read()
+    )
 setup(name="ZEO",
+      description = long_description.split('\n', 2)[1],
+      long_description = long_description,
       version=VERSION,
       maintainer="Zope Foundation and Contributors",
       maintainer_email="zodb-dev@zope.org",
