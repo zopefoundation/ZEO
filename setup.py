@@ -37,6 +37,12 @@ Operating System :: Unix
 Framework :: ZODB
 """
 
+def _modname(path, base, name=''):
+    if path == base:
+        return name
+    dirname, basename = os.path.split(path)
+    return _modname(dirname, base, basename + '.' + name)
+
 def alltests():
     import logging
     import pkg_resources

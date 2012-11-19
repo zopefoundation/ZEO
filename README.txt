@@ -1,30 +1,381 @@
-====
-ZODB
-====
+===
+ZEO
+===
 
-Introduction
-============
+ZEO provides a client-server storage implementation for ZODB.
 
-The ZODB  package provides a  set of tools  for using the  Zope Object
-Database (ZODB).  The components you  get with the ZODB release are as
-follows:
+Usage
+=====
 
-- Core ZODB, including the persistence machinery
-- Standard storages such as FileStorage
-- The persistent BTrees modules
-- ZEO, for scalability needs
-- documentation (needs a lot more work)
+ZEO is a client-server system for sharing a single storage among many
+clients.  When you use ZEO, the storage is opened in the ZEO server
+process.  Client programs connect to this process using a ZEO
+ClientStorage.  ZEO provides a consistent view of the database to all
+clients.  The ZEO client and server communicate using a custom RPC
+protocol layered on top of TCP.
 
-Our primary development platforms are Linux, Mac OS X, and Windows
-XP.  The test suite should pass without error on all of these
-platforms, although it can take a long time on Windows -- longer if
-you use ZoneAlarm.  Many particularly slow tests are skipped unless
-you pass --all as an argument to test.py.
+There are several configuration options that affect the behavior of a
+ZEO server.  This section describes how a few of these features
+working.  Subsequent sections describe how to configure every option.
+
+Client cache
+~~~~~~~~~~~~
+
+Each ZEO client keeps an on-disk cache of recently used objects to
+avoid fetching those objects from the server each time they are
+requested.  It is usually faster to read the objects from disk than it
+is to fetch them over the network.  The cache can also provide
+read-only copies of objects during server outages.
+
+The cache may be persistent or transient. If the cache is persistent,
+then the cache files are retained for use after process restarts. A
+non-persistent cache uses temporary files that are removed when the
+client storage is closed.
+
+The client cache size is configured when the ClientStorage is created.
+The default size is 20MB, but the right size depends entirely on the
+particular database.  Setting the cache size too small can hurt
+performance, but in most cases making it too big just wastes disk
+space.  The document "Client cache tracing" describes how to collect a
+cache trace that can be used to determine a good cache size.
+
+ZEO uses invalidations for cache consistency.  Every time an object is
+modified, the server sends a message to each client informing it of
+the change.  The client will discard the object from its cache when it
+receives an invalidation.  These invalidations are often batched.
+
+Each time a client connects to a server, it must verify that its cache
+contents are still valid.  (It did not receive any invalidation
+messages while it was disconnected.)  There are several mechanisms
+used to perform cache verification.  In the worst case, the client
+sends the server a list of all objects in its cache along with their
+timestamps; the server sends back an invalidation message for each
+stale object.  The cost of verification is one drawback to making the
+cache too large.
+
+Note that every time a client crashes or disconnects, it must verify
+its cache.  Every time a server crashes, all of its clients must
+verify their caches.
+
+The cache verification process is optimized in two ways to eliminate
+costs when restarting clients and servers.  Each client keeps the
+timestamp of the last invalidation message it has seen.  When it
+connects to the server, it checks to see if any invalidation messages
+were sent after that timestamp.  If not, then the cache is up-to-date
+and no further verification occurs.  The other optimization is the
+invalidation queue, described below.
+
+Invalidation queue
+~~~~~~~~~~~~~~~~~~
+
+The ZEO server keeps a queue of recent invalidation messages in
+memory.  When a client connects to the server, it sends the timestamp
+of the most recent invalidation message it has received.  If that
+message is still in the invalidation queue, then the server sends the
+client all the missing invalidations.  This is often cheaper than
+perform full cache verification.
+
+The default size of the invalidation queue is 100.  If the
+invalidation queue is larger, it will be more likely that a client
+that reconnects will be able to verify its cache using the queue.  On
+the other hand, a large queue uses more memory on the server to store
+the message.  Invalidation messages tend to be small, perhaps a few
+hundred bytes each on average; it depends on the number of objects
+modified by a transaction.
+
+Transaction timeouts
+~~~~~~~~~~~~~~~~~~~~
+
+A ZEO server can be configured to timeout a transaction if it takes
+too long to complete.  Only a single transaction can commit at a time;
+so if one transaction takes too long, all other clients will be
+delayed waiting for it.  In the extreme, a client can hang during the
+commit process.  If the client hangs, the server will be unable to
+commit other transactions until it restarts.  A well-behaved client
+will not hang, but the server can be configured with a transaction
+timeout to guard against bugs that cause a client to hang.
+
+If any transaction exceeds the timeout threshold, the client's
+connection to the server will be closed and the transaction aborted.
+Once the transaction is aborted, the server can start processing other
+client's requests.  Most transactions should take very little time to
+commit.  The timer begins for a transaction after all the data has
+been sent to the server.  At this point, the cost of commit should be
+dominated by the cost of writing data to disk; it should be unusual
+for a commit to take longer than 1 second.  A transaction timeout of
+30 seconds should tolerate heavy load and slow communications between
+client and server, while guarding against hung servers.
+
+When a transaction times out, the client can be left in an awkward
+position.  If the timeout occurs during the second phase of the two
+phase commit, the client will log a panic message.  This should only
+cause problems if the client transaction involved multiple storages.
+If it did, it is possible that some storages committed the client
+changes and others did not.
+
+Connection management
+~~~~~~~~~~~~~~~~~~~~~
+
+A ZEO client manages its connection to the ZEO server.  If it loses
+the connection, it attempts to reconnect.  While
+it is disconnected, it can satisfy some reads by using its cache.
+
+The client can be configured to wait for a connection when it is created
+or to return immediately and provide data from its persistent cache.
+It usually simplifies programming to have the client wait for a
+connection on startup.
+
+When the client is disconnected, it polls periodically to see if the
+server is available.  The rate at which it polls is configurable.
+
+The client can be configured with multiple server addresses.  In this
+case, it assumes that each server has identical content and will use
+any server that is available.  It is possible to configure the client
+to accept a read-only connection to one of these servers if no
+read-write connection is available.  If it has a read-only connection,
+it will continue to poll for a read-write connection.  This feature
+supports the Zope Replication Services product,
+http://www.zope.com/Products/ZopeProducts/ZRS.  In general, it could
+be used to with a system that arranges to provide hot backups of
+servers in the case of failure.
+
+If a single address resolves to multiple IPv4 or IPv6 addresses,
+the client will connect to an arbitrary of these addresses.
+
+Authentication
+~~~~~~~~~~~~~~
+
+ZEO supports optional authentication of client and server using a
+password scheme similar to HTTP digest authentication (RFC 2069).  It
+is a simple challenge-response protocol that does not send passwords
+in the clear, but does not offer strong security.  The RFC discusses
+many of the limitations of this kind of protocol.  Note that this
+feature provides authentication only.  It does not provide encryption
+or confidentiality.
+
+The challenge-response also produces a session key that is used to
+generate message authentication codes for each ZEO message.  This
+should prevent session hijacking.
+
+Guard the password database as if it contained plaintext passwords.
+It stores the hash of a username and password.  This does not expose
+the plaintext password, but it is sensitive nonetheless.  An attacker
+with the hash can impersonate the real user.  This is a limitation of
+the simple digest scheme.
+
+The authentication framework allows third-party developers to provide
+new authentication modules.
+
+Installing software
+-------------------
+
+ZEO is installed like other Python packages using pip, easy_install,
+buildout, etc.
+
+Configuring server
+------------------
+
+The script ``runzeo`` runs the ZEO server.  The server can be
+configured using command-line arguments or a config file.  This
+document only describes the config file.  Run runzeo.py
+-h to see the list of command-line arguments.
+
+The ``runzeo`` script imports the ZEO package.  ZEO must either be
+installed in Python's site-packages directory or be in a directory on
+PYTHONPATH.
+
+The configuration file specifies the underlying storage the server
+uses, the address it binds, and a few other optional parameters.
+An example is::
+
+    <zeo>
+      address zeo.example.com:8090
+    </zeo>
+
+    <filestorage>
+      path /var/tmp/Data.fs
+    </filestorage>
+
+    <eventlog>
+      <logfile>
+        path /var/tmp/zeo.log
+        format %(asctime)s %(message)s
+      </logfile>
+    </eventlog>
+
+This file configures a server to use a FileStorage from
+``/var/tmp/Data.fs``.  The server listens on port 8090 of
+zeo.example.com.  The ZEO server writes its log file to
+/var/tmp/zeo.log and uses a custom format for each line.  Assuming the
+example configuration it stored in zeo.config, you can run a server by
+typing::
+
+    python runzeo -C zeo.config
+
+A configuration file consists of a <zeo> section and a storage
+section, where the storage section can use any of the valid ZODB
+storage types.  It may also contain an eventlog configuration.  See
+the document "Configuring a ZODB database" for more information about
+configuring storages and eventlogs.
+
+The zeo section must list the address.  All the other keys are
+optional.
+
+address
+        The address at which the server should listen.  This can be in
+        the form 'host:port' to signify a TCP/IP connection or a
+        pathname string to signify a Unix domain socket connection (at
+        least one '/' is required).  A hostname may be a DNS name or a
+        dotted IP address.  If the hostname is omitted, the platform's
+        default behavior is used when binding the listening socket (''
+        is passed to socket.bind() as the hostname portion of the
+        address).
+
+read-only
+        Flag indicating whether the server should operate in read-only
+        mode.  Defaults to false.  Note that even if the server is
+        operating in writable mode, individual storages may still be
+        read-only.  But if the server is in read-only mode, no write
+        operations are allowed, even if the storages are writable.  Note
+        that pack() is considered a read-only operation.
+
+invalidation-queue-size
+        The storage server keeps a queue of the objects modified by the
+        last N transactions, where N == invalidation_queue_size.  This
+        queue is used to speed client cache verification when a client
+        disconnects for a short period of time.
+
+transaction-timeout
+        The maximum amount of time to wait for a transaction to commit
+        after acquiring the storage lock, specified in seconds.  If the
+        transaction takes too long, the client connection will be closed
+        and the transaction aborted.
+
+authentication-protocol
+        The name of the protocol used for authentication.  The
+        only protocol provided with ZEO is "digest," but extensions
+        may provide other protocols.
+
+authentication-database
+        The path of the database containing authentication credentials.
+
+authentication-realm
+        The authentication realm of the server.  Some authentication
+        schemes use a realm to identify the logic set of usernames
+        that are accepted by this server.
+
+Configuring clients
+-------------------
+
+The ZEO client can also be configured using ZConfig.  The ZODB.config
+module provides several function for opening a storage based on its
+configuration.
+
+- ZODB.config.storageFromString()
+- ZODB.config.storageFromFile()
+- ZODB.config.storageFromURL()
+
+The ZEO client configuration requires the server address be
+specified.  Everything else is optional.  An example configuration is::
+
+    <zeoclient>
+      server zeo.example.com:8090
+    </zeoclient>
+
+The other configuration options are listed below.
+
+cache-size
+        The maximum size of the client cache, in bytes.
+
+name
+        The storage name.  If unspecified, the address of the server
+        will be used as the name.
+
+client
+        Enables persistent cache files.  The string passed here is
+        used to construct the cache filenames.  If it is not
+        specified, the client creates a temporary cache that will
+        only be used by the current object.
+
+var
+        The directory where persistent cache files are stored.  By
+        default cache files, if they are persistent, are stored in 
+        the current directory.
+
+min-disconnect-poll
+        The minimum delay in seconds between attempts to connect to
+        the server, in seconds.  Defaults to 5 seconds.
+
+max-disconnect-poll
+        The maximum delay in seconds between attempts to connect to
+        the server, in seconds.  Defaults to 300 seconds.
+
+wait
+        A boolean indicating whether the constructor should wait
+        for the client to connect to the server and verify the cache
+        before returning.  The default is true.
+
+read-only
+        A flag indicating whether this should be a read-only storage,
+        defaulting to false (i.e. writing is allowed by default).
+
+read-only-fallback
+        A flag indicating whether a read-only remote storage should be
+        acceptable as a fallback when no writable storages are
+        available.  Defaults to false.  At most one of read_only and
+        read_only_fallback should be true.
+
+realm
+        The authentication realm of the server.  Some authentication
+        schemes use a realm to identify the logic set of usernames
+        that are accepted by this server.
+
+A ZEO client can also be created by calling the ClientStorage
+constructor explicitly.  For example::
+
+    from ZEO.ClientStorage import ClientStorage
+    storage = ClientStorage(("zeo.example.com", 8090))
+
+Running the ZEO server as a daemon
+----------------------------------
+
+In an operational setting, you will want to run the ZEO server a
+daemon process that is restarted when it dies.  The zdaemon package
+provides two tools for running daemons: zdrun.py and zdctl.py. You can
+find zdaemon and it's documentation at
+http://pypi.python.org/pypi/zdaemon.
+
+Rotating log files
+~~~~~~~~~~~~~~~~~~
+
+ZEO will re-initialize its logging subsystem when it receives a
+SIGUSR2 signal.  If you are using the standard event logger, you
+should first rename the log file and then send the signal to the
+server.  The server will continue writing to the renamed log file
+until it receives the signal.  After it receives the signal, the
+server will create a new file with the old name and write to it.
+
+Tools
+-----
+
+There are a few scripts that may help running a ZEO server.  The
+zeopack script connects to a server and packs the storage.  It can
+be run as a cron job.  The zeopasswd.py script
+manages a ZEO servers password database.
+
+Diagnosing problems
+-------------------
+
+If an exception occurs on the server, the server will log a traceback
+and send an exception to the client.  The traceback on the client will
+show a ZEO protocol library as the source of the error.  If you need
+to diagnose the problem, you will have to look in the server log for
+the rest of the traceback.
 
 Compatibility
 =============
 
-ZODB 3.10 requires Python 2.5 or later.
+ZEO 4.0.0 requires Python 2.6 or later.
 
 Note --
    When using ZEO and upgrading from Python 2.4, you need to upgrade
@@ -34,57 +385,19 @@ Note --
    properly with servers running Python 2.5 or later due to changes in
    the way Python implements exceptions.
 
-ZODB ZEO clients from ZODB 3.2 on can talk to ZODB 3.10 servers.  ZODB
-ZEO 3.10 Clients can talk to ZODB 3.8, 3.9, and 3.10 ZEO servers.
+For a long time ZEO has been distributes with ZODB.  ZEO 4 is
+is now maintained as a separate project.
+
+ZEO clients from ZODB 3.2 on can talk to ZEO 4.0 servers.
+ZEO 4.0 clients  talk to ZODB 3.8, 3.9, and 3.10 and ZEO 4.0 servers.
 
 Note --
-   ZEO 3.10 servers don't support undo for older clients.
-
-Prerequisites
-=============
-
-You must have Python installed. If you're using a system Python
-install, make sure development support is installed too.
-
-You also need the transaction, zc.lockfile, ZConfig, zdaemon,
-zope.event, zope.interface, zope.proxy and zope.testing packages.  If
-you don't have them and you can connect to the Python Package Index,
-then these will be installed for you if you don't have them.
-
-Installation
-============
-
-ZODB is released as a distutils package.  The easiest ways to build
-and install it are to use `easy_install
-<http://peak.telecommunity.com/DevCenter/EasyInstall>`_, or
-`zc.buildout <http://www.python.org/pypi/zc.buildout>`_.
-
-To install by hand, first install the dependencies, ZConfig, zdaemon,
-zope.interface, zope.proxy and zope.testing.  These can be found
-in the `Python Package Index <http://www.python.org/pypi>`_.
-
-To run the tests, use the test setup command::
-
-  python setup.py test
-
-It will download dependencies if needed.  If this happens, ou may get
-an import error when the test command gets to looking for tests.  Try
-running the test command a second time and you should see the tests
-run.
-
-::
-
-  python setup.py test
-
-To install, use the install command::
-
-  python setup.py install
-
+   ZEO 4.0 servers don't support undo for clients older than ZODB 3.10.
 
 Testing for Developers
 ======================
 
-The ZODB checkouts are `buildouts <http://www.python.org/pypi/zc.buildout>`_.
+The ZEO checkouts are `buildouts <http://www.python.org/pypi/zc.buildout>`_.
 When working from a ZODB checkout, first run the bootstrap.py script
 to initialize the buildout:
 
@@ -117,77 +430,13 @@ Running all the tests takes much longer.::
 
     OK
 
-
-Maintenance scripts
--------------------
-
-Several scripts are provided with the ZODB and can help for analyzing,
-debugging, checking for consistency, summarizing content, reporting space used
-by objects, doing backups, artificial load testing, etc.
-Look at the ZODB/script directory for more informations.
-
-
-History
-=======
-
-The historical version numbering schemes for ZODB and ZEO are complicated.
-Starting with ZODB 3.4, the ZODB and ZEO version numbers are the same.
-
-In the ZODB 3.1 through 3.3 lines, the ZEO version number was "one smaller"
-than the ZODB version number; e.g., ZODB 3.2.7 included ZEO 2.2.7.  ZODB and
-ZEO were distinct releases prior to ZODB 3.1, and had independent version
-numbers.
-
-Historically, ZODB was distributed as a part of the Zope application
-server.  Jim Fulton's paper at the Python conference in 2000 described
-a version of ZODB he called ZODB 3, based on an earlier persistent
-object system called BoboPOS.  The earliest versions of ZODB 3 were
-released with Zope 2.0.
-
-Andrew Kuchling extracted ZODB from Zope 2.4.1 and packaged it for
-use by standalone Python programs.  He called this version
-"StandaloneZODB".  Andrew's guide to using ZODB is included in the Doc
-directory.  This version of ZODB was hosted at
-http://sf.net/projects/zodb.  It supported Python 1.5.2, and might
-still be of interest to users of this very old Python version.
-
-Zope Corporation released a version of ZODB called "StandaloneZODB
-1.0" in Feb. 2002.  This release was based on Andrew's packaging, but
-built from the same CVS repository as Zope.  It is roughly equivalent
-to the ZODB in Zope 2.5.
-
-Why not call the current release StandaloneZODB?  The name
-StandaloneZODB is a bit of a mouthful.  The standalone part of the
-name suggests that the Zope version is the real version and that this
-is an afterthought, which isn't the case.  So we're calling this
-release "ZODB". We also worked on a ZODB4 package for a while and
-made a couple of alpha releases.  We've now abandoned that effort,
-because we didn't have the resources to pursue ot while also maintaining
-ZODB(3).
-
-License
-=======
-
-ZODB is distributed under the Zope Public License, an OSI-approved
-open source license.  Please see the LICENSE.txt file for terms and
-conditions.
-
-The ZODB/ZEO Programming Guide included in the documentation is a
-modified version of Andrew Kuchling's original guide, provided under
-the terms of the GNU Free Documentation License.
-
-
 More information
 ================
 
-We maintain a Wiki page about all things ZODB, including status on
-future directions for ZODB.  Please see
+For more information on ZEO, see http://zodb.org
 
-    http://wiki.zope.org/ZODB/FrontPage
-
-and feel free to contribute your comments.  There is a Mailman mailing
-list in place to discuss all issues related to ZODB.  You can send
-questions to
+There is a Mailman mailing list in place to discuss all issues related
+to ZODB, including ZEO.  You can send questions to
 
     zodb-dev@zope.org
 
@@ -199,12 +448,7 @@ and view its archives at
 
     http://lists.zope.org/pipermail/zodb-dev
 
-Note that Zope Corp mailing lists have a subscriber-only posting policy.
-
-Andrew's ZODB Programmers Guide is made available in several
-forms, including DVI and HTML.  To view it online, point your
-browser at the file Doc/guide/zodb/index.html
-
+Note that Zope mailing lists have a subscriber-only posting policy.
 
 Bugs and Patches
 ================
