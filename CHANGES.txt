@@ -1,13 +1,12 @@
+CHANGES
+=======
 
 4.0.0a1 (2012-11-19)
-====================
+--------------------
 
 First (in a long time) separate ZEO release.
 
 Since ZODB 3.10.5:
-
-New Features
-------------
 
 - Storage servers now emit Serving and Closed events so subscribers
   can discover addresses when dynamic port assignment (bind to port 0)
