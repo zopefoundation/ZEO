@@ -394,6 +394,17 @@ ZEO 4.0 clients  talk to ZODB 3.8, 3.9, and 3.10 and ZEO 4.0 servers.
 Note --
    ZEO 4.0 servers don't support undo for clients older than ZODB 3.10.
 
+Testing for downloaders
+=======================
+
+You can run the tests with::
+
+  python setup.py test
+
+however, there's an issue with getting the dependencies installed
+propely in a single run.  If the first run fails installing
+dependencies, try running the above command a second time.
+
 Testing for Developers
 ======================
 
