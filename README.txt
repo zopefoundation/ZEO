@@ -4,6 +4,8 @@ ZEO
 
 ZEO provides a client-server storage implementation for ZODB.
 
+.. contents::
+
 Usage
 =====
 
@@ -13,6 +15,9 @@ process.  Client programs connect to this process using a ZEO
 ClientStorage.  ZEO provides a consistent view of the database to all
 clients.  The ZEO client and server communicate using a custom RPC
 protocol layered on top of TCP.
+
+Options
+-------
 
 There are several configuration options that affect the behavior of a
 ZEO server.  This section describes how a few of these features
