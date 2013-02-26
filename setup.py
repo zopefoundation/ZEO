@@ -14,16 +14,12 @@
 
 VERSION = "4.0.0dev"
 
-from ez_setup import use_setuptools
-use_setuptools()
-
 from setuptools import setup, find_packages
-from setuptools.extension import Extension
 import os
 import sys
 
 if sys.version_info < (2, 6):
-    print "This version of ZEO requires Python 2.6 or higher"
+    print("This version of ZEO requires Python 2.6 or higher")
     sys.exit(0)
 
 classifiers = """\
