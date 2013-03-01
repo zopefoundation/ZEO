@@ -16,6 +16,8 @@
 Database -- abstract base class for password database
 Client -- abstract base class for authentication client
 """
+from __future__ import print_function
+from __future__ import print_function
 
 import os
 from ZEO.hash import sha1
@@ -73,10 +75,10 @@ class Database:
         if not fd:
             fd = open(filename, 'w')
         if self.realm:
-            print >> fd, "realm", self.realm
+            print("realm", self.realm, file=fd)
 
-        for username in sort(self._users.keys()):
-            print >> fd, "%s: %s" % (username, self._users[username])
+        for username in sorted(self._users.keys()):
+            print("%s: %s" % (username, self._users[username]), file=fd)
 
     def load(self):
         filename = self.filename
@@ -108,24 +110,24 @@ class Database:
 
         Callers must check for LookupError, which is raised in
         the case of a non-existent user specified."""
-        if not self._users.has_key(username):
+        if username not in self._users:
             raise LookupError("No such user: %s" % username)
         return self._users[username]
 
     def hash(self, s):
-        return sha1(s).hexdigest()
+        return sha1(s.encode()).hexdigest()
 
     def add_user(self, username, password):
-        if self._users.has_key(username):
+        if username in self._users:
             raise LookupError("User %s already exists" % username)
         self._store_password(username, password)
 
     def del_user(self, username):
-        if not self._users.has_key(username):
+        if username not in self._users:
             raise LookupError("No such user: %s" % username)
         del self._users[username]
 
     def change_password(self, username, password):
-        if not self._users.has_key(username):
+        if username not in self._users:
             raise LookupError("No such user: %s" % username)
         self._store_password(username, password)

@@ -1,3 +1,4 @@
+from __future__ import print_function
 ##############################################################################
 #
 # Copyright (c) 2001-2005 Zope Foundation and Contributors.
@@ -17,10 +18,10 @@ from __future__ import with_statement
 import asyncore
 import os
 import socket
-import thread
 import errno
 
 from ZODB.utils import positive_id
+from ZEO._compat import thread, get_ident
 
 # Original comments follow; they're hard to follow in the context of
 # ZEO's use of triggers.  TODO:  rewrite from a ZEO perspective.
@@ -128,8 +129,8 @@ class _triggerbase(object):
                 thunk[0](*thunk[1:])
             except:
                 nil, t, v, tbinfo = asyncore.compact_traceback()
-                print ('exception in trigger thunk:'
-                       ' (%s:%s %s)' % (t, v, tbinfo))
+                print(('exception in trigger thunk:'
+                       ' (%s:%s %s)' % (t, v, tbinfo)))
 
     def __repr__(self):
         return '<select-trigger (%s) at %x>' % (self.kind, positive_id(self))
@@ -158,7 +159,7 @@ if os.name == 'posix':
             asyncore.file_dispatcher.close(self)
 
         def _physical_pull(self):
-            os.write(self.trigger, 'x')
+            os.write(self.trigger, b'x')
 
 else:
     # Windows version; uses just sockets, because a pipe isn't select'able
@@ -204,7 +205,7 @@ else:
                try:
                    w.connect(connect_address)
                    break    # success
-               except socket.error, detail:
+               except socket.error as detail:
                    if detail[0] != errno.WSAEADDRINUSE:
                        # "Address already in use" is the only error
                        # I've seen on two WinXP Pro SP2 boxes, under

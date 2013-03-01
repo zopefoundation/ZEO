@@ -82,7 +82,7 @@ class Dispatcher(asyncore.dispatcher):
     def handle_accept(self):
         try:
             sock, addr = self.accept()
-        except socket.error, msg:
+        except socket.error as msg:
             log("accepted failed: %s" % msg)
             return
 

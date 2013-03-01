@@ -19,12 +19,12 @@ def get_module(name):
         from auth_sha import StorageClass, SHAClient, Database
         return StorageClass, SHAClient, Database
     elif name == 'digest':
-        from auth_digest import StorageClass, DigestClient, DigestDatabase
+        from .auth_digest import StorageClass, DigestClient, DigestDatabase
         return StorageClass, DigestClient, DigestDatabase
     else:
         return _auth_modules.get(name)
 
 def register_module(name, storage_class, client, db):
-    if _auth_modules.has_key(name):
+    if name in _auth_modules:
         raise TypeError("%s is already registred" % name)
     _auth_modules[name] = storage_class, client, db

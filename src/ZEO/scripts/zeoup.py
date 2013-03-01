@@ -25,6 +25,11 @@ Options:
 
 You must specify either -p and -h or -U.
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import getopt
 import logging
@@ -90,11 +95,11 @@ def check_server(addr, storage, write):
         data, serial = cs.load("\0\0\0\0\0\0\0\0", "")
         cs.close()
     t1 = time.time()
-    print "Elapsed time: %.2f" % (t1 - t0)
+    print("Elapsed time: %.2f" % (t1 - t0))
 
 def usage(exit=1):
-    print __doc__
-    print " ".join(sys.argv)
+    print(__doc__)
+    print(" ".join(sys.argv))
     sys.exit(exit)
 
 def main():
@@ -119,11 +124,11 @@ def main():
                 write = 0
             elif o == '-1':
                 ZEO_VERSION = 1
-    except Exception, err:
+    except Exception as err:
         s = str(err)
         if s:
             s = ": " + s
-        print err.__class__.__name__ + s
+        print(err.__class__.__name__ + s)
         usage()
 
     if unix is not None:
@@ -143,9 +148,9 @@ if __name__ == "__main__":
         main()
     except SystemExit:
         raise
-    except Exception, err:
+    except Exception as err:
         s = str(err)
         if s:
             s = ": " + s
-        print err.__class__.__name__ + s
+        print(err.__class__.__name__ + s)
         sys.exit(1)

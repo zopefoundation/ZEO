@@ -426,7 +426,7 @@ class Connection(smac.SizedMessageAsyncConnection, object):
                 ret = self.obj.loadEx(*args)
             except (SystemExit, KeyboardInterrupt):
                 raise
-            except Exception, msg:
+            except Exception as msg:
                 if not isinstance(msg, self.unlogged_exception_types):
                     self.log("%s() raised exception: %s" % (name, msg),
                              logging.ERROR, exc_info=True)
@@ -471,7 +471,7 @@ class Connection(smac.SizedMessageAsyncConnection, object):
                 self.waiting_for_reply = False
         except (SystemExit, KeyboardInterrupt):
             raise
-        except Exception, msg:
+        except Exception as msg:
             if not isinstance(msg, self.unlogged_exception_types):
                 self.log("%s() raised exception: %s" % (name, msg),
                          logging.ERROR, exc_info=True)
@@ -661,11 +661,11 @@ def server_loop(map):
     while len(map) > 1:
         try:
             asyncore.poll(30.0, map)
-        except Exception, v:
+        except Exception as v:
             if v.args[0] != errno.EBADF:
                 raise
 
-    for o in map.values():
+    for o in tuple(map.values()):
         o.close()
 
 class ManagedClientConnection(Connection):

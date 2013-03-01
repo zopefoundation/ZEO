@@ -109,7 +109,7 @@ class ZEOTestServer(asyncore.dispatcher):
             sock.close()
             os._exit(0)
         self.log('continuing')
-        sock.send('X')
+        sock.send(b'X')
         self._count -= 1
 
     def register_socket(self, sock):
@@ -190,7 +190,7 @@ def main():
     try:
         log(label, 'creating the test server, keep: %s', keep)
         t = ZEOTestServer(test_addr, server, keep)
-    except socket.error, e:
+    except socket.error as e:
         if e[0] != errno.EADDRINUSE:
             raise
         log(label, 'addr in use, closing and exiting')

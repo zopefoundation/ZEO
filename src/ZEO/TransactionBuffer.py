@@ -23,9 +23,9 @@ is used to store the data until a commit or abort.
 
 from threading import Lock
 import os
-import cPickle
 import tempfile
 import ZODB.blob
+from ZEO._compat import Pickler, Unpickler
 
 class TransactionBuffer:
 
@@ -64,7 +64,7 @@ class TransactionBuffer:
         self.blobs = []
         # It's safe to use a fast pickler because the only objects
         # stored are builtin types -- strings or None.
-        self.pickler = cPickle.Pickler(self.file, 1)
+        self.pickler = Pickler(self.file, 1)
         self.pickler.fast = 1
 
     def close(self):
@@ -137,7 +137,7 @@ class TBIterator(object):
     def __init__(self, f, count):
         self.file = f
         self.count = count
-        self.unpickler = cPickle.Unpickler(f)
+        self.unpickler = Unpickler(f)
 
     def __iter__(self):
         return self

@@ -11,9 +11,8 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-
-VERSION = "4.0.0dev"
-
+"""Setup
+"""
 from setuptools import setup, find_packages
 import os
 import sys
@@ -28,6 +27,9 @@ License :: OSI Approved :: Zope Public License
 Programming Language :: Python
 Programming Language :: Python :: 2.6
 Programming Language :: Python :: 2.7
+Programming Language :: Python :: 3
+Programming Language :: Python :: 3.3
+Programming Language :: Python :: Implementation :: CPython
 Topic :: Database
 Topic :: Software Development :: Libraries :: Python Modules
 Operating System :: Microsoft :: Windows
@@ -77,23 +79,22 @@ long_description = (
     open('CHANGES.txt').read()
     )
 setup(name="ZEO",
+      version='4.0.0dev',
       description = long_description.split('\n', 2)[1],
       long_description = long_description,
-      version=VERSION,
       maintainer="Zope Foundation and Contributors",
       maintainer_email="zodb-dev@zope.org",
       packages = find_packages('src'),
       package_dir = {'': 'src'},
       license = "ZPL 2.1",
       platforms = ["any"],
-      # description = doclines[0],
       classifiers = filter(None, classifiers.split("\n")),
-      # long_description = long_description,
       test_suite="__main__.alltests", # to support "setup.py test"
       tests_require = tests_require,
       extras_require = dict(test=tests_require),
       install_requires = [
           'ZODB',
+          'six',
           'transaction',
           'persistent',
           'zc.lockfile',

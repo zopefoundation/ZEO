@@ -16,6 +16,7 @@
 The stress test should run in an infinite loop and should involve
 multiple connections.
 """
+from __future__ import print_function
 # TODO: This code is currently broken.
 
 import transaction
@@ -91,7 +92,7 @@ def main():
 
     while 1:
         pid = start_child(zaddr)
-        print "started", pid
+        print("started", pid)
         os.waitpid(pid, 0)
 
     exitserver()

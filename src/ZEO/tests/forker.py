@@ -12,7 +12,7 @@
 #
 ##############################################################################
 """Library for forking storage server and connecting client storage"""
-
+from __future__ import print_function
 import os
 import random
 import sys
@@ -21,12 +21,11 @@ import errno
 import socket
 import subprocess
 import logging
-import StringIO
 import tempfile
 import logging
 import ZODB.tests.util
 import zope.testing.setupstack
-
+from ZEO._compat import BytesIO
 logger = logging.getLogger('ZEO.tests.forker')
 
 class ZEOConfig:
@@ -50,39 +49,39 @@ class ZEOConfig:
         self.loglevel = 'INFO'
 
     def dump(self, f):
-        print >> f, "<zeo>"
-        print >> f, "address " + self.address
+        print("<zeo>", file=f)
+        print("address " + self.address, file=f)
         if self.read_only is not None:
-            print >> f, "read-only", self.read_only and "true" or "false"
+            print("read-only", self.read_only and "true" or "false", file=f)
         if self.invalidation_queue_size is not None:
-            print >> f, "invalidation-queue-size", self.invalidation_queue_size
+            print("invalidation-queue-size", self.invalidation_queue_size, file=f)
         if self.invalidation_age is not None:
-            print >> f, "invalidation-age", self.invalidation_age
+            print("invalidation-age", self.invalidation_age, file=f)
         if self.monitor_address is not None:
-            print >> f, "monitor-address %s:%s" % self.monitor_address
+            print("monitor-address %s:%s" % self.monitor_address, file=f)
         if self.transaction_timeout is not None:
-            print >> f, "transaction-timeout", self.transaction_timeout
+            print("transaction-timeout", self.transaction_timeout, file=f)
         if self.authentication_protocol is not None:
-            print >> f, "authentication-protocol", self.authentication_protocol
+            print("authentication-protocol", self.authentication_protocol, file=f)
         if self.authentication_database is not None:
-            print >> f, "authentication-database", self.authentication_database
+            print("authentication-database", self.authentication_database, file=f)
         if self.authentication_realm is not None:
-            print >> f, "authentication-realm", self.authentication_realm
-        print >> f, "</zeo>"
+            print("authentication-realm", self.authentication_realm, file=f)
+        print("</zeo>", file=f)
 
-        print >> f, """
+        print("""
         <eventlog>
           level %s
           <logfile>
              path %s
           </logfile>
         </eventlog>
-        """ % (self.loglevel, self.logpath)
+        """ % (self.loglevel, self.logpath), file=f)
 
     def __str__(self):
-        f = StringIO.StringIO()
+        f = BytesIO()
         self.dump(f)
-        return f.getvalue()
+        return f.getvalue().decode()
 
 
 def encode_format(fmt):
@@ -179,8 +178,8 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
             s.close()
             logging.debug('acked: %s' % ack)
             break
-        except socket.error, e:
-            if e[0] not in (errno.ECONNREFUSED, errno.ECONNRESET):
+        except socket.error as e:
+            if e.args[0] not in (errno.ECONNREFUSED, errno.ECONNRESET):
                 raise
             s.close()
     else:
@@ -215,18 +214,18 @@ def shutdown_zeo_server(adminaddr):
             if i > 0:
                 break
             raise
-        except socket.error, e:
-            if (e[0] == errno.ECONNREFUSED
+        except socket.error as e:
+            if (e.args[0] == errno.ECONNREFUSED
                 or
                 # MAC OS X uses EINVAL when connecting to a port
                 # that isn't being listened on.
-                (sys.platform == 'darwin' and e[0] == errno.EINVAL)
+                (sys.platform == 'darwin' and e.args[0] == errno.EINVAL)
                 ) and i > 0:
                 break
             raise
         try:
             ack = s.recv(1024)
-        except socket.error, e:
+        except socket.error as e:
             ack = 'no ack received'
         logger.debug('shutdown_zeo_server(): acked: %s' % ack)
         s.close()
@@ -281,8 +280,8 @@ def get_port2(test):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             s.bind(('localhost', port+2))
-        except socket.error, e:
-            if e[0] != errno.EADDRINUSE:
+        except socket.error as e:
+            if e.args[0] != errno.EADDRINUSE:
                 raise
             continue
 

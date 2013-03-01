@@ -5,6 +5,11 @@
 An example of the log format is:
 2002-04-15T13:05:29 BLATHER(-100) ZEO Server storea(3235680, [714], 235339406490168806) ('10.0.26.30', 45514)
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import re
 import time
@@ -65,8 +70,8 @@ class TStats:
             d_finish = self.finish - self.begin
         else:
             d_finish =  "*"
-        print self.fmt % (time.ctime(self.begin), d_vote, d_finish,
-                          self.user, self.url)
+        print(self.fmt % (time.ctime(self.begin), d_vote, d_finish,
+                          self.user, self.url))
 
 class TransactionParser:
 
@@ -97,7 +102,7 @@ class TransactionParser:
         try:
             return self.txns[tid]
         except KeyError:
-            print "uknown tid", repr(tid)
+            print("uknown tid", repr(tid))
             return None
 
     def tpc_finish(self, time, args):
@@ -127,9 +132,9 @@ if __name__ == "__main__":
         try:
             p.parse(line)
         except:
-            print "line", i
+            print("line", i)
             raise
-    print "Transaction: %d" % len(p.txns)
-    print TStats.hdr
+    print("Transaction: %d" % len(p.txns))
+    print(TStats.hdr)
     for txn in p.get_txns():
         txn.report()

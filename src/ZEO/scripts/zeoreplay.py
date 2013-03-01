@@ -24,6 +24,16 @@ Unlike parsezeolog.py, this script generates timestamps for each transaction,
 and sub-command in the transaction.  We can use this to compare timings with
 synthesized data.
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import re
 import sys
@@ -40,6 +50,7 @@ from ZODB.FileStorage import FileStorage
 #from Standby.config import RS_PORT
 from ZODB.Transaction import Transaction
 from ZODB.utils import p64
+from functools import reduce
 
 datecre = re.compile('(\d\d\d\d-\d\d-\d\d)T(\d\d:\d\d:\d\d)')
 methcre = re.compile("ZEO Server (\w+)\((.*)\) \('(.*)', (\d+)")
@@ -50,9 +61,9 @@ class StopParsing(Exception):
 
 
 def usage(code, msg=''):
-    print __doc__
+    print(__doc__)
     if msg:
-        print msg
+        print(msg)
     sys.exit(code)
 
 
@@ -220,12 +231,12 @@ class ZEOParser:
             bytes = reduce(operator.add, [size for oid, size in txn._objects])
         else:
             bytes = 0
-        print '%s %s %4d %10d %s %s' % (
+        print('%s %s %4d %10d %s %s' % (
             txn._begintime, txn._finishtime - txn._begintime,
             len(txn._objects),
             bytes,
             time.ctime(txn._begintime),
-            txn._url)
+            txn._url))
 
     def replay(self):
         for txn in self.__txns:
@@ -238,16 +249,16 @@ class ZEOParser:
                 slower.append(txn)
             else:
                 faster.append(txn)
-        print len(slower), 'laggards,', len(faster), 'on-time or faster'
+        print(len(slower), 'laggards,', len(faster), 'on-time or faster')
         # Find some averages
         if slower:
             sum = reduce(operator.add,
                          [txn._replaydelta for txn in slower], 0)
-            print 'average slower txn was:', float(sum) / len(slower)
+            print('average slower txn was:', float(sum) / len(slower))
         if faster:
             sum = reduce(operator.add,
                          [txn._replaydelta for txn in faster], 0)
-            print 'average faster txn was:', float(sum) / len(faster)
+            print('average faster txn was:', float(sum) / len(faster))
 
 
 
@@ -257,7 +268,7 @@ def main():
             sys.argv[1:],
             'hr:pm:',
             ['help', 'replay=', 'report', 'maxtxns='])
-    except getopt.error, e:
+    except getopt.error as e:
         usage(1, e)
 
     if args:
@@ -298,16 +309,16 @@ def main():
         except StopParsing:
             break
         except:
-            print 'input file line:', i
+            print('input file line:', i)
             raise
     t1 = now()
-    print 'total parse time:', t1-t0
+    print('total parse time:', t1-t0)
     t2 = now()
     if replay:
         p.replay()
     t3 = now()
-    print 'total replay time:', t3-t2
-    print 'total time:', t3-t0
+    print('total replay time:', t3-t2)
+    print('total time:', t3-t0)
 
 
 

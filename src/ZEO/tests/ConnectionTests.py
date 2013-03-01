@@ -1194,7 +1194,7 @@ class MSTThread(threading.Thread):
             for c in clients:
                 # Check that we got serials for all oids
                 for oid in c.__oids:
-                    testcase.failUnless(c.__serials.has_key(oid))
+                    testcase.failUnless(oid in c.__serials)
                 # Check that we got serials for no other oids
                 for oid in c.__serials.keys():
                     testcase.failUnless(oid in c.__oids)
@@ -1218,6 +1218,6 @@ else:
             return '::1', forker.get_port(self)
 
     _g = globals()
-    for name, value in _g.items():
+    for name, value in tuple(_g.items()):
         if isinstance(value, type) and issubclass(value, CommonSetupTearDown):
             _g[name+"V6"] = type(name+"V6", (V6Setup, value), {})

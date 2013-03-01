@@ -27,10 +27,11 @@ is set to 1 and the MAC immediately follows the length.
 
 import asyncore
 import errno
+import six
 try:
     import hmac
 except ImportError:
-    import _hmac as hmac
+    from . import _hmac as hmac
 import socket
 import struct
 import threading
@@ -62,7 +63,7 @@ del tmp_dict
 # that we could pass to send() without blocking.
 SEND_SIZE = 60000
 
-MAC_BIT = 0x80000000L
+MAC_BIT = 0x80000000
 
 _close_marker = object()
 
@@ -165,7 +166,7 @@ class SizedMessageAsyncConnection(asyncore.dispatcher):
             # Use a single __inp buffer and integer indexes to make this fast.
             try:
                 d = self.recv(8192)
-            except socket.error, err:
+            except socket.error as err:
                 if err[0] in expected_socket_read_errors:
                     return
                 raise
@@ -272,7 +273,7 @@ class SizedMessageAsyncConnection(asyncore.dispatcher):
                     return self.close()
                 else:
                     try:
-                        message = message.next()
+                        message = six.advance_iterator(message)
                     except StopIteration:
                         messages.pop(0)
                     else:
@@ -284,7 +285,7 @@ class SizedMessageAsyncConnection(asyncore.dispatcher):
 
             try:
                 n = self.send(v)
-            except socket.error, err:
+            except socket.error as err:
                 # Fix for https://bugs.launchpad.net/zodb/+bug/182833
                 #  ensure the above mentioned "output" invariant
                 output.insert(0, v)

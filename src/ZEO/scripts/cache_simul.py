@@ -30,6 +30,18 @@ Note:
 
 
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import bisect
 import getopt
@@ -42,10 +54,11 @@ from ZODB.utils import z64, u64
 
 # we assign ctime locally to facilitate test replacement!
 from time import ctime
+import six
 
 def usage(msg):
-    print >> sys.stderr, msg
-    print >> sys.stderr, __doc__
+    print(msg, file=sys.stderr)
+    print(__doc__, file=sys.stderr)
 
 def main(args=None):
     if args is None:
@@ -58,7 +71,7 @@ def main(args=None):
     interval_step = 15
     try:
         opts, args = getopt.getopt(args, "s:i:r:")
-    except getopt.error, msg:
+    except getopt.error as msg:
         usage(msg)
         return 2
 
@@ -89,12 +102,12 @@ def main(args=None):
         try:
             import gzip
         except ImportError:
-            print >> sys.stderr, "can't read gzipped files (no module gzip)"
+            print("can't read gzipped files (no module gzip)", file=sys.stderr)
             return 1
         try:
             f = gzip.open(filename, "rb")
-        except IOError, msg:
-            print >> sys.stderr, "can't open %s: %s" % (filename, msg)
+        except IOError as msg:
+            print("can't open %s: %s" % (filename, msg), file=sys.stderr)
             return 1
     elif filename == "-":
         # Read from stdin.
@@ -103,8 +116,8 @@ def main(args=None):
         # Open regular file.
         try:
             f = open(filename, "rb")
-        except IOError, msg:
-            print >> sys.stderr, "can't open %s: %s" % (filename, msg)
+        except IOError as msg:
+            print("can't open %s: %s" % (filename, msg), file=sys.stderr)
             return 1
 
     # Create simulation object.
@@ -245,13 +258,13 @@ class Simulation(object):
     extraname = "*** please override ***"
 
     def printheader(self):
-        print "%s, cache size %s bytes" % (self.__class__.__name__,
-                                           addcommas(self.cachelimit))
+        print("%s, cache size %s bytes" % (self.__class__.__name__,
+                                           addcommas(self.cachelimit)))
         self.extraheader()
         extranames = tuple([s.upper() for s in self.extras])
         args = ("START TIME", "DUR.", "LOADS", "HITS",
                 "INVALS", "WRITES", "HITRATE") + extranames
-        print self.format % args
+        print(self.format % args)
 
     def extraheader(self):
         pass
@@ -267,13 +280,13 @@ class Simulation(object):
                 self.loads, self.hits, self.invals, self.writes,
                 hitrate(self.loads, self.hits))
         args += tuple([getattr(self, name) for name in self.extras])
-        print self.format % args
+        print(self.format % args)
 
     def finish(self):
         # Make sure that the last line of output ends with "OVERALL".  This
         # makes it much easier for another program parsing the output to
         # find summary statistics.
-        print '-'*74
+        print('-'*74)
         if self.nreports < 2:
             self.report()
         else:
@@ -288,7 +301,7 @@ class Simulation(object):
                 hitrate(self.total_loads, self.total_hits))
             args += tuple([getattr(self, "total_" + name)
                            for name in self.extras])
-            print self.format % args
+            print(self.format % args)
 
 
 # For use in CircularCacheSimulation.
@@ -546,7 +559,7 @@ class CircularCacheSimulation(Simulation):
     def report(self):
         self.check()
         free = used = total = 0
-        for size, e in self.filemap.itervalues():
+        for size, e in six.itervalues(self.filemap):
             total += size
             if e:
                 used += size
@@ -571,12 +584,12 @@ class CircularCacheSimulation(Simulation):
         assert pos == self.cachelimit
 
     def dump(self):
-        print len(self.filemap)
+        print(len(self.filemap))
         L = list(self.filemap)
         L.sort()
         for k in L:
             v = self.filemap[k]
-            print k, v[0], repr(v[1])
+            print(k, v[0], repr(v[1]))
 
 
 def roundup(size):

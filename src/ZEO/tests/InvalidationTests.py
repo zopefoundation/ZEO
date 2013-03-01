@@ -25,6 +25,8 @@ from ZEO.tests.TestThread import TestThread
 
 from ZODB.DB import DB
 from ZODB.POSException import ReadConflictError, ConflictError
+from six.moves import map
+from six.moves import zip
 
 # The tests here let several threads have a go at one or more database
 # instances simultaneously.  Each thread appends a disjoint (from the
@@ -86,7 +88,7 @@ class StressTask:
         self.tm.get().note("add key %s" % key)
         try:
             self.tm.get().commit()
-        except ConflictError, msg:
+        except ConflictError as msg:
             self.tm.abort()
         else:
             if self.sleep:
@@ -116,7 +118,7 @@ def _runTasks(rounds, *tasks):
                 commit(run, actions)
             run.append(t)
             t.doStep()
-            actions.append(`t.startnum`)
+            actions.append(repr(t.startnum))
         commit(run,actions)
         # stderr.write(' '.join(actions)+'\n')
     finally:
@@ -160,7 +162,7 @@ class StressThread(FailableThread):
                 self.commitdict[self] = 1
                 if self.sleep:
                     time.sleep(self.sleep)
-            except (ReadConflictError, ConflictError), msg:
+            except (ReadConflictError, ConflictError) as msg:
                 tm.abort()
             else:
                 self.added_keys.append(key)
@@ -205,14 +207,14 @@ class LargeUpdatesThread(FailableThread):
 
             nkeys = len(tkeys)
             if nkeys < 50:
-                tkeys = range(self.startnum, 3000, self.step)
+                tkeys = list(range(self.startnum, 3000, self.step))
                 nkeys = len(tkeys)
             step = max(int(nkeys / 50), 1)
             keys = [tkeys[i] for i in range(0, nkeys, step)]
             for key in keys:
                 try:
                     tree[key] = self.threadnum
-                except (ReadConflictError, ConflictError), msg:
+                except (ReadConflictError, ConflictError) as msg:
                     # print "%d setting key %s" % (self.threadnum, msg)
                     transaction.abort()
                     break
@@ -224,7 +226,7 @@ class LargeUpdatesThread(FailableThread):
                     self.commitdict[self] = 1
                     if self.sleep:
                         time.sleep(self.sleep)
-                except ConflictError, msg:
+                except ConflictError as msg:
                     # print "%d commit %s" % (self.threadnum, msg)
                     transaction.abort()
                     continue

@@ -1,3 +1,5 @@
+from __future__ import print_function
+from __future__ import print_function
 ##############################################################################
 #
 # Copyright Zope Foundation and Contributors.
@@ -57,7 +59,7 @@ class Connection:
         self.addr = addr or 'test-addr-'+name
 
     def close(self):
-        print self.name, 'closed'
+        print(self.name, 'closed')
         self.connected = False
 
     def poll(self):
@@ -65,7 +67,7 @@ class Connection:
             raise ZEO.zrpc.error.DisconnectedError()
 
     def callAsync(self, meth, *args):
-        print self.name, 'callAsync', meth, repr(args)
+        print(self.name, 'callAsync', meth, repr(args))
 
     callAsyncNoPoll = callAsync
 

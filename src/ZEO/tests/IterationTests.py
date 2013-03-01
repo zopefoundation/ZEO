@@ -14,6 +14,7 @@
 """ZEO iterator protocol tests."""
 
 import transaction
+import six
 
 
 class IterationTests:
@@ -40,7 +41,7 @@ class IterationTests:
 
         # At this point, a wrapping iterator might not have called the CS
         # iterator yet. We'll consume one item to make sure this happens.
-        iterator.next()
+        six.advance_iterator(iterator)
         self.assertEquals(1, len(self._storage._iterator_ids))
         iid = list(self._storage._iterator_ids)[0]
         self.assertEquals([], list(iterator))
@@ -70,7 +71,7 @@ class IterationTests:
         # We need to actually do some iteration to get the iterator created.
         # We do a store to make sure the iterator isn't exhausted right away.
         self._dostore()
-        self._storage.iterator().next()
+        six.advance_iterator(self._storage.iterator())
 
         self.assertEquals(1, len(self._storage._iterator_ids))
         iid = list(self._storage._iterator_ids)[0]
@@ -87,7 +88,7 @@ class IterationTests:
         # We need to actually do some iteration to get the iterator created.
         # We do a store to make sure the iterator isn't exhausted right away.
         self._dostore()
-        self._storage.iterator().next()
+        six.advance_iterator(self._storage.iterator())
 
         iid = list(self._storage._iterator_ids)[0]
 
@@ -104,7 +105,7 @@ class IterationTests:
         # We need to actually do some iteration to get the iterator created.
         # We do a store to make sure the iterator isn't exhausted right away.
         self._dostore()
-        self._storage.iterator().next()
+        six.advance_iterator(self._storage.iterator())
 
         iid = list(self._storage._iterator_ids)[0]
         t = transaction.Transaction()
@@ -120,11 +121,11 @@ class IterationTests:
         self._dostore()
         iter1 = self._storage.iterator()
         iter2 = self._storage.iterator()
-        txn_info1 = iter1.next()
-        txn_info2 = iter2.next()
+        txn_info1 = six.advance_iterator(iter1)
+        txn_info2 = six.advance_iterator(iter2)
         self.assertEquals(txn_info1.tid, txn_info2.tid)
-        txn_info1 = iter1.next()
-        txn_info2 = iter2.next()
+        txn_info1 = six.advance_iterator(iter1)
+        txn_info2 = six.advance_iterator(iter2)
         self.assertEquals(txn_info1.tid, txn_info2.tid)
         self.assertRaises(StopIteration, iter1.next)
         self.assertRaises(StopIteration, iter2.next)

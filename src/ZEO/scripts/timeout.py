@@ -9,6 +9,11 @@ transaction timeout feature of the server.
 usage: timeout.py address delay [storage-name]
 
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import sys
 import time
@@ -44,9 +49,9 @@ def main():
         port = int(port)
         address = (host, port)
 
-    print "Connecting to %s..." % repr(address)
+    print("Connecting to %s..." % repr(address))
     storage = ClientStorage(address, name)
-    print "Connected.  Now starting a transaction..."
+    print("Connected.  Now starting a transaction...")
 
     oid = storage.new_oid()
     revid = ZERO
@@ -56,12 +61,12 @@ def main():
     t.user = "timeout.py"
     storage.tpc_begin(t)
     storage.store(oid, revid, pickled_data, '', t)
-    print "Stored.  Now voting..."
+    print("Stored.  Now voting...")
     storage.tpc_vote(t)
 
-    print "Voted; now sleeping %s..." % delay
+    print("Voted; now sleeping %s..." % delay)
     time.sleep(delay)
-    print "Done."
+    print("Done.")
 
 if __name__ == "__main__":
     main()

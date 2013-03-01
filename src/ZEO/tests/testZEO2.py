@@ -40,7 +40,7 @@ Set up the storage with some initial blob data.
     >>> fs = ZODB.FileStorage.FileStorage('t.fs', blob_dir='t.blobs')
     >>> db = ZODB.DB(fs)
     >>> conn = db.open()
-    >>> conn.root.b = ZODB.blob.Blob('x')
+    >>> conn.root.b = ZODB.blob.Blob(b'x')
     >>> transaction.commit()
 
 Get the iod and first serial. We'll use the serial later to provide
@@ -48,7 +48,8 @@ out-of-date data.
 
     >>> oid = conn.root.b._p_oid
     >>> serial = conn.root.b._p_serial
-    >>> conn.root.b.open('w').write('y')
+    >>> with conn.root.b.open('w') as file:
+    ...     _ = file.write(b'y')
     >>> transaction.commit()
     >>> data = fs.load(oid)[0]
 
@@ -63,7 +64,7 @@ And an initial client.
     >>> zs1.notifyConnected(conn1)
     >>> zs1.register('1', 0)
     >>> zs1.tpc_begin('0', '', '', {})
-    >>> zs1.storea(ZODB.utils.p64(99), ZODB.utils.z64, 'x', '0')
+    >>> zs1.storea(ZODB.utils.p64(99), ZODB.utils.z64, b'x', '0')
     >>> _ = zs1.vote('0') # doctest: +ELLIPSIS
     1 callAsync serialnos ...
 
@@ -76,13 +77,13 @@ will conflict. It will be blocked at the vote call.
     >>> zs2.register('1', 0)
     >>> zs2.tpc_begin('1', '', '', {})
     >>> zs2.storeBlobStart()
-    >>> zs2.storeBlobChunk('z')
+    >>> zs2.storeBlobChunk(b'z')
     >>> zs2.storeBlobEnd(oid, serial, data, '1')
     >>> delay = zs2.vote('1')
 
     >>> class Sender:
     ...     def send_reply(self, id, reply):
-    ...         print 'reply', id, reply
+    ...         print('reply', id, reply)
     >>> delay.set_sender(1, Sender())
 
     >>> logger = logging.getLogger('ZEO')
@@ -90,7 +91,7 @@ will conflict. It will be blocked at the vote call.
     >>> logger.setLevel(logging.INFO)
     >>> logger.addHandler(handler)
 
-Now, when we abort the transaction for the first client. the second
+Now, when we abort the transaction for the first client. The second
 client will be restarted.  It will get a conflict error, that is
 handled correctly:
 
@@ -130,7 +131,7 @@ And an initial client.
 Intentionally break zs1:
 
     >>> zs1._store = lambda : None
-    >>> _ = zs1.vote('0') # doctest: +ELLIPSIS
+    >>> _ = zs1.vote('0') # doctest: +ELLIPSIS +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ...
     TypeError: <lambda>() takes no arguments (3 given)

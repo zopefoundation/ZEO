@@ -12,6 +12,8 @@
 #
 ##############################################################################
 """Test suite for ZEO based on ZODB.tests."""
+from __future__ import print_function
+from __future__ import print_function
 
 from ZEO.ClientStorage import ClientStorage
 from ZEO.tests.forker import get_port
@@ -259,10 +261,10 @@ class GenericTests(
                 store.store(oid, revid, 'x', '', t)
                 store.tpc_vote(t)
                 store.tpc_finish(t)
-            except Exception, v:
+            except Exception as v:
                 import traceback
-                print 'E'*70
-                print v
+                print('E'*70)
+                print(v)
                 traceback.print_exception(*sys.exc_info())
             finally:
                 store.close()

@@ -19,22 +19,7 @@ file storage or Berkeley storage.
 TODO:  Need some basic access control-- a declaration of the methods
 exported for invocation by the server.
 """
-
-from __future__ import with_statement
-
-from ZEO.Exceptions import AuthError
-from ZEO.monitor import StorageStats, StatsServer
-from ZEO.zrpc.connection import ManagedServerConnection, Delay, MTDelay, Result
-from ZEO.zrpc.server import Dispatcher
-from ZODB.ConflictResolution import ResolvedSerial
-from ZODB.loglevels import BLATHER
-from ZODB.POSException import StorageError, StorageTransactionError
-from ZODB.POSException import TransactionError, ReadOnlyError, ConflictError
-from ZODB.serialize import referencesf
-from ZODB.utils import oid_repr, p64, u64, z64
-
 import asyncore
-import cPickle
 import itertools
 import logging
 import os
@@ -50,7 +35,19 @@ import ZODB.event
 import ZODB.serialize
 import ZODB.TimeStamp
 import zope.interface
+import six
 
+from ZEO._compat import Pickler, Unpickler, PY3, BytesIO
+from ZEO.Exceptions import AuthError
+from ZEO.monitor import StorageStats, StatsServer
+from ZEO.zrpc.connection import ManagedServerConnection, Delay, MTDelay, Result
+from ZEO.zrpc.server import Dispatcher
+from ZODB.ConflictResolution import ResolvedSerial
+from ZODB.loglevels import BLATHER
+from ZODB.POSException import StorageError, StorageTransactionError
+from ZODB.POSException import TransactionError, ReadOnlyError, ConflictError
+from ZODB.serialize import referencesf
+from ZODB.utils import oid_repr, p64, u64, z64
 
 logger = logging.getLogger('ZEO.StorageServer')
 
@@ -92,7 +89,7 @@ class ZEOStorage:
         # The authentication protocol may define extra methods.
         self._extensions = {}
         for func in self.extensions:
-            self._extensions[func.func_name] = None
+            self._extensions[func.__name__] = None
         self._iterators = {}
         self._iterator_ids = itertools.count()
         # Stores the last item that was handed out for a
@@ -605,7 +602,7 @@ class ZEOStorage:
             self.storage.deleteObject(oid, serial, self.transaction)
         except (SystemExit, KeyboardInterrupt):
             raise
-        except Exception, err:
+        except Exception as err:
             self._op_error(oid, err, 'delete')
 
         return err is None
@@ -617,7 +614,7 @@ class ZEOStorage:
                 oid, serial, self.transaction)
         except (SystemExit, KeyboardInterrupt):
             raise
-        except Exception, err:
+        except Exception as err:
             self._op_error(oid, err, 'checkCurrentSerialInTransaction')
 
         return err is None
@@ -633,13 +630,14 @@ class ZEOStorage:
                     oid, serial, data, blobfile, '', self.transaction)
         except (SystemExit, KeyboardInterrupt):
             raise
-        except Exception, err:
-            self._op_error(oid, err, 'store')
+        except Exception as error:
+            self._op_error(oid, error, 'store')
+            err = error
         else:
             if serial != "\0\0\0\0\0\0\0\0":
                 self.invalidated.append(oid)
 
-            if isinstance(newserial, str):
+            if isinstance(newserial, bytes):
                 newserial = [(oid, newserial)]
 
             for oid, s in newserial or ():
@@ -660,7 +658,7 @@ class ZEOStorage:
                                  self.transaction)
         except (SystemExit, KeyboardInterrupt):
             raise
-        except Exception, err:
+        except Exception as err:
             self._op_error(oid, err, 'restore')
 
         return err is None
@@ -671,7 +669,7 @@ class ZEOStorage:
             tid, oids = self.storage.undo(trans_id, self.transaction)
         except (SystemExit, KeyboardInterrupt):
             raise
-        except Exception, err:
+        except Exception as err:
             self._op_error(z64, err, 'undo')
         else:
             self.invalidated.extend(oids)
@@ -682,7 +680,10 @@ class ZEOStorage:
     def _marshal_error(self, error):
         # Try to pickle the exception.  If it can't be pickled,
         # the RPC response would fail, so use something that can be pickled.
-        pickler = cPickle.Pickler()
+        if PY3:
+            pickler = Pickler(BytesIO(), 1)
+        else:
+            pickler = Pickler()
         pickler.fast = 1
         try:
             pickler.dump(error, 1)
@@ -695,14 +696,14 @@ class ZEOStorage:
     # IStorageIteration support
 
     def iterator_start(self, start, stop):
-        iid = self._iterator_ids.next()
+        iid = next(self._iterator_ids)
         self._iterators[iid] = iter(self.storage.iterator(start, stop))
         return iid
 
     def iterator_next(self, iid):
         iterator = self._iterators[iid]
         try:
-            info = iterator.next()
+            info = next(iterator)
         except StopIteration:
             del self._iterators[iid]
             item = None
@@ -720,7 +721,7 @@ class ZEOStorage:
         return item
 
     def iterator_record_start(self, txn_iid, tid):
-        record_iid = self._iterator_ids.next()
+        record_iid = next(self._iterator_ids)
         txn_info = self._txn_iterators_last[txn_iid]
         if txn_info.tid != tid:
             raise Exception(
@@ -732,7 +733,7 @@ class ZEOStorage:
     def iterator_record_next(self, iid):
         iterator = self._iterators[iid]
         try:
-            info = iterator.next()
+            info = next(iterator)
         except StopIteration:
             del self._iterators[iid]
             item = None
@@ -1183,7 +1184,7 @@ class StorageServer:
                 except:
                     pass
 
-        for name, storage in self.storages.iteritems():
+        for name, storage in six.iteritems(self.storages):
             logger.info("closing storage %r", name)
             storage.close()
 
@@ -1566,7 +1567,7 @@ class CommitLog:
 
     def __init__(self):
         self.file = tempfile.TemporaryFile(suffix=".comit-log")
-        self.pickler = cPickle.Pickler(self.file, 1)
+        self.pickler = Pickler(self.file, 1)
         self.pickler.fast = 1
         self.stores = 0
 
@@ -1595,7 +1596,7 @@ class CommitLog:
 
     def __iter__(self):
         self.file.seek(0)
-        unpickler = cPickle.Unpickler(self.file)
+        unpickler = Unpickler(self.file)
         for i in range(self.stores):
             yield unpickler.load()
 

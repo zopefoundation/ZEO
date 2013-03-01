@@ -15,6 +15,22 @@
 
 $Id$
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import asyncore
 import socket
@@ -85,19 +101,19 @@ class StorageStats:
                 self.conflicts_resolved = int(value)
 
     def dump(self, f):
-        print >> f, "Server started:", self.start
-        print >> f, "Clients:", self.clients
-        print >> f, "Clients verifying:", self.verifying_clients
-        print >> f, "Active transactions:", self.active_txns
+        print("Server started:", self.start, file=f)
+        print("Clients:", self.clients, file=f)
+        print("Clients verifying:", self.verifying_clients, file=f)
+        print("Active transactions:", self.active_txns, file=f)
         if self.lock_time:
             howlong = time.time() - self.lock_time
-            print >> f, "Commit lock held for:", int(howlong)
-        print >> f, "Commits:", self.commits
-        print >> f, "Aborts:", self.aborts
-        print >> f, "Loads:", self.loads
-        print >> f, "Stores:", self.stores
-        print >> f, "Conflicts:", self.conflicts
-        print >> f, "Conflicts resolved:", self.conflicts_resolved
+            print("Commit lock held for:", int(howlong), file=f)
+        print("Commits:", self.commits, file=f)
+        print("Aborts:", self.aborts, file=f)
+        print("Loads:", self.loads, file=f)
+        print("Stores:", self.stores, file=f)
+        print("Conflicts:", self.conflicts, file=f)
+        print("Conflicts resolved:", self.conflicts_resolved, file=f)
 
 class StatsClient(asyncore.dispatcher):
 
@@ -164,14 +180,14 @@ class StatsServer(asyncore.dispatcher):
         f.close()
 
     def dump(self, f):
-        print >> f, "ZEO monitor server version %s" % zeo_version
-        print >> f, time.ctime()
-        print >> f
+        print("ZEO monitor server version %s" % zeo_version, file=f)
+        print(time.ctime(), file=f)
+        print(file=f)
 
         L = self.stats.keys()
         L.sort()
         for k in L:
             stats = self.stats[k]
-            print >> f, "Storage:", k
+            print("Storage:", k, file=f)
             stats.dump(f)
-            print >> f
+            print(file=f)

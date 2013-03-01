@@ -140,7 +140,7 @@ class CommitLockTests:
     def _get_timestamp(self):
         t = time.time()
         t = TimeStamp(*time.gmtime(t)[:5]+(t%60,))
-        return `t`
+        return repr(t)
 
 class CommitLockVoteTests(CommitLockTests):
 

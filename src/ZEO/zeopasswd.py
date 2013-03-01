@@ -29,6 +29,8 @@ Additional options:
 
     -d/--delete -- delete user instead of updating password
 """
+from __future__ import print_function
+from __future__ import print_function
 
 import getopt
 import getpass
@@ -39,8 +41,8 @@ import ZConfig
 import ZEO
 
 def usage(msg):
-    print __doc__
-    print msg
+    print(__doc__)
+    print(msg)
     sys.exit(2)
 
 def options(args):
@@ -50,7 +52,7 @@ def options(args):
                                                           "protocol=",
                                                           "filename=",
                                                           "realm"])
-    except getopt.error, msg:
+    except getopt.error as msg:
         usage(msg)
     config = None
     delete = 0

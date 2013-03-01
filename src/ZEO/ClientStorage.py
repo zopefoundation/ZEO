@@ -18,18 +18,7 @@ Public contents of this module:
 ClientStorage -- the main class, implementing the Storage API
 
 """
-
-from persistent.TimeStamp import TimeStamp
-from ZEO.auth import get_module
-from ZEO.cache import ClientCache
-from ZEO.Exceptions import ClientStorageError, ClientDisconnected, AuthError
-from ZEO import ServerStub
-from ZEO.TransactionBuffer import TransactionBuffer
-from ZEO.zrpc.client import ConnectionManager
-from ZODB import POSException
-from ZODB import utils
 import BTrees.IOBTree
-import cPickle
 import logging
 import os
 import re
@@ -37,7 +26,6 @@ import socket
 import stat
 import sys
 import tempfile
-import thread
 import threading
 import time
 import weakref
@@ -48,6 +36,17 @@ import ZODB.BaseStorage
 import ZODB.interfaces
 import ZODB.event
 import zope.interface
+import six
+from persistent.TimeStamp import TimeStamp
+from ZEO._compat import Pickler, Unpickler, get_ident
+from ZEO.auth import get_module
+from ZEO.cache import ClientCache
+from ZEO.Exceptions import ClientStorageError, ClientDisconnected, AuthError
+from ZEO import ServerStub
+from ZEO.TransactionBuffer import TransactionBuffer
+from ZEO.zrpc.client import ConnectionManager
+from ZODB import POSException
+from ZODB import utils
 
 logger = logging.getLogger(__name__)
 
@@ -689,7 +688,7 @@ class ClientStorage(object):
             host = addr[0]
             try:
                 canonical, aliases, addrs = socket.gethostbyaddr(host)
-            except socket.error, err:
+            except socket.error as err:
                 logger.debug("%s Error resolving host: %s (%s)",
                              self.__name__, host, err)
                 canonical = host
@@ -1221,7 +1220,7 @@ class ClientStorage(object):
         if self._cache is None:
             return
 
-        for oid, _ in self._seriald.iteritems():
+        for oid, _ in six.iteritems(self._seriald):
             self._cache.invalidate(oid, tid)
 
         for oid, data in self._tbuf:
@@ -1330,7 +1329,7 @@ class ClientStorage(object):
         # setup tempfile to hold zeoVerify results and interim
         # invalidation results
         self._tfile = tempfile.TemporaryFile(suffix=".inv")
-        self._pickler = cPickle.Pickler(self._tfile, 1)
+        self._pickler = Pickler(self._tfile, 1)
         self._pickler.fast = 1 # Don't use the memo
 
         if self._connection.peer_protocol_version < 'Z309':
@@ -1449,7 +1448,7 @@ class ClientStorage(object):
             self._pickler.dump((None, None))
             self._pickler = None
             self._tfile.seek(0)
-            unpickler = cPickle.Unpickler(self._tfile)
+            unpickler = Unpickler(self._tfile)
             min_tid = self._cache.getLastTid()
             while 1:
                 tid, oids = unpickler.load()
@@ -1682,12 +1681,12 @@ def _check_blob_cache_size(blob_dir, target):
         except zc.lockfile.LockError:
             # Someone is already cleaning up, so don't bother
             logger.debug("%s Another thread is checking the blob cache size.",
-                         thread.get_ident())
+                         get_ident())
             open(attempt_path, 'w').close() # Mark that we tried
             return
 
     logger.debug("%s Checking blob cache size. (target: %s)",
-                 thread.get_ident(), target)
+                 get_ident(), target)
 
     try:
         while 1:
@@ -1714,7 +1713,7 @@ def _check_blob_cache_size(blob_dir, target):
                         files_by_atime[t] = []
                     files_by_atime[t].append(os.path.join(dirname, file_name))
 
-            logger.debug("%s   blob cache size: %s", thread.get_ident(), size)
+            logger.debug("%s   blob cache size: %s", get_ident(), size)
 
             if size <= target:
                 if os.path.isfile(attempt_path):
@@ -1723,7 +1722,7 @@ def _check_blob_cache_size(blob_dir, target):
                     except OSError:
                         pass # Sigh, windows
                     continue
-                logger.debug("%s   -->", thread.get_ident())
+                logger.debug("%s   -->", get_ident())
                 break
 
             while size > target and files_by_atime:
@@ -1735,7 +1734,7 @@ def _check_blob_cache_size(blob_dir, target):
                         lock = zc.lockfile.LockFile(lockfilename)
                     except zc.lockfile.LockError:
                         logger.debug("%s Skipping locked %s",
-                                     thread.get_ident(),
+                                     get_ident(),
                                      os.path.basename(file_name))
                         continue  # In use, skip
 
@@ -1743,7 +1742,7 @@ def _check_blob_cache_size(blob_dir, target):
                         fsize = os.stat(file_name).st_size
                         try:
                             ZODB.blob.remove_committed(file_name)
-                        except OSError, v:
+                        except OSError as v:
                             pass # probably open on windows
                         else:
                             size -= fsize
@@ -1754,7 +1753,7 @@ def _check_blob_cache_size(blob_dir, target):
                         break
 
             logger.debug("%s   reduced blob cache size: %s",
-                         thread.get_ident(), size)
+                         get_ident(), size)
 
     finally:
         check_lock.close()

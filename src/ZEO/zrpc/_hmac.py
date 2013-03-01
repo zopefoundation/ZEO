@@ -5,6 +5,8 @@
 
 Implements the HMAC algorithm as described by RFC 2104.
 """
+from six.moves import map
+from six.moves import zip
 
 def _strxor(s1, s2):
     """Utility method. XOR the two strings s1 and s2 (must have same length).

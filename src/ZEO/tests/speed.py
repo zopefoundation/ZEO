@@ -1,3 +1,10 @@
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 ##############################################################################
 #
 # Copyright (c) 2001, 2002 Zope Foundation and Contributors.
@@ -68,7 +75,7 @@ class ZEOExit(asyncore.file_dispatcher):
         self.delete_fs()
         os._exit(0)
     def handle_close(self):
-        print "Parent process exited unexpectedly"
+        print("Parent process exited unexpectedly")
         self.delete_fs()
         os._exit(0)
     def delete_fs(self):
@@ -88,7 +95,7 @@ def work(db, results, nrep, compress, data, detailed, minimize, threadno=None):
                     transaction.begin()
                     rt = jar.root()
                     key = 's%s' % r
-                    if rt.has_key(key):
+                    if key in rt:
                         p = rt[key]
                     else:
                         rt[key] = p =P()
@@ -109,10 +116,10 @@ def work(db, results, nrep, compress, data, detailed, minimize, threadno=None):
             t = time.time() - t
             if detailed:
                 if threadno is None:
-                    print "%s\t%s\t%.4f\t%d" % (j, r, t, conflicts)
+                    print("%s\t%s\t%.4f\t%d" % (j, r, t, conflicts))
                 else:
-                    print "%s\t%s\t%.4f\t%d\t%d" % (j, r, t, conflicts,
-                                                    threadno)
+                    print("%s\t%s\t%.4f\t%d\t%d" % (j, r, t, conflicts,
+                                                    threadno))
             results[r].append((t, conflicts))
             rt=d=p=v=None # release all references
             if minimize:
@@ -168,7 +175,7 @@ def main(args):
                cache_size=4000,
                cache_deactivate_after=6000,)
 
-    print "Beginning work..."
+    print("Beginning work...")
     results={1:[], 10:[], 100:[], 1000:[]}
     if threads > 1:
         import threading
@@ -191,14 +198,14 @@ def main(args):
         os.waitpid(pid, 0)
 
     if detailed:
-        print '-'*24
-    print "num\tmean\tmin\tmax"
+        print('-'*24)
+    print("num\tmean\tmin\tmax")
     for r in 1, 10, 100, 1000:
         times = []
         for time, conf in results[r]:
             times.append(time)
         t = mean(times)
-        print "%d\t%.4f\t%.4f\t%.4f" % (r, t, min(times), max(times))
+        print("%d\t%.4f\t%.4f\t%.4f" % (r, t, min(times), max(times)))
 
 def mean(l):
     tot = 0

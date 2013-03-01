@@ -47,7 +47,7 @@ from ZEO.hash import sha1
 
 def get_random_bytes(n=8):
     if os.path.exists("/dev/urandom"):
-        f = open("/dev/urandom")
+        f = open("/dev/urandom", 'rb')
         s = f.read(n)
         f.close()
     else:
@@ -56,7 +56,7 @@ def get_random_bytes(n=8):
     return s
 
 def hexdigest(s):
-    return sha1(s).hexdigest()
+    return sha1(s.encode()).hexdigest()
 
 class DigestDatabase(Database):
     def __init__(self, filename, realm=None):

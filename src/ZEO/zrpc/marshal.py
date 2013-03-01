@@ -11,10 +11,9 @@
 # FOR A PARTICULAR PURPOSE
 #
 ##############################################################################
-from cPickle import Unpickler, Pickler
-from cStringIO import StringIO
 import logging
 
+from ZEO._compat import Unpickler, Pickler, BytesIO, PY3
 from ZEO.zrpc.error import ZRPCError
 from ZEO.zrpc.log import log, short_repr
 
@@ -31,25 +30,38 @@ def encode(*args): # args: (msgid, flags, name, args)
     # being represented by \xij escapes in proto 0).
     # Undocumented:  cPickle.Pickler accepts a lone protocol argument;
     # pickle.py does not.
-    pickler = Pickler(1)
-    pickler.fast = 1
-    return pickler.dump(args, 1)
+    if PY3:
+        # XXX: Py3: Needs optimization.
+        f = BytesIO()
+        pickler = Pickler(f, 1)
+        pickler.fast = 1
+        pickler.dump(args)
+        res = f.getvalue()
+        return res
+    else:
+        pickler = Pickler(1)
+        pickler.fast = 1
+        return pickler.dump(args, 1)
 
 
-@apply
-def fast_encode():
-    # Only use in cases where you *know* the data contains only basic
-    # Python objects
-    pickler = Pickler(1)
-    pickler.fast = 1
-    dump = pickler.dump
-    def fast_encode(*args):
-        return dump(args, 1)
-    return fast_encode
+if PY3:
+    # XXX: Py3: Needs optimization.
+    fast_encode = encode
+else:
+    def fast_encode():
+        # Only use in cases where you *know* the data contains only basic
+        # Python objects
+        pickler = Pickler(1)
+        pickler.fast = 1
+        dump = pickler.dump
+        def fast_encode(*args):
+            return dump(args, 1)
+        return fast_encode
+    fast_encode = fast_encode()
 
 def decode(msg):
     """Decodes msg and returns its parts"""
-    unpickler = Unpickler(StringIO(msg))
+    unpickler = Unpickler(BytesIO(msg))
     unpickler.find_global = find_global
 
     try:
@@ -61,7 +73,7 @@ def decode(msg):
 
 def server_decode(msg):
     """Decodes msg and returns its parts"""
-    unpickler = Unpickler(StringIO(msg))
+    unpickler = Unpickler(BytesIO(msg))
     unpickler.find_global = server_find_global
 
     try:
@@ -80,7 +92,7 @@ def find_global(module, name):
     """Helper for message unpickler"""
     try:
         m = __import__(module, _globals, _globals, _silly)
-    except ImportError, msg:
+    except ImportError as msg:
         raise ZRPCError("import error %s: %s" % (module, msg))
 
     try:
@@ -104,7 +116,7 @@ def server_find_global(module, name):
         if module != 'ZopeUndo.Prefix':
             raise ImportError
         m = __import__(module, _globals, _globals, _silly)
-    except ImportError, msg:
+    except ImportError as msg:
         raise ZRPCError("import error %s: %s" % (module, msg))
 
     try:

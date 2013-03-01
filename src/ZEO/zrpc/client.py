@@ -28,6 +28,8 @@ from ZEO.zrpc.error import DisconnectedError
 
 from ZODB.POSException import ReadOnlyError
 from ZODB.loglevels import BLATHER
+from six.moves import map
+from six.moves import zip
 
 
 def client_timeout():
@@ -49,7 +51,7 @@ def client_loop(map):
 
             try:
                 r, w, e = select.select(r, w, e, client_timeout())
-            except select.error, err:
+            except select.error as err:
                 if err[0] != errno.EINTR:
                     if err[0] == errno.EBADF:
 
@@ -481,7 +483,7 @@ class ConnectThread(threading.Thread):
             try:
                 r, w, x = select.select([], connecting, connecting, 1.0)
                 log("CT: select() %d, %d, %d" % tuple(map(len, (r,w,x))))
-            except select.error, msg:
+            except select.error as msg:
                 log("CT: select failed; msg=%s" % str(msg),
                     level=logging.WARNING)
                 continue
@@ -547,7 +549,7 @@ class ConnectWrapper:
         log("CW: attempt to connect to %s" % repr(addr))
         try:
             self.sock = socket.socket(domain, socket.SOCK_STREAM)
-        except socket.error, err:
+        except socket.error as err:
             log("CW: can't create socket, domain=%s: %s" % (domain, err),
                 level=logging.ERROR)
             self.close()
@@ -560,7 +562,7 @@ class ConnectWrapper:
         if self.state in ("opened", "connecting"):
             try:
                 err = self.sock.connect_ex(self.addr)
-            except socket.error, msg:
+            except socket.error as msg:
                 log("CW: connect_ex(%r) failed: %s" % (self.addr, msg),
                     level=logging.ERROR)
                 self.close()

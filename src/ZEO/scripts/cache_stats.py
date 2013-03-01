@@ -1,3 +1,4 @@
+from __future__ import print_function
 ##############################################################################
 #
 # Copyright (c) 2001, 2002 Zope Foundation and Contributors.
@@ -55,7 +56,6 @@ this file in the 'explain' dictionary.  Note that the keys there (and
 also the arguments to _trace() in ClientStorage.py) are 'code & 0x7e',
 i.e. the low bit is always zero.
 """
-
 import sys
 import time
 import getopt
@@ -63,10 +63,11 @@ import struct
 
 # we assign ctime locally to facilitate test replacement!
 from time import ctime
+import six
 
 def usage(msg):
-    print >> sys.stderr, msg
-    print >> sys.stderr, __doc__
+    print(msg, file=sys.stderr)
+    print(__doc__, file=sys.stderr)
 
 def main(args=None):
     if args is None:
@@ -81,7 +82,7 @@ def main(args=None):
     heuristic = False
     try:
         opts, args = getopt.getopt(args, "hi:qsSvX")
-    except getopt.error, msg:
+    except getopt.error as msg:
         usage(msg)
         return 2
     for o, a in opts:
@@ -118,12 +119,12 @@ def main(args=None):
         try:
             import gzip
         except ImportError:
-            print >> sys.stderr, "can't read gzipped files (no module gzip)"
+            print("can't read gzipped files (no module gzip)", file=sys.stderr)
             return 1
         try:
             f = gzip.open(filename, "rb")
-        except IOError, msg:
-            print >> sys.stderr, "can't open %s: %s" % (filename, msg)
+        except IOError as msg:
+            print("can't open %s: %s" % (filename, msg), file=sys.stderr)
             return 1
     elif filename == '-':
         # Read from stdin
@@ -132,8 +133,8 @@ def main(args=None):
         # Open regular file
         try:
             f = open(filename, "rb")
-        except IOError, msg:
-            print >> sys.stderr, "can't open %s: %s" % (filename, msg)
+        except IOError as msg:
+            print("can't open %s: %s" % (filename, msg), file=sys.stderr)
             return 1
 
     rt0 = time.time()
@@ -142,7 +143,7 @@ def main(args=None):
     records = 0     # number of trace records read
     versions = 0    # number of trace records with versions
     datarecords = 0 # number of records with dlen set
-    datasize = 0L   # sum of dlen across records with dlen set
+    datasize = 0   # sum of dlen across records with dlen set
     oids = {}       # map oid to number of times it was loaded
     bysize = {}     # map data size to number of loads
     bysizew = {}    # map data size to number of writes
@@ -158,8 +159,8 @@ def main(args=None):
     FMT_SIZE = struct.calcsize(FMT)
     assert FMT_SIZE == 26
     # Read file, gathering statistics, and printing each record if verbose.
-    print ' '*16, "%7s %7s %7s %7s" % ('loads', 'hits', 'inv(h)', 'writes'),
-    print 'hitrate'
+    print(' '*16, "%7s %7s %7s %7s" % ('loads', 'hits', 'inv(h)', 'writes'), end=' ')
+    print('hitrate')
     try:
         while 1:
             r = f_read(FMT_SIZE)
@@ -169,7 +170,7 @@ def main(args=None):
             if ts == 0:
                 # Must be a misaligned record caused by a crash.
                 if not quiet:
-                    print "Skipping 8 bytes at offset", f.tell() - FMT_SIZE
+                    print("Skipping 8 bytes at offset", f.tell() - FMT_SIZE)
                     f.seek(f.tell() - FMT_SIZE + 8)
                 continue
             oid = f_read(oidlen)
@@ -208,14 +209,14 @@ def main(args=None):
                     bysizew[dlen] = d = bysizew.get(dlen) or {}
                     d[oid] = d.get(oid, 0) + 1
             if verbose:
-                print "%s %02x %s %016x %016x %c%s" % (
+                print("%s %02x %s %016x %016x %c%s" % (
                     ctime(ts)[4:-5],
                     code,
                     oid_repr(oid),
                     U64(start_tid),
                     U64(end_tid),
                     version,
-                    dlen and (' '+str(dlen)) or "")
+                    dlen and (' '+str(dlen)) or ""))
             if code & 0x70 == 0x20:
                 oids[oid] = oids.get(oid, 0) + 1
                 total_loads += 1
@@ -226,10 +227,10 @@ def main(args=None):
                 thisinterval = ts // interval
                 h0 = he = ts
                 if not quiet:
-                    print ctime(ts)[4:-5],
-                    print '='*20, "Restart", '='*20
+                    print(ctime(ts)[4:-5], end=' ')
+                    print('='*20, "Restart", '='*20)
     except KeyboardInterrupt:
-        print "\nInterrupted.  Stats so far:\n"
+        print("\nInterrupted.  Stats so far:\n")
 
     end_pos = f.tell()
     f.close()
@@ -239,74 +240,73 @@ def main(args=None):
 
     # Error if nothing was read
     if not records:
-        print >> sys.stderr, "No records processed"
+        print("No records processed", file=sys.stderr)
         return 1
 
     # Print statistics
     if dostats:
-        print
-        print "Read %s trace records (%s bytes) in %.1f seconds" % (
-            addcommas(records), addcommas(end_pos), rte-rt0)
-        print "Versions:   %s records used a version" % addcommas(versions)
-        print "First time: %s" % ctime(t0)
-        print "Last time:  %s" % ctime(te)
-        print "Duration:   %s seconds" % addcommas(te-t0)
-        print "Data recs:  %s (%.1f%%), average size %d bytes" % (
+        print()
+        print("Read %s trace records (%s bytes) in %.1f seconds" % (
+            addcommas(records), addcommas(end_pos), rte-rt0))
+        print("Versions:   %s records used a version" % addcommas(versions))
+        print("First time: %s" % ctime(t0))
+        print("Last time:  %s" % ctime(te))
+        print("Duration:   %s seconds" % addcommas(te-t0))
+        print("Data recs:  %s (%.1f%%), average size %d bytes" % (
             addcommas(datarecords),
             100.0 * datarecords / records,
-            datasize / datarecords)
-        print "Hit rate:   %.1f%% (load hits / loads)" % hitrate(bycode)
-        print
-        codes = bycode.keys()
-        codes.sort()
-        print "%13s %4s %s" % ("Count", "Code", "Function (action)")
+            datasize / datarecords))
+        print("Hit rate:   %.1f%% (load hits / loads)" % hitrate(bycode))
+        print()
+        codes = sorted(bycode.keys())
+        print("%13s %4s %s" % ("Count", "Code", "Function (action)"))
         for code in codes:
-            print "%13s  %02x  %s" % (
+            print("%13s  %02x  %s" % (
                 addcommas(bycode.get(code, 0)),
                 code,
-                explain.get(code) or "*** unknown code ***")
+                explain.get(code) or "*** unknown code ***"))
 
     # Print histogram.
     if print_histogram:
-        print
-        print "Histogram of object load frequency"
+        print()
+        print("Histogram of object load frequency")
         total = len(oids)
-        print "Unique oids: %s" % addcommas(total)
-        print "Total loads: %s" % addcommas(total_loads)
+        print("Unique oids: %s" % addcommas(total))
+        print("Total loads: %s" % addcommas(total_loads))
         s = addcommas(total)
         width = max(len(s), len("objects"))
         fmt = "%5d %" + str(width) + "s %5.1f%% %5.1f%% %5.1f%%"
         hdr = "%5s %" + str(width) + "s %6s %6s %6s"
-        print hdr % ("loads", "objects", "%obj", "%load", "%cum")
+        print(hdr % ("loads", "objects", "%obj", "%load", "%cum"))
         cum = 0.0
         for binsize, count in histogram(oids):
             obj_percent = 100.0 * count / total
             load_percent = 100.0 * count * binsize / total_loads
             cum += load_percent
-            print fmt % (binsize, addcommas(count),
-                         obj_percent, load_percent, cum)
+            print(fmt % (binsize, addcommas(count),
+                         obj_percent, load_percent, cum))
 
     # Print size histogram.
     if print_size_histogram:
-        print
-        print "Histograms of object sizes"
-        print
+        print()
+        print("Histograms of object sizes")
+        print()
         dumpbysize(bysizew, "written", "writes")
         dumpbysize(bysize, "loaded", "loads")
 
 def dumpbysize(bysize, how, how2):
-    print
-    print "Unique sizes %s: %s" % (how, addcommas(len(bysize)))
-    print "%10s %6s %6s" % ("size", "objs", how2)
+    print()
+    print("Unique sizes %s: %s" % (how, addcommas(len(bysize))))
+    print("%10s %6s %6s" % ("size", "objs", how2))
     sizes = bysize.keys()
     sizes.sort()
     for size in sizes:
         loads = 0
-        for n in bysize[size].itervalues():
+        for n in six.itervalues(bysize[size]):
             loads += n
-        print "%10s %6d %6d" % (addcommas(size),
+        print("%10s %6d %6d" % (addcommas(size),
                                 len(bysize.get(size, "")),
-                                loads)
+                                loads))
 
 def dumpbyinterval(byinterval, h0, he):
     loads = hits = invals = writes = 0
@@ -327,9 +327,9 @@ def dumpbyinterval(byinterval, h0, he):
     else:
         hr = 'n/a'
 
-    print "%s-%s %7s %7s %7s %7s %7s" % (
+    print("%s-%s %7s %7s %7s %7s %7s" % (
         ctime(h0)[4:-8], ctime(he)[14:-8],
-        loads, hits, invals, writes, hr)
+        loads, hits, invals, writes, hr))
 
 def hitrate(bycode):
     loads = hits = 0
@@ -346,7 +346,7 @@ def hitrate(bycode):
 
 def histogram(d):
     bins = {}
-    for v in d.itervalues():
+    for v in six.itervalues(d):
         bins[v] = bins.get(v, 0) + 1
     L = bins.items()
     L.sort()

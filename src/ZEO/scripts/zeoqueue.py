@@ -22,6 +22,7 @@ Options:
         when you rotate log files so that the next run will parse from the
         beginning of the file.
 """
+from __future__ import print_function
 
 import os
 import re
@@ -29,7 +30,7 @@ import sys
 import time
 import errno
 import getopt
-import cPickle as pickle
+from ZEO._compat import load, dump
 
 COMMASPACE = ', '
 STATEFILE = 'zeoqueue.pck'
@@ -165,7 +166,7 @@ class Status:
     def process_file(self, fp):
         if self.pos:
             if VERBOSE:
-                print 'seeking to file position', self.pos
+                print('seeking to file position', self.pos)
             fp.seek(self.pos)
         while True:
             line = fp.readline()
@@ -237,7 +238,7 @@ class Status:
     def call_vote(self, t, client, tid, rest):
         txn = self.txns.get(tid)
         if txn is None:
-            print "Oops!"
+            print("Oops!")
             txn = self.txns[tid] = Txn(tid)
         txn.vote = t
         txn.voters.append(client)
@@ -245,7 +246,7 @@ class Status:
     def call_tpc_abort(self, t, client, tid, rest):
         txn = self.txns.get(tid)
         if txn is None:
-            print "Oops!"
+            print("Oops!")
             txn = self.txns[tid] = Txn(tid)
         txn.abort = t
         txn.voters = []
@@ -261,7 +262,7 @@ class Status:
     def call_tpc_finish(self, t, client, tid, rest):
         txn = self.txns.get(tid)
         if txn is None:
-            print "Oops!"
+            print("Oops!")
             txn = self.txns[tid] = Txn(tid)
         txn.finish = t
         txn.voters = []
@@ -281,17 +282,17 @@ class Status:
         self.commit = self.commit_or_abort = txn
 
     def report(self):
-        print "Blocked transactions:", self.n_blocked
+        print("Blocked transactions:", self.n_blocked)
         if not VERBOSE:
             return
         if self.t_restart:
-            print "Server started:", time.ctime(self.t_restart)
+            print("Server started:", time.ctime(self.t_restart))
 
         if self.commit is not None:
             t = self.commit_or_abort.finish
             if t is None:
                 t = self.commit_or_abort.abort
-            print "Last finished transaction:", time.ctime(t)
+            print("Last finished transaction:", time.ctime(t))
 
         # the blocked transaction should be the first one that calls vote
         L = [(txn.begin, txn) for txn in self.txns.values()]
@@ -301,18 +302,18 @@ class Status:
             if txn.isactive():
                 began = txn.begin
                 if txn.voters:
-                    print "Blocked client (first vote):", txn.voters[0]
-                print "Blocked transaction began at:", time.ctime(began)
-                print "Hint:", txn.hint
-                print "Idle time: %d sec" % int(time.time() - began)
+                    print("Blocked client (first vote):", txn.voters[0])
+                print("Blocked transaction began at:", time.ctime(began))
+                print("Hint:", txn.hint)
+                print("Idle time: %d sec" % int(time.time() - began))
                 break
 
 
 
 def usage(code, msg=''):
-    print >> sys.stderr, __doc__ % globals()
+    print(__doc__ % globals(), file=sys.stderr)
     if msg:
-        print >> sys.stderr, msg
+        print(msg, file=sys.stderr)
     sys.exit(code)
 
 
@@ -327,7 +328,7 @@ def main():
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'vhf:r0',
                                    ['help', 'verbose', 'file=', 'reset'])
-    except getopt.error, msg:
+    except getopt.error as msg:
         usage(1, msg)
 
     for opt, arg in opts:
@@ -347,9 +348,9 @@ def main():
         try:
             os.unlink(file)
             if VERBOSE:
-                print 'removing pickle state file', file
-        except OSError, e:
-            if e.errno <> errno.ENOENT:
+                print('removing pickle state file', file)
+        except OSError as e:
+            if e.errno != errno.ENOENT:
                 raise
         return
 
@@ -366,18 +367,18 @@ def main():
     try:
         statefp = open(file, 'rb')
         try:
-            status = pickle.load(statefp)
+            status = load(statefp)
             if VERBOSE:
-                print 'reading status from file', file
+                print('reading status from file', file)
         finally:
             statefp.close()
-    except IOError, e:
-        if e.errno <> errno.ENOENT:
+    except IOError as e:
+        if e.errno != errno.ENOENT:
             raise
     if status is None:
         status = Status()
         if VERBOSE:
-            print 'using new status'
+            print('using new status')
 
     if not seek:
         status.pos = 0
@@ -389,7 +390,7 @@ def main():
         fp.close()
     # Save state
     statefp = open(file, 'wb')
-    pickle.dump(status, statefp, 1)
+    dump(status, statefp, 1)
     statefp.close()
     # Print the report and return the number of blocked clients in the exit
     # status code.

@@ -143,8 +143,35 @@ Commands:
 
 $Id$
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import datetime, sys, re, os
+from six.moves import map
+from six.moves import zip
 
 
 def time(line):
@@ -197,7 +224,7 @@ def blocked_times(args):
         if waiting == 0:
             d = sub(t1, time(line))
             if d >= thresh:
-                print t1, sub(t1, t2), cid, d
+                print(t1, sub(t1, t2), cid, d)
             t1 = t2 = cid = blocking = waiting = last_wait = max_wait = 0
 
         last_blocking = blocking
@@ -222,11 +249,11 @@ def time_calls(f):
         elif ' returns ' in line and t1 is not None:
             d = sub(t1, time(line))
             if d >= thresh:
-                print t1, d, connidre.search(line).group(1)
+                print(t1, d, connidre.search(line).group(1))
             maxd = max(maxd, d)
             t1 = None
 
-    print maxd
+    print(maxd)
 
 def xopen(f):
     if f == '-':
@@ -268,7 +295,7 @@ def time_tpc(f):
                 t = time(line)
                 d = sub(t1, t)
                 if d >= thresh:
-                    print 'a', t1, cid, sub(t1, t2), vs, sub(t2, t)
+                    print('a', t1, cid, sub(t1, t2), vs, sub(t2, t))
                 del transactions[cid]
         elif ' calling tpc_finish(' in line:
             if cid in transactions:
@@ -280,7 +307,7 @@ def time_tpc(f):
                 t = time(line)
                 d = sub(t1, t)
                 if d >= thresh:
-                    print 'c', t1, cid, sub(t1, t2), vs, sub(t2, t3), sub(t3, t)
+                    print('c', t1, cid, sub(t1, t2), vs, sub(t2, t3), sub(t3, t))
                 del transactions[cid]
 
 
@@ -336,9 +363,9 @@ def time_trans(f):
                     t = time(line)
                     d = sub(t1, t)
                     if d >= thresh:
-                        print t1, cid, "%s/%s" % (stores, old), \
+                        print(t1, cid, "%s/%s" % (stores, old), \
                               sub(t0, t1), sub(t1, t2), vs, \
-                              sub(t2, t), 'abort'
+                              sub(t2, t), 'abort')
                 del transactions[cid]
         elif ' calling tpc_finish(' in line:
             if cid in transactions:
@@ -350,9 +377,9 @@ def time_trans(f):
                 t = time(line)
                 d = sub(t1, t)
                 if d >= thresh:
-                    print t1, cid, "%s/%s" % (stores, old), \
+                    print(t1, cid, "%s/%s" % (stores, old), \
                           sub(t0, t1), sub(t1, t2), vs, \
-                          sub(t2, t3), sub(t3, t)
+                          sub(t2, t3), sub(t3, t))
                 del transactions[cid]
 
 def minute(f, slice=16, detail=1, summary=1):
@@ -365,8 +392,8 @@ def minute(f, slice=16, detail=1, summary=1):
 
     cols = ["time", "reads", "stores", "commits", "aborts", "txns"]
     fmt = "%18s %6s %6s %7s %6s %6s"
-    print fmt % cols
-    print fmt % ["-"*len(col) for col in cols]
+    print(fmt % cols)
+    print(fmt % ["-"*len(col) for col in cols])
 
     mlast = r = s = c = a = cl = None
     rs = []
@@ -387,7 +414,7 @@ def minute(f, slice=16, detail=1, summary=1):
             if m != mlast:
                 if mlast:
                     if detail:
-                        print fmt % (mlast, len(cl), r, s, c, a, a+c)
+                        print(fmt % (mlast, len(cl), r, s, c, a, a+c))
                     cls.append(len(cl))
                     rs.append(r)
                     ss.append(s)
@@ -412,7 +439,7 @@ def minute(f, slice=16, detail=1, summary=1):
 
     if mlast:
         if detail:
-            print fmt % (mlast, len(cl), r, s, c, a, a+c)
+            print(fmt % (mlast, len(cl), r, s, c, a, a+c))
         cls.append(len(cl))
         rs.append(r)
         ss.append(s)
@@ -421,16 +448,16 @@ def minute(f, slice=16, detail=1, summary=1):
         ts.append(c+a)
 
     if summary:
-        print
-        print 'Summary:     \t', '\t'.join(('min', '10%', '25%', 'med',
-                                            '75%', '90%', 'max', 'mean'))
-        print "n=%6d\t" % len(cls), '-'*62
-        print 'Clients: \t', '\t'.join(map(str,stats(cls)))
-        print 'Reads:   \t', '\t'.join(map(str,stats(rs)))
-        print 'Stores:  \t', '\t'.join(map(str,stats(ss)))
-        print 'Commits: \t', '\t'.join(map(str,stats(cs)))
-        print 'Aborts:  \t', '\t'.join(map(str,stats(aborts)))
-        print 'Trans:   \t', '\t'.join(map(str,stats(ts)))
+        print()
+        print('Summary:     \t', '\t'.join(('min', '10%', '25%', 'med',
+                                            '75%', '90%', 'max', 'mean')))
+        print("n=%6d\t" % len(cls), '-'*62)
+        print('Clients: \t', '\t'.join(map(str,stats(cls))))
+        print('Reads:   \t', '\t'.join(map(str,stats(rs))))
+        print('Stores:  \t', '\t'.join(map(str,stats(ss))))
+        print('Commits: \t', '\t'.join(map(str,stats(cs))))
+        print('Aborts:  \t', '\t'.join(map(str,stats(aborts))))
+        print('Trans:   \t', '\t'.join(map(str,stats(ts))))
 
 def stats(s):
     s.sort()
@@ -497,7 +524,7 @@ def verify(f):
             t1, n = nv[cid]
             if n:
                 d = sub(t1, time(line))
-                print cid, t1, n, d, n and (d*1000.0/n) or '-'
+                print(cid, t1, n, d, n and (d*1000.0/n) or '-')
 
 def recovery(f):
     f, = f
@@ -520,17 +547,17 @@ def recovery(f):
         else:
             if trans:
                 if len(trans) > 1:
-                    print "  ... %s similar records skipped ..." % (
-                        len(trans) - 1)
-                    print n, last.strip()
+                    print("  ... %s similar records skipped ..." % (
+                        len(trans) - 1))
+                    print(n, last.strip())
                 trans=[]
-            print n, line.strip()
+            print(n, line.strip())
         last = line
 
     if len(trans) > 1:
-        print "  ... %s similar records skipped ..." % (
-            len(trans) - 1)
-        print n, last.strip()
+        print("  ... %s similar records skipped ..." % (
+            len(trans) - 1))
+        print(n, last.strip())
 
 
 

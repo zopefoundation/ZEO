@@ -29,6 +29,8 @@ Options:
 
 Unless -C is specified, -a and -f are required.
 """
+from __future__ import print_function
+from __future__ import print_function
 
 # The code here is designed to be reused by other, similar servers.
 # For the forseeable future, it must work under Python 2.1 as well as
@@ -256,7 +258,7 @@ class ZEOServer:
 
     def loop_forever(self):
         if self.options.testing_exit_immediately:
-            print "testing exit immediately"
+            print("testing exit immediately")
         else:
             self.server.loop()
 
@@ -322,7 +324,7 @@ class ZEOServer:
                 if os.path.exists(pidfile):
                     os.unlink(pidfile)
                 f = open(pidfile, 'w')
-                print >> f, pid
+                print(pid, file=f)
                 f.close()
                 log("created PID file '%s'" % pidfile)
             except IOError:
