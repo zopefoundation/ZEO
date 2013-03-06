@@ -265,7 +265,7 @@ class SizedMessageAsyncConnection(asyncore.dispatcher):
             size = sum((len(s) for s in output))
             while (size <= SEND_SIZE) and messages:
                 message = messages[0]
-                if message.__class__ is str:
+                if message.__class__ is six.binary_type:
                     size += self.__message_output(messages.pop(0), output)
                 elif message is _close_marker:
                     del messages[:]
