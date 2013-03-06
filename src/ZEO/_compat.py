@@ -32,3 +32,8 @@ else:
 
     import thread
     from thread import get_ident
+
+try:
+    from cStringIO import StringIO
+except:
+    from io import StringIO

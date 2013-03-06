@@ -32,8 +32,8 @@ class ZEOConfigTest(ConfigTestBase):
         from ZEO.ClientStorage import ClientDisconnected
         import ZConfig
         from ZODB.config import getDbSchema
-        from ZEO._compat import BytesIO
-        cfg = b"""
+        from ZEO._compat import StringIO
+        cfg = """
         <zodb>
           <zeoclient>
             server localhost:56897
@@ -41,12 +41,12 @@ class ZEOConfigTest(ConfigTestBase):
           </zeoclient>
         </zodb>
         """
-        config, handle = ZConfig.loadConfigFile(getDbSchema(), BytesIO(cfg))
+        config, handle = ZConfig.loadConfigFile(getDbSchema(), StringIO(cfg))
         self.assertEqual(config.database[0].config.storage.config.blob_dir,
                          None)
         self.assertRaises(ClientDisconnected, self._test, cfg)
 
-        cfg = b"""
+        cfg = """
         <zodb>
           <zeoclient>
             blob-dir blobs
@@ -55,7 +55,7 @@ class ZEOConfigTest(ConfigTestBase):
           </zeoclient>
         </zodb>
         """
-        config, handle = ZConfig.loadConfigFile(getDbSchema(), BytesIO(cfg))
+        config, handle = ZConfig.loadConfigFile(getDbSchema(), StringIO(cfg))
         self.assertEqual(config.database[0].config.storage.config.blob_dir,
                          'blobs')
         self.assertRaises(ClientDisconnected, self._test, cfg)
