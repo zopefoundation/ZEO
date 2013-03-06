@@ -108,7 +108,7 @@ class ZEOStorage:
     def notifyConnected(self, conn):
         self.connection = conn
         assert conn.peer_protocol_version is not None
-        if conn.peer_protocol_version < 'Z309':
+        if conn.peer_protocol_version < b'Z309':
             self.client = ClientStub308(conn)
             conn.register_object(ZEOStorage308Adapter(self))
         else:
@@ -253,7 +253,7 @@ class ZEOStorage:
 
 
         supportsUndo = (getattr(storage, 'supportsUndo', lambda : False)()
-                        and self.connection.peer_protocol_version >= 'Z310')
+                        and self.connection.peer_protocol_version >= b'Z310')
 
         # Communicate the backend storage interfaces to the client
         storage_provides = zope.interface.providedBy(storage)
