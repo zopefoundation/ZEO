@@ -23,6 +23,7 @@ import subprocess
 import logging
 import tempfile
 import logging
+import six
 import ZODB.tests.util
 import zope.testing.setupstack
 from ZEO._compat import BytesIO
@@ -358,7 +359,7 @@ def wait_until(label=None, func=None, timeout=30, onfail=None):
     if label is None:
         if func is not None:
             label = func.__name__
-    elif not isinstance(label, basestring) and func is None:
+    elif not isinstance(label, six.string_types) and func is None:
         func = label
         label = func.__name__
 

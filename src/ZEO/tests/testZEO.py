@@ -13,7 +13,6 @@
 ##############################################################################
 """Test suite for ZEO based on ZODB.tests."""
 from __future__ import print_function
-from __future__ import print_function
 
 from ZEO.ClientStorage import ClientStorage
 from ZEO.tests.forker import get_port
@@ -258,7 +257,7 @@ class GenericTests(
             try:
                 t = transaction.get()
                 store.tpc_begin(t)
-                store.store(oid, revid, 'x', '', t)
+                store.store(oid, revid, b'x', '', t)
                 store.tpc_vote(t)
                 store.tpc_finish(t)
             except Exception as v:
@@ -625,7 +624,7 @@ class CommonBlobTests:
              handle_serials
         import transaction
 
-        somedata = 'a' * 10
+        somedata = b'a' * 10
 
         blob = Blob()
         bd_fh = blob.open('w')
@@ -649,7 +648,7 @@ class CommonBlobTests:
         self.assert_(not os.path.exists(tfname))
         filename = self._storage.fshelper.getBlobFilename(oid, revid)
         self.assert_(os.path.exists(filename))
-        self.assertEqual(somedata, open(filename).read())
+        self.assertEqual(somedata, open(filename, 'rb').read())
 
     def checkStoreBlob_wrong_partition(self):
         os_rename = os.rename
@@ -667,7 +666,7 @@ class CommonBlobTests:
              handle_serials
         import transaction
 
-        somedata = 'a' * 10
+        somedata = b'a' * 10
 
         blob = Blob()
         bd_fh = blob.open('w')
@@ -699,7 +698,8 @@ class CommonBlobTests:
 
     def checkTransactionBufferCleanup(self):
         oid = self._storage.new_oid()
-        open('blob_file', 'w').write('I am a happy blob.')
+        with open('blob_file', 'wb') as f:
+            f.write(b'I am a happy blob.')
         t = transaction.Transaction()
         self._storage.tpc_begin(t)
         self._storage.storeBlob(
@@ -720,7 +720,7 @@ class BlobAdaptedFileStorageTests(FullGenericTests, CommonBlobTests):
         somedata_path = os.path.join(self.blob_cache_dir, 'somedata')
         somedata = open(somedata_path, 'w+b')
         for i in range(1000000):
-            somedata.write("%s\n" % i)
+            somedata.write(("%s\n" % i).encode('ascii'))
         somedata.seek(0)
 
         blob = Blob()
@@ -1240,10 +1240,10 @@ def runzeo_without_configfile():
     ... ''' % sys.path)
 
     >>> import subprocess, re
-    >>> print re.sub('\d\d+|[:]', '', subprocess.Popen(
+    >>> print(re.sub('\d\d+|[:]', '', subprocess.Popen(
     ...     [sys.executable, 'runzeo', '-a:%s' % get_port(), '-ft', '--test'],
     ...     stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-    ...     ).stdout.read()), # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+    ...     ).stdout.read())) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     ------
     --T INFO ZEO.runzeo () opening storage '1' using FileStorage
     ------
@@ -1277,7 +1277,7 @@ Invalidations could cause errors when closing client storages,
     >>> time.sleep(.01)
     >>> for i in range(10):
     ...     conn = ZEO.connection(addr)
-    ...     _ = conn._storage.load('\0'*8)
+    ...     _ = conn._storage.load(b'\0'*8)
     ...     conn.close()
 
     >>> writing.clear()
@@ -1336,7 +1336,7 @@ constructor.
     ... def check_for_test_label_1():
     ...    for line in open('server-%s.log' % addr[1]):
     ...        if 'test-label-1' in line:
-    ...            print line.split()[1:4]
+    ...            print(line.split()[1:4])
     ...            return True
     ['INFO', 'ZEO.StorageServer', '(test-label-1']
 
@@ -1356,7 +1356,7 @@ You can specify the client label via a configuration file as well:
     ... def check_for_test_label_2():
     ...    for line in open('server-%s.log' % addr[1]):
     ...        if 'test-label-2' in line:
-    ...            print line.split()[1:4]
+    ...            print(line.split()[1:4])
     ...            return True
     ['INFO', 'ZEO.StorageServer', '(test-label-2']
 

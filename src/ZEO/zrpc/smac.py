@@ -196,7 +196,7 @@ class SizedMessageAsyncConnection(asyncore.dispatcher):
                 inp = d
             else:
                 inp.append(d)
-                inp = "".join(inp)
+                inp = b"".join(inp)
 
             offset = 0
             while (offset + msg_size) <= input_len:

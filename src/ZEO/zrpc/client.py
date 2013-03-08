@@ -507,7 +507,7 @@ class ConnectThread(threading.Thread):
     def _fallback_wrappers(self, wrappers, deadline):
         # If we've got wrappers left at this point, they're fallback
         # connections.  Try notifying them until one succeeds.
-        for wrap in wrappers.keys():
+        for wrap in list(wrappers.keys()):
             assert wrap.state == "tested" and wrap.preferred == 0
             if self.mgr.is_connected():
                 wrap.close()

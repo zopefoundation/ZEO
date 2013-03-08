@@ -127,8 +127,8 @@ class IterationTests:
         txn_info1 = six.advance_iterator(iter1)
         txn_info2 = six.advance_iterator(iter2)
         self.assertEquals(txn_info1.tid, txn_info2.tid)
-        self.assertRaises(StopIteration, iter1.next)
-        self.assertRaises(StopIteration, iter2.next)
+        self.assertRaises(StopIteration, next, iter1)
+        self.assertRaises(StopIteration, next, iter2)
 
 
 def iterator_sane_after_reconnect():

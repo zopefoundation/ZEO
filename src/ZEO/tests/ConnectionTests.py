@@ -335,7 +335,7 @@ class ConnectionTests(CommonSetupTearDown):
         self.shutdownServer()
         self._storage = self.openClientStorage('test', 1000, wait=0)
         self.assertRaises(ClientDisconnected,
-                          self._storage.load, 'fredwash', '')
+                          self._storage.load, b'fredwash', '')
         self._storage.close()
 
     def checkBasicPersistence(self):
@@ -579,13 +579,13 @@ class ConnectionTests(CommonSetupTearDown):
         self._storage = self.openClientStorage()
         self._dostore()
         self.shutdownServer()
-        self.assertRaises(ClientDisconnected, self._storage.load, '\0'*8, '')
+        self.assertRaises(ClientDisconnected, self._storage.load, b'\0'*8, '')
 
         self.startServer()
 
         # No matter how long we wait, the client won't reconnect:
         time.sleep(2)
-        self.assertRaises(ClientDisconnected, self._storage.load, '\0'*8, '')
+        self.assertRaises(ClientDisconnected, self._storage.load, b'\0'*8, '')
 
 class InvqTests(CommonSetupTearDown):
     invq = 3
