@@ -33,7 +33,7 @@ def encode(*args): # args: (msgid, flags, name, args)
     if PY3:
         # XXX: Py3: Needs optimization.
         f = BytesIO()
-        pickler = Pickler(f, 1)
+        pickler = Pickler(f, 3)
         pickler.fast = 1
         pickler.dump(args)
         res = f.getvalue()

@@ -17,8 +17,21 @@ import sys
 
 PY3 = sys.version_info[0] >= 3
 
-# Pickle support
-from ZODB._compat import Pickler, Unpickler, dump, dumps, loads
+if PY3:
+    from pickle import Pickler, Unpickler as _Unpickler, dump, dumps, loads
+    class Unpickler(_Unpickler):
+        # Py3: Python 3 doesn't allow assignments to find_global,
+        # instead, find_class can be overridden
+
+        find_global = None
+
+        def find_class(self, modulename, name):
+            if self.find_global is None:
+                return super(Unpickler, self).find_class(modulename, name)
+            return self.find_global(modulename, name)
+else:
+    # Pickle support
+    from cPickle import Pickler, Unpickler, dump, dumps, loads
 
 # String and Bytes IO
 from ZODB._compat import BytesIO
@@ -37,3 +50,4 @@ try:
     from cStringIO import StringIO
 except:
     from io import StringIO
+
