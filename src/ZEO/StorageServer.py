@@ -602,7 +602,8 @@ class ZEOStorage:
             self.storage.deleteObject(oid, serial, self.transaction)
         except (SystemExit, KeyboardInterrupt):
             raise
-        except Exception as err:
+        except Exception as e:
+            err = e
             self._op_error(oid, err, 'delete')
 
         return err is None
@@ -614,7 +615,8 @@ class ZEOStorage:
                 oid, serial, self.transaction)
         except (SystemExit, KeyboardInterrupt):
             raise
-        except Exception as err:
+        except Exception as e:
+            err = e
             self._op_error(oid, err, 'checkCurrentSerialInTransaction')
 
         return err is None
@@ -669,7 +671,8 @@ class ZEOStorage:
             tid, oids = self.storage.undo(trans_id, self.transaction)
         except (SystemExit, KeyboardInterrupt):
             raise
-        except Exception as err:
+        except Exception as e:
+            err = e
             self._op_error(z64, err, 'undo')
         else:
             self.invalidated.extend(oids)
@@ -681,12 +684,12 @@ class ZEOStorage:
         # Try to pickle the exception.  If it can't be pickled,
         # the RPC response would fail, so use something that can be pickled.
         if PY3:
-            pickler = Pickler(BytesIO(), 1)
+            pickler = Pickler(BytesIO(), 3)
         else:
             pickler = Pickler()
         pickler.fast = 1
         try:
-            pickler.dump(error, 1)
+            pickler.dump(error)
         except:
             msg = "Couldn't pickle storage exception: %s" % repr(error)
             self.log(msg, logging.ERROR)
