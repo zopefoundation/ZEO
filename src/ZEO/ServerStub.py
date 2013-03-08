@@ -308,7 +308,7 @@ class StorageServer:
 class StorageServer308(StorageServer):
 
     def __init__(self, rpc):
-        if rpc.peer_protocol_version == 'Z200':
+        if rpc.peer_protocol_version == b'Z200':
             self.lastTransaction = lambda: z64
             self.getInvalidations = lambda tid: None
             self.getAuthProtocol = lambda: None
@@ -386,7 +386,7 @@ def stub(client, connection):
             raise ValueError("Timeout waiting for protocol handshake")
         time.sleep(0.1)
 
-    if connection.peer_protocol_version < 'Z309':
+    if connection.peer_protocol_version < b'Z309':
         return StorageServer308(connection)
     return StorageServer(connection)
 

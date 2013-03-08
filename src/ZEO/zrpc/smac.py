@@ -182,7 +182,7 @@ class SizedMessageAsyncConnection(asyncore.dispatcher):
             if msg_size > input_len:
                 if inp is None:
                     self.__inp = d
-                elif type(self.__inp) is str:
+                elif isinstance(self.__inp, six.binary_type):
                     self.__inp = [self.__inp, d]
                 else:
                     self.__inp.append(d)
@@ -190,7 +190,7 @@ class SizedMessageAsyncConnection(asyncore.dispatcher):
                 return # keep waiting for more input
 
             # load all previous input and d into single string inp
-            if isinstance(inp, str):
+            if isinstance(inp, six.binary_type):
                 inp = inp + d
             elif inp is None:
                 inp = d
@@ -265,7 +265,7 @@ class SizedMessageAsyncConnection(asyncore.dispatcher):
             size = sum((len(s) for s in output))
             while (size <= SEND_SIZE) and messages:
                 message = messages[0]
-                if message.__class__ is six.binary_type:
+                if isinstance(message, six.binary_type):
                     size += self.__message_output(messages.pop(0), output)
                 elif message is _close_marker:
                     del messages[:]

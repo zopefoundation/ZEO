@@ -112,6 +112,7 @@ def client_loop(map):
                         'A ZEO client loop failed.',
                         exc_info=sys.exc_info())
                 except:
+
                     pass
 
                 for fd, obj in map.items():
@@ -212,7 +213,7 @@ class ConnectionManager(object):
                 log("CM.close(): self.thread.join() timed out",
                     level=logging.WARNING)
 
-        for fd, obj in self.map.items():
+        for fd, obj in list(self.map.items()):
             if obj is not self.trigger:
                 try:
                     obj.close()

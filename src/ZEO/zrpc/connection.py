@@ -243,16 +243,16 @@ class Connection(smac.SizedMessageAsyncConnection, object):
 
     # Protocol variables:
     # Our preferred protocol.
-    current_protocol = "Z3101"
+    current_protocol = b"Z3101"
 
     # If we're a client, an exhaustive list of the server protocols we
     # can accept.
-    servers_we_can_talk_to = ["Z308", "Z309", "Z310", current_protocol]
+    servers_we_can_talk_to = [b"Z308", b"Z309", b"Z310", current_protocol]
 
     # If we're a server, an exhaustive list of the client protocols we
     # can accept.
     clients_we_can_talk_to = [
-        "Z200", "Z201", "Z303", "Z308", "Z309", "Z310", current_protocol]
+        b"Z200", b"Z201", b"Z303", b"Z308", b"Z309", b"Z310", current_protocol]
 
     # This is pretty excruciating.  Details:
     #
@@ -278,7 +278,7 @@ class Connection(smac.SizedMessageAsyncConnection, object):
     # Exception types that should not be logged:
     unlogged_exception_types = ()
 
-    # Client constructor passes 'C' for tag, server constructor 'S'.  This
+    # Client constructor passes b'C' for tag, server constructor b'S'.  This
     # is used in log messages, and to determine whether we can speak with
     # our peer.
     def __init__(self, sock, addr, obj, tag, map=None):
@@ -290,9 +290,9 @@ class Connection(smac.SizedMessageAsyncConnection, object):
         self.closed = False
         self.peer_protocol_version = None # set in recv_handshake()
 
-        assert tag in "CS"
+        assert tag in b"CS"
         self.tag = tag
-        self.logger = logging.getLogger('ZEO.zrpc.Connection(%c)' % tag)
+        self.logger = logging.getLogger('ZEO.zrpc.Connection(%r)' % tag)
         if isinstance(addr, tuple):
             self.log_label = "(%s:%d) " % addr
         else:
@@ -393,10 +393,10 @@ class Connection(smac.SizedMessageAsyncConnection, object):
         del self.message_input  # uncover normal-case message_input()
         self.peer_protocol_version = proto
 
-        if self.tag == 'C':
+        if self.tag == b'C':
             good_protos = self.servers_we_can_talk_to
         else:
-            assert self.tag == 'S'
+            assert self.tag == b'S'
             good_protos = self.clients_we_can_talk_to
 
         if proto in good_protos:
@@ -604,7 +604,7 @@ class ManagedServerConnection(Connection):
     def __init__(self, sock, addr, obj, mgr):
         self.mgr = mgr
         map = {}
-        Connection.__init__(self, sock, addr, obj, 'S', map=map)
+        Connection.__init__(self, sock, addr, obj, b'S', map=map)
 
         self.decode = ZEO.zrpc.marshal.server_decode
 
@@ -699,7 +699,7 @@ class ManagedClientConnection(Connection):
         self.replies_cond = threading.Condition()
         self.replies = {}
 
-        self.__super_init(sock, addr, None, tag='C', map=mgr.map)
+        self.__super_init(sock, addr, None, tag=b'C', map=mgr.map)
         self.trigger = mgr.trigger
         self.call_from_thread = self.trigger.pull_trigger
         self.call_from_thread()

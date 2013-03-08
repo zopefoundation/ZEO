@@ -142,7 +142,7 @@ class TBIterator(object):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         """Return next tuple of data or None if EOF"""
         if self.count == 0:
             self.file.seek(0)
@@ -151,3 +151,4 @@ class TBIterator(object):
         oid_ver_data = self.unpickler.load()
         self.count -= 1
         return oid_ver_data
+    next = __next__

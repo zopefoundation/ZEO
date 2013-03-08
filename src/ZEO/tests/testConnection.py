@@ -114,7 +114,7 @@ class MonitorTests(ZEO.tests.testMonitor.MonitorTests):
     def check_connection_management_with_old_client(self):
         # Check that connection management works even when using an
         # older protcool that requires a connection adapter.
-        test_protocol = "Z303"
+        test_protocol = b"Z303"
         current_protocol = ZEO.zrpc.connection.Connection.current_protocol
         ZEO.zrpc.connection.Connection.current_protocol = test_protocol
         ZEO.zrpc.connection.Connection.servers_we_can_talk_to.append(

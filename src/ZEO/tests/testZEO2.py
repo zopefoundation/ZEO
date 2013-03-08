@@ -443,7 +443,7 @@ ZEOStorage as closed and see if trying to get a lock cleans it up:
     ZEO.StorageServer DEBUG
     (test-addr-1) ('1') lock: transactions waiting: 0
     ZEO.StorageServer BLATHER
-    (test-addr-1) Preparing to commit transaction: 1 objects, 36 bytes
+    (test-addr-1) Preparing to commit transaction: 1 objects, ... bytes
     1 callAsync serialnos ...
 
     >>> zs1.connection = None
@@ -456,7 +456,7 @@ ZEOStorage as closed and see if trying to get a lock cleans it up:
     ZEO.StorageServer DEBUG
     (test-addr-2) ('1') lock: transactions waiting: 0
     ZEO.StorageServer BLATHER
-    (test-addr-2) Preparing to commit transaction: 1 objects, 36 bytes
+    (test-addr-2) Preparing to commit transaction: 1 objects, ... bytes
     2 callAsync serialnos ...
 
     >>> zs1.txnlog.close()
@@ -475,6 +475,8 @@ def test_suite():
                 (re.compile('\d+/test-addr'), ''),
                 (re.compile("'lock_time': \d+.\d+"), 'lock_time'),
                 (re.compile(r"'start': '[^\n]+'"), 'start'),
+                (re.compile('ZODB.POSException.StorageTransactionError'),
+                 'StorageTransactionError'),
                 ]),
             ),
         ))

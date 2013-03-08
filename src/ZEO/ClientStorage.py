@@ -29,6 +29,8 @@ import tempfile
 import threading
 import time
 import weakref
+from binascii import hexlify
+
 import zc.lockfile
 import ZEO.interfaces
 import ZODB
@@ -568,7 +570,7 @@ class ClientStorage(object):
         # TODO:  Should we check the protocol version here?
         conn._is_read_only = self._is_read_only
         stub = self.StorageServerStubClass(conn)
-
+        
         auth = stub.getAuthProtocol()
         logger.info("%s Server authentication protocol %r", self.__name__, auth)
         if auth:
@@ -634,10 +636,10 @@ class ClientStorage(object):
 
         stub = self.StorageServerStubClass(conn)
 
-        if self._client_label and conn.peer_protocol_version >= "Z310":
+        if self._client_label and conn.peer_protocol_version >= b"Z310":
             stub.set_client_label(self._client_label)
 
-        if conn.peer_protocol_version < "Z3101":
+        if conn.peer_protocol_version < b"Z3101":
             logger.warning("Old server doesn't suppport "
                            "checkCurrentSerialInTransaction")
             self.checkCurrentSerialInTransaction = lambda *args: None
@@ -1332,7 +1334,7 @@ class ClientStorage(object):
         self._pickler = Pickler(self._tfile, 1)
         self._pickler.fast = 1 # Don't use the memo
 
-        if self._connection.peer_protocol_version < 'Z309':
+        if self._connection.peer_protocol_version < b'Z309':
             client = ClientStorage308Adapter(self)
         else:
             client = self
@@ -1557,7 +1559,7 @@ class TransactionIterator(object):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         if self._ended:
             raise StopIteration()
 
@@ -1574,6 +1576,8 @@ class TransactionIterator(object):
 
         return ClientStorageTransactionInformation(
             self._storage, self, *tx_data)
+
+    next = __next__
 
 
 class ClientStorageTransactionInformation(ZODB.BaseStorage.TransactionRecord):
@@ -1607,7 +1611,7 @@ class RecordIterator(object):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         if self._completed:
             # We finished iteration once already and the server can't know
             # about the iteration anymore.
@@ -1619,6 +1623,8 @@ class RecordIterator(object):
             self._completed = True
             raise StopIteration()
         return ZODB.BaseStorage.DataRecord(*item)
+
+    next = __next__
 
 
 class ClientStorage308Adapter:
@@ -1647,7 +1653,8 @@ class BlobCacheLayout(object):
         base, rem = divmod(utils.u64(oid), self.size)
         return os.path.join(
             str(rem),
-            "%s.%s%s" % (base, tid.encode('hex'), ZODB.blob.BLOB_SUFFIX)
+            "%s.%s%s" % (base, hexlify(tid).decode('ascii'),
+                         ZODB.blob.BLOB_SUFFIX)
             )
 
 def _accessed(filename):

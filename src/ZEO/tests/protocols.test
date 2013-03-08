@@ -17,7 +17,7 @@ Let's start a Z308 server
     ... '''
 
     >>> addr, admin = start_server(
-    ...    storage_conf, dict(invalidation_queue_size=5), protocol='Z308')
+    ...    storage_conf, dict(invalidation_queue_size=5), protocol=b'Z308')
 
 A current client should be able to connect to a old server:
 
@@ -25,7 +25,7 @@ A current client should be able to connect to a old server:
     >>> db = ZEO.DB(addr, client='client', blob_dir='blobs')
     >>> wait_connected(db.storage)
     >>> db.storage._connection.peer_protocol_version
-    'Z308'
+    b'Z308'
 
     >>> conn = db.open()
     >>> conn.root().x = 0
@@ -105,11 +105,11 @@ Note that we'll have to pull some hijinks:
 
     >>> import ZEO.zrpc.connection
     >>> old_current_protocol = ZEO.zrpc.connection.Connection.current_protocol
-    >>> ZEO.zrpc.connection.Connection.current_protocol = 'Z308'
+    >>> ZEO.zrpc.connection.Connection.current_protocol = b'Z308'
 
     >>> db = ZEO.DB(addr, client='client', blob_dir='blobs')
     >>> db.storage._connection.peer_protocol_version
-    'Z308'
+    b'Z308'
     >>> wait_connected(db.storage)
     >>> conn = db.open()
     >>> conn.root().x = 0
