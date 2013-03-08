@@ -40,7 +40,7 @@ import ZODB.event
 import zope.interface
 import six
 from persistent.TimeStamp import TimeStamp
-from ZEO._compat import Pickler, Unpickler, get_ident
+from ZEO._compat import Pickler, Unpickler, get_ident, PY3
 from ZEO.auth import get_module
 from ZEO.cache import ClientCache
 from ZEO.Exceptions import ClientStorageError, ClientDisconnected, AuthError
@@ -1331,7 +1331,10 @@ class ClientStorage(object):
         # setup tempfile to hold zeoVerify results and interim
         # invalidation results
         self._tfile = tempfile.TemporaryFile(suffix=".inv")
-        self._pickler = Pickler(self._tfile, 1)
+        if PY3:
+            self._pickler = Pickler(self._tfile, 3)
+        else:
+            self._pickler = Pickler(self._tfile, 1)
         self._pickler.fast = 1 # Don't use the memo
 
         if self._connection.peer_protocol_version < b'Z309':
