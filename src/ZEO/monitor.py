@@ -139,7 +139,7 @@ class StatsClient(asyncore.dispatcher):
     def handle_write(self):
         s = "".join(self.buf)
         self.buf = []
-        n = self.socket.send(s)
+        n = self.socket.send(s.encode('ascii'))
         if n < len(s):
             self.buf.append(s[:n])
 
@@ -184,8 +184,7 @@ class StatsServer(asyncore.dispatcher):
         print(time.ctime(), file=f)
         print(file=f)
 
-        L = self.stats.keys()
-        L.sort()
+        L = sorted(self.stats.keys())
         for k in L:
             stats = self.stats[k]
             print("Storage:", k, file=f)

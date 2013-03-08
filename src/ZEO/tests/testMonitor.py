@@ -37,7 +37,7 @@ class MonitorTests(CommonSetupTearDown):
             else:
                 break
         s.close()
-        return "".join(L)
+        return b"".join(L).decode('ascii')
 
     def parse(self, s):
         # Return a list of StorageStats, one for each storage.
