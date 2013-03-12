@@ -1023,7 +1023,7 @@ def tpc_finish_error():
     ...     def register_object(self, ob):
     ...         pass
     ...     def close(self):
-    ...         print 'connection closed'
+    ...         print('connection closed')
     ...     trigger = property(lambda self: self)
     ...     pull_trigger = lambda self, func, *args: func(*args)
 
@@ -1045,25 +1045,25 @@ def tpc_finish_error():
     ...     def endZeoVerify(self):
     ...         self.conn.client.endVerify()
     ...     def lastTransaction(self):
-    ...         return '\0'*8
+    ...         return b'\0'*8
     ...     def tpc_begin(self, t, *args):
     ...         if self.t is not None:
     ...             raise TypeError('already trans')
     ...         self.t = t
-    ...         print 'begin', args
+    ...         print('begin', args)
     ...     def vote(self, t):
     ...         if self.t != t:
     ...             raise TypeError('bad trans')
-    ...         print 'vote'
+    ...         print('vote')
     ...     def tpc_finish(self, *args):
     ...         if self.should_fail:
     ...             raise TypeError()
-    ...         print 'finish'
+    ...         print('finish')
     ...     def tpc_abort(self, t):
     ...         if self.t != t:
     ...             raise TypeError('bad trans')
     ...         self.t = None
-    ...         print 'abort'
+    ...         print('abort')
     ...     def iterator_gc(*args):
     ...         pass
 
@@ -1106,7 +1106,7 @@ def tpc_finish_error():
     >>> cs._update_cache = lambda : None
     >>> try: cs.tpc_finish(t2)
     ... except: pass
-    ... else: print "Should have failed"
+    ... else: print("Should have failed")
     finish
     connection closed
 
@@ -1146,7 +1146,7 @@ def client_has_newer_data_than_server():
 
     >>> db.close()
     >>> for record in handler.records[:5]:
-    ...     print formatter.format(record)
+    ...     print(formatter.format(record))
     ... # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     ZEO.ClientStorage CRITICAL client
     Client has seen newer transactions than server!
