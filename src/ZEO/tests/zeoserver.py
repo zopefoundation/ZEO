@@ -167,7 +167,7 @@ def main():
         elif opt == '-S':
             suicide = False
         elif opt == '-v':
-            ZEO.zrpc.connection.Connection.current_protocol = arg
+            ZEO.zrpc.connection.Connection.current_protocol = arg.encode('ascii')
 
     zo = ZEO.runzeo.ZEOOptions()
     zo.realize(["-C", configfile])
