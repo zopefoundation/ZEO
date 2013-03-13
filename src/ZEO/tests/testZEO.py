@@ -1119,7 +1119,7 @@ def client_has_newer_data_than_server():
 
     >>> db = ZODB.DB('Data.fs')
     >>> db.close()
-    >>> shutil.copyfile('Data.fs', 'Data.save')
+    >>> r = shutil.copyfile('Data.fs', 'Data.save')
     >>> addr, admin = start_server(keep=1)
     >>> db = ZEO.DB(addr, name='client', max_disconnect_poll=.01)
     >>> wait_connected(db.storage)
@@ -1132,7 +1132,7 @@ def client_has_newer_data_than_server():
     see what happens. :)
 
     >>> stop_server(admin)
-    >>> shutil.copyfile('Data.save', 'Data.fs')
+    >>> r = shutil.copyfile('Data.save', 'Data.fs')
 
     >>> import zope.testing.loggingsupport
     >>> handler = zope.testing.loggingsupport.InstalledHandler(
@@ -1515,8 +1515,8 @@ def gracefully_handle_abort_while_storing_many_blobs():
 
     >>> addr, _ = start_server(blob_dir='blobs')
     >>> c = ZEO.connection(addr, blob_dir='cblobs')
-    >>> c.root.x = ZODB.blob.Blob('z'*(1<<20))
-    >>> c.root.y = ZODB.blob.Blob('z'*(1<<2))
+    >>> c.root.x = ZODB.blob.Blob(b'z'*(1<<20))
+    >>> c.root.y = ZODB.blob.Blob(b'z'*(1<<2))
     >>> t = c.transaction_manager.get()
     >>> c.tpc_begin(t)
     >>> c.commit(t)
@@ -1531,7 +1531,7 @@ Now we'll try to use the connection, mainly to wait for everything to
 get processed. Before we fixed this by making tpc_finish a synchronous
 call to the server. we'd get some sort of error here.
 
-    >>> _ = c._storage._server.loadEx('\0'*8)
+    >>> _ = c._storage._server.loadEx(b'\0'*8)
 
     >>> c.close()
 
@@ -1755,6 +1755,10 @@ def test_suite():
         setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
         checker=renormalizing.RENormalizing([
             (re.compile(r"'start': '[^\n]+'"), 'start'),
+            (re.compile("ZODB.POSException.ConflictError"), "ConflictError"),
+            (re.compile("ZODB.POSException.POSKeyError"), "POSKeyError"),
+            (re.compile("ZEO.Exceptions.ClientStorageError"),
+             "ClientStorageError"),
             ]),
         ))
     zeo.addTest(doctest.DocTestSuite(

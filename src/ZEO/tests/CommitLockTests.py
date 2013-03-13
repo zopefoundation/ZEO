@@ -24,7 +24,7 @@ import ZEO.ClientStorage
 from ZEO.Exceptions import ClientDisconnected
 from ZEO.tests.TestThread import TestThread
 
-ZERO = '\0'*8
+ZERO = b'\0'*8
 
 class DummyDB:
     def invalidate(self, *args, **kwargs):
