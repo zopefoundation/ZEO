@@ -231,7 +231,7 @@ We start a transaction and vote, this leads to getting the lock.
     ZEO.StorageServer DEBUG
     (test-addr-1) ('1') lock: transactions waiting: 0
     ZEO.StorageServer BLATHER
-    (test-addr-1) Preparing to commit transaction: 1 objects, 36 bytes
+    (test-addr-1) Preparing to commit transaction: 1 objects, ... bytes
     1 callAsync serialnos ...
 
 If another client tried to vote, it's lock request will be queued and
@@ -253,7 +253,7 @@ When we end the first transaction, the queued vote gets the lock.
     ZEO.StorageServer DEBUG
     (test-addr-2) ('1') lock: transactions waiting: 0
     ZEO.StorageServer BLATHER
-    (test-addr-2) Preparing to commit transaction: 1 objects, 36 bytes
+    (test-addr-2) Preparing to commit transaction: 1 objects, ... bytes
     2 callAsync serialnos ...
 
 Let's try again with the first client. The vote will be queued:
@@ -328,7 +328,7 @@ release the lock and one of the waiting clients will get the lock.
     ZEO.StorageServer WARNING
     (test-addr-1) ('1') lock: transactions waiting: 9
     ZEO.StorageServer BLATHER
-    (test-addr-1) Preparing to commit transaction: 1 objects, 36 bytes
+    (test-addr-1) Preparing to commit transaction: 1 objects, ... bytes
     1 callAsync serialnos ...
 
 (In practice, waiting clients won't necessarily get the lock in order.)

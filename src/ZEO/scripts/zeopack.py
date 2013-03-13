@@ -85,7 +85,7 @@ def _main(args=None, prog=None):
 
     packt = time.time()
     if options.time:
-        time_ = map(int, options.time.split(':'))
+        time_ = list(map(int, options.time.split(':')))
         if len(time_) == 1:
             time_ += (0, 0)
         elif len(time_) == 2:

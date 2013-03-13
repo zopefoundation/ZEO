@@ -13,6 +13,7 @@
 ##############################################################################
 """Test suite for ZEO based on ZODB.tests."""
 from __future__ import print_function
+import re
 
 from ZEO.ClientStorage import ClientStorage
 from ZEO.tests.forker import get_port
@@ -1453,7 +1454,7 @@ def generate_script(name, src):
 def runzeo_logrotate_on_sigusr2():
     """
     >>> port = get_port()
-    >>> open('c', 'w').write('''
+    >>> r = open('c', 'w').write('''
     ... <zeo>
     ...    address %s
     ... </zeo>
@@ -1756,8 +1757,14 @@ def test_suite():
             (re.compile(r"'start': '[^\n]+'"), 'start'),
             ]),
         ))
-    zeo.addTest(doctest.DocTestSuite(ZEO.tests.IterationTests,
-        setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown))
+    zeo.addTest(doctest.DocTestSuite(
+            ZEO.tests.IterationTests,
+            setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
+            checker=renormalizing.RENormalizing((
+                    (re.compile("ZEO.Exceptions.ClientDisconnected"),
+                     "ClientDisconnected"),
+                    )),
+            ))
     zeo.addTest(doctest.DocFileSuite('registerDB.test'))
     zeo.addTest(
         doctest.DocFileSuite(

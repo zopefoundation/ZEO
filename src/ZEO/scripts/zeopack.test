@@ -14,25 +14,25 @@ for our test:
     ...             logging.getLogger('test.ClientStorage').error(
     ...                 "I hate this address, %r", args[0])
     ...             raise ValueError("Bad address")
-    ...         print "ClientStorage(%s %s)" % (
+    ...         print("ClientStorage(%s %s)" % (
     ...             repr(args)[1:-1],
     ...             ', '.join("%s=%r" % i for i in sorted(kw.items())),
-    ...             )
+    ...             ))
     ...     def pack(self, t=None, *args, **kw):
     ...         now = time.localtime(time.time())
     ...         local_midnight = time.mktime(now[:3]+(0, 0, 0)+now[6:])
     ...         t -= local_midnight # adjust for tz
     ...         t += 86400*7 # add a week to make sure we're positive
-    ...         print "pack(%r,%s %s)" % (
+    ...         print("pack(%r,%s %s)" % (
     ...             t, repr(args)[1:-1],
     ...             ', '.join("%s=%r" % i for i in sorted(kw.items())),
-    ...             )
+    ...             ))
     ...     def is_connected(self):
     ...         self.connect_wait -= 1
-    ...         print 'is_connected', self.connect_wait < 0
+    ...         print('is_connected', self.connect_wait < 0)
     ...         return self.connect_wait < 0
     ...     def close(self):
-    ...         print "close()"
+    ...         print("close()")
 
     >>> import ZEO
     >>> ClientStorage_orig = ZEO.ClientStorage.ClientStorage
@@ -83,7 +83,7 @@ value is timezone dependent.
     >>> time.time = lambda : time.mktime((2009, 3, 24, 10, 55, 17, 1, 83, -1))
     >>> sleep_orig = time.sleep
     >>> def sleep(t):
-    ...     print 'sleep(%r)' % t
+    ...     print('sleep(%r)' % t)
     >>> time.sleep = sleep
 
 Normally, we pass one or more TCP server specifications:
@@ -178,8 +178,8 @@ seconds of waiting for a connect.
     ...     try:
     ...         try:
     ...             main(args)
-    ...         except SystemExit, v:
-    ...             print "Exited", v
+    ...         except SystemExit as v:
+    ...             print("Exited", v)
     ...     finally:
     ...         sys.stderr = old_stderr
 

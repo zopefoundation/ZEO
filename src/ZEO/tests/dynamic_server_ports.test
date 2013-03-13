@@ -82,7 +82,7 @@ dynamic port using ZConfig, you'd use a hostname by itself. In this
 case, ZConfig passes None as the port.
 
     >>> import ZEO.runzeo
-    >>> open('conf', 'w').write("""
+    >>> r = open('conf', 'w').write("""
     ... <zeo>
     ...     address 127.0.0.1
     ... </zeo>
