@@ -154,7 +154,7 @@ def main(args=None):
                                code & 0x80,
                                code & 0x7e)
         # And pass it to the simulation.
-        this_interval = int(ts)/interval_step
+        this_interval = int(ts) // interval_step
         if this_interval != last_interval:
             if last_interval is not None:
                 interval_sim.report()

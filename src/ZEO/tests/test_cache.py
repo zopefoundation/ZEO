@@ -424,7 +424,7 @@ def thread_safe():
 >>> for i in range(100):
 ...     cache.store(ZODB.utils.p64(i), ZODB.utils.p64(1), None, b'0')
 
->>> import random, sys, threading
+>>> import random2 as random, sys, threading
 >>> random = random.Random(0)
 >>> stop = False
 >>> read_failure = None
@@ -512,7 +512,7 @@ Check to make sure the cache analysis scripts work.
     >>> time.time = lambda : now
 
     >>> os.environ["ZEO_CACHE_TRACE"] = 'yes'
-    >>> import random
+    >>> import random2 as random
     >>> random = random.Random(42)
     >>> history = []
     >>> serial = 1

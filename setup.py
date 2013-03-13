@@ -71,7 +71,7 @@ def alltests():
                     suite.addTest(mod.test_suite())
     return suite
 
-tests_require = ['zope.testing', 'manuel']
+tests_require = ['zope.testing', 'manuel', 'random2']
 
 long_description = (
     open('README.txt').read()

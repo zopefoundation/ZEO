@@ -298,8 +298,7 @@ def dumpbysize(bysize, how, how2):
     print()
     print("Unique sizes %s: %s" % (how, addcommas(len(bysize))))
     print("%10s %6s %6s" % ("size", "objs", how2))
-    sizes = bysize.keys()
-    sizes.sort()
+    sizes = sorted(bysize.keys())
     for size in sizes:
         loads = 0
         for n in six.itervalues(bysize[size]):
@@ -348,15 +347,14 @@ def histogram(d):
     bins = {}
     for v in six.itervalues(d):
         bins[v] = bins.get(v, 0) + 1
-    L = bins.items()
-    L.sort()
+    L = sorted(bins.items())
     return L
 
 def U64(s):
     return struct.unpack(">Q", s)[0]
 
 def oid_repr(oid):
-    if isinstance(oid, str) and len(oid) == 8:
+    if isinstance(oid, six.binary_type) and len(oid) == 8:
         return '%16x' % U64(oid)
     else:
         return repr(oid)
