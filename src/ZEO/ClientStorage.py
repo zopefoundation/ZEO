@@ -409,7 +409,7 @@ class ClientStorage(object):
         if blob_cache_size is not None:
             assert blob_cache_size_check < 100
             self._blob_cache_size_check = (
-                blob_cache_size * blob_cache_size_check / 100)
+                blob_cache_size * blob_cache_size_check // 100)
             self._check_blob_size()
 
         self._rpc_mgr = self.ConnectionManagerClass(addr, self,

@@ -85,7 +85,7 @@ The simplest client configuration specified a server address:
     >>> storage._blob_cache_size
     1048576000
 
-    >>> print storage._blob_cache_size_check
+    >>> print(storage._blob_cache_size_check)
     104857600
 
     >>> storage.close()

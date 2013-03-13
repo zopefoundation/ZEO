@@ -831,4 +831,4 @@ class ManagedClientConnection(Connection):
     def send_reply(self, msgid, ret):
         # Whimper. Used to send heartbeat
         assert msgid == -1 and ret is None
-        self.message_output('(J\xff\xff\xff\xffK\x00U\x06.replyNt.')
+        self.message_output(b'(J\xff\xff\xff\xffK\x00U\x06.replyNt.')

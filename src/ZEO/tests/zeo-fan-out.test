@@ -47,7 +47,7 @@ If we update c1, we'll eventually see the change in c2:
     >>> r1[1].v = 1000
     >>> r1[2] = persistent.mapping.PersistentMapping()
     >>> r1[2].v = -1000
-    >>> r1[3] = ZODB.blob.Blob('x'*4111222)
+    >>> r1[3] = ZODB.blob.Blob(b'x'*4111222)
     >>> for i in range(1000, 2000):
     ...     r1[i] = persistent.mapping.PersistentMapping()
     ...     r1[i].v = 0
@@ -97,14 +97,14 @@ Now, let's see if we can break it. :)
     >>> while time.time() - start_time < 999:
     ...     t = tm2.begin()
     ...     if r2[1].v + r2[2].v:
-    ...         print 'oops', r2[1], r2[2]
+    ...         print('oops', r2[1], r2[2])
     ...     if r2[1].v == 800:
     ...         break # we caught up
     ...     path = s2.fshelper.getBlobFilename(*blob_id)
     ...     if os.path.exists(path):
     ...         ZODB.blob.remove_committed(path)
     ...     s2._server.sendBlob(*blob_id)
-    ... else: print 'Dang'
+    ... else: print('Dang')
 
     >>> threadf.join()
 
@@ -129,11 +129,11 @@ invalidated:
     ...         and
     ...         (r2[2]._p_changed is None)
     ...        ):
-    ...        print 'Cool'
+    ...        print('Cool')
     ...        break
     ...     time.sleep(0.01)
     ... else:
-    ...     print 'Dang'
+    ...     print('Dang')
     Cool
 
 Cleanup:

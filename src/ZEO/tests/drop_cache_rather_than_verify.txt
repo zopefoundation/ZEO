@@ -82,7 +82,7 @@ Now, let's verify our assertions above:
 - Publishes a stale-cache event.
 
     >>> for e in events:
-    ...     print e
+    ...     print(e)
     (3, '', 'StaleCache')
 
     Note that the length of the cache when the event handler was
@@ -105,7 +105,7 @@ Now, let's verify our assertions above:
 
 - Logs a CRITICAL message.
 
-    >>> print handler
+    >>> print(handler)
     ZEO.ClientStorage CRITICAL
       test dropping stale cache
 
@@ -149,14 +149,14 @@ in the database, which is why we get 1, rather than 0 objects in the cache.)
 - Publishes a stake-cache event.
 
     >>> for e in events:
-    ...     print e
+    ...     print(e)
     (2, '', 'StaleCache')
 
     >>> del events[:]
 
 - Logs a CRITICAL message.
 
-    >>> print handler
+    >>> print(handler)
     ZEO.ClientStorage CRITICAL
       test dropping stale cache
 
@@ -199,10 +199,10 @@ drop_cache_rather_verify option:
     >>> wait_connected(db.storage)
 
     >>> for e in events:
-    ...     print e
+    ...     print(e)
     (4, '', 'StaleCache')
 
-    >>> print handler
+    >>> print(handler)
     <BLANKLINE>
 
     >>> len(db.storage._cache)

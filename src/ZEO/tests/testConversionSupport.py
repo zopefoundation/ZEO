@@ -64,7 +64,7 @@ underlying storage.
     >>> next = None
     >>> while 1:
     ...     oid, serial, data, next = zeo.record_iternext(next)
-    ...     print oid
+    ...     print(oid)
     ...     if next is None:
     ...         break
     1
@@ -114,7 +114,7 @@ Now we'll have our way with it's private _server attr:
     >>> next = None
     >>> while 1:
     ...     oid, serial, data, next = client.record_iternext(next)
-    ...     print oid
+    ...     print(oid)
     ...     if next is None:
     ...         break
     1
@@ -143,7 +143,7 @@ stuff.  I'd rather do a lame test than a really lame test, so here goes.
     >>> next = None
     >>> while 1:
     ...     oid, serial, data, next = stub.record_iternext(next)
-    ...     print oid
+    ...     print(oid)
     ...     if next is None:
     ...         break
     1

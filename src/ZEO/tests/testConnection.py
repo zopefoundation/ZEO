@@ -17,7 +17,7 @@ The actual tests are in ConnectionTests.py; this file provides the
 platform-dependent scaffolding.
 """
 
-from __future__ import with_statement
+from __future__ import with_statement, print_function
 
 from ZEO.tests import ConnectionTests, InvalidationTests
 from zope.testing import setupstack
@@ -222,16 +222,16 @@ This tests tries to provoke this bug by:
     ...            conn = db.open()
     ...            for i in range(1000):
     ...                if conn.root()[i].value != conn2.root()[i].value:
-    ...                    print 'bad', c, i, conn.root()[i].value,
-    ...                    print  conn2.root()[i].value
+    ...                    print('bad', c, i, conn.root()[i].value, end=" ")
+    ...                    print(conn2.root()[i].value)
     ...                    bad = True
-    ...                    print 'client debug log with lock held'
+    ...                    print('client debug log with lock held')
     ...                    while handler.records:
     ...                          record = handler.records.pop(0)
-    ...                          print record.name, record.levelname,
-    ...                          print handler.format(record)
+    ...                          print(record.name, record.levelname, end=' ')
+    ...                          print(handler.format(record))
     ...        if bad:
-    ...           print open('server-%s.log' % addr[1]).read()
+    ...           print(open('server-%s.log' % addr[1]).read())
     ...        #else:
     ...        #   logging.getLogger('ZEO').debug('GOOD %s' % c)
     ...        db.close()
@@ -245,8 +245,8 @@ This tests tries to provoke this bug by:
     >>> for record in handler.records:
     ...     if record.levelno < logging.ERROR:
     ...         continue
-    ...     print record.name, record.levelname
-    ...     print handler.format(record)
+    ...     print(record.name, record.levelname)
+    ...     print(handler.format(record))
 
     >>> handler.uninstall()
 

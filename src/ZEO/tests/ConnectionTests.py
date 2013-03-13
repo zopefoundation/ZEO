@@ -1166,7 +1166,7 @@ class MSTThread(threading.Thread):
             # Begin a transaction
             t = Transaction()
             for c in clients:
-                #print "%s.%s.%s begin\n" % (tname, c.__name, i),
+                #print("%s.%s.%s begin" % (tname, c.__name, i))
                 c.tpc_begin(t)
 
             for j in range(testcase.nobj):
@@ -1175,20 +1175,20 @@ class MSTThread(threading.Thread):
                     oid = c.new_oid()
                     c.__oids.append(oid)
                     data = MinPO("%s.%s.t%d.o%d" % (tname, c.__name, i, j))
-                    #print data.value
+                    #print(data.value)
                     data = zodb_pickle(data)
                     s = c.store(oid, ZERO, data, '', t)
                     c.__serials.update(handle_all_serials(oid, s))
 
             # Vote on all servers and handle serials
             for c in clients:
-                #print "%s.%s.%s vote\n" % (tname, c.__name, i),
+                #print("%s.%s.%s vote" % (tname, c.__name, i))
                 s = c.tpc_vote(t)
                 c.__serials.update(handle_all_serials(None, s))
 
             # Finish on all servers
             for c in clients:
-                #print "%s.%s.%s finish\n" % (tname, c.__name, i),
+                #print("%s.%s.%s finish\n" % (tname, c.__name, i))
                 c.tpc_finish(t)
 
             for c in clients:

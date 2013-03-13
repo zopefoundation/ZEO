@@ -1560,7 +1560,9 @@ class ZEOStorage308Adapter:
         return getattr(self.storage, name)
 
 def _addr_label(addr):
-    if isinstance(addr, type("")):
+    if isinstance(addr, six.binary_type):
+        return addr.decode('ascii')
+    if isinstance(addr, six.string_types):
         return addr
     else:
         host, port = addr

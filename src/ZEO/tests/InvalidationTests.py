@@ -194,7 +194,7 @@ class LargeUpdatesThread(FailableThread):
                 tree = cn.root()["tree"]
                 break
             except (ConflictError, KeyError):
-                # print "%d getting tree abort" % self.threadnum
+                # print("%d getting tree abort" % self.threadnum)
                 transaction.abort()
 
         keys_added = {} # set of keys we commit
@@ -215,11 +215,11 @@ class LargeUpdatesThread(FailableThread):
                 try:
                     tree[key] = self.threadnum
                 except (ReadConflictError, ConflictError) as msg:
-                    # print "%d setting key %s" % (self.threadnum, msg)
+                    # print("%d setting key %s" % (self.threadnum, msg))
                     transaction.abort()
                     break
             else:
-                # print "%d set #%d" % (self.threadnum, len(keys))
+                # print("%d set #%d" % (self.threadnum, len(keys)))
                 transaction.get().note("keys %s" % ", ".join(map(str, keys)))
                 try:
                     transaction.commit()
@@ -227,7 +227,7 @@ class LargeUpdatesThread(FailableThread):
                     if self.sleep:
                         time.sleep(self.sleep)
                 except ConflictError as msg:
-                    # print "%d commit %s" % (self.threadnum, msg)
+                    # print("%d commit %s" % (self.threadnum, msg))
                     transaction.abort()
                     continue
                 for k in keys:

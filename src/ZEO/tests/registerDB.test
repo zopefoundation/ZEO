@@ -52,15 +52,15 @@ stub that implements the client invalidation calls:
     ...     def __init__(self, name):
     ...         self.name = name
     ...     def invalidateTransaction(self, tid, invalidated):
-    ...         print 'invalidateTransaction', tid, self.name
-    ...         print invalidated
+    ...         print('invalidateTransaction', tid, self.name)
+    ...         print(invalidated)
 
     >>> class Connection:
     ...     def __init__(self, mgr, obj):
     ...         self.mgr = mgr
     ...         self.obj = obj
     ...     def should_close(self):
-    ...         print 'closed', self.obj.name
+    ...         print('closed', self.obj.name)
     ...         self.mgr.close_conn(self)
     ...     def poll(self):
     ...         pass
@@ -101,7 +101,7 @@ Now, if we call invalidate, we'll see it propigate to the client:
 The storage servers queue will reflect the invalidations:
 
     >>> for tid, invalidated in server.invq['t']:
-    ...     print repr(tid), invalidated
+    ...     print(repr(tid), invalidated)
     'trans3' ['ob1', 'ob2']
     'trans2' ['ob1', 'ob2']
     'trans1' ['ob0', 'ob1']
@@ -119,6 +119,6 @@ The connections will then reopen and revalidate their caches.
 The servers's invalidation queue will get reset
 
     >>> for tid, invalidated in server.invq['t']:
-    ...     print repr(tid), invalidated
+    ...     print(repr(tid), invalidated)
     'trans1' ['ob0', 'ob1']
     'trans0' ['ob0']
