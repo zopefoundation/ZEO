@@ -267,6 +267,8 @@ class SizedMessageAsyncConnection(asyncore.dispatcher):
                 message = messages[0]
                 if isinstance(message, six.binary_type):
                     size += self.__message_output(messages.pop(0), output)
+                elif isinstance(message, six.text_type):
+                    assert False, "Got a unicode message: %s" % repr(message)
                 elif message is _close_marker:
                     del messages[:]
                     del output[:]
