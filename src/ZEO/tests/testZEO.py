@@ -1232,7 +1232,7 @@ def client_asyncore_thread_has_name():
 
 def runzeo_without_configfile():
     """
-    >>> open('runzeo', 'w').write('''
+    >>> r = open('runzeo', 'w').write('''
     ... import sys
     ... sys.path[:] = %r
     ... import ZEO.runzeo
@@ -1240,10 +1240,11 @@ def runzeo_without_configfile():
     ... ''' % sys.path)
 
     >>> import subprocess, re
-    >>> print(re.sub('\d\d+|[:]', '', subprocess.Popen(
+    >>> print(re.sub(b'\d\d+|[:]', b'', subprocess.Popen(
     ...     [sys.executable, 'runzeo', '-a:%s' % get_port(), '-ft', '--test'],
     ...     stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-    ...     ).stdout.read())) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+    ...     ).stdout.read()).decode('ascii'))
+    ... # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     ------
     --T INFO ZEO.runzeo () opening storage '1' using FileStorage
     ------
