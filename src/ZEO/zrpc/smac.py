@@ -147,7 +147,7 @@ class SizedMessageAsyncConnection(asyncore.dispatcher):
             self.__hmac_send = hmac.HMAC(sesskey, digestmod=ZEO.hash)
             self.__hmac_recv = hmac.HMAC(sesskey, digestmod=ZEO.hash)
             if False:
-                yield ''
+                yield b''
 
         self.message_output(hack())
 

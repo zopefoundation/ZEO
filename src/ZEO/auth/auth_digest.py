@@ -48,12 +48,12 @@ from ZEO.hash import sha1
 def get_random_bytes(n=8):
     if os.path.exists("/dev/urandom"):
         f = open("/dev/urandom", 'rb')
-        s = f.read(n)
+        b = f.read(n)
         f.close()
     else:
         L = [chr(random.randint(0, 255)) for i in range(n)]
-        s = "".join(L)
-    return s
+        b = b"".join(L)
+    return b
 
 def hexdigest(s):
     return sha1(s.encode()).hexdigest()
@@ -76,7 +76,8 @@ def session_key(h_up, nonce):
     # HMAC wants a 64-byte key.  We don't want to use h_up
     # directly because it would never change over time.  Instead
     # use the hash plus part of h_up.
-    return sha1("%s:%s" % (h_up, nonce)).digest() + h_up[:44]
+    return (sha1(("%s:%s" % (h_up, nonce)).encode('latin-1')).digest() +
+            h_up.encode('utf-8')[:44])
 
 class StorageClass(ZEOStorage):
     def set_database(self, database):
@@ -93,7 +94,7 @@ class StorageClass(ZEOStorage):
         # RFC 2069 recommends a nonce of the form
         # H(client-IP ":" time-stamp ":" private-key)
         dig = sha1()
-        dig.update(str(self.connection.addr))
+        dig.update(str(self.connection.addr).encode('latin-1'))
         dig.update(self._get_time())
         dig.update(self.noncekey)
         return dig.hexdigest()

@@ -26,7 +26,8 @@ from ZEO.auth import register_module
 from ZEO.auth.base import Client, Database
 
 def session_key(username, realm, password):
-    return sha1("%s:%s:%s" % (username, realm, password)).hexdigest()
+    key = "%s:%s:%s" % (username, realm, password)
+    return sha1(key.encode('utf-8')).hexdigest().encode('ascii')
 
 class StorageClass(ZEOStorage):
 
@@ -36,7 +37,7 @@ class StorageClass(ZEOStorage):
         except LookupError:
             return 0
 
-        password_dig = sha1(password).hexdigest()
+        password_dig = sha1(password.encode('utf-8')).hexdigest()
         if dbpw == password_dig:
             self.connection.setSessionKey(session_key(username,
                                                       self.database.realm,
