@@ -549,11 +549,16 @@ class ZRPCConnectionTests(ZEO.tests.ConnectionTests.CommonSetupTearDown):
             'foo', 0, 'history', (1, 2, 3, 4))
         # test logging
 
+        py2_msg = (
+            'history() raised exception: history() takes at most '
+            '3 arguments (5 given)'
+            )
+        py3_msg = (
+            'history() raised exception: history() takes '
+            'from 2 to 3 positional arguments but 5 were given'
+            )
         for level, message, kw in log:
-            if message.endswith(
-                ') history() raised exception: history() takes at'
-                ' most 3 arguments (5 given)'
-                ):
+            if message.endswith(py2_msg) or message.endswith(py3_msg):
                 self.assertEqual(level,logging.ERROR)
                 self.assertEqual(kw,{'exc_info':True})
                 break
