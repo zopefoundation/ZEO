@@ -20,6 +20,7 @@ from ZEO.tests.forker import get_port
 from ZEO.tests import forker, Cache, CommitLockTests, ThreadTests
 from ZEO.tests import IterationTests
 from ZEO.zrpc.error import DisconnectedError
+from ZEO._compat import PY3
 from ZODB.tests import StorageTestBase, BasicStorage,  \
      TransactionalUndoStorage,  \
      PackableStorage, Synchronization, ConflictResolution, RevisionStorage, \
@@ -1756,15 +1757,18 @@ def test_suite():
     # unit test layer
     zeo = unittest.TestSuite()
     zeo.addTest(unittest.makeSuite(ZODB.tests.util.AAAA_Test_Runner_Hack))
+    patterns = [
+        (re.compile(r"'start': '[^\n]+'"), 'start'),
+        (re.compile("ZODB.POSException.ConflictError"), "ConflictError"),
+        (re.compile("ZODB.POSException.POSKeyError"), "POSKeyError"),
+        (re.compile("ZEO.Exceptions.ClientStorageError"), "ClientStorageError"),
+        ]
+    if not PY3:
+        patterns.append((re.compile("^'(blob[^']*)'"), r"b'\1'"))
+        patterns.append((re.compile("^'Z308'"), "b'Z308'"))
     zeo.addTest(doctest.DocTestSuite(
         setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
-        checker=renormalizing.RENormalizing([
-            (re.compile(r"'start': '[^\n]+'"), 'start'),
-            (re.compile("ZODB.POSException.ConflictError"), "ConflictError"),
-            (re.compile("ZODB.POSException.POSKeyError"), "POSKeyError"),
-            (re.compile("ZEO.Exceptions.ClientStorageError"),
-             "ClientStorageError"),
-            ]),
+        checker=renormalizing.RENormalizing(patterns),
         ))
     zeo.addTest(doctest.DocTestSuite(
             ZEO.tests.IterationTests,
@@ -1774,7 +1778,8 @@ def test_suite():
                      "ClientDisconnected"),
                     )),
             ))
-    zeo.addTest(doctest.DocFileSuite('registerDB.test'))
+    zeo.addTest(doctest.DocFileSuite(
+            'registerDB.test', globs={'print_function': print_function}))
     zeo.addTest(
         doctest.DocFileSuite(
             'zeo-fan-out.test', 'zdoptions.test',
@@ -1782,6 +1787,8 @@ def test_suite():
             'protocols.test', 'zeo_blob_cache.test', 'invalidation-age.txt',
             'dynamic_server_ports.test', 'new_addr.test',
             setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
+            checker=renormalizing.RENormalizing(patterns),
+            globs={'print_function': print_function},
             ),
         )
     zeo.addTest(PackableStorage.IExternalGC_suite(
