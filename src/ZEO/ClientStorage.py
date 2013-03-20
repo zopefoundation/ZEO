@@ -1111,19 +1111,20 @@ class ClientStorage(object):
         if self._is_read_only:
             raise POSException.ReadOnlyError()
         self._tpc_cond.acquire()
-        self._midtxn_disconnect = 0
-        while self._transaction is not None:
-            # It is allowable for a client to call two tpc_begins in a
-            # row with the same transaction, and the second of these
-            # must be ignored.
-            if self._transaction == txn:
-                self._tpc_cond.release()
-                raise POSException.StorageTransactionError(
-                    "Duplicate tpc_begin calls for same transaction")
+        try:
+            self._midtxn_disconnect = 0
+            while self._transaction is not None:
+                # It is allowable for a client to call two tpc_begins in a
+                # row with the same transaction, and the second of these
+                # must be ignored.
+                if self._transaction == txn:
+                    raise POSException.StorageTransactionError(
+                        "Duplicate tpc_begin calls for same transaction")
 
-            self._tpc_cond.wait(30)
-        self._transaction = txn
-        self._tpc_cond.release()
+                self._tpc_cond.wait(30)
+            self._transaction = txn
+        finally:
+            self._tpc_cond.release()
 
         try:
             self._server.tpc_begin(id(txn), txn.user, txn.description,
@@ -1143,9 +1144,11 @@ class ClientStorage(object):
         # the right way to set self._transaction to None
         # calls notify() on _tpc_cond in case there are waiting threads
         self._tpc_cond.acquire()
-        self._transaction = None
-        self._tpc_cond.notify()
-        self._tpc_cond.release()
+        try:
+            self._transaction = None
+            self._tpc_cond.notify()
+        finally:
+            self._tpc_cond.release()
 
     def lastTransaction(self):
         return self._cache.getLastTid()
