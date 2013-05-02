@@ -16,6 +16,7 @@
 import sys
 
 PY3 = sys.version_info[0] >= 3
+PY32 = sys.version_info[:2] == (3, 2)
 
 if PY3:
     from pickle import Pickler, Unpickler as _Unpickler, dump, dumps, loads
@@ -39,7 +40,11 @@ from ZODB._compat import BytesIO
 if PY3:
 
     import _thread as thread
-    from threading import get_ident
+    if PY32:
+        from threading import _get_ident as get_ident
+    else:
+        from threading import get_ident
+
 
 else:
 
