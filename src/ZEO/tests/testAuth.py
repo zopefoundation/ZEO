@@ -22,7 +22,7 @@ from ZEO import zeopasswd
 from ZEO.Exceptions import ClientDisconnected
 from ZEO.tests.ConnectionTests import CommonSetupTearDown
 
-class AuthTest(CommonSetupTearDown):
+class _AuthTest(CommonSetupTearDown):
     __super_getServerConfig = CommonSetupTearDown.getServerConfig
     __super_setUp = CommonSetupTearDown.setUp
     __super_tearDown = CommonSetupTearDown.tearDown
@@ -111,14 +111,14 @@ class AuthTest(CommonSetupTearDown):
         self.assertRaises(ClientDisconnected, self._storage.undoInfo)
 
 
-class PlainTextAuth(AuthTest):
+class PlainTextAuth(_AuthTest):
     import ZEO.tests.auth_plaintext
     protocol = "plaintext"
     database = "authdb.sha"
     dbclass = ZEO.tests.auth_plaintext.Database
     realm = "Plaintext Realm"
 
-class DigestAuth(AuthTest):
+class DigestAuth(_AuthTest):
     import ZEO.auth.auth_digest
     protocol = "digest"
     database = "authdb.digest"
