@@ -145,10 +145,10 @@ if os.name == 'posix':
             r, self.trigger = os.pipe()
             asyncore.file_dispatcher.__init__(self, r, map)
 
-            if self.fd != r:
+            if self.socket.fd != r:
                 # Starting in Python 2.6, the descriptor passed to
                 # file_dispatcher gets duped and assigned to
-                # self.fd. This breals the instantiation semantics and
+                # self.socket.fd. This breals the instantiation semantics and
                 # is a bug imo.  I dount it will get fixed, but maybe
                 # it will. Who knows. For that reason, we test for the
                 # fd changing rather than just checking the Python version.
