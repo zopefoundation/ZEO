@@ -284,6 +284,7 @@ def get_port2(test):
         except socket.error as e:
             if e.args[0] != errno.EADDRINUSE:
                 raise
+            s.close()
             continue
 
         if not (can_connect(port) or can_connect(port+1)):
@@ -297,12 +298,14 @@ def get_port2(test):
 def can_connect(port):
     c = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        c.connect(('localhost', port))
-    except socket.error:
-        return False  # Perhaps we should check value of error too.
-    else:
+        try:
+            c.connect(('localhost', port))
+        except socket.error:
+            return False  # Perhaps we should check value of error too.
+        else:
+            return True
+    finally:
         c.close()
-        return True
 
 def setUp(test):
     ZODB.tests.util.setUp(test)
