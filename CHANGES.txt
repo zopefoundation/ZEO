@@ -4,6 +4,8 @@ CHANGES
 Unreleased
 ----------
 
+- Depend on ZODB >= 4.0.0b1
+
 - Added support for Python 3.2 / 3.3.
 
 4.0.0a1 (2012-11-19)
