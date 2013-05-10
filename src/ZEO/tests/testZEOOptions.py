@@ -46,9 +46,8 @@ class TestZEOOptions(TestZDOptions):
 
     def setUp(self):
         self.tempfilename = tempfile.mktemp()
-        f = open(self.tempfilename, "w")
-        f.write(self.configdata)
-        f.close()
+        with open(self.tempfilename, "w") as f:
+            f.write(self.configdata)
 
     def tearDown(self):
         try:

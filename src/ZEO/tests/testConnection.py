@@ -231,7 +231,8 @@ This tests tries to provoke this bug by:
     ...                          print(record.name, record.levelname, end=' ')
     ...                          print(handler.format(record))
     ...        if bad:
-    ...           print(open('server-%s.log' % addr[1]).read())
+    ...           with open('server-%s.log' % addr[1]) as f:
+    ...               print(f.read())
     ...        #else:
     ...        #   logging.getLogger('ZEO').debug('GOOD %s' % c)
     ...        db.close()

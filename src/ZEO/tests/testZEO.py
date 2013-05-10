@@ -625,18 +625,17 @@ class CommonBlobTests:
     blob_cache_dir = 'blob_cache'
 
     def checkStoreBlob(self):
-        from ZODB.utils import oid_repr, tid_repr
-        from ZODB.blob import Blob, BLOB_SUFFIX
-        from ZODB.tests.StorageTestBase import zodb_pickle, ZERO, \
-             handle_serials
         import transaction
+        from ZODB.blob import Blob
+        from ZODB.tests.StorageTestBase import handle_serials
+        from ZODB.tests.StorageTestBase import ZERO
+        from ZODB.tests.StorageTestBase import zodb_pickle
 
         somedata = b'a' * 10
 
         blob = Blob()
-        bd_fh = blob.open('w')
-        bd_fh.write(somedata)
-        bd_fh.close()
+        with blob.open('w') as bd_fh:
+            bd_fh.write(somedata)
         tfname = bd_fh.name
         oid = self._storage.new_oid()
         data = zodb_pickle(blob)
@@ -655,7 +654,8 @@ class CommonBlobTests:
         self.assert_(not os.path.exists(tfname))
         filename = self._storage.fshelper.getBlobFilename(oid, revid)
         self.assert_(os.path.exists(filename))
-        self.assertEqual(somedata, open(filename, 'rb').read())
+        with open(filename, 'rb') as f:
+            self.assertEqual(somedata, f.read())
 
     def checkStoreBlob_wrong_partition(self):
         os_rename = os.rename
@@ -676,9 +676,8 @@ class CommonBlobTests:
         somedata = b'a' * 10
 
         blob = Blob()
-        bd_fh = blob.open('w')
-        bd_fh.write(somedata)
-        bd_fh.close()
+        with blob.open('w') as bd_fh:
+            bd_fh.write(somedata)
         tfname = bd_fh.name
         oid = self._storage.new_oid()
         data = zodb_pickle(blob)
@@ -695,7 +694,8 @@ class CommonBlobTests:
             raise
 
         filename = self._storage.loadBlob(oid, serial)
-        self.assertEquals(somedata, open(filename, 'rb').read())
+        with open(filename, 'rb') as f:
+            self.assertEqual(somedata, f.read())
         self.assert_(not(os.stat(filename).st_mode & stat.S_IWRITE))
         self.assert_((os.stat(filename).st_mode & stat.S_IREAD))
 
@@ -718,88 +718,88 @@ class BlobAdaptedFileStorageTests(FullGenericTests, CommonBlobTests):
     """ZEO backed by a BlobStorage-adapted FileStorage."""
 
     def checkStoreAndLoadBlob(self):
-        from ZODB.utils import oid_repr, tid_repr
-        from ZODB.blob import Blob, BLOB_SUFFIX
-        from ZODB.tests.StorageTestBase import zodb_pickle, ZERO, \
-             handle_serials
         import transaction
+        from ZODB.blob import Blob
+        from ZODB.tests.StorageTestBase import handle_serials
+        from ZODB.tests.StorageTestBase import ZERO
+        from ZODB.tests.StorageTestBase import zodb_pickle
 
         somedata_path = os.path.join(self.blob_cache_dir, 'somedata')
-        somedata = open(somedata_path, 'w+b')
-        for i in range(1000000):
-            somedata.write(("%s\n" % i).encode('ascii'))
-        somedata.seek(0)
+        with open(somedata_path, 'w+b') as somedata:
+            for i in range(1000000):
+                somedata.write(("%s\n" % i).encode('ascii'))
 
-        blob = Blob()
-        bd_fh = blob.open('w')
-        ZODB.utils.cp(somedata, bd_fh)
-        bd_fh.close()
-        tfname = bd_fh.name
-        oid = self._storage.new_oid()
-        data = zodb_pickle(blob)
-        self.assert_(os.path.exists(tfname))
-
-        t = transaction.Transaction()
-        try:
-            self._storage.tpc_begin(t)
-            r1 = self._storage.storeBlob(oid, ZERO, data, tfname, '', t)
-            r2 = self._storage.tpc_vote(t)
-            revid = handle_serials(oid, r1, r2)
-            self._storage.tpc_finish(t)
-        except:
-            self._storage.tpc_abort(t)
-            raise
-
-        # The uncommitted data file should have been removed
-        self.assert_(not os.path.exists(tfname))
-
-        def check_data(path):
-            self.assert_(os.path.exists(path))
-            f = open(path, 'rb')
+            def check_data(path):
+                self.assert_(os.path.exists(path))
+                f = open(path, 'rb')
+                somedata.seek(0)
+                d1 = d2 = 1
+                while d1 or d2:
+                    d1 = f.read(8096)
+                    d2 = somedata.read(8096)
+                    self.assertEqual(d1, d2)
             somedata.seek(0)
-            d1 = d2 = 1
-            while d1 or d2:
-                d1 = f.read(8096)
-                d2 = somedata.read(8096)
-                self.assertEqual(d1, d2)
 
-        # The file should be in the cache ...
-        filename = self._storage.fshelper.getBlobFilename(oid, revid)
-        check_data(filename)
+            blob = Blob()
+            with blob.open('w') as bd_fh:
+                ZODB.utils.cp(somedata, bd_fh)
+                bd_fh.close()
+                tfname = bd_fh.name
+            oid = self._storage.new_oid()
+            data = zodb_pickle(blob)
+            self.assert_(os.path.exists(tfname))
 
-        # ... and on the server
-        server_filename = os.path.join(
-            self.blobdir,
-            ZODB.blob.BushyLayout().getBlobFilePath(oid, revid),
-            )
+            t = transaction.Transaction()
+            try:
+                self._storage.tpc_begin(t)
+                r1 = self._storage.storeBlob(oid, ZERO, data, tfname, '', t)
+                r2 = self._storage.tpc_vote(t)
+                revid = handle_serials(oid, r1, r2)
+                self._storage.tpc_finish(t)
+            except:
+                self._storage.tpc_abort(t)
+                raise
 
-        self.assert_(server_filename.startswith(self.blobdir))
-        check_data(server_filename)
+            # The uncommitted data file should have been removed
+            self.assert_(not os.path.exists(tfname))
 
-        # If we remove it from the cache and call loadBlob, it should
-        # come back. We can do this in many threads.  We'll instrument
-        # the method that is used to request data from teh server to
-        # verify that it is only called once.
+            # The file should be in the cache ...
+            filename = self._storage.fshelper.getBlobFilename(oid, revid)
+            check_data(filename)
 
-        sendBlob_org = ZEO.ServerStub.StorageServer.sendBlob
-        calls = []
-        def sendBlob(self, oid, serial):
-            calls.append((oid, serial))
-            sendBlob_org(self, oid, serial)
+            # ... and on the server
+            server_filename = os.path.join(
+                self.blobdir,
+                ZODB.blob.BushyLayout().getBlobFilePath(oid, revid),
+                )
 
-        ZODB.blob.remove_committed(filename)
-        returns = []
-        threads = [
-            threading.Thread(
-               target=lambda :
-                      returns.append(self._storage.loadBlob(oid, revid))
-               )
-            for i in range(10)
-            ]
-        [thread.start() for thread in threads]
-        [thread.join() for thread in threads]
-        [self.assertEqual(r, filename) for r in returns]
-        check_data(filename)
+            self.assert_(server_filename.startswith(self.blobdir))
+            check_data(server_filename)
+
+            # If we remove it from the cache and call loadBlob, it should
+            # come back. We can do this in many threads.  We'll instrument
+            # the method that is used to request data from teh server to
+            # verify that it is only called once.
+
+            sendBlob_org = ZEO.ServerStub.StorageServer.sendBlob
+            calls = []
+            def sendBlob(self, oid, serial):
+                calls.append((oid, serial))
+                sendBlob_org(self, oid, serial)
+
+            ZODB.blob.remove_committed(filename)
+            returns = []
+            threads = [
+                threading.Thread(
+                target=lambda :
+                        returns.append(self._storage.loadBlob(oid, revid))
+                )
+                for i in range(10)
+                ]
+            [thread.start() for thread in threads]
+            [thread.join() for thread in threads]
+            [self.assertEqual(r, filename) for r in returns]
+            check_data(filename)
 
 
 class BlobWritableCacheTests(FullGenericTests, CommonBlobTests):
@@ -1201,7 +1201,8 @@ def dont_log_poskeyerrors_on_server():
 
     >>> cs.close()
     >>> stop_server(admin)
-    >>> 'POSKeyError' in open('server-%s.log' % addr[1]).read()
+    >>> with open('server-%s.log' % addr[1]) as f:
+    ...     'POSKeyError' in f.read()
     False
     """
 
@@ -1239,7 +1240,8 @@ def client_asyncore_thread_has_name():
 
 def runzeo_without_configfile():
     """
-    >>> r = open('runzeo', 'w').write('''
+    >>> with open('runzeo', 'w') as r:
+    ...     r.write('''
     ... import sys
     ... sys.path[:] = %r
     ... import ZEO.runzeo
@@ -1342,10 +1344,11 @@ constructor.
     >>> db.close()
     >>> @wait_until
     ... def check_for_test_label_1():
-    ...    for line in open('server-%s.log' % addr[1]):
-    ...        if 'test-label-1' in line:
-    ...            print(line.split()[1:4])
-    ...            return True
+    ...    wih open('server-%s.log' % addr[1]) as f:
+    ...        for line in f:
+    ...            if 'test-label-1' in line:
+    ...                print(line.split()[1:4])
+    ...                return True
     ['INFO', 'ZEO.StorageServer', '(test-label-1']
 
 You can specify the client label via a configuration file as well:
@@ -1362,10 +1365,11 @@ You can specify the client label via a configuration file as well:
     >>> db.close()
     >>> @wait_until
     ... def check_for_test_label_2():
-    ...    for line in open('server-%s.log' % addr[1]):
-    ...        if 'test-label-2' in line:
-    ...            print(line.split()[1:4])
-    ...            return True
+    ...    with open('server-%s.log' % addr[1]) as f:
+    ...        for line in open('server-%s.log' % addr[1]):
+    ...            if 'test-label-2' in line:
+    ...                print(line.split()[1:4])
+    ...                return True
     ['INFO', 'ZEO.StorageServer', '(test-label-2']
 
     """
@@ -1451,16 +1455,18 @@ sys.path[:] = %(path)r
 
 """
 def generate_script(name, src):
-    open(name, 'w').write(script_template % dict(
-        exe=sys.executable,
-        path=sys.path,
-        src=src,
+    with open(name, 'w') as f:
+        f.write(script_template % dict(
+            exe=sys.executable,
+            path=sys.path,
+            src=src,
         ))
 
 def runzeo_logrotate_on_sigusr2():
     """
     >>> port = get_port()
-    >>> r = open('c', 'w').write('''
+    >>> with open('c', 'w') as r:
+    ...    r.write('''
     ... <zeo>
     ...    address %s
     ... </zeo>
@@ -1478,19 +1484,23 @@ def runzeo_logrotate_on_sigusr2():
     ... ''')
     >>> import subprocess, signal
     >>> p = subprocess.Popen([sys.executable, 's', '-Cc'], close_fds=True)
-    >>> wait_until('started',
-    ...   lambda : os.path.exists('l') and ('listening on' in open('l').read())
-    ...   )
+    >>> with open('l') as f:
+    ...     wait_until('started',
+    ...       lambda : os.path.exists('l') and ('listening on' in f.read())
+    ...     )
 
-    >>> oldlog = open('l').read()
+    >>> with open('l') as f:
+    ...    oldlog = f .read()
     >>> os.rename('l', 'o')
     >>> os.kill(p.pid, signal.SIGUSR2)
 
     >>> wait_until('new file', lambda : os.path.exists('l'))
     >>> s = ClientStorage(port)
     >>> s.close()
-    >>> wait_until('See logging', lambda : ('Log files ' in open('l').read()))
-    >>> open('o').read() == oldlog # No new data in old log
+    >>> with open('l') as f:
+    ...     wait_until('See logging', lambda : ('Log files ' in f.read()))
+    >>> with open('o') as f:
+    ...     f.read() == oldlog # No new data in old log
     True
 
     # Cleanup:

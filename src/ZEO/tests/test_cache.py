@@ -159,11 +159,10 @@ class CacheTests(ZODB.tests.util.TestCase):
         path = tempfile.mktemp()
         # Copy data from self.cache into path, reaching into the cache
         # guts to make the copy.
-        dst = open(path, "wb+")
-        src = self.cache.f
-        src.seek(0)
-        dst.write(src.read(self.cache.maxsize))
-        dst.close()
+        with open(path, "wb+") as dst:
+            src = self.cache.f
+            src.seek(0)
+            dst.write(src.read(self.cache.maxsize))
         copy = ZEO.cache.ClientCache(path)
 
         # Verify that internals of both objects are the same.
@@ -213,24 +212,22 @@ class CacheTests(ZODB.tests.util.TestCase):
         cache.close()
 
     def testConversionOfLargeFreeBlocks(self):
-        f = open('cache', 'wb')
-        f.write(ZEO.cache.magic+
-                b'\0'*8 +
-                b'f'+struct.pack(">I", (1<<32)-12)
-                )
-        f.seek((1<<32)-1)
-        f.write(b'x')
-        f.close()
+        with open('cache', 'wb') as f:
+            f.write(ZEO.cache.magic+
+                    b'\0'*8 +
+                    b'f'+struct.pack(">I", (1<<32)-12)
+                    )
+            f.seek((1<<32)-1)
+            f.write(b'x')
         cache = ZEO.cache.ClientCache('cache', size=1<<32)
         cache.close()
         cache = ZEO.cache.ClientCache('cache', size=1<<32)
         cache.close()
-        f = open('cache', 'rb')
-        f.seek(12)
-        self.assertEquals(f.read(1), b'f')
-        self.assertEquals(struct.unpack(">I", f.read(4))[0],
-                          ZEO.cache.max_block_size)
-        f.close()
+        with open('cache', 'rb') as f:
+            f.seek(12)
+            self.assertEquals(f.read(1), b'f')
+            self.assertEquals(struct.unpack(">I", f.read(4))[0],
+                            ZEO.cache.max_block_size)
 
     if not sys.platform.startswith('linux'):
         # On platforms without sparse files, these tests are just way
@@ -347,8 +344,8 @@ isn't corrupted.  To see this, we'll write a little script that
 writes records to a cache file repeatedly.
 
 >>> import os, random, sys, time
->>> with open('t', 'w') as file:
-...     _ = file.write('''
+>>> with open('t', 'w') as f:
+...     _ = f.write('''
 ... import os, random, sys, time
 ... try:
 ...     import thread
@@ -1088,8 +1085,8 @@ def rename_bad_cache_file():
     """
 An attempt to open a bad cache file will cause it to be dropped and recreated.
 
-    >>> with open('cache', 'w') as file:
-    ...     _ = file.write('x'*100)
+    >>> with open('cache', 'w') as f:
+    ...     _ = f.write('x'*100)
     >>> import logging, sys
     >>> handler = logging.StreamHandler(sys.stdout)
     >>> logging.getLogger().addHandler(handler)
@@ -1104,14 +1101,13 @@ An attempt to open a bad cache file will cause it to be dropped and recreated.
 
     >>> cache.store(p64(1), p64(1), None, b'data')
     >>> cache.close()
-    >>> f = open('cache')
-    >>> _ = f.seek(0, 2)
-    >>> print(f.tell())
+    >>> with open('cache') as f:
+    ...     _ = f.seek(0, 2)
+    ...     print(f.tell())
     1000
-    >>> f.close()
 
-    >>> with open('cache', 'w') as file:
-    ...     _ = file.write('x'*200)
+    >>> with open('cache', 'w') as f:
+    ...     _ = f.write('x'*200)
     >>> cache = ZEO.cache.ClientCache('cache', 1000) # doctest: +ELLIPSIS
     Removing bad cache file: 'cache' (prev bad exists).
     Traceback (most recent call last):
@@ -1120,17 +1116,15 @@ An attempt to open a bad cache file will cause it to be dropped and recreated.
 
     >>> cache.store(p64(1), p64(1), None, b'data')
     >>> cache.close()
-    >>> f = open('cache')
-    >>> _ = f.seek(0, 2)
-    >>> print(f.tell())
+    >>> with open('cache') as f:
+    ...     _ = f.seek(0, 2)
+    ...     print(f.tell())
     1000
-    >>> f.close()
 
-    >>> f = open('cache.bad')
-    >>> _ = f.seek(0, 2)
-    >>> print(f.tell())
+    >>> with open('cache.bad') as f:
+    ...     _ = f.seek(0, 2)
+    ...     print(f.tell())
     100
-    >>> f.close()
 
     >>> logging.getLogger().removeHandler(handler)
     >>> logging.getLogger().setLevel(old_level)
