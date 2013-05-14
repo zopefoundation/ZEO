@@ -25,6 +25,7 @@ classifiers = """\
 Intended Audience :: Developers
 License :: OSI Approved :: Zope Public License
 Programming Language :: Python
+Programming Language :: Python :: 2
 Programming Language :: Python :: 2.6
 Programming Language :: Python :: 2.7
 Programming Language :: Python :: 3
@@ -94,7 +95,7 @@ setup(name="ZEO",
       tests_require = tests_require,
       extras_require = dict(test=tests_require),
       install_requires = [
-          'ZODB >= 4.0.0b1',
+          'ZODB >= 4.0.0b2',
           'six',
           'transaction',
           'persistent',
