@@ -5,6 +5,5 @@ __pycache__
 .tox
 bin
 develop-eggs
-docs
-parts
 eggs
+parts
