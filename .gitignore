@@ -1,8 +1,6 @@
 *.pyc
 __pycache__
-src/*.egg-info
-benchmark/*.egg-info
-
+*.egg-info
 .installed.cfg
 .tox
 bin
