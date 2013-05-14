@@ -1023,7 +1023,8 @@ class ClientStorage(object):
             else:
                 # We're using a server shared cache.  If the file isn't
                 # here, it's not anywhere.
-                raise POSException.POSKeyError("No blob file", oid, serial)
+                raise POSException.POSKeyError(
+                        "No blob file at %s" % blob_filename, oid, serial)
 
         if os.path.exists(blob_filename):
             return _accessed(blob_filename)
