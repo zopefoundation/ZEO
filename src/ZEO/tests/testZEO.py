@@ -1143,22 +1143,14 @@ def client_has_newer_data_than_server():
     ...           time.sleep(.01)
 
     >>> db.close()
-    >>> for record in handler.records[:5]:
-    ...     print formatter.format(record)
-    ... # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-    ZEO.ClientStorage CRITICAL client
-    Client has seen newer transactions than server!
-    ZEO.zrpc ERROR (...) CW: error in notifyConnected (('127.0.0.1', ...))
-    Traceback (most recent call last):
-    ...
-    ClientStorageError: client Client has seen newer transactions than server!
-    ZEO.ClientStorage CRITICAL client
-    Client has seen newer transactions than server!
-    ZEO.zrpc ERROR (...) CW: error in notifyConnected (('127.0.0.1', ...))
-    Traceback (most recent call last):
-    ...
-    ClientStorageError: client Client has seen newer transactions than server!
-    ...
+    >>> client_errors = [x for x in handler.records
+    ...                   if x.filename == 'ClientStorage.py' and
+    ...                      x.funcName == 'verify_cache' and
+    ...                      x.levelname == 'CRITICAL' and
+    ...                      x.msg == 'client Client has seen '
+    ...                               'newer transactions than server!']
+    >>> len(client_errors) >= 2
+    True
 
     Note that the errors repeat because the client keeps on trying to connect.
 
