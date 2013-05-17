@@ -7,3 +7,4 @@ bin
 develop-eggs
 eggs
 parts
+testing.log
