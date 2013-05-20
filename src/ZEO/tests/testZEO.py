@@ -1337,7 +1337,7 @@ constructor.
     >>> db.close()
     >>> @wait_until
     ... def check_for_test_label_1():
-    ...    wih open('server-%s.log' % addr[1]) as f:
+    ...    with open('server-%s.log' % addr[1]) as f:
     ...        for line in f:
     ...            if 'test-label-1' in line:
     ...                print(line.split()[1:4])
