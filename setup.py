@@ -98,7 +98,7 @@ long_description = (
     open('CHANGES.txt').read()
     )
 setup(name="ZEO",
-      version='4.0.0dev',
+      version='4.0.0b1',
       description = long_description.split('\n', 2)[1],
       long_description = long_description,
       maintainer="Zope Foundation and Contributors",
