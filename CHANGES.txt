@@ -1,6 +1,11 @@
 CHANGES
 =======
 
+Unreleased
+----------
+
+- Fix "assignment to keyword" error under Py3k in 'ZEO.scripts.zeoqueue'.
+
 4.0.0b1 (2013-05-20)
 --------------------
 

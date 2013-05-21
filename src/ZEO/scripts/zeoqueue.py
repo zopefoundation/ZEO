@@ -36,12 +36,6 @@ COMMASPACE = ', '
 STATEFILE = 'zeoqueue.pck'
 PROGRAM = sys.argv[0]
 
-try:
-    True, False
-except NameError:
-    True = 1
-    False = 0
-
 
 
 tcre = re.compile(r"""
