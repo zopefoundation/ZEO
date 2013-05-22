@@ -1234,7 +1234,7 @@ def client_asyncore_thread_has_name():
 def runzeo_without_configfile():
     """
     >>> with open('runzeo', 'w') as r:
-    ...     r.write('''
+    ...     _ = r.write('''
     ... import sys
     ... sys.path[:] = %r
     ... import ZEO.runzeo
