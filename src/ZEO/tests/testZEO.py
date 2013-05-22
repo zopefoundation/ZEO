@@ -1483,7 +1483,7 @@ def runzeo_logrotate_on_sigusr2():
     ...     )
 
     >>> with open('l') as f:
-    ...    oldlog = f .read()
+    ...    oldlog = f.read()
     >>> os.rename('l', 'o')
     >>> os.kill(p.pid, signal.SIGUSR2)
 
@@ -1750,7 +1750,7 @@ class ServerManagingClientStorageForIExternalGCTest(
 def test_suite():
     suite = unittest.TestSuite()
 
-    # Collect misc tests into their own layer to educe size of
+    # Collect misc tests into their own layer to reduce size of
     # unit test layer
     zeo = unittest.TestSuite()
     zeo.addTest(unittest.makeSuite(ZODB.tests.util.AAAA_Test_Runner_Hack))
