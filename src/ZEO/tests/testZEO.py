@@ -1455,11 +1455,15 @@ def generate_script(name, src):
             src=src,
         ))
 
+def read(filename):
+    with open(filename) as f:
+        return f.read()
+
 def runzeo_logrotate_on_sigusr2():
     """
     >>> port = get_port()
     >>> with open('c', 'w') as r:
-    ...    r.write('''
+    ...    _ = r.write('''
     ... <zeo>
     ...    address %s
     ... </zeo>
@@ -1477,23 +1481,23 @@ def runzeo_logrotate_on_sigusr2():
     ... ''')
     >>> import subprocess, signal
     >>> p = subprocess.Popen([sys.executable, 's', '-Cc'], close_fds=True)
-    >>> with open('l') as f:
-    ...     wait_until('started',
-    ...       lambda : os.path.exists('l') and ('listening on' in f.read())
+    >>> wait_until('started',
+    ...       lambda : os.path.exists('l') and ('listening on' in read('l'))
     ...     )
 
-    >>> with open('l') as f:
-    ...    oldlog = f.read()
+    >>> oldlog = read('l')
     >>> os.rename('l', 'o')
     >>> os.kill(p.pid, signal.SIGUSR2)
 
     >>> wait_until('new file', lambda : os.path.exists('l'))
+
+    XXX: if any of the previous commands failed, we'll hang here trying to
+    connect to ZEO, because doctest runs all the assertions...
+
     >>> s = ClientStorage(port)
     >>> s.close()
-    >>> with open('l') as f:
-    ...     wait_until('See logging', lambda : ('Log files ' in f.read()))
-    >>> with open('o') as f:
-    ...     f.read() == oldlog # No new data in old log
+    >>> wait_until('See logging', lambda : ('Log files ' in read('l')))
+    >>> read('o') == oldlog  # No new data in old log
     True
 
     # Cleanup:
