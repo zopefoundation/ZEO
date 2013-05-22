@@ -612,6 +612,7 @@ class ManagedServerConnection(Connection):
         self.call_from_thread = self.trigger.pull_trigger
 
         t = threading.Thread(target=server_loop, args=(map,))
+        t.setName("ManagedServerConnection thread")
         t.setDaemon(True)
         t.start()
 
