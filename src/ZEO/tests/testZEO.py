@@ -1148,22 +1148,17 @@ def client_has_newer_data_than_server():
 
     >>> _, admin = start_server(addr=addr)
 
-    >>> for i in range(1000):
-    ...     while len(handler.records) < 5:
-    ...           time.sleep(.01)
-
-    >>> db.close()
-    >>> client_errors = [x for x in handler.records
-    ...                   if x.filename == 'ClientStorage.py' and
-    ...                      x.funcName == 'verify_cache' and
-    ...                      x.levelname == 'CRITICAL' and
-    ...                      x.msg == 'client Client has seen '
-    ...                               'newer transactions than server!']
-    >>> len(client_errors) >= 2
-    True
+    >>> wait_until('got enough errors', lambda:
+    ...    len([x for x in handler.records
+    ...         if x.filename == 'ClientStorage.py' and
+    ...            x.funcName == 'verify_cache' and
+    ...            x.levelname == 'CRITICAL' and
+    ...            x.msg == 'client Client has seen '
+    ...                     'newer transactions than server!']) >= 2)
 
     Note that the errors repeat because the client keeps on trying to connect.
 
+    >>> db.close()
     >>> handler.uninstall()
     >>> stop_server(admin)
 
