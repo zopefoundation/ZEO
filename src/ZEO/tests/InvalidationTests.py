@@ -25,8 +25,6 @@ from ZEO.tests.TestThread import TestThread
 
 from ZODB.DB import DB
 from ZODB.POSException import ReadConflictError, ConflictError
-from six.moves import map
-from six.moves import zip
 
 # The tests here let several threads have a go at one or more database
 # instances simultaneously.  Each thread appends a disjoint (from the
