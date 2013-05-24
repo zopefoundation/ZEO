@@ -1150,7 +1150,7 @@ def client_has_newer_data_than_server():
 
     >>> wait_until('got enough errors', lambda:
     ...    len([x for x in handler.records
-    ...         if x.filename == 'ClientStorage.py' and
+    ...         if x.filename.lower() == 'clientstorage.py' and
     ...            x.funcName == 'verify_cache' and
     ...            x.levelname == 'CRITICAL' and
     ...            x.msg == 'client Client has seen '
