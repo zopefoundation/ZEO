@@ -444,6 +444,11 @@ class ConnectThread(threading.Thread):
                 host, port = addr
                 for (family, socktype, proto, cannoname, sockaddr
                      ) in socket.getaddrinfo(host or 'localhost', port):
+                    # we only speak TCP, so let's skip UDP and RAW sockets
+                    # otherwise we'll try to connect to the same address
+                    # three times in a row
+                    if socktype != socket.SOCK_STREAM:
+                        continue
                     # for IPv6, drop flowinfo, and restrict addresses
                     # to [host]:port
                     yield family, sockaddr[:2]
