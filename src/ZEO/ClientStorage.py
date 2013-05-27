@@ -162,12 +162,12 @@ class ClientStorage(object):
         var
             When client is not None, this specifies the directory
             where the persistent cache files are created.  It defaults
-            to None, in whichcase the current directory is used.
+            to None, in which case the current directory is used.
 
         min_disconnect_poll
             The minimum delay in seconds between
             attempts to connect to the server, in seconds.  Defaults
-            to 5 seconds.
+            to 1 second.
 
         max_disconnect_poll
             The maximum delay in seconds between
