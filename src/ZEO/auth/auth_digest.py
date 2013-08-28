@@ -46,11 +46,9 @@ from ZEO.Exceptions import AuthError
 from ZEO.hash import sha1
 
 def get_random_bytes(n=8):
-    if os.path.exists("/dev/urandom"):
-        f = open("/dev/urandom", 'rb')
-        b = f.read(n)
-        f.close()
-    else:
+    try:
+        b = os.urandom(n)
+    except NotImplementedError:
         L = [chr(random.randint(0, 255)) for i in range(n)]
         b = b"".join(L)
     return b
