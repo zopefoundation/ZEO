@@ -4,6 +4,12 @@ CHANGES
 Unreleased
 ----------
 
+- Optimize socket address enumeration in ZEO client (avoid non-TCP types).
+
+- Improve Travis CI testing support.
+
+- Assign names to all threads for better runtime debugging.
+
 - Fix "assignment to keyword" error under Py3k in 'ZEO.scripts.zeoqueue'.
 
 4.0.0b1 (2013-05-20)
