@@ -4,6 +4,8 @@ CHANGES
 Unreleased
 ----------
 
+- Avoid reading excess random bytes when setting up an auth_digest session.
+
 - Optimize socket address enumeration in ZEO client (avoid non-TCP types).
 
 - Improve Travis CI testing support.
