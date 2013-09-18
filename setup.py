@@ -13,6 +13,7 @@
 ##############################################################################
 """Setup
 """
+version = '4.0.0'
 from setuptools import setup, find_packages
 import os
 import sys
@@ -98,7 +99,7 @@ long_description = (
     open('CHANGES.txt').read()
     )
 setup(name="ZEO",
-      version='4.0.0b1',
+      version=version,
       description = long_description.split('\n', 2)[1],
       long_description = long_description,
       url = 'https://pypi.python.org/pypi/ZEO',
