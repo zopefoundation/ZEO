@@ -1,6 +1,12 @@
 Changelog
 =========
 
+4.0.1dev (unreleased)
+---------------------
+
+- Log errors on server side even if using multi threaded delay.
+
+
 4.0.0 (2013-08-18)
 ------------------
 
