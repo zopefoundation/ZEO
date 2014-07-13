@@ -94,9 +94,9 @@ def alltests():
 tests_require = ['zope.testing', 'manuel', 'random2']
 
 long_description = (
-    open('README.txt').read()
+    open('README.rst').read()
     + '\n' +
-    open('CHANGES.txt').read()
+    open('CHANGES.rst').read()
     )
 setup(name="ZEO",
       version=version,

@@ -11,7 +11,9 @@ before_install:
     - sudo rm -rf /dev/shm
     - sudo ln -s /run/shm /dev/shm
 install:
-    - python bootstrap.py
+    - virtualenv env
+    - env/bin/pip install -U setuptools distribute
+    - env/bin/python bootstrap.py
     - bin/buildout
 script:
     - bin/test -v1 -j99
