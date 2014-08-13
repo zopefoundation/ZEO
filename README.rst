@@ -202,6 +202,7 @@ An example is::
     </filestorage>
 
     <eventlog>
+      level INFO
       <logfile>
         path /var/tmp/zeo.log
         format %(asctime)s %(message)s
