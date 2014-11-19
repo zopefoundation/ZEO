@@ -52,7 +52,7 @@ class Delay:
 
     def error(self, exc_info):
         self.sent = 'error'
-        log("Error raised in delayed method", logging.ERROR, exc_info=True)
+        log("Error raised in delayed method", logging.ERROR, exc_info=exc_info)
         self.conn.return_error(self.msgid, *exc_info[:2])
 
     def __repr__(self):
@@ -84,6 +84,7 @@ class MTDelay(Delay):
 
     def error(self, exc_info):
         self.ready.wait()
+        log("Error raised in delayed method", logging.ERROR, exc_info=exc_info)
         self.conn.call_from_thread(Delay.error, self, exc_info)
 
 # PROTOCOL NEGOTIATION
