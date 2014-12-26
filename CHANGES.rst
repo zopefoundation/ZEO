@@ -1,8 +1,10 @@
 Changelog
 =========
 
-4.0.1dev (unreleased)
----------------------
+4.1.0 (unreleased)
+------------------
+
+- Add support for Python 3.4.
 
 - Log errors on server side even if using multi threaded delay.
 

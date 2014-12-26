@@ -13,7 +13,7 @@
 ##############################################################################
 """Setup
 """
-version = '4.0.0'
+version = '4.1.0.dev0'
 from setuptools import setup, find_packages
 import os
 import sys
@@ -32,6 +32,7 @@ Programming Language :: Python :: 2.7
 Programming Language :: Python :: 3
 Programming Language :: Python :: 3.2
 Programming Language :: Python :: 3.3
+Programming Language :: Python :: 3.4
 Programming Language :: Python :: Implementation :: CPython
 Topic :: Database
 Topic :: Software Development :: Libraries :: Python Modules
