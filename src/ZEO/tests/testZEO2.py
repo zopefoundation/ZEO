@@ -337,7 +337,7 @@ release the lock and one of the waiting clients will get the lock.
 We can find out about the current lock state, and get other server
 statistics using the server_status method:
 
-    >>> pprint.pprint(zs1.server_status(), width=1)
+    >>> pprint.pprint(zs1.server_status(), width=40)
     {'aborts': 3,
      'active_txns': 10,
      'commits': 0,

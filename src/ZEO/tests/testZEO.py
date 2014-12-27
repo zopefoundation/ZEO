@@ -1300,7 +1300,7 @@ def test_server_status():
     >>> addr, _ = start_server(zeo_conf=dict(transaction_timeout=1))
     >>> db = ZEO.DB(addr)
     >>> import pprint
-    >>> pprint.pprint(db.storage.server_status(), width=1)
+    >>> pprint.pprint(db.storage.server_status(), width=40)
     {'aborts': 0,
      'active_txns': 0,
      'commits': 1,
