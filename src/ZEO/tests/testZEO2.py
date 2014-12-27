@@ -224,6 +224,13 @@ def some_basic_locking_tests():
     >>> logging.getLogger('ZEO').addHandler(handler)
     >>> logging.getLogger('ZEO').setLevel(logging.DEBUG)
 
+Work around the fact that ZODB registers level names backwards, which
+quit working in Python 3.4:
+
+    >>> import logging
+    >>> from ZODB.loglevels import BLATHER
+    >>> logging.addLevelName(BLATHER, "BLATHER")
+
 We start a transaction and vote, this leads to getting the lock.
 
     >>> zs1 = ZEO.tests.servertesting.client(server, '1')
@@ -434,6 +441,13 @@ Set up server and logging:
     ...     '%(name)s %(levelname)s\n%(message)s'))
     >>> logging.getLogger('ZEO').addHandler(handler)
     >>> logging.getLogger('ZEO').setLevel(logging.DEBUG)
+
+Work around the fact that ZODB registers level names backwards, which
+quit working in Python 3.4:
+
+    >>> import logging
+    >>> from ZODB.loglevels import BLATHER
+    >>> logging.addLevelName(BLATHER, "BLATHER")
 
 Now, we'll start a transaction, get the lock and then mark the
 ZEOStorage as closed and see if trying to get a lock cleans it up:
