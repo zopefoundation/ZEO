@@ -351,6 +351,7 @@ statistics using the server_status method:
      'conflicts': 0,
      'conflicts_resolved': 0,
      'connections': 11,
+     'last-transaction': '0000000000000000',
      'loads': 0,
      'lock_time': 1272653598.693882,
      'start': 'Fri Apr 30 14:53:18 2010',

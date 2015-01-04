@@ -753,7 +753,7 @@ class ZEOStorage:
             self._iterators.pop(iid, None)
 
     def server_status(self):
-        return self.server.server_status(self)
+        return self.server.server_status(self.storage_id)
 
     def set_client_label(self, label):
         self.log_label = str(label)+' '+_addr_label(self.connection.addr)
@@ -992,7 +992,7 @@ class StorageServer:
             zstorage = self.ZEOStorageClass(self, self.read_only)
 
         c = self.ManagedServerConnectionClass(sock, addr, zstorage, self)
-        log("new connection %s: %s" % (addr, repr(c)))
+        log("new connection %s: %s" % (addr, repr(c)), logging.DEBUG)
         return c
 
     def register_connection(self, storage_id, conn):
@@ -1303,13 +1303,18 @@ class StorageServer:
         with self._lock:
             return bool([i for i in waiting if i[0] is zeostore])
 
-    def server_status(self, zeostore):
-        storage_id = zeostore.storage_id
+    def server_status(self, storage_id):
         status = self.stats[storage_id].__dict__.copy()
         status['connections'] = len(status['connections'])
         status['waiting'] = len(self._waiting[storage_id])
         status['timeout-thread-is-alive'] = self.timeouts[storage_id].isAlive()
+        status['last-transaction'] = (
+            self.storages[storage_id].lastTransaction().encode('hex'))
         return status
+
+    def ruok(self):
+        return dict((storage_id, self.server_status(storage_id))
+                    for storage_id in self.storages)
 
 def _level_for_waiting(waiting):
     if len(waiting) > 9:

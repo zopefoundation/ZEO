@@ -6,6 +6,10 @@ Changelog
 
 - Add support for Python 3.4.
 
+- Added a new ``ruok`` client protocol for getting server status on
+  the ZEO port without creating a full-blown client connection and
+  without logging in the server log.
+
 - Log errors on server side even if using multi threaded delay.
 
 

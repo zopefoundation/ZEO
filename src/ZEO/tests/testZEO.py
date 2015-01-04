@@ -35,6 +35,7 @@ import doctest
 import logging
 import os
 import persistent
+import pprint
 import re
 import shutil
 import signal
@@ -1299,7 +1300,6 @@ def test_server_status():
 
     >>> addr, _ = start_server(zeo_conf=dict(transaction_timeout=1))
     >>> db = ZEO.DB(addr)
-    >>> import pprint
     >>> pprint.pprint(db.storage.server_status(), width=40)
     {'aborts': 0,
      'active_txns': 0,
@@ -1307,6 +1307,7 @@ def test_server_status():
      'conflicts': 0,
      'conflicts_resolved': 0,
      'connections': 1,
+     'last-transaction': '03ac11b771fa1c00',
      'loads': 1,
      'lock_time': None,
      'start': 'Tue May  4 10:55:20 2010',
@@ -1316,6 +1317,35 @@ def test_server_status():
      'waiting': 0}
 
     >>> db.close()
+    """
+
+def test_ruok():
+    """
+    You can also get server status using the ruok protocol.
+
+    >>> addr, _ = start_server(zeo_conf=dict(transaction_timeout=1))
+    >>> db = ZEO.DB(addr) # force a transaction :)
+    >>> import json, socket, struct
+    >>> s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    >>> s.connect(addr)
+    >>> _ = s.send(struct.pack(">I", 4)+"ruok")
+    >>> proto = s.recv(struct.unpack(">I", s.recv(4))[0])
+    >>> pprint.pprint(json.loads(s.recv(struct.unpack(">I", s.recv(4))[0])))
+    {u'1': {u'aborts': 0,
+            u'active_txns': 0,
+            u'commits': 1,
+            u'conflicts': 0,
+            u'conflicts_resolved': 0,
+            u'connections': 1,
+            u'last-transaction': u'03ac11cd11372499',
+            u'loads': 1,
+            u'lock_time': None,
+            u'start': u'Sun Jan  4 09:37:03 2015',
+            u'stores': 1,
+            u'timeout-thread-is-alive': True,
+            u'verifying_clients': 0,
+            u'waiting': 0}}
+    >>> db.close(); s.close()
     """
 
 def client_labels():
@@ -1754,7 +1784,9 @@ def test_suite():
     zeo = unittest.TestSuite()
     zeo.addTest(unittest.makeSuite(ZODB.tests.util.AAAA_Test_Runner_Hack))
     patterns = [
-        (re.compile(r"'start': '[^\n]+'"), 'start'),
+        (re.compile(r"u?'start': u?'[^\n]+'"), 'start'),
+        (re.compile(r"u?'last-transaction': u?'[0-9a-f]+'"),
+         'last-transaction'),
         (re.compile("ZODB.POSException.ConflictError"), "ConflictError"),
         (re.compile("ZODB.POSException.POSKeyError"), "POSKeyError"),
         (re.compile("ZEO.Exceptions.ClientStorageError"), "ClientStorageError"),
