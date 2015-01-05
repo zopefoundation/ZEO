@@ -73,9 +73,13 @@ def check(addr, output_metrics, status, per):
         s.connect(addr)
     except socket.error:
         return error("Can't connect %s" % sys.exc_info()[1])
-    s.send('\x00\x00\x00\x04ruok')
-    proto = s.recv(struct.unpack(">I", s.recv(4))[0])
-    datas = s.recv(struct.unpack(">I", s.recv(4))[0])
+    fp = s.makefile()
+    fp.write('\x00\x00\x00\x04ruok')
+    fp.flush()
+    proto = fp.read(struct.unpack(">I", fp.read(4))[0])
+    datas = fp.read(struct.unpack(">I", fp.read(4))[0])
+    fp.close()
+    s.close()
     data = json.loads(datas)
     if not data:
         return warn("No storages")
