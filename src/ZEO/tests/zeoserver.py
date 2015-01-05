@@ -167,7 +167,8 @@ def main():
         elif opt == '-S':
             suicide = False
         elif opt == '-v':
-            ZEO.zrpc.connection.Connection.current_protocol = arg.encode('ascii')
+            ZEO.zrpc.connection.Connection.current_protocol = arg.encode(
+                'ascii')
 
     zo = ZEO.runzeo.ZEOOptions()
     zo.realize(["-C", configfile])
@@ -181,11 +182,11 @@ def main():
     else:
         test_addr = addr + '-test'
     log(label, 'creating the storage server')
-    storage = zo.storages[0].open()
     mon_addr = None
     if zo.monitor_address:
         mon_addr = zo.monitor_address
-    server = ZEO.runzeo.create_server({"1": storage}, zo)
+    storages = dict((s.name or '1', s.open()) for s in zo.storages)
+    server = ZEO.runzeo.create_server(storages, zo)
 
     try:
         log(label, 'creating the test server, keep: %s', keep)
@@ -194,8 +195,9 @@ def main():
         if e[0] != errno.EADDRINUSE:
             raise
         log(label, 'addr in use, closing and exiting')
-        storage.close()
-        cleanup(storage)
+        for storage in storages.values():
+            storage.close()
+            cleanup(storage)
         sys.exit(2)
 
     t.register_socket(server.dispatcher)
