@@ -131,6 +131,7 @@ setup(name="ZEO",
       runzeo = ZEO.runzeo:main
       zeopasswd = ZEO.zeopasswd:main
       zeoctl = ZEO.zeoctl:main
+      zeo-nagios = ZEO.nagios:main
       """,
       include_package_data = True,
       )

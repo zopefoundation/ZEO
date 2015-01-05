@@ -13,6 +13,7 @@
 ##############################################################################
 import asyncore
 import errno
+import json
 import sys
 import threading
 import logging
@@ -631,8 +632,13 @@ class ManagedServerConnection(Connection):
         self.message_output(self.current_protocol)
 
     def recv_handshake(self, proto):
-        Connection.recv_handshake(self, proto)
-        self.obj.notifyConnected(self)
+        if proto == 'ruok':
+            self.message_output(json.dumps(self.mgr.ruok()))
+            self.poll()
+            Connection.close(self)
+        else:
+            Connection.recv_handshake(self, proto)
+            self.obj.notifyConnected(self)
 
     def close(self):
         self.obj.notifyDisconnected()
