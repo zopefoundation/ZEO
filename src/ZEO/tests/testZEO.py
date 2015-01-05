@@ -1790,6 +1790,8 @@ def test_suite():
         (re.compile("ZODB.POSException.ConflictError"), "ConflictError"),
         (re.compile("ZODB.POSException.POSKeyError"), "POSKeyError"),
         (re.compile("ZEO.Exceptions.ClientStorageError"), "ClientStorageError"),
+        (re.compile(r"\[Errno \d+\]"), '[Errno N]'),
+        (re.compile(r"loads=\d+\.\d+"), 'loads=42.42'),
         ]
     if not PY3:
         patterns.append((re.compile("^'(blob[^']*)'"), r"b'\1'"))
@@ -1813,7 +1815,7 @@ def test_suite():
             'zeo-fan-out.test', 'zdoptions.test',
             'drop_cache_rather_than_verify.txt', 'client-config.test',
             'protocols.test', 'zeo_blob_cache.test', 'invalidation-age.txt',
-            'dynamic_server_ports.test', 'new_addr.test',
+            'dynamic_server_ports.test', 'new_addr.test', '../nagios.rst',
             setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
             checker=renormalizing.RENormalizing(patterns),
             globs={'print_function': print_function},
