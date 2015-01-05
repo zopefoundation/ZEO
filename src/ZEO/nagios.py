@@ -71,8 +71,8 @@ def check(addr, output_metrics, status, per):
             s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     try:
         s.connect(addr)
-    except socket.error:
-        return error("Can't connect %s" % sys.exc_info()[1])
+    except socket.error as err:
+        return error("Can't connect %s" % err)
     fp = s.makefile()
     fp.write('\x00\x00\x00\x04ruok')
     fp.flush()
