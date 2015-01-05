@@ -106,7 +106,7 @@ Multi-storage servers
 ---------------------
 
 A ZEO server can host multiple servers.  (This is a feature that will
-likely be dropped in the future.) When this is the case, the monitor
+likely be dropped in the future.)  When this is the case, the monitor
 profixes metrics with a storage id.
 
     >>> addr, stop = ZEO.server(

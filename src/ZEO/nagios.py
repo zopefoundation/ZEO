@@ -125,16 +125,16 @@ def main(args=None):
     parser = optparse.OptionParser(__doc__)
     parser.add_option(
         '-m', '--output-metrics', action="store_true",
-        help ="Output metrics."
+        help="Output metrics.",
         )
     parser.add_option(
         '-s', '--status-path',
-        help ="Path to status file, needed to get rate metrics"
+        help="Path to status file, needed to get rate metrics",
         )
     parser.add_option(
         '-u', '--time-units', type='choice', default='minutes',
         choices=['seconds', 'minutes', 'hours', 'days'],
-        help ="Time unit for rate metrics"
+        help="Time unit for rate metrics",
         )
     (options, args) = parser.parse_args(args)
     [addr] = args
