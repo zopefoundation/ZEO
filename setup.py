@@ -13,7 +13,7 @@
 ##############################################################################
 """Setup
 """
-version = '4.1.0.dev0'
+version = '4.1.0'
 from setuptools import setup, find_packages
 import os
 import sys
