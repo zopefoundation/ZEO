@@ -14,9 +14,11 @@
 """Python versions compatiblity
 """
 import sys
+import platform
 
 PY3 = sys.version_info[0] >= 3
 PY32 = sys.version_info[:2] == (3, 2)
+PYPY = getattr(platform, 'python_implementation', lambda: None)() == 'PyPy'
 
 if PY3:
     from pickle import Pickler, Unpickler as _Unpickler, dump, dumps, loads
@@ -55,4 +57,3 @@ try:
     from cStringIO import StringIO
 except:
     from io import StringIO
-

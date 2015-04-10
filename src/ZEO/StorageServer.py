@@ -495,7 +495,7 @@ class ZEOStorage:
                 self.storage.tpc_abort(self.transaction)
                 self._clear_transaction()
                 if delay is not None:
-                    delay.error()
+                    delay.error(sys.exc_info())
                 else:
                     raise
             else:
@@ -687,7 +687,7 @@ class ZEOStorage:
         if PY3:
             pickler = Pickler(BytesIO(), 3)
         else:
-            pickler = Pickler()
+            pickler = Pickler(0) # The pure-python version requires at least one argument (PyPy)
         pickler.fast = 1
         try:
             pickler.dump(error)
@@ -1631,4 +1631,3 @@ class Serving(ServerEvent):
 
 class Closed(ServerEvent):
     pass
-

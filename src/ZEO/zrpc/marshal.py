@@ -13,7 +13,7 @@
 ##############################################################################
 import logging
 
-from ZEO._compat import Unpickler, Pickler, BytesIO, PY3
+from ZEO._compat import Unpickler, Pickler, BytesIO, PY3, PYPY
 from ZEO.zrpc.error import ZRPCError
 from ZEO.zrpc.log import log, short_repr
 
@@ -41,11 +41,22 @@ def encode(*args): # args: (msgid, flags, name, args)
     else:
         pickler = Pickler(1)
         pickler.fast = 1
-        return pickler.dump(args, 1)
+        # Only CPython's cPickle supports dumping
+        # and returning in one operation:
+        #   return pickler.dump(args, 1)
+        # For PyPy we must return the value; fortunately this
+        # works the same on CPython and is no more expensive
+        pickler.dump(args)
+        return pickler.getvalue()
+
 
 
 if PY3:
     # XXX: Py3: Needs optimization.
+    fast_encode = encode
+elif PYPY:
+    # can't use the python-2 branch, need a new pickler
+    # every time, getvalue() only works once
     fast_encode = encode
 else:
     def fast_encode():
@@ -63,7 +74,10 @@ def decode(msg):
     """Decodes msg and returns its parts"""
     unpickler = Unpickler(BytesIO(msg))
     unpickler.find_global = find_global
-
+    try:
+        unpickler.find_class = find_global # PyPy, zodbpickle, the non-c-accelerated version
+    except AttributeError:
+        pass
     try:
         return unpickler.load() # msgid, flags, name, args
     except:
@@ -75,6 +89,10 @@ def server_decode(msg):
     """Decodes msg and returns its parts"""
     unpickler = Unpickler(BytesIO(msg))
     unpickler.find_global = server_find_global
+    try:
+        unpickler.find_class = server_find_global # PyPy, zodbpickle, the non-c-accelerated version
+    except AttributeError:
+        pass
 
     try:
         return unpickler.load() # msgid, flags, name, args

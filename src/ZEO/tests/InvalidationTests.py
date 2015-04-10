@@ -403,6 +403,7 @@ class InvalidationTests:
         self._check_tree(cn, tree)
         self._check_threads(tree, *threads)
 
+        transaction.abort()
         cn.close()
         _ = [db.close() for db in dbs]
 

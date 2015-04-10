@@ -19,6 +19,7 @@ ClientStorage -- the main class, implementing the Storage API
 
 """
 import BTrees.IOBTree
+import gc
 import logging
 import os
 import re
@@ -56,6 +57,19 @@ try:
     from ZODB.ConflictResolution import ResolvedSerial
 except ImportError:
     ResolvedSerial = 'rs'
+
+# ClientStorage keeps track of open iterators in a
+# WeakValueDictionary. Under non-refcounted implementations,
+# like PyPy, the weak references are only cleared when
+# a GC runs. To make sure they are cleared when requested,
+# we request a GC in that case.
+# XXX: Is this needed? Do we have to dispose of them in a timely
+# fashion? There are a few tests in IterationTests.py that
+# directly check the length of the internal data structures, but
+# if they stick around a bit longer is that visible to real clients,
+# or could cause any problems (E.g., reuse of ids?)
+_ITERATOR_GC_NEEDS_GC = not hasattr(sys, 'getrefcount')
+
 
 def tid2time(tid):
     return str(TimeStamp(tid))
@@ -571,7 +585,7 @@ class ClientStorage(object):
         # TODO:  Should we check the protocol version here?
         conn._is_read_only = self._is_read_only
         stub = self.StorageServerStubClass(conn)
-        
+
         auth = stub.getAuthProtocol()
         logger.info("%s Server authentication protocol %r", self.__name__, auth)
         if auth:
@@ -1542,6 +1556,9 @@ class ClientStorage(object):
             self._iterators.clear()
             self._iterator_ids.clear()
             return
+
+        if _ITERATOR_GC_NEEDS_GC:
+            gc.collect()
 
         iids = self._iterator_ids - set(self._iterators)
         if iids:
