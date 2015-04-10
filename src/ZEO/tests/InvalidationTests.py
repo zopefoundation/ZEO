@@ -343,6 +343,7 @@ class InvalidationTests:
         self._check_tree(cn, tree)
         self._check_threads(tree, t1, t2)
 
+        transaction.abort()
         cn.close()
         db1.close()
         db2.close()
@@ -374,6 +375,7 @@ class InvalidationTests:
         self._check_tree(cn, tree)
         self._check_threads(tree, t1, t2)
 
+        transaction.abort()
         cn.close()
         db1.close()
         db2.close()
@@ -428,6 +430,7 @@ class InvalidationTests:
         self._check_tree(cn, tree)
         self._check_threads(tree, t1, t2)
 
+        transaction.abort()
         cn.close()
         db1.close()
 
@@ -462,6 +465,7 @@ class InvalidationTests:
         self._check_tree(cn, tree)
         self._check_threads(tree, t1, t2, t3)
 
+        transaction.abort()
         cn.close()
         db1.close()
         db2.close()

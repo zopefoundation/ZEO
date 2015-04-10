@@ -58,19 +58,6 @@ try:
 except ImportError:
     ResolvedSerial = 'rs'
 
-# ClientStorage keeps track of open iterators in a
-# WeakValueDictionary. Under non-refcounted implementations,
-# like PyPy, the weak references are only cleared when
-# a GC runs. To make sure they are cleared when requested,
-# we request a GC in that case.
-# XXX: Is this needed? Do we have to dispose of them in a timely
-# fashion? There are a few tests in IterationTests.py that
-# directly check the length of the internal data structures, but
-# if they stick around a bit longer is that visible to real clients,
-# or could cause any problems (E.g., reuse of ids?)
-_ITERATOR_GC_NEEDS_GC = not hasattr(sys, 'getrefcount')
-
-
 def tid2time(tid):
     return str(TimeStamp(tid))
 
@@ -1557,10 +1544,21 @@ class ClientStorage(object):
             self._iterator_ids.clear()
             return
 
-        if _ITERATOR_GC_NEEDS_GC:
-            gc.collect()
-
+        # Recall that self._iterators is a WeakValueDictionary. Under
+        # non-refcounted implementations like PyPy, this means that
+        # unreachable iterators (and their IDs) may still be in this
+        # map for some arbitrary period of time (until the next
+        # garbage collection occurs.) This is fine: the server
+        # supports being asked to GC the same iterator ID more than
+        # once. Iterator ids can be reused, but only after a server
+        # restart, after which we had already been called with
+        # `disconnected` True and so had cleared out our map anyway,
+        # plus we simply replace whatever is in the map if we get a
+        # duplicate id---and duplicates at that point would be dead
+        # objects waiting to be cleaned up. So there's never any risk
+        # of confusing TransactionIterator objects that are in use.
         iids = self._iterator_ids - set(self._iterators)
+        self._iterators._last_gc = time.time() # let tests know we've been called
         if iids:
             try:
                 self._server.iterator_gc(list(iids))
