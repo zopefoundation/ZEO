@@ -52,7 +52,7 @@ Now, let's write some data:
     >>> conn = db.open()
     >>> for i in range(1, 101):
     ...     conn.root()[i] = ZODB.blob.Blob()
-    ...     w = conn.root()[i].open('w').write((chr(i)*100).encode('ascii'))
+    ...     with conn.root()[i].open('w') as f: w = f.write((chr(i)*100).encode('ascii'))
     >>> transaction.commit()
 
 We've committed 10000 bytes of data, but our target size is 3000.  We
@@ -85,19 +85,19 @@ necessary, but the cache size will remain not much bigger than the
 target:
 
     >>> for i in range(1, 101):
-    ...     data = conn.root()[i].open().read()
+    ...     with conn.root()[i].open() as f: data = f.read()
     ...     if data != (chr(i)*100).encode('ascii'):
     ...         print('bad data', repr(chr(i)), repr(data))
 
     >>> wait_until("size is reduced", check, 99, onfail)
 
     >>> for i in range(1, 101):
-    ...     data = conn.root()[i].open().read()
+    ...     with conn.root()[i].open() as f: data = f.read()
     ...     if data != (chr(i)*100).encode('ascii'):
     ...         print('bad data', repr(chr(i)), repr(data))
 
     >>> for i in range(1, 101):
-    ...     data = conn.root()[i].open('c').read()
+    ...     with conn.root()[i].open('c') as f: data = f.read()
     ...     if data != (chr(i)*100).encode('ascii'):
     ...         print('bad data', repr(chr(i)), repr(data))
 
@@ -114,11 +114,11 @@ provoke problems:
     ...     for i in range(300):
     ...         time.sleep(0)
     ...         i = random.randint(1, 100)
-    ...         data = conn.root()[i].open().read()
+    ...         with conn.root()[i].open() as f: data = f.read()
     ...         if data != (chr(i)*100).encode('ascii'):
     ...             print('bad data', repr(chr(i)), repr(data))
     ...         i = random.randint(1, 100)
-    ...         data = conn.root()[i].open('c').read()
+    ...         with conn.root()[i].open('c') as f: data = f.read()
     ...         if data != (chr(i)*100).encode('ascii'):
     ...             print('bad data', repr(chr(i)), repr(data))
     ...     db.close()
@@ -143,4 +143,3 @@ provoke problems:
 
     >>> db.close()
     >>> ZEO.ClientStorage.BlobCacheLayout.size = orig_blob_cache_layout_size
-

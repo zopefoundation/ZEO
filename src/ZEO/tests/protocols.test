@@ -34,7 +34,7 @@ A current client should be able to connect to a old server:
     2
 
     >>> conn.root()['blob1'] = ZODB.blob.Blob()
-    >>> r = conn.root()['blob1'].open('w').write(b'blob data 1')
+    >>> with conn.root()['blob1'].open('w') as f: r = f.write(b'blob data 1')
     >>> transaction.commit()
 
     >>> db2 = ZEO.DB(addr, blob_dir='server-blobs', shared_blob_dir=True)
@@ -44,7 +44,7 @@ A current client should be able to connect to a old server:
     ...     conn2.root().x += 1
     ...     transaction.commit()
     >>> conn2.root()['blob2'] = ZODB.blob.Blob()
-    >>> r = conn2.root()['blob2'].open('w').write(b'blob data 2')
+    >>> with conn2.root()['blob2'].open('w') as f: r = f.write(b'blob data 2')
     >>> transaction.commit()
 
     >>> @wait_until("Get the new data")
@@ -76,9 +76,9 @@ A current client should be able to connect to a old server:
     >>> conn.root().x
     17
 
-    >>> conn.root()['blob1'].open().read()
+    >>> with conn.root()['blob1'].open() as f: f.read()
     b'blob data 1'
-    >>> conn.root()['blob2'].open().read()
+    >>> with conn.root()['blob2'].open() as f: f.read()
     b'blob data 2'
 
 Note that when taking to a 3.8 server, iteration won't work:
@@ -118,7 +118,7 @@ Note that we'll have to pull some hijinks:
     2
 
     >>> conn.root()['blob1'] = ZODB.blob.Blob()
-    >>> r = conn.root()['blob1'].open('w').write(b'blob data 1')
+    >>> with conn.root()['blob1'].open('w') as f: r = f.write(b'blob data 1')
     >>> transaction.commit()
 
     >>> db2 = ZEO.DB(addr, blob_dir='server-blobs', shared_blob_dir=True)
@@ -128,7 +128,7 @@ Note that we'll have to pull some hijinks:
     ...     conn2.root().x += 1
     ...     transaction.commit()
     >>> conn2.root()['blob2'] = ZODB.blob.Blob()
-    >>> r = conn2.root()['blob2'].open('w').write(b'blob data 2')
+    >>> with conn2.root()['blob2'].open('w') as f: r = f.write(b'blob data 2')
     >>> transaction.commit()
 
 
@@ -161,9 +161,9 @@ Note that we'll have to pull some hijinks:
     >>> conn.root().x
     17
 
-    >>> conn.root()['blob1'].open().read()
+    >>> with conn.root()['blob1'].open() as f: f.read()
     b'blob data 1'
-    >>> conn.root()['blob2'].open().read()
+    >>> with conn.root()['blob2'].open() as f: f.read()
     b'blob data 2'
 
 Make some old protocol calls:
