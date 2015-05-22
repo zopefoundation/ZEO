@@ -16,13 +16,14 @@ It is an error not to specify any storages:
     ...    from io import StringIO
     >>> stderr = sys.stderr
 
-    >>> r = open('config', 'w').write("""
+    >>> with open('config', 'w') as f:
+    ...    _ = f.write("""
     ... <zeo>
     ...     address 8100
     ... </zeo>
     ... """)
-    
-    >>> sys.stderr = StringIO() 
+
+    >>> sys.stderr = StringIO()
     >>> options = ZEO.runzeo.ZEOOptions()
     >>> options.realize('-C config'.split())
     Traceback (most recent call last):
@@ -37,7 +38,8 @@ It is an error not to specify any storages:
 
 But we can specify a storage without a name:
 
-    >>> r = open('config', 'w').write("""
+    >>> with open('config', 'w') as f:
+    ...    _ = f.write("""
     ... <zeo>
     ...     address 8100
     ... </zeo>
@@ -51,8 +53,9 @@ But we can specify a storage without a name:
 
 We can't have multiple unnamed storages:
 
-    >>> sys.stderr = StringIO() 
-    >>> r = open('config', 'w').write("""
+    >>> sys.stderr = StringIO()
+    >>> with open('config', 'w') as f:
+    ...    _ = f.write("""
     ... <zeo>
     ...     address 8100
     ... </zeo>
@@ -73,8 +76,9 @@ We can't have multiple unnamed storages:
 
 Or an unnamed storage and one named '1':
 
-    >>> sys.stderr = StringIO() 
-    >>> r = open('config', 'w').write("""
+    >>> sys.stderr = StringIO()
+    >>> with open('config', 'w') as f:
+    ...    _ = f.write("""
     ... <zeo>
     ...     address 8100
     ... </zeo>
@@ -95,7 +99,8 @@ Or an unnamed storage and one named '1':
 
 But we can have multiple storages:
 
-    >>> r = open('config', 'w').write("""
+    >>> with open('config', 'w') as f:
+    ...    _ = f.write("""
     ... <zeo>
     ...     address 8100
     ... </zeo>
@@ -111,8 +116,9 @@ But we can have multiple storages:
 
 As long as the names are unique:
 
-    >>> sys.stderr = StringIO() 
-    >>> r = open('config', 'w').write("""
+    >>> sys.stderr = StringIO()
+    >>> with open('config', 'w') as f:
+    ...    f.write("""
     ... <zeo>
     ...     address 8100
     ... </zeo>

@@ -82,7 +82,8 @@ dynamic port using ZConfig, you'd use a hostname by itself. In this
 case, ZConfig passes None as the port.
 
     >>> import ZEO.runzeo
-    >>> r = open('conf', 'w').write("""
+    >>> with open('conf', 'w') as f:
+    ...    _ = f.write("""
     ... <zeo>
     ...     address 127.0.0.1
     ... </zeo>
@@ -103,4 +104,3 @@ case, ZConfig passes None as the port.
 .. cleanup
 
     >>> ZODB.event.notify = old_notify
-
