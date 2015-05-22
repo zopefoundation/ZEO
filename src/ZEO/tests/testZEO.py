@@ -1332,21 +1332,22 @@ def test_ruok():
     >>> _ = writer.write(struct.pack(">I", 4)+b"ruok")
     >>> writer.close()
     >>> proto = s.recv(struct.unpack(">I", s.recv(4))[0])
-    >>> pprint.pprint(json.loads(s.recv(struct.unpack(">I", s.recv(4))[0]).decode("ascii")))
-    {u'1': {u'aborts': 0,
-            u'active_txns': 0,
-            u'commits': 1,
-            u'conflicts': 0,
-            u'conflicts_resolved': 0,
-            u'connections': 1,
-            u'last-transaction': u'03ac11cd11372499',
-            u'loads': 1,
-            u'lock_time': None,
-            u'start': u'Sun Jan  4 09:37:03 2015',
-            u'stores': 1,
-            u'timeout-thread-is-alive': True,
-            u'verifying_clients': 0,
-            u'waiting': 0}}
+    >>> data = json.loads(s.recv(struct.unpack(">I", s.recv(4))[0]).decode("ascii"))
+    >>> pprint.pprint(data['1'])
+    {u'aborts': 0,
+     u'active_txns': 0,
+     u'commits': 1,
+     u'conflicts': 0,
+     u'conflicts_resolved': 0,
+     u'connections': 1,
+     u'last-transaction': u'03ac11cd11372499',
+     u'loads': 1,
+     u'lock_time': None,
+     u'start': u'Sun Jan  4 09:37:03 2015',
+     u'stores': 1,
+     u'timeout-thread-is-alive': True,
+     u'verifying_clients': 0,
+     u'waiting': 0}
     >>> db.close(); s.close()
     """
 
@@ -1794,6 +1795,9 @@ def test_suite():
         (re.compile("ZEO.Exceptions.ClientStorageError"), "ClientStorageError"),
         (re.compile(r"\[Errno \d+\]"), '[Errno N]'),
         (re.compile(r"loads=\d+\.\d+"), 'loads=42.42'),
+        # Python 3 drops the u prefix
+        (re.compile("u('.*?')"), r"\1"),
+        (re.compile('u(".*?")'), r"\1")
         ]
     if not PY3:
         patterns.append((re.compile("^'(blob[^']*)'"), r"b'\1'"))
