@@ -167,7 +167,10 @@ class SizedMessageAsyncConnection(asyncore.dispatcher):
             try:
                 d = self.recv(8192)
             except socket.error as err:
-                if err[0] in expected_socket_read_errors:
+                # Python >= 3.3 makes select.error an alias of OSError,
+                # which is not subscriptable but does have the 'errno' attribute
+                err_errno = getattr(err, 'errno', None) or err[0]
+                if err_errno in expected_socket_read_errors:
                     return
                 raise
             if not d:
@@ -291,7 +294,10 @@ class SizedMessageAsyncConnection(asyncore.dispatcher):
                 # Fix for https://bugs.launchpad.net/zodb/+bug/182833
                 #  ensure the above mentioned "output" invariant
                 output.insert(0, v)
-                if err[0] in expected_socket_write_errors:
+                # Python >= 3.3 makes select.error an alias of OSError,
+                # which is not subscriptable but does have the 'errno' attribute
+                err_errno = getattr(err, 'errno', None) or err[0]
+                if err_errno in expected_socket_write_errors:
                     break # we couldn't write anything
                 raise
 
