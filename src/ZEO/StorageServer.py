@@ -20,6 +20,7 @@ TODO:  Need some basic access control-- a declaration of the methods
 exported for invocation by the server.
 """
 import asyncore
+import codecs
 import itertools
 import logging
 import os
@@ -1309,8 +1310,12 @@ class StorageServer:
         status['connections'] = len(status['connections'])
         status['waiting'] = len(self._waiting[storage_id])
         status['timeout-thread-is-alive'] = self.timeouts[storage_id].isAlive()
-        status['last-transaction'] = (
-            self.storages[storage_id].lastTransaction().encode('hex'))
+        last_transaction = self.storages[storage_id].lastTransaction()
+        last_transaction_hex = codecs.encode(last_transaction, 'hex_codec')
+        if PY3:
+            # doctests and maybe clients expect a str, not bytes
+            last_transaction_hex = str(last_transaction_hex, 'ascii')
+        status['last-transaction'] = last_transaction_hex
         return status
 
     def ruok(self):
