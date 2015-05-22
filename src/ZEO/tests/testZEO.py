@@ -1328,7 +1328,9 @@ def test_ruok():
     >>> import json, socket, struct
     >>> s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     >>> s.connect(addr)
-    >>> _ = s.send(struct.pack(">I", 4)+"ruok")
+    >>> writer = s.makefile(mode='wb')
+    >>> _ = writer.write(struct.pack(">I", 4)+b"ruok")
+    >>> writer.close()
     >>> proto = s.recv(struct.unpack(">I", s.recv(4))[0])
     >>> pprint.pprint(json.loads(s.recv(struct.unpack(">I", s.recv(4))[0])))
     {u'1': {u'aborts': 0,
