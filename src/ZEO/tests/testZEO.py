@@ -1332,7 +1332,7 @@ def test_ruok():
     >>> _ = writer.write(struct.pack(">I", 4)+b"ruok")
     >>> writer.close()
     >>> proto = s.recv(struct.unpack(">I", s.recv(4))[0])
-    >>> pprint.pprint(json.loads(s.recv(struct.unpack(">I", s.recv(4))[0])))
+    >>> pprint.pprint(json.loads(s.recv(struct.unpack(">I", s.recv(4))[0]).decode("ascii")))
     {u'1': {u'aborts': 0,
             u'active_txns': 0,
             u'commits': 1,

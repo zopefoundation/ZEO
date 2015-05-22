@@ -78,7 +78,7 @@ def check(addr, output_metrics, status, per):
     proto = s.recv(struct.unpack(">I", s.recv(4))[0])
     datas = s.recv(struct.unpack(">I", s.recv(4))[0])
     s.close()
-    data = json.loads(datas)
+    data = json.loads(datas.decode("ascii"))
     if not data:
         return warn("No storages")
 

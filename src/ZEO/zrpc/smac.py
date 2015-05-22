@@ -271,6 +271,9 @@ class SizedMessageAsyncConnection(asyncore.dispatcher):
                 if isinstance(message, six.binary_type):
                     size += self.__message_output(messages.pop(0), output)
                 elif isinstance(message, six.text_type):
+                    # XXX This can silently lead to data loss and client hangs
+                    # if asserts aren't enabled. Encountered this under Python3
+                    # and 'ruok' protocol
                     assert False, "Got a unicode message: %s" % repr(message)
                 elif message is _close_marker:
                     del messages[:]
