@@ -124,7 +124,7 @@ provoke problems:
     ...             print('bad data', repr(chr(i)), repr(data))
     ...         i = random.randint(1, 100)
     ...         with conn.root()[i].open('c') as f:
-	...             data = f.read()
+    ...             data = f.read()
     ...         if data != (chr(i)*100).encode('ascii'):
     ...             print('bad data', repr(chr(i)), repr(data))
     ...     db.close()
