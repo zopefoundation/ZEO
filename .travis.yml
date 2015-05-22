@@ -11,6 +11,7 @@ install:
     - virtualenv env
     - env/bin/pip install -U setuptools distribute
     - env/bin/python bootstrap.py
+    - env/bin/python --version
     - bin/buildout
 script:
     - bin/test -v1 -j99
