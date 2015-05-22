@@ -185,7 +185,7 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
             s.close()
     else:
         logging.debug('boo hoo')
-        raise
+        raise RuntimeError("Failed to start server")
     return addr, adminaddr, pid, tmpfile
 
 
