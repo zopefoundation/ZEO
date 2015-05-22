@@ -52,8 +52,11 @@ def client_loop(map):
             try:
                 r, w, e = select.select(r, w, e, client_timeout())
             except select.error as err:
-                if err[0] != errno.EINTR:
-                    if err[0] == errno.EBADF:
+                # Python >= 3.3 makes select.error an alias of OSError,
+                # which is not subscriptable but does have the 'errno' attribute
+                err_errno = getattr(err, 'errno', None) or err[0]
+                if err_errno != errno.EINTR:
+                    if err_errno == errno.EBADF:
 
                         # If a connection is closed while we are
                         # calling select on it, we can get a bad
