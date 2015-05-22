@@ -1,4 +1,5 @@
 language: python
+sudo: false
 python:
     - 2.6
     - 2.7
@@ -6,12 +7,6 @@ python:
     - 3.3
     - 3.4
     - pypy
-before_install:
-    # Workaround for a permissions issue with Travis virtual machine images
-    # that breaks Python's multiprocessing:
-    # https://github.com/travis-ci/travis-cookbooks/issues/155
-    - sudo rm -rf /dev/shm
-    - sudo ln -s /run/shm /dev/shm
 install:
     - virtualenv env
     - env/bin/pip install -U setuptools distribute
