@@ -98,7 +98,7 @@ def check(addr, output_metrics, status, per):
                     with open(status) as f:      # Read previous
                         old = json.loads(f.read())
                     dt /= per_times[per]
-                    for storage_id, sdata in data.items():
+                    for storage_id, sdata in sorted(data.items()):
                         sdata['sameple-time'] = now
                         if storage_id in old:
                             sold = old[storage_id]
