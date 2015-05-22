@@ -1,7 +1,7 @@
 Changelog
 =========
 
-4.1.1 (unreleased)
+4.2.0 (unreleased)
 ------------------
 
 - Add support for PyPy.
