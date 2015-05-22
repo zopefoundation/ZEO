@@ -118,7 +118,7 @@ As long as the names are unique:
 
     >>> sys.stderr = StringIO()
     >>> with open('config', 'w') as f:
-    ...    f.write("""
+    ...    _ = f.write("""
     ... <zeo>
     ...     address 8100
     ... </zeo>
