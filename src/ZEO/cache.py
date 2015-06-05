@@ -36,6 +36,7 @@ import ZODB.fsIndex
 import zc.lockfile
 from ZODB.utils import p64, u64, z64
 import six
+from ._compat import PYPY
 
 logger = logging.getLogger("ZEO.cache")
 
@@ -130,21 +131,23 @@ allocated_record_overhead = 43
 # to the end of the file that the new object can't fit in one
 # contiguous chunk, currentofs is reset to ZEC_HEADER_SIZE first.
 
-class locked(object):
 
-    def __init__(self, func):
-        self.func = func
+def locked(func):
+    def _locked_wrapper(inst, *args, **kwargs):
+        inst._lock.acquire()
+        try:
+            return func(inst, *args, **kwargs)
+        finally:
+            inst._lock.release()
+    return _locked_wrapper
 
-    def __get__(self, inst, class_):
-        if inst is None:
-            return self
-        def call(*args, **kw):
-            inst._lock.acquire()
-            try:
-                return self.func(inst, *args, **kw)
-            finally:
-                inst._lock.release()
-        return call
+# Under PyPy, the available dict specializations perform significantly
+# better (faster) than the pure-Python BTree implementation. They may
+# use less memory too. And we don't require any of the special BTree features...
+_current_index_type = ZODB.fsIndex.fsIndex if not PYPY else dict
+_noncurrent_index_type = BTrees.LOBTree.LOBTree if not PYPY else dict
+# ...except at this leaf level
+_noncurrent_bucket_type = BTrees.LLBTree.LLBucket
 
 class ClientCache(object):
     """A simple in-memory cache."""
@@ -173,13 +176,13 @@ class ClientCache(object):
         self._len = 0
 
         # {oid -> pos}
-        self.current = ZODB.fsIndex.fsIndex()
+        self.current = _current_index_type()
 
         # {oid -> {tid->pos}}
         # Note that caches in the wild seem to have very little non-current
         # data, so this would seem to have little impact on memory consumption.
         # I wonder if we even need to store non-current data in the cache.
-        self.noncurrent = BTrees.LOBTree.LOBTree()
+        self.noncurrent = _noncurrent_index_type()
 
         # tid for the most recent transaction we know about.  This is also
         # stored near the start of the file.
@@ -276,8 +279,8 @@ class ClientCache(object):
         # Remember the location of the largest free block.  That seems a
         # decent place to start currentofs.
 
-        self.current = ZODB.fsIndex.fsIndex()
-        self.noncurrent = BTrees.LOBTree.LOBTree()
+        self.current = _current_index_type()
+        self.noncurrent = _noncurrent_index_type()
         l = 0
         last = ofs = ZEC_HEADER_SIZE
         first_free_offset = 0
@@ -369,7 +372,7 @@ class ClientCache(object):
     def _set_noncurrent(self, oid, tid, ofs):
         noncurrent_for_oid = self.noncurrent.get(u64(oid))
         if noncurrent_for_oid is None:
-            noncurrent_for_oid = BTrees.LLBTree.LLBucket()
+            noncurrent_for_oid = _noncurrent_bucket_type()
             self.noncurrent[u64(oid)] = noncurrent_for_oid
         noncurrent_for_oid[u64(tid)] = ofs
 

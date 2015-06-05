@@ -71,14 +71,20 @@ class Database:
 
     def save(self, fd=None):
         filename = self.filename
-
+        needs_closed = False
         if not fd:
             fd = open(filename, 'w')
-        if self.realm:
-            print("realm", self.realm, file=fd)
+            needs_closed = True
 
-        for username in sorted(self._users.keys()):
-            print("%s: %s" % (username, self._users[username]), file=fd)
+        try:
+            if self.realm:
+                print("realm", self.realm, file=fd)
+
+            for username in sorted(self._users.keys()):
+                print("%s: %s" % (username, self._users[username]), file=fd)
+        finally:
+            if needs_closed:
+                fd.close()
 
     def load(self):
         filename = self.filename
@@ -88,8 +94,8 @@ class Database:
         if not os.path.exists(filename):
             return
 
-        fd = open(filename)
-        L = fd.readlines()
+        with open(filename) as fd:
+            L = fd.readlines()
 
         if not L:
             return

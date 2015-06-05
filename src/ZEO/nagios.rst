@@ -118,34 +118,34 @@ profixes metrics with a storage id.
     ... """)
     >>> saddr = ':'.join(map(str, addr)) # (host, port) -> host:port
     >>> nagios([saddr, '-m', '-sstatus'])
-    Empty storage u'second'|second:active_txns=0
-    Empty storage u'first'
-    | second:connections=0
-     second:waiting=0
-     first:active_txns=0
-     first:connections=0
+    Empty storage u'first'|first:active_txns=0
+    Empty storage u'second'
+    | first:connections=0
      first:waiting=0
+     second:active_txns=0
+     second:connections=0
+     second:waiting=0
     1
     >>> nagios([saddr, '-m', '-sstatus'])
-    Empty storage u'second'|second:active_txns=0
-    Empty storage u'first'
-    | second:connections=0
-     second:waiting=0
-     first:active_txns=0
-     first:connections=0
+    Empty storage u'first'|first:active_txns=0
+    Empty storage u'second'
+    | first:connections=0
      first:waiting=0
-     second:aborts=0.0
-     second:commits=0.0
-     second:conflicts=0.0
-     second:conflicts_resolved=0.0
-     second:loads=0.0
-     second:stores=0.0
+     second:active_txns=0
+     second:connections=0
+     second:waiting=0
      first:aborts=0.0
      first:commits=0.0
      first:conflicts=0.0
      first:conflicts_resolved=0.0
-     first:loads=0.0
+     first:loads=42.42
      first:stores=0.0
+     second:aborts=0.0
+     second:commits=0.0
+     second:conflicts=0.0
+     second:conflicts_resolved=0.0
+     second:loads=42.42
+     second:stores=0.0
     1
 
     >>> stop()

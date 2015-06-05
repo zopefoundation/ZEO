@@ -13,7 +13,7 @@
 ##############################################################################
 """Setup
 """
-version = '4.1.0'
+version = '4.2.0.dev0'
 from setuptools import setup, find_packages
 import os
 import sys
@@ -34,6 +34,7 @@ Programming Language :: Python :: 3.2
 Programming Language :: Python :: 3.3
 Programming Language :: Python :: 3.4
 Programming Language :: Python :: Implementation :: CPython
+Programming Language :: Python :: Implementation :: PyPy
 Topic :: Database
 Topic :: Software Development :: Libraries :: Python Modules
 Operating System :: Microsoft :: Windows
@@ -115,10 +116,10 @@ setup(name="ZEO",
       tests_require = tests_require,
       extras_require = dict(test=tests_require),
       install_requires = [
-          'ZODB >= 4.0.0b2',
+          'ZODB >= 4.2.0b1',
           'six',
           'transaction',
-          'persistent',
+          'persistent >= 4.1.0',
           'zc.lockfile',
           'ZConfig',
           'zdaemon',

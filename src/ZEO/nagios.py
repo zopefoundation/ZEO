@@ -73,14 +73,12 @@ def check(addr, output_metrics, status, per):
         s.connect(addr)
     except socket.error as err:
         return error("Can't connect %s" % err)
-    fp = s.makefile()
-    fp.write('\x00\x00\x00\x04ruok')
-    fp.flush()
-    proto = fp.read(struct.unpack(">I", fp.read(4))[0])
-    datas = fp.read(struct.unpack(">I", fp.read(4))[0])
-    fp.close()
+
+    s.sendall(b'\x00\x00\x00\x04ruok')
+    proto = s.recv(struct.unpack(">I", s.recv(4))[0])
+    datas = s.recv(struct.unpack(">I", s.recv(4))[0])
     s.close()
-    data = json.loads(datas)
+    data = json.loads(datas.decode("ascii"))
     if not data:
         return warn("No storages")
 
@@ -88,7 +86,7 @@ def check(addr, output_metrics, status, per):
     messages = []
     level = 0
     if output_metrics:
-        for storage_id, sdata in data.items():
+        for storage_id, sdata in sorted(data.items()):
             for name in nodiff_names:
                 new_metric(metrics, storage_id, name, sdata[name])
 
@@ -100,7 +98,7 @@ def check(addr, output_metrics, status, per):
                     with open(status) as f:      # Read previous
                         old = json.loads(f.read())
                     dt /= per_times[per]
-                    for storage_id, sdata in data.items():
+                    for storage_id, sdata in sorted(data.items()):
                         sdata['sameple-time'] = now
                         if storage_id in old:
                             sold = old[storage_id]
@@ -110,7 +108,7 @@ def check(addr, output_metrics, status, per):
             with open(status, 'w') as f: # save current
                 f.write(json.dumps(data))
 
-    for storage_id, sdata in data.items():
+    for storage_id, sdata in sorted(data.items()):
         if sdata['last-transaction'] == NO_TRANSACTION:
             messages.append("Empty storage %r" % storage_id)
             level = max(level, 1)

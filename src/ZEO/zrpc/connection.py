@@ -632,8 +632,8 @@ class ManagedServerConnection(Connection):
         self.message_output(self.current_protocol)
 
     def recv_handshake(self, proto):
-        if proto == 'ruok':
-            self.message_output(json.dumps(self.mgr.ruok()))
+        if proto == b'ruok':
+            self.message_output(json.dumps(self.mgr.ruok()).encode("ascii"))
             self.poll()
             Connection.close(self)
         else:

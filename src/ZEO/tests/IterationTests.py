@@ -15,9 +15,40 @@
 
 import transaction
 import six
-
+import gc
 
 class IterationTests:
+
+    def _assertIteratorIdsEmpty(self):
+        # Account for the need to run a GC collection
+        # under non-refcounted implementations like PyPy
+        # for storage._iterator_gc to fully do its job.
+        # First, confirm that it ran
+        self.assertTrue(self._storage._iterators._last_gc > 0)
+        gc_enabled = gc.isenabled()
+        gc.disable() # make sure there's no race conditions cleaning out the weak refs
+        try:
+            self.assertEquals(0, len(self._storage._iterator_ids))
+        except AssertionError:
+            # Ok, we have ids. That should also mean that the
+            # weak dictionary has the same length.
+
+            self.assertEqual(len(self._storage._iterators), len(self._storage._iterator_ids))
+            # Now if we do a collection and re-ask for iterator_gc
+            # everything goes away as expected.
+            gc.enable()
+            gc.collect()
+            gc.collect() # sometimes PyPy needs it twice to clear weak refs
+
+            self._storage._iterator_gc()
+
+            self.assertEqual(len(self._storage._iterators), len(self._storage._iterator_ids))
+            self.assertEquals(0, len(self._storage._iterator_ids))
+        finally:
+            if gc_enabled:
+                gc.enable()
+            else:
+                gc.disable()
 
     def checkIteratorGCProtocol(self):
         # Test garbage collection on protocol level.
@@ -78,8 +109,9 @@ class IterationTests:
 
         # GC happens at the transaction boundary. After that, both the storage
         # and the server have forgotten the iterator.
+        self._storage._iterators._last_gc = -1
         self._dostore()
-        self.assertEquals(0, len(self._storage._iterator_ids))
+        self._assertIteratorIdsEmpty()
         self.assertRaises(KeyError, self._storage._server.iterator_next, iid)
 
     def checkIteratorGCStorageTPCAborting(self):
@@ -93,9 +125,10 @@ class IterationTests:
         iid = list(self._storage._iterator_ids)[0]
 
         t = transaction.Transaction()
+        self._storage._iterators._last_gc = -1
         self._storage.tpc_begin(t)
         self._storage.tpc_abort(t)
-        self.assertEquals(0, len(self._storage._iterator_ids))
+        self._assertIteratorIdsEmpty()
         self.assertRaises(KeyError, self._storage._server.iterator_next, iid)
 
     def checkIteratorGCStorageDisconnect(self):

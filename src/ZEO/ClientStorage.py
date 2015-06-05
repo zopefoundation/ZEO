@@ -19,6 +19,7 @@ ClientStorage -- the main class, implementing the Storage API
 
 """
 import BTrees.IOBTree
+import gc
 import logging
 import os
 import re
@@ -571,7 +572,7 @@ class ClientStorage(object):
         # TODO:  Should we check the protocol version here?
         conn._is_read_only = self._is_read_only
         stub = self.StorageServerStubClass(conn)
-        
+
         auth = stub.getAuthProtocol()
         logger.info("%s Server authentication protocol %r", self.__name__, auth)
         if auth:
@@ -1543,7 +1544,21 @@ class ClientStorage(object):
             self._iterator_ids.clear()
             return
 
+        # Recall that self._iterators is a WeakValueDictionary. Under
+        # non-refcounted implementations like PyPy, this means that
+        # unreachable iterators (and their IDs) may still be in this
+        # map for some arbitrary period of time (until the next
+        # garbage collection occurs.) This is fine: the server
+        # supports being asked to GC the same iterator ID more than
+        # once. Iterator ids can be reused, but only after a server
+        # restart, after which we had already been called with
+        # `disconnected` True and so had cleared out our map anyway,
+        # plus we simply replace whatever is in the map if we get a
+        # duplicate id---and duplicates at that point would be dead
+        # objects waiting to be cleaned up. So there's never any risk
+        # of confusing TransactionIterator objects that are in use.
         iids = self._iterator_ids - set(self._iterators)
+        self._iterators._last_gc = time.time() # let tests know we've been called
         if iids:
             try:
                 self._server.iterator_gc(list(iids))

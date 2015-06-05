@@ -8,3 +8,4 @@ develop-eggs
 eggs
 parts
 testing.log
+.dir-locals.el

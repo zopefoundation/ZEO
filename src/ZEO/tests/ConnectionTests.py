@@ -137,7 +137,7 @@ class CommonSetupTearDown(StorageTestBase):
                 os.waitpid(pid, 0)
             except OSError:
                 pass # The subprocess module may already have waited
-                    
+
         for c in self.caches:
             for i in 0, 1:
                 for ext in "", ".trace", ".lock":
@@ -619,8 +619,9 @@ class InvqTests(CommonSetupTearDown):
         perstorage = self.openClientStorage(cache="test")
 
         forker.wait_until(
-            (lambda : perstorage.verify_result == "quick verification"),
-            onfail=(lambda : None))
+            func=(lambda : perstorage.verify_result == "quick verification"),
+            timeout=60,
+            label="perstorage.verify_result to be quick verification")
 
         self.assertEqual(perstorage.verify_result, "quick verification")
         self.assertEqual(perstorage._server._last_invals,
@@ -1119,7 +1120,7 @@ class TimeoutTests(CommonSetupTearDown):
         self.assertRaises(ConflictError, storage.tpc_vote, t)
         # Abort this one and try a transaction that should succeed.
         storage.tpc_abort(t)
-        
+
         # Now do a store.
         obj.value = 11
         t = Transaction()
