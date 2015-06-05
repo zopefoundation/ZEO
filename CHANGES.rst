@@ -1,8 +1,8 @@
 Changelog
 =========
 
-4.2.0 (unreleased)
-------------------
+4.2.0b1 (2015-06-05)
+--------------------
 
 - Add support for PyPy.
 
@@ -16,7 +16,6 @@ Changelog
   without logging in the server log.
 
 - Log errors on server side even if using multi threaded delay.
-
 
 4.0.0 (2013-08-18)
 ------------------
