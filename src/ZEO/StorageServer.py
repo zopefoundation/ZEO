@@ -1122,6 +1122,12 @@ class StorageServer:
         Returns None if it is unable to provide a complete list
         of invalidations for tid.  In this case, client should
         do full cache verification.
+
+        XXX This API is stupid.  It would be better to simply return a
+        list of oid-tid pairs. With this API, we can't really use the
+        tid returned and have to discard all versions for an OID. If
+        we used the max tid, then loadBefore results from the cache
+        might be incorrect.
         """
 
         # We make a copy of invq because it might be modified by a
