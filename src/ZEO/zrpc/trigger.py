@@ -21,7 +21,9 @@ import socket
 import errno
 
 from ZODB.utils import positive_id
+from ZODB._compat import ascii_bytes
 from ZEO._compat import thread, get_ident
+
 
 # Original comments follow; they're hard to follow in the context of
 # ZEO's use of triggers.  TODO:  rewrite from a ZEO perspective.
@@ -135,6 +137,9 @@ class _triggerbase(object):
     def __repr__(self):
         return '<select-trigger (%s) at %x>' % (self.kind, positive_id(self))
 
+# Added for Python 3.2 compatibility.
+TRIGGER_CHARACTER = ascii_bytes('x')
+
 if os.name == 'posix':
 
     class trigger(_triggerbase, asyncore.file_dispatcher):
@@ -159,7 +164,7 @@ if os.name == 'posix':
             asyncore.file_dispatcher.close(self)
 
         def _physical_pull(self):
-            os.write(self.trigger, b'x')
+            os.write(self.trigger, TRIGGER_CHARACTER)
 
 else:
     # Windows version; uses just sockets, because a pipe isn't select'able
@@ -232,4 +237,4 @@ else:
             self.trigger.close()
 
         def _physical_pull(self):
-            self.trigger.send('x')
+            self.trigger.send(TRIGGER_CHARACTER)
