@@ -1,40 +1,46 @@
 from zope.testing import setupstack
 from concurrent.futures import Future
 from unittest import mock
+from ZODB.POSException import ReadOnlyError
+
 import asyncio
 import collections
+import logging
+import pdb
 import pickle
 import struct
 import unittest
 
 from .testing import Loop
-from .client import ClientRunner
+from .client import ClientRunner, Fallback
 from ..Exceptions import ClientDisconnected
 
 class AsyncTests(setupstack.TestCase, ClientRunner):
 
-    addr = ('127.0.0.1', 8200)
-
-    def start(self):
+    def start(self,
+              addrs=(('127.0.0.1', 8200), ), loop_addrs=None,
+              read_only=False,
+              ):
         # To create a client, we need to specify an address, a client
         # object and a cache.
 
         wrapper = mock.Mock()
         cache = MemoryCache()
-        self.set_options(self.addr, wrapper, cache, 'TEST', False)
+        self.set_options(addrs, wrapper, cache, 'TEST', read_only)
 
         # We can also provide an event loop.  We'll use a testing loop
         # so we don't have to actually make any network connection.
-        self.setup_delegation(Loop())
-        protocol = self.loop.protocol
-        transport = self.loop.transport
+        loop = Loop(addrs if loop_addrs is None else loop_addrs)
+        self.setup_delegation(loop)
+        protocol = loop.protocol
+        transport = loop.transport
 
         def send(meth, *args):
-            protocol.data_received(
+            loop.protocol.data_received(
                 sized(pickle.dumps((0, True, meth, args), 3)))
 
         def respond(message_id, result):
-            protocol.data_received(
+            loop.protocol.data_received(
                 sized(pickle.dumps((message_id, False, '.reply', result), 3)))
 
         return (wrapper, cache, self.loop, self.client, protocol, transport,
@@ -159,7 +165,7 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         self.assertEqual(cache.load(b'2'*8), ('committed 2', b'd'*8))
         self.assertEqual(cache.load(b'4'*8), ('committed 4', b'd'*8))
 
-        # Is the protocol is disconnected, it will reconnect and will
+        # If the protocol is disconnected, it will reconnect and will
         # resolve outstanding requests with exceptions:
         loaded = self.load(b'1'*8)
         f1 = self.call('foo', 1, 2)
@@ -186,11 +192,11 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         protocol.data_received(sized(b'Z101'))
         self.assertEqual(self.unsized(transport.pop(2)), b'Z101')
         self.assertEqual(parse(transport.pop()),
-                         [(10, False, 'register', ('TEST', False)),
-                          (11, False, 'lastTransaction', ()),
+                         [(1, False, 'register', ('TEST', False)),
+                          (2, False, 'lastTransaction', ()),
                           ])
-        respond(10, None)
-        respond(11, b'd'*8)
+        respond(1, None)
+        respond(2, b'd'*8)
 
         # Because the server tid matches the cache tid, we're done connecting
         self.assert_(client.connected.done() and not transport.data)
@@ -279,15 +285,147 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         self.assertFalse(cache)
         wrapper.invalidateCache.assert_called_with()
 
-    def test_cache_crazy(self):
+    def test_multiple_addresses(self):
+        # We can pass multiple addresses to client constructor
+        addrs = [('1.2.3.4', 8200), ('2.2.3.4', 8200)]
+        wrapper, cache, loop, client, protocol, transport, send, respond = (
+            self.start(addrs, ()))
+
+        # We haven't connected yet
+        self.assert_(protocol is None and transport is None)
+
+        # There are 2 connection attempts outstanding:
+        self.assertEqual(sorted(loop.connecting), addrs)
+
+        # We cause the first one to fail:
+        loop.fail_connecting(addrs[0])
+        self.assertEqual(sorted(loop.connecting), addrs[1:])
+
+        # The failed connection is attempted in the future:
+        delay, func, args = loop.later.pop(0)
+        self.assert_(1 <= delay <= 2)
+        func(*args)
+        self.assertEqual(sorted(loop.connecting), addrs)
+
+        # Let's connect the second address
+        loop.connect_connecting(addrs[1])
+        self.assertEqual(sorted(loop.connecting), addrs[:1])
+        protocol = loop.protocol
+        transport = loop.transport
+        protocol.data_received(sized(b'Z101'))
+        self.assertEqual(self.unsized(transport.pop(2)), b'Z101')
+        respond(1, None)
+
+        # Now, when the first connection fails, it won't be retried,
+        # because we're already connected.
+        self.assertEqual(sorted(loop.later), [])
+        loop.fail_connecting(addrs[0])
+        self.assertEqual(sorted(loop.connecting), [])
+        self.assertEqual(sorted(loop.later), [])
+
+    def test_bad_server_tid(self):
+        # If in verification we get a server_tid behing the cache's, make sure
+        # we retry the connection later.
         wrapper, cache, loop, client, protocol, transport, send, respond = (
             self.start())
-
-        cache.setLastTid(b'e'*8)
-        cache.store(b'4'*8, b'e'*8, None, '4 data')
-        self.assertTrue(cache)
-
+        cache.store(b'4'*8, b'a'*8, None, '4 data')
+        cache.setLastTid('b'*8)
+        protocol.data_received(sized(b'Z101'))
+        self.assertEqual(self.unsized(transport.pop(2)), b'Z101')
+        parse = self.parse
+        self.assertEqual(parse(transport.pop()),
+                         [(1, False, 'register', ('TEST', False)),
+                          (2, False, 'lastTransaction', ()),
+                          ])
+        respond(1, None)
+        respond(2, 'a'*8)
         self.assertFalse(client.connected.done() or transport.data)
+        delay, func, args = loop.later.pop(0)
+        self.assert_(8 < delay < 10)
+        self.assertEqual(len(loop.later), 0)
+        func(*args) # connect again
+        self.assertFalse(protocol is loop.protocol)
+        self.assertFalse(transport is loop.transport)
+        protocol = loop.protocol
+        transport = loop.transport
+        protocol.data_received(sized(b'Z101'))
+        self.assertEqual(self.unsized(transport.pop(2)), b'Z101')
+        self.assertEqual(parse(transport.pop()),
+                         [(1, False, 'register', ('TEST', False)),
+                          (2, False, 'lastTransaction', ()),
+                          ])
+        respond(1, None)
+        respond(2, 'b'*8)
+        self.assert_(client.connected.done() and not transport.data)
+        self.assert_(client.ready)
+
+    def test_readonly_fallback(self):
+        addrs = [('1.2.3.4', 8200), ('2.2.3.4', 8200)]
+        wrapper, cache, loop, client, protocol, transport, send, respond = (
+            self.start(addrs, (), read_only=Fallback))
+
+        # We'll treat the first address as read-only and we'll let it connect:
+        loop.connect_connecting(addrs[0])
+        protocol, transport = loop.protocol, loop.transport
+        protocol.data_received(sized(b'Z101'))
+        self.assertEqual(self.unsized(transport.pop(2)), b'Z101')
+        # We see that the client tried a writable connection:
+        self.assertEqual(self.parse(transport.pop()),
+                         [(1, False, 'register', ('TEST', False)),
+                          (2, False, 'lastTransaction', ()),
+                          ])
+        # We respond with a read-only exception:
+        respond(1, (ReadOnlyError, ReadOnlyError()))
+
+        # The client tries for a read-only connection:
+        self.assertEqual(self.parse(transport.pop()),
+                         [(3, False, 'register', ('TEST', True)),
+                          (4, False, 'lastTransaction', ()),
+                          ])
+        # We respond with successfully:
+        respond(3, None)
+        respond(4, 'b'*8)
+
+        # At this point, the client is ready and using the protocol,
+        # and the protocol is read-only:
+        self.assert_(client.ready)
+        self.assertEqual(client.protocol, protocol)
+        self.assertEqual(protocol.read_only, True)
+        connected = client.connected
+        self.assert_(connected.done())
+
+        # We connect the second address:
+        loop.connect_connecting(addrs[1])
+        loop.protocol.data_received(sized(b'Z101'))
+        self.assertEqual(self.unsized(loop.transport.pop(2)), b'Z101')
+        self.assertEqual(self.parse(loop.transport.pop()),
+                         [(1, False, 'register', ('TEST', False)),
+                          (2, False, 'lastTransaction', ()),
+                          ])
+
+        # We respond and the writable connection succeeds:
+        respond(1, None)
+
+        # Now, the original protocol is closed, and the client is
+        # no-longer ready:
+        self.assertFalse(client.ready)
+        self.assertFalse(client.protocol is protocol)
+        self.assertEqual(client.protocol, loop.protocol)
+        self.assertEqual(protocol.closed, True)
+        self.assert_(client.connected is not connected)
+        self.assertFalse(client.connected.done())
+        protocol, transport = loop.protocol, loop.transport
+        self.assertEqual(protocol.read_only, False)
+
+        # Now, we finish verification
+        respond(2, 'b'*8)
+        self.assert_(client.ready)
+        self.assert_(client.connected.done())
+
+    def test_invalidations_while_verifying(self):
+        # While we're verifying, invalidations are ignored
+        wrapper, cache, loop, client, protocol, transport, send, respond = (
+            self.start())
         protocol.data_received(sized(b'Z101'))
         self.assertEqual(self.unsized(transport.pop(2)), b'Z101')
         self.assertEqual(self.parse(transport.pop()),
@@ -295,15 +433,35 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
                           (2, False, 'lastTransaction', ()),
                           ])
         respond(1, None)
+        send('invalidateTransaction', b'b'*8, [b'1'*8])
+        self.assertFalse(wrapper.invalidateTransaction.called)
         respond(2, b'a'*8)
+        send('invalidateTransaction', b'c'*8, [b'1'*8])
+        wrapper.invalidateTransaction.assert_called_with(b'c'*8, [b'1'*8])
+        wrapper.invalidateTransaction.reset_mock()
 
-        # The server tid is less than the client tid, WTF? We error
-        with self.assertRaisesRegex(AssertionError, 'Server behind client'):
-            client.connected.result()
+        # We'll disconnect:
+        protocol.connection_lost(Exception("lost"))
+        self.assert_(protocol is not loop.protocol)
+        self.assert_(transport is not loop.transport)
+        protocol = loop.protocol
+        transport = loop.transport
 
-# todo:
-# bad cache validation, make sure ZODB cache is cleared
-# cache boolean value in interface
+        # Similarly, invalidations aren't processed while reconnecting:
+
+        protocol.data_received(sized(b'Z101'))
+        self.assertEqual(self.unsized(transport.pop(2)), b'Z101')
+        self.assertEqual(self.parse(transport.pop()),
+                         [(1, False, 'register', ('TEST', False)),
+                          (2, False, 'lastTransaction', ()),
+                          ])
+        respond(1, None)
+        send('invalidateTransaction', b'd'*8, [b'1'*8])
+        self.assertFalse(wrapper.invalidateTransaction.called)
+        respond(2, b'c'*8)
+        send('invalidateTransaction', b'e'*8, [b'1'*8])
+        wrapper.invalidateTransaction.assert_called_with(b'e'*8, [b'1'*8])
+        wrapper.invalidateTransaction.reset_mock()
 
     def unsized(self, data, unpickle=False):
         result = []
@@ -377,6 +535,21 @@ class MemoryCache:
 
     def setLastTid(self, tid):
         self.last_tid = tid
+
+class Logging:
+
+    def __init__(self, level=logging.ERROR):
+        self.level = level
+
+    def __enter__(self):
+        self.handler = logging.StreamHandler()
+        logging.getLogger().addHandler(self.handler)
+        logging.getLogger().setLevel(self.level)
+
+    def __exit__(self, *args):
+        logging.getLogger().removeHandler(self.handler)
+        logging.getLogger().setLevel(logging.NOTSET)
+
 
 def test_suite():
     suite = unittest.TestSuite()

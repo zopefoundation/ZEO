@@ -1,23 +1,62 @@
 import asyncio
+import pprint
 
 class Loop:
 
-    def __init__(self, debug=True):
+    protocol = transport = None
+
+    def __init__(self, addrs=(), debug=True):
+        self.addrs = addrs
         self.get_debug = lambda : debug
+        self.connecting = {}
+        self.later = []
+        self.exceptions = []
 
     def call_soon(self, func, *args):
         func(*args)
 
-    def create_connection(self, protocol_factory, host, port):
+    def _connect(self, future, protocol_factory):
         self.protocol  = protocol  = protocol_factory()
         self.transport = transport = Transport()
-        future = asyncio.Future(loop=self)
-        future.set_result((transport, protocol))
         protocol.connection_made(transport)
+        future.set_result((transport, protocol))
+
+    def connect_connecting(self, addr):
+        future, protocol_factory = self.connecting.pop(addr)
+        self._connect(future, protocol_factory)
+
+    def fail_connecting(self, addr):
+        future, protocol_factory = self.connecting.pop(addr)
+        if not future.cancelled():
+            future.set_exception(ConnectionRefusedError())
+
+    def create_connection(self, protocol_factory, host, port):
+        future = asyncio.Future(loop=self)
+        addr = host, port
+        if addr in self.addrs:
+            self._connect(future, protocol_factory)
+        else:
+            self.connecting[addr] = future, protocol_factory
+
+        return future
+
+    def create_unix_connection(self, protocol_factory, path):
+        future = asyncio.Future(loop=self)
+        if path in self.addrs:
+            self._connect(future, protocol_factory)
+        else:
+            self.connecting[path] = future, protocol_factory
+
         return future
 
     def call_soon_threadsafe(self, func, *args):
         func(*args)
+
+    def call_later(self, delay, func, *args):
+        self.later.append((delay, func, args))
+
+    def call_exception_handler(self, context):
+        self.exceptions.append(context)
 
 class Transport:
 
