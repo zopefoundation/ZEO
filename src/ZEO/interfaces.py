@@ -37,6 +37,10 @@ class IClientCache(zope.interface.Interface):
         Returns data and serial, or None.
         """
 
+    def __len__():
+        """Retirn the number of items in the cache.
+        """
+
     def store(oid, start_tid, end_tid, data):
         """Store data for the object
 
@@ -77,13 +81,6 @@ class IClientCache(zope.interface.Interface):
 
     def clear():
         """Clear/empty the cache
-        """
-
-    def contents():
-        """Return an [oid, tid] iterator over the (current) cache contents
-
-        This is used by cache verification, which has been found to be
-        a bad idea.
         """
 
 class IServeable(zope.interface.Interface):
