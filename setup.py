@@ -18,19 +18,22 @@ from setuptools import setup, find_packages
 import os
 import sys
 
-if sys.version_info < (2, 6):
-    print("This version of ZEO requires Python 2.6 or higher")
+if sys.version_info < (2, 7):
+    print("This version of ZEO requires Python 2.7 or higher")
     sys.exit(0)
+
+if (3, 0) < sys.version_info < 3.3:
+    print("This version of ZEO requires Python 3.3 or higher")
+    sys.exit(0)
+
 
 classifiers = """\
 Intended Audience :: Developers
 License :: OSI Approved :: Zope Public License
 Programming Language :: Python
 Programming Language :: Python :: 2
-Programming Language :: Python :: 2.6
 Programming Language :: Python :: 2.7
 Programming Language :: Python :: 3
-Programming Language :: Python :: 3.2
 Programming Language :: Python :: 3.3
 Programming Language :: Python :: 3.4
 Programming Language :: Python :: Implementation :: CPython
