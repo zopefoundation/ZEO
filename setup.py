@@ -22,7 +22,7 @@ if sys.version_info < (2, 7):
     print("This version of ZEO requires Python 2.7 or higher")
     sys.exit(0)
 
-if (3, 0) < sys.version_info < 3.3:
+if (3, 0) < sys.version_info < (3, 3):
     print("This version of ZEO requires Python 3.3 or higher")
     sys.exit(0)
 
