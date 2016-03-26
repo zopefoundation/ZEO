@@ -1,14 +1,12 @@
 language: python
 sudo: false
 python:
-    - 2.6
     - 2.7
-    - 3.2
     - 3.3
     - 3.4
     - pypy
 install:
-    - pip install -U setuptools distribute
+    - pip install -U setuptools
     - python bootstrap.py
     - bin/buildout
 script:
