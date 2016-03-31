@@ -70,7 +70,76 @@ class AttributeErrorTests(unittest.TestCase):
         self.assertRaises(RuntimeError, zeo.main)
 
 
+class CloseServerTests(unittest.TestCase):
+
+    def testCallSequence(self):
+        # The close_server hook is called after loop_forever
+        # has returned
+        zeo = TestZEOServer()
+        zeo.main()
+        self.assertEqual(zeo.called, [
+            "setup_default_logging",
+            "check_socket",
+            "clear_socket",
+            "make_pidfile",
+            "open_storages",
+            "setup_signals",
+            "create_server",
+            "loop_forever",
+            "close_server", # New
+            "clear_socket",
+            "remove_pidfile",
+            ])
+        # The default implementation closes the storage server
+        self.assertEqual(hasattr(zeo, "server"), True)
+        self.assertEqual(zeo.server.called, ["close"])
+
+    def testFailLoopForever(self):
+        # The close_server hook is called if loop_forever exits
+        # with an exception
+        zeo = TestZEOServer(fail_loop_forever=True)
+        self.assertRaises(RuntimeError, zeo.main)
+        self.assertEqual(zeo.called, [
+            "setup_default_logging",
+            "check_socket",
+            "clear_socket",
+            "make_pidfile",
+            "open_storages",
+            "setup_signals",
+            "create_server",
+            "loop_forever",
+            "close_server",
+            "clear_socket",
+            "remove_pidfile",
+            ])
+        # The storage server has been closed
+        self.assertEqual(hasattr(zeo, "server"), True)
+        self.assertEqual(zeo.server.called, ["close"])
+
+    def testFailCreateServer(self):
+        # The close_server hook is called if create_server exits
+        # with an exception
+        zeo = TestZEOServer(fail_create_server=True)
+        self.assertRaises(RuntimeError, zeo.main)
+        self.assertEqual(zeo.called, [
+            "setup_default_logging",
+            "check_socket",
+            "clear_socket",
+            "make_pidfile",
+            "open_storages",
+            "setup_signals",
+            "create_server",
+            "close_server",
+            "clear_socket",
+            "remove_pidfile",
+            ])
+        # The server attribute is present but None
+        self.assertEqual(hasattr(zeo, "server"), True)
+        self.assertEqual(zeo.server, None)
+
+
 def test_suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(AttributeErrorTests))
+    suite.addTest(unittest.makeSuite(CloseServerTests))
     return suite
