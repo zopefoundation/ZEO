@@ -51,7 +51,9 @@ class Protocol(asyncio.Protocol):
         self.client = client
         self.connect_poll = connect_poll
         self.futures = {} # { message_id -> future }
-        self.input = []
+        self.input  = [] # Buffer when assembling messages
+        self.output = [] # Buffer when paused
+        self.paused = [] # Paused indicator, mutable to avoid attr lookup
 
         # Handle the first message, the protocol handshake, differently
         self.message_received = self.first_message_received
@@ -98,14 +100,56 @@ class Protocol(asyncio.Protocol):
     def connection_made(self, transport):
         logger.info("Connected %s", self)
         self.transport = transport
-
+        paused = self.paused
+        output = self.output
+        append = output.append
         writelines = transport.writelines
         from struct import pack
 
         def write(message):
-            writelines((pack(">I", len(message)), message))
+            if paused:
+                append(message)
+            else:
+                writelines((pack(">I", len(message)), message))
 
         self._write = write
+
+        def writeit(data):
+            # Note, don't worry about combining messages.  Iters
+            # will be used with blobs, in which case, the individual
+            # messages will be big to begin with.
+            data = iter(data)
+            for message in data:
+                writelines((pack(">I", len(message)), message))
+                if paused:
+                    append(data)
+                    break
+
+        self._writeit = writeit
+
+    def pause_writing(self):
+        self.paused.append(1)
+
+    def resume_writing(self):
+        paused = self.paused
+        del paused[:]
+        output = self.output
+        writelines = self.transport.writelines
+        from struct import pack
+        while output and not paused:
+            message = output.pop(0)
+            if isinstance(message, bytes):
+                writelines((pack(">I", len(message)), message))
+            else:
+                data = message
+                for message in data:
+                    writelines((pack(">I", len(message)), message))
+                    if paused: # paused again. Put iter back.
+                        output.insert(0, data)
+                        break
+
+    def get_peername(self):
+        return self.transport.get_extra_info('peername')
 
     def connection_lost(self, exc):
         if exc is None:
@@ -232,6 +276,9 @@ class Protocol(asyncio.Protocol):
     def call_async(self, method, args):
         self._write(dumps((0, True, method, args), 3))
 
+    def call_async_iter(self, it):
+        self._writeit(dumps((0, True, method, args), 3) for method, args in it)
+
     message_id = 0
     def call(self, future, method, args):
         self.message_id += 1
@@ -304,6 +351,8 @@ class Client:
 
     def disconnected(self, protocol=None):
         if protocol is None or protocol is self.protocol:
+            if protocol is self.protocol:
+                self.client.notify_disconnected()
             self.ready = False
             self.connected = concurrent.futures.Future()
             self.protocol = None
@@ -403,10 +452,21 @@ class Client:
         self.cache.setLastTid(server_tid)
         self.ready = True
         self.connected.set_result(None)
+        self.client.notify_connected(self)
+
+    def get_peername(self):
+        return self.protocol.get_peername()
 
     def call_async_threadsafe(self, future, method, args):
         if self.ready:
             self.protocol.call_async(method, args)
+            future.set_result(None)
+        else:
+            future.set_exception(ZEO.Exceptions.ClientDisconnected())
+
+    def call_async_iter_threadsafe(self, future, it):
+        if self.ready:
+            self.protocol.call_async_iter(it)
             future.set_result(None)
         else:
             future.set_exception(ZEO.Exceptions.ClientDisconnected())
@@ -463,16 +523,17 @@ class Client:
         else:
             self._when_ready(self.load_before_threadsafe, future, oid, tid)
 
-    def tpc_finish_threadsafe(self, future, tid, updates):
+    def tpc_finish_threadsafe(self, future, tid, updates, f):
         if self.ready:
             @self.protocol.promise('tpc_finish', tid)
-            def committed(_):
+            def committed(tid):
                 cache = self.cache
-                for oid, s, data in updates:
+                for oid, data, resolved in updates:
                     cache.invalidate(oid, tid)
-                    if data and s != ResolvedSerial:
+                    if data and not resolved:
                         cache.store(oid, tid, None, data)
                 cache.setLastTid(tid)
+                f(tid)
                 future.set_result(None)
 
             committed.catch(future.set_exception)
@@ -536,8 +597,11 @@ class ClientRunner:
     def call(self, method, *args, timeout=None):
         return self.__call(self.client.call_threadsafe, method, args)
 
-    def callAsync(self, method, *args):
+    def async(self, method, *args):
         return self.__call(self.client.call_async_threadsafe, method, args)
+
+    def async_iter(self, it):
+        return self.__call(self.client.call_async_iter_threadsafe, it)
 
     def load(self, oid):
         return self.__call(self.client.load_threadsafe, oid)
@@ -545,11 +609,22 @@ class ClientRunner:
     def load_before(self, oid, tid):
         return self.__call(self.client.load_before_threadsafe, oid, tid)
 
-    def tpc_finish(self, tid, updates):
-        return self.__call(self.client.tpc_finish_threadsafe, tid, updates)
+    def tpc_finish(self, tid, updates, f):
+        return self.__call(self.client.tpc_finish_threadsafe, tid, updates, f)
 
     def is_connected(self):
         return self.client.ready
+
+    def is_read_only(self):
+        try:
+            protocol = self.client.protocol
+        except AttributeError:
+            return True
+        else:
+            if protocol is None:
+                return True
+            else:
+                return protocol.read_only
 
     def close(self):
         self.__call(self.client.close_threadsafe)

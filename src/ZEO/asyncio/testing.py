@@ -17,7 +17,7 @@ class Loop:
 
     def _connect(self, future, protocol_factory):
         self.protocol  = protocol  = protocol_factory()
-        self.transport = transport = Transport()
+        self.transport = transport = Transport(protocol)
         protocol.connection_made(transport)
         future.set_result((transport, protocol))
 
@@ -60,14 +60,26 @@ class Loop:
 
 class Transport:
 
-    def __init__(self):
+    capacity = 1 << 64
+    paused = False
+    extra = dict(peername='1.2.3.4')
+
+    def __init__(self, protocol):
         self.data = []
+        self.protocol = protocol
 
     def write(self, data):
         self.data.append(data)
+        self.check_pause()
 
     def writelines(self, lines):
         self.data.extend(lines)
+        self.check_pause()
+
+    def check_pause(self):
+        if len(self.data) > self.capacity and not self.paused:
+            self.paused = True
+            self.protocol.pause_writing()
 
     def pop(self, count=None):
         if count:
@@ -76,8 +88,17 @@ class Transport:
         else:
             r = self.data[:]
             del self.data[:]
+        self.check_resume()
         return r
+
+    def check_resume(self):
+        if len(self.data) < self.capacity and self.paused:
+            self.paused = False
+            self.protocol.resume_writing()
 
     closed = False
     def close(self):
         self.closed = True
+
+    def get_extra_info(self, name):
+        return self.extra[name]

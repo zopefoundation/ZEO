@@ -20,6 +20,7 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
     def start(self,
               addrs=(('127.0.0.1', 8200), ), loop_addrs=None,
               read_only=False,
+              finish_start=False,
               ):
         # To create a client, we need to specify an address, a client
         # object and a cache.
@@ -42,6 +43,17 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         def respond(message_id, result):
             loop.protocol.data_received(
                 sized(pickle.dumps((message_id, False, '.reply', result), 3)))
+
+        if finish_start:
+            protocol.data_received(sized(b'Z101'))
+            self.assertEqual(self.unsized(transport.pop(2)), b'Z101')
+            parse = self.parse
+            self.assertEqual(parse(transport.pop()),
+                             [(1, False, 'register', ('TEST', False)),
+                              (2, False, 'lastTransaction', ()),
+                              ])
+            respond(1, None)
+            respond(2, 'a'*8)
 
         return (wrapper, cache, self.loop, self.client, protocol, transport,
                 send, respond)
@@ -82,8 +94,11 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         self.assertFalse(f1.done())
 
         # If we try to make an async call, we get an immediate error:
-        f2 = self.callAsync('bar', 3, 4)
+        f2 = self.async('bar', 3, 4)
         self.assert_(isinstance(f2.exception(), ClientDisconnected))
+
+        # The wrapper object (ClientStorage) hasn't been notified:
+        wrapper.notify_connected.assert_not_called()
 
         # Let's respond to those first 2 calls:
 
@@ -96,11 +111,14 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         self.assertEqual(cache.getLastTid(), 'a'*8)
         self.assertEqual(parse(transport.pop()), (3, False, 'foo', (1, 2)))
 
+        # The wrapper object (ClientStorage) has been notified:
+        wrapper.notify_connected.assert_called_with(client)
+
         respond(3, 42)
         self.assertEqual(f1.result(), 42)
 
         # Now we can make async calls:
-        f2 = self.callAsync('bar', 3, 4)
+        f2 = self.async('bar', 3, 4)
         self.assert_(f2.done() and f2.exception() is None)
         self.assertEqual(parse(transport.pop()), (0, True, 'bar', (3, 4)))
 
@@ -144,26 +162,32 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         self.assertEqual(loaded.result(), (b'data0', b'^'*8, b'_'*8))
 
         # When committing transactions, we need to update the cache
-        # with committed data.  To do this, we pass a (oid, tid, data)
+        # with committed data.  To do this, we pass a (oid, data, resolved)
         # iteratable to tpc_finish_threadsafe.
-        from ZODB.ConflictResolution import ResolvedSerial
+
+        tids = []
+        def finished_cb(tid):
+            tids.append(tid)
+
         committed = self.tpc_finish(
             b'd'*8,
-            [(b'2'*8, b'd'*8, 'committed 2'),
-             (b'1'*8, ResolvedSerial, 'committed 3'),
-             (b'4'*8, b'd'*8, 'committed 4'),
-             ])
+            [(b'2'*8, 'committed 2', False),
+             (b'1'*8, 'committed 3', True),
+             (b'4'*8, 'committed 4', False),
+             ],
+            finished_cb)
         self.assertFalse(committed.done() or
                          cache.load(b'2'*8) or
                          cache.load(b'4'*8))
         self.assertEqual(cache.load(b'1'*8), (b'data2', b'b'*8))
         self.assertEqual(parse(transport.pop()),
                          (7, False, 'tpc_finish', (b'd'*8,)))
-        respond(7, None)
+        respond(7, b'e'*8)
         self.assertEqual(committed.result(), None)
         self.assertEqual(cache.load(b'1'*8), None)
-        self.assertEqual(cache.load(b'2'*8), ('committed 2', b'd'*8))
-        self.assertEqual(cache.load(b'4'*8), ('committed 4', b'd'*8))
+        self.assertEqual(cache.load(b'2'*8), ('committed 2', b'e'*8))
+        self.assertEqual(cache.load(b'4'*8), ('committed 4', b'e'*8))
+        self.assertEqual(tids.pop(), b'e'*8)
 
         # If the protocol is disconnected, it will reconnect and will
         # resolve outstanding requests with exceptions:
@@ -176,7 +200,10 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
                          )
         exc = TypeError(43)
 
+        wrapper.notify_disconnected.assert_not_called()
+        wrapper.notify_connected.reset_mock()
         protocol.connection_lost(exc)
+        wrapper.notify_disconnected.assert_called_with()
 
         self.assertEqual(loaded.exception(), exc)
         self.assertEqual(f1.exception(), exc)
@@ -195,12 +222,14 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
                          [(1, False, 'register', ('TEST', False)),
                           (2, False, 'lastTransaction', ()),
                           ])
+        wrapper.notify_connected.assert_not_called()
         respond(1, None)
-        respond(2, b'd'*8)
+        respond(2, b'e'*8)
+        wrapper.notify_connected.assert_called_with(client)
 
         # Because the server tid matches the cache tid, we're done connecting
         self.assert_(client.connected.done() and not transport.data)
-        self.assertEqual(cache.getLastTid(), b'd'*8)
+        self.assertEqual(cache.getLastTid(), b'e'*8)
 
         # Because we were able to update the cache, we didn't have to
         # invalidate the database cache:
@@ -364,6 +393,8 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         wrapper, cache, loop, client, protocol, transport, send, respond = (
             self.start(addrs, (), read_only=Fallback))
 
+        self.assertTrue(self.is_read_only())
+
         # We'll treat the first address as read-only and we'll let it connect:
         loop.connect_connecting(addrs[0])
         protocol, transport = loop.protocol, loop.transport
@@ -376,6 +407,7 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
                           ])
         # We respond with a read-only exception:
         respond(1, (ReadOnlyError, ReadOnlyError()))
+        self.assertTrue(self.is_read_only())
 
         # The client tries for a read-only connection:
         self.assertEqual(self.parse(transport.pop()),
@@ -385,6 +417,7 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         # We respond with successfully:
         respond(3, None)
         respond(4, 'b'*8)
+        self.assertTrue(self.is_read_only())
 
         # At this point, the client is ready and using the protocol,
         # and the protocol is read-only:
@@ -402,9 +435,11 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
                          [(1, False, 'register', ('TEST', False)),
                           (2, False, 'lastTransaction', ()),
                           ])
+        self.assertTrue(self.is_read_only())
 
         # We respond and the writable connection succeeds:
         respond(1, None)
+        self.assertFalse(self.is_read_only())
 
         # Now, the original protocol is closed, and the client is
         # no-longer ready:
@@ -462,6 +497,46 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         send('invalidateTransaction', b'e'*8, [b'1'*8])
         wrapper.invalidateTransaction.assert_called_with(b'e'*8, [b'1'*8])
         wrapper.invalidateTransaction.reset_mock()
+
+    def test_flow_control(self):
+        # When sending a lot of data (blobs), we don't want to fill up
+        # memory behind a slow socket. Asycio's flow control helper
+        # seems a bit complicated. We'd rather pass an iterator that's
+        # consumed as we can.
+
+        wrapper, cache, loop, client, protocol, transport, send, respond = (
+            self.start(finish_start=True))
+
+        # Give the transport a small capacity:
+        transport.capacity = 2
+        self.async('foo')
+        self.async('bar')
+        self.async('baz')
+        self.async('splat')
+
+        # The first 2 were sent, but the remaining were queued.
+        self.assertEqual(self.parse(transport.pop()),
+                         [(0, True, 'foo', ()), (0, True, 'bar', ())])
+
+        # But popping them allowed sending to resume:
+        self.assertEqual(self.parse(transport.pop()),
+                         [(0, True, 'baz', ()), (0, True, 'splat', ())])
+
+        # This is especially handy with iterators:
+        self.async_iter((name, ()) for name in 'abcde')
+        self.assertEqual(self.parse(transport.pop()),
+                         [(0, True, 'a', ()), (0, True, 'b', ())])
+        self.assertEqual(self.parse(transport.pop()),
+                         [(0, True, 'c', ()), (0, True, 'd', ())])
+        self.assertEqual(self.parse(transport.pop()),
+                         (0, True, 'e', ()))
+        self.assertEqual(self.parse(transport.pop()),
+                         [])
+
+    def test_get_peername(self):
+        wrapper, cache, loop, client, protocol, transport, send, respond = (
+            self.start(finish_start=True))
+        self.assertEqual(client.get_peername(), '1.2.3.4') 
 
     def unsized(self, data, unpickle=False):
         result = []
