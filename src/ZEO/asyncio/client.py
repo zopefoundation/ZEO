@@ -32,6 +32,8 @@ class Protocol(asyncio.Protocol):
 
     transport = protocol_version = None
 
+    protocols = b"Z309", b"Z310", b"Z3101"
+
     def __init__(self, loop,
                  addr, client, storage_key, read_only, connect_poll=1):
         """Create a client interface
@@ -179,8 +181,12 @@ class Protocol(asyncio.Protocol):
         # lastTid before processing (and possibly missing) subsequent
         # invalidations.
 
-        self.protocol_version = protocol_version
-        self._write(protocol_version) # XXX protocol negotiation
+        self.protocol_version = min(protocol_version, self.protocols[-1])
+        if self.protocol_version not in self.protocols:
+            self.client.register_failed(
+                self, ZEO.Exceptions.ProtocolError(protocol_version))
+            return
+        self._write(self.protocol_version)
 
         register = self.promise(
             'register', self.storage_key,
@@ -351,7 +357,7 @@ class Client:
 
     def disconnected(self, protocol=None):
         if protocol is None or protocol is self.protocol:
-            if protocol is self.protocol:
+            if protocol is self.protocol and protocol is not None:
                 self.client.notify_disconnected()
             self.ready = False
             self.connected = concurrent.futures.Future()
@@ -543,14 +549,6 @@ class Client:
     def close_threadsafe(self, future):
         self.close()
         future.set_result(None)
-
-    # Methods called by the server:
-
-    client_methods = (
-        'invalidateTransaction', 'serialnos', 'info',
-        'receiveBlobStart', 'receiveBlobChunk', 'receiveBlobStop',
-        )
-    client_delegated = client_methods[1:]
 
     def invalidateTransaction(self, tid, oids):
         if self.ready:
