@@ -92,6 +92,8 @@ class Protocol(asyncio.Protocol):
         @cr.add_done_callback
         def done_connecting(future):
             if future.exception() is not None:
+                logger.info("Connection to %rfailed, retrying, %s",
+                            self.addr, future.exception())
                 # keep trying
                 if not self.closed:
                     self.loop.call_later(
@@ -160,9 +162,9 @@ class Protocol(asyncio.Protocol):
                 f.cancel()
         else:
             logger.info("Disconnected, %s, %r", self, exc)
+            self.client.disconnected(self)
             for f in self.futures.values():
                 f.set_exception(exc)
-            self.client.disconnected(self)
 
     def finish_connect(self, protocol_version):
 
@@ -295,11 +297,14 @@ class Protocol(asyncio.Protocol):
     def promise(self, method, *args):
         return self.call(Promise(), method, args)
 
-    # Methods called by the server:
+    # Methods called by the server.
+    # WARNING WARNING we can't call methods that call back to us
+    # syncronously, as that would lead to DEADLOCK!
 
     client_methods = (
         'invalidateTransaction', 'serialnos', 'info',
         'receiveBlobStart', 'receiveBlobChunk', 'receiveBlobStop',
+        # plus: notify_connected, notify_disconnected
         )
     client_delegated = client_methods[1:]
 
@@ -400,7 +405,7 @@ class Client:
         # A protcol failed registration. That's weird.  If they've all
         # failed, we should try again in a bit.
         protocol.close()
-        logger.error("Registration or cache validation failed, %s", exc)
+        logger.exception("Registration or cache validation failed, %s", exc)
         if (self.protocol is None and not
             any(not p.closed for p in self.protocols)
             ):
@@ -455,10 +460,20 @@ class Client:
             self.register_failed(protocol, exc)
 
     def finished_verify(self, server_tid):
+        # The cache is validated and the last tid we got from the server.
+        # Set ready so we apply any invalidations that follow.
+        # We've been ignoring them up to this point.
         self.cache.setLastTid(server_tid)
         self.ready = True
-        self.connected.set_result(None)
-        self.client.notify_connected(self)
+
+        @self.protocol.promise('get_info')
+        def got_info(info):
+            self.connected.set_result(None)
+            self.client.notify_connected(self, info)
+
+        @got_info.catch
+        def failed_info(exc):
+            self.register_failed(self, exc)
 
     def get_peername(self):
         return self.protocol.get_peername()
@@ -469,6 +484,9 @@ class Client:
             future.set_result(None)
         else:
             future.set_exception(ZEO.Exceptions.ClientDisconnected())
+
+    def call_async_from_same_thread(self, method, *args):
+        return self.protocol.call_async(method, args)
 
     def call_async_iter_threadsafe(self, future, it):
         if self.ready:
@@ -557,6 +575,9 @@ class Client:
             self.cache.setLastTid(tid)
             self.client.invalidateTransaction(tid, oids)
 
+    @property
+    def protocol_version(self):
+        return self.protocol.protocol_version
 
 class ClientRunner:
 
@@ -641,21 +662,21 @@ class ClientThread(ClientRunner):
     """
 
     def __init__(self, addrs, client, cache,
-                 storage_key='1', read_only=False, timeout=30):
+                 storage_key='1', read_only=False, timeout=30,
+                 disconnect_poll=1):
         self.set_options(addrs, client, cache, storage_key, read_only,
                          timeout, disconnect_poll)
         threading.Thread(
             target=self.run,
-            args=(addr, client, cache, storage_key, read_only),
             name='zeo_client_'+storage_key,
             daemon=True,
             ).start()
         self.connected.result(timeout)
 
-    def run(self, *args):
+    def run(self):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        self.setup_delegation(loop, *args)
+        self.setup_delegation(loop)
         loop.run_forever()
 
 class Promise:

@@ -56,6 +56,8 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
                               ])
             respond(1, None)
             respond(2, 'a'*8)
+            self.assertEqual(parse(transport.pop()), (3, False, 'get_info', ()))
+            respond(3, dict(length=42))
 
         return (wrapper, cache, self.loop, self.client, protocol, transport,
                 send, respond)
@@ -110,16 +112,20 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         respond(1, None)
         respond(2, 'a'*8)
 
+        # After verification, the client requests info:
+        self.assertEqual(parse(transport.pop()), (3, False, 'get_info', ()))
+        respond(3, dict(length=42))
+
         # Now we're connected, the cache was initialized, and the
         # queued message has been sent:
         self.assert_(client.connected.done())
         self.assertEqual(cache.getLastTid(), 'a'*8)
-        self.assertEqual(parse(transport.pop()), (3, False, 'foo', (1, 2)))
+        self.assertEqual(parse(transport.pop()), (4, False, 'foo', (1, 2)))
 
         # The wrapper object (ClientStorage) has been notified:
-        wrapper.notify_connected.assert_called_with(client)
+        wrapper.notify_connected.assert_called_with(client, {'length': 42})
 
-        respond(3, 42)
+        respond(4, 42)
         self.assertEqual(f1.result(), 42)
 
         # Now we can make async calls:
@@ -132,8 +138,8 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
 
         # The data wasn't in the cache, so we make a server call:
         self.assertEqual(parse(transport.pop()),
-                         (4, False, 'loadEx', (b'1'*8,)))
-        respond(4, (b'data', b'a'*8))
+                         (5, False, 'loadEx', (b'1'*8,)))
+        respond(5, (b'data', b'a'*8))
         self.assertEqual(loaded.result(), (b'data', b'a'*8))
 
         # If we make another request, it will be satisfied from the cache:
@@ -149,8 +155,8 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         # Now, if we try to load current again, we'll make a server request.
         loaded = self.load(b'1'*8)
         self.assertEqual(parse(transport.pop()),
-                         (5, False, 'loadEx', (b'1'*8,)))
-        respond(5, (b'data2', b'b'*8))
+                         (6, False, 'loadEx', (b'1'*8,)))
+        respond(6, (b'data2', b'b'*8))
         self.assertEqual(loaded.result(), (b'data2', b'b'*8))
 
         # Loading non-current data may also be satisfied from cache
@@ -163,8 +169,8 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         loaded = self.load_before(b'1'*8, b'_'*8)
 
         self.assertEqual(parse(transport.pop()),
-                         (6, False, 'loadBefore', (b'1'*8, b'_'*8)))
-        respond(6, (b'data0', b'^'*8, b'_'*8))
+                         (7, False, 'loadBefore', (b'1'*8, b'_'*8)))
+        respond(7, (b'data0', b'^'*8, b'_'*8))
         self.assertEqual(loaded.result(), (b'data0', b'^'*8, b'_'*8))
 
         # When committing transactions, we need to update the cache
@@ -187,8 +193,8 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
                          cache.load(b'4'*8))
         self.assertEqual(cache.load(b'1'*8), (b'data2', b'b'*8))
         self.assertEqual(parse(transport.pop()),
-                         (7, False, 'tpc_finish', (b'd'*8,)))
-        respond(7, b'e'*8)
+                         (8, False, 'tpc_finish', (b'd'*8,)))
+        respond(8, b'e'*8)
         self.assertEqual(committed.result(), None)
         self.assertEqual(cache.load(b'1'*8), None)
         self.assertEqual(cache.load(b'2'*8), ('committed 2', b'e'*8))
@@ -201,8 +207,8 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         f1 = self.call('foo', 1, 2)
         self.assertFalse(loaded.done() or f1.done())
         self.assertEqual(parse(transport.pop()),
-                         [(8, False, 'loadEx', (b'1'*8,)),
-                          (9, False, 'foo', (1, 2))],
+                         [(9, False, 'loadEx', (b'1'*8,)),
+                          (10, False, 'foo', (1, 2))],
                          )
         exc = TypeError(43)
 
@@ -235,9 +241,11 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         self.assertFalse(wrapper.notify_connected.called)
         respond(1, None)
         respond(2, b'e'*8)
-        wrapper.notify_connected.assert_called_with(client)
+        self.assertEqual(parse(transport.pop()), (3, False, 'get_info', ()))
+        respond(3, dict(length=42))
 
         # Because the server tid matches the cache tid, we're done connecting
+        wrapper.notify_connected.assert_called_with(client, {'length': 42})
         self.assert_(client.connected.done() and not transport.data)
         self.assertEqual(cache.getLastTid(), b'e'*8)
 
@@ -277,6 +285,10 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
                          (3, False, 'getInvalidations', (b'a'*8, )))
         respond(3, (b'e'*8, [b'4'*8]))
 
+        self.assertEqual(self.parse(transport.pop()),
+                         (4, False, 'get_info', ()))
+        respond(4, dict(length=42))
+
         # Now that verification is done, we're done connecting
         self.assert_(client.connected.done() and not transport.data)
         self.assertEqual(cache.getLastTid(), b'e'*8)
@@ -315,6 +327,10 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
 
         # We respond None, indicating that we're too far out of date:
         respond(3, None)
+
+        self.assertEqual(self.parse(transport.pop()),
+                         (4, False, 'get_info', ()))
+        respond(4, dict(length=42))
 
         # Now that verification is done, we're done connecting
         self.assert_(client.connected.done() and not transport.data)
@@ -395,6 +411,8 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
                           ])
         respond(1, None)
         respond(2, 'b'*8)
+        self.assertEqual(parse(transport.pop()), (3, False, 'get_info', ()))
+        respond(3, dict(length=42))
         self.assert_(client.connected.done() and not transport.data)
         self.assert_(client.ready)
 
@@ -435,6 +453,12 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         self.assertEqual(client.protocol, protocol)
         self.assertEqual(protocol.read_only, True)
         connected = client.connected
+
+        # The client asks for info, and we respond:
+        self.assertEqual(self.parse(transport.pop()),
+                         (5, False, 'get_info', ()))
+        respond(5, dict(length=42))
+
         self.assert_(connected.done())
 
         # We connect the second address:
@@ -464,6 +488,7 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
 
         # Now, we finish verification
         respond(2, 'b'*8)
+        respond(3, dict(length=42))
         self.assert_(client.ready)
         self.assert_(client.connected.done())
 
@@ -556,7 +581,17 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
     def test_get_peername(self):
         wrapper, cache, loop, client, protocol, transport, send, respond = (
             self.start(finish_start=True))
-        self.assertEqual(client.get_peername(), '1.2.3.4') 
+        self.assertEqual(client.get_peername(), '1.2.3.4')
+
+    def test_call_async_from_same_thread(self):
+        # There are a few (1?) cases where we call into client storage
+        # where it needs to call back asyncronously. Because we're
+        # calling from the same thread, we don't need to use a futurte.
+        wrapper, cache, loop, client, protocol, transport, send, respond = (
+            self.start(finish_start=True))
+
+        client.call_async_from_same_thread('foo', 1)
+        self.assertEqual(self.parse(transport.pop()), (0, True, 'foo', (1, )))
 
     def unsized(self, data, unpickle=False):
         result = []
