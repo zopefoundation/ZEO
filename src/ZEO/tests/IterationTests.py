@@ -17,6 +17,8 @@ import transaction
 import six
 import gc
 
+from ..asyncio.testing import AsyncRPC
+
 class IterationTests:
 
     def _assertIteratorIdsEmpty(self):
@@ -52,7 +54,7 @@ class IterationTests:
 
     def checkIteratorGCProtocol(self):
         # Test garbage collection on protocol level.
-        server = self._storage._server
+        server = AsyncRPC(self._storage._server)
 
         iid = server.iterator_start(None, None)
         # None signals the end of iteration.
@@ -79,7 +81,7 @@ class IterationTests:
         self.assertEquals(0, len(self._storage._iterator_ids))
 
         # The iterator has run through, so the server has already disposed it.
-        self.assertRaises(KeyError, self._storage._server.iterator_next, iid)
+        self.assertRaises(KeyError, self._storage._call, 'iterator_next', iid)
 
     def checkIteratorGCSpanTransactions(self):
         # Keep a hard reference to the iterator so it won't be automatically
@@ -112,7 +114,7 @@ class IterationTests:
         self._storage._iterators._last_gc = -1
         self._dostore()
         self._assertIteratorIdsEmpty()
-        self.assertRaises(KeyError, self._storage._server.iterator_next, iid)
+        self.assertRaises(KeyError, self._storage._call, 'iterator_next', iid)
 
     def checkIteratorGCStorageTPCAborting(self):
         # The odd little jig we do below arises from the fact that the
@@ -129,7 +131,7 @@ class IterationTests:
         self._storage.tpc_begin(t)
         self._storage.tpc_abort(t)
         self._assertIteratorIdsEmpty()
-        self.assertRaises(KeyError, self._storage._server.iterator_next, iid)
+        self.assertRaises(KeyError, self._storage._call, 'iterator_next', iid)
 
     def checkIteratorGCStorageDisconnect(self):
 
@@ -146,7 +148,7 @@ class IterationTests:
         # Show that after disconnecting, the client side GCs the iterators
         # as well. I'm calling this directly to avoid accidentally
         # calling tpc_abort implicitly.
-        self._storage.notifyDisconnected()
+        self._storage.notify_disconnected()
         self.assertEquals(0, len(self._storage._iterator_ids))
 
     def checkIteratorParallel(self):

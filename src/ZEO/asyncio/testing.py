@@ -102,3 +102,12 @@ class Transport:
 
     def get_extra_info(self, name):
         return self.extra[name]
+
+class AsyncRPC:
+    """Adapt an asyncio API to an RPC to help hysterical tests
+    """
+    def __init__(self, api):
+        self.api = api
+
+    def __getattr__(self, name):
+        return lambda *a, **kw: self.api.call(name, *a, **kw)

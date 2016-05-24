@@ -174,9 +174,6 @@ def main():
     zo.realize(["-C", configfile])
     addr = zo.address
 
-    if zo.auth_protocol == "plaintext":
-        __import__('ZEO.tests.auth_plaintext')
-
     if isinstance(addr, tuple):
         test_addr = addr[0], addr[1]+1
     else:

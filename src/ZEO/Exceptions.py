@@ -26,3 +26,7 @@ class ClientDisconnected(ClientStorageError):
 
 class AuthError(StorageError):
     """The client provided invalid authentication credentials."""
+
+class ProtocolError(ClientStorageError):
+    """A client contacted a server with an incomparible protocol
+    """

@@ -19,7 +19,6 @@ import asyncore
 import threading
 import logging
 
-import ZEO.ServerStub
 from ZEO.ClientStorage import ClientStorage
 from ZEO.Exceptions import ClientDisconnected
 from ZEO.zrpc.marshal import encode
@@ -40,19 +39,9 @@ logger = logging.getLogger('ZEO.tests.ConnectionTests')
 
 ZERO = '\0'*8
 
-class TestServerStub(ZEO.ServerStub.StorageServer):
-    __super_getInvalidations = ZEO.ServerStub.StorageServer.getInvalidations
-
-    def getInvalidations(self, tid):
-        # squirrel the results away for inspection by test case
-        self._last_invals = self.__super_getInvalidations(tid)
-        return self._last_invals
-
 class TestClientStorage(ClientStorage):
 
     test_connection = False
-
-    StorageServerStubClass = TestServerStub
 
     connection_count_for_tests = 0
 
@@ -592,7 +581,6 @@ class InvqTests(CommonSetupTearDown):
 
     def checkQuickVerificationWith2Clients(self):
         perstorage = self.openClientStorage(cache="test", cache_size=4000)
-        self.assertEqual(perstorage.verify_result, "empty cache")
 
         self._storage = self.openClientStorage()
         oid = self._storage.new_oid()
@@ -624,8 +612,6 @@ class InvqTests(CommonSetupTearDown):
             label="perstorage.verify_result to be quick verification")
 
         self.assertEqual(perstorage.verify_result, "quick verification")
-        self.assertEqual(perstorage._server._last_invals,
-                         (revid, [oid]))
 
         self.assertEqual(perstorage.load(oid, ''),
                          self._storage.load(oid, ''))

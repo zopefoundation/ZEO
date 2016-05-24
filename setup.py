@@ -118,7 +118,7 @@ setup(name="ZEO",
       install_requires = [
           'ZODB >= 4.2.0b1',
           'six',
-          'transaction',
+          'transaction >= 1.6.0',
           'persistent >= 4.1.0',
           'zc.lockfile',
           'ZConfig',

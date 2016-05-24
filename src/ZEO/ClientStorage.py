@@ -18,38 +18,33 @@ Public contents of this module:
 ClientStorage -- the main class, implementing the Storage API
 
 """
-import BTrees.IOBTree
-import gc
 import logging
 import os
 import re
 import socket
 import stat
 import sys
-import tempfile
 import threading
 import time
 import weakref
 from binascii import hexlify
 
 import zc.lockfile
-import ZEO.interfaces
 import ZODB
 import ZODB.BaseStorage
 import ZODB.interfaces
-import ZODB.event
 import zope.interface
 import six
+
 from persistent.TimeStamp import TimeStamp
-from ZEO._compat import Pickler, Unpickler, get_ident, PY3
-from ZEO.auth import get_module
-from ZEO.cache import ClientCache
-from ZEO.Exceptions import ClientStorageError, ClientDisconnected, AuthError
-from ZEO import ServerStub
+from ZEO._compat import get_ident
+from ZEO.Exceptions import ClientDisconnected
 from ZEO.TransactionBuffer import TransactionBuffer
-from ZEO.zrpc.client import ConnectionManager
 from ZODB import POSException
 from ZODB import utils
+
+import ZEO.asyncio.client
+import ZEO.cache
 
 logger = logging.getLogger(__name__)
 
@@ -75,22 +70,6 @@ def get_timestamp(prev_ts=None):
         t = t.laterThan(prev_ts)
     return t
 
-class DisconnectedServerStub:
-    """Internal helper class used as a faux RPC stub when disconnected.
-
-    This raises ClientDisconnected on all attribute accesses.
-
-    This is a singleton class -- there should be only one instance,
-    the global disconnected_stub, so it can be tested by identity.
-
-    """
-
-    def __getattr__(self, attr):
-        raise ClientDisconnected()
-
-# Singleton instance of DisconnectedServerStub
-disconnected_stub = DisconnectedServerStub()
-
 MB = 1024**2
 
 class ClientStorage(object):
@@ -103,28 +82,20 @@ class ClientStorage(object):
 
     """
 
-    # ClientStorage does not declare any interfaces here. Interfaces are
-    # declared according to the server's storage once a connection is
-    # established.
-
-
-    # Classes we instantiate.  A subclass might override.
-    TransactionBufferClass = TransactionBuffer
-    ClientCacheClass = ClientCache
-    ConnectionManagerClass = ConnectionManager
-    StorageServerStubClass = ServerStub.stub
-
     def __init__(self, addr, storage='1', cache_size=20 * MB,
-                 name='', client=None, var=None,
-                 min_disconnect_poll=1, max_disconnect_poll=30,
-                 wait_for_server_on_startup=None, # deprecated alias for wait
-                 wait=None, wait_timeout=None,
+                 name='', wait_timeout=None,
+                 disconnect_poll=None,
                  read_only=0, read_only_fallback=0,
-                 drop_cache_rather_verify=False,
-                 username='', password='', realm=None,
                  blob_dir=None, shared_blob_dir=False,
                  blob_cache_size=None, blob_cache_size_check=10,
                  client_label=None,
+                 cache=None,
+                 # Mostly ignored backward-compatability options
+                 client=None, var=None,
+                 min_disconnect_poll=1, max_disconnect_poll=None,
+                 wait=True,
+                 drop_cache_rather_verify=True,
+                 username=None, password=None, realm=None,
                  ):
         """ClientStorage constructor.
 
@@ -142,50 +113,31 @@ class ClientStorage(object):
             address.  Required.
 
         storage
-            The storage name, defaulting to '1'.  The name must
+            The server storage name, defaulting to '1'.  The name must
             match one of the storage names supported by the server(s)
-            specified by the addr argument.  The storage name is
-            displayed in the Zope control panel.
+            specified by the addr argument.
 
         cache_size
             The disk cache size, defaulting to 20 megabytes.
             This is passed to the ClientCache constructor.
 
         name
-            The storage name, defaulting to ''.  If this is false,
-            str(addr) is used as the storage name.
+            The storage name, defaulting to a combination of the
+            address and the server storage name.  This is used to
+            construct the response to getName()
 
-        client
-            A name used to construct persistent cache filenames.
-            Defaults to None, in which case the cache is not persistent.
-            See ClientCache for more info.
+        cache
+            A cache object or a name, relative to the current working
+            directory, used to construct persistent cache filenames.
+            Defaults to None, in which case the cache is not
+            persistent.  See ClientCache for more info.
 
-        var
-            When client is not None, this specifies the directory
-            where the persistent cache files are created.  It defaults
-            to None, in which case the current directory is used.
-
-        min_disconnect_poll
-            The minimum delay in seconds between
-            attempts to connect to the server, in seconds.  Defaults
-            to 1 second.
-
-        max_disconnect_poll
-            The maximum delay in seconds between
-            attempts to connect to the server, in seconds.  Defaults
-            to 300 seconds.
-
-        wait_for_server_on_startup
-            A backwards compatible alias for
-            the wait argument.
-
-        wait
-            A flag indicating whether to wait until a connection
-            with a server is made, defaulting to true.
+        disconnect_poll
+            The delay in seconds between attempts to connect to the
+            server, in seconds.  Defaults to 1 second.
 
         wait_timeout
-            Maximum time to wait for a connection before
-            giving up.  Only meaningful if wait is True.
+            Maximum time to wait for results, including connecting.
 
         read_only
             A flag indicating whether this should be a
@@ -198,21 +150,6 @@ class ClientStorage(object):
             writable storages are available.  Defaults to false.  At
             most one of read_only and read_only_fallback should be
             true.
-
-        username
-            string with username to be used when authenticating.
-            These only need to be provided if you are connecting to an
-            authenticated server storage.
-
-        password
-            string with plaintext password to be used when authenticated.
-
-        realm
-            not documented.
-
-        drop_cache_rather_verify
-            a flag indicating that the cache should be dropped rather
-            than expensively verified.
 
         blob_dir
             directory path for blob data.  'blob data' is data that
@@ -246,9 +183,15 @@ class ClientStorage(object):
         """
 
         if isinstance(addr, int):
-            addr = '127.0.0.1', addr
+            addr = ('127.0.0.1', addr)
 
         self.__name__ = name or str(addr) # Standard convention for storages
+
+        if isinstance(addr, str):
+            addr = [addr]
+        elif (isinstance(addr, tuple) and len(addr) == 2 and
+              isinstance(addr[0], str) and isinstance(addr[1], int)):
+            addr = [addr]
 
         logger.info(
             "%s %s (pid=%d) created %s/%s for storage: %r",
@@ -260,121 +203,27 @@ class ClientStorage(object):
             storage,
             )
 
-        self._drop_cache_rather_verify = drop_cache_rather_verify
-
-        # wait defaults to True, but wait_for_server_on_startup overrides
-        # if not None
-        if wait_for_server_on_startup is not None:
-            if wait is not None and wait != wait_for_server_on_startup:
-                logger.warning(
-                    "%s ClientStorage(): conflicting values for wait and "
-                    "wait_for_server_on_startup; wait prevails",
-                    self.__name__)
-            else:
-                logger.info(
-                     "%s ClientStorage(): wait_for_server_on_startup "
-                     "is deprecated; please use wait instead",
-                    self.__name__)
-                wait = wait_for_server_on_startup
-        elif wait is None:
-            wait = 1
+        self._is_read_only = read_only
 
         self._addr = addr # For tests
 
-        # A ZEO client can run in disconnected mode, using data from
-        # its cache, or in connected mode.  Several instance variables
-        # are related to whether the client is connected.
-
-        # _server: All method calls are invoked through the server
-        #    stub.  When not connect, set to disconnected_stub an
-        #    object that raises ClientDisconnected errors.
-
-        # _ready: A threading Event that is set only if _server
-        #    is set to a real stub.
-
-        # _connection: The current zrpc connection or None.
-
-        # _connection is set as soon as a connection is established,
-        # but _server is set only after cache verification has finished
-        # and clients can safely use the server.  _pending_server holds
-        # a server stub while it is being verified.
-
-        self._server = disconnected_stub
-        self._connection = None
-        self._pending_server = None
-        self._ready = threading.Event()
-
-        # _is_read_only stores the constructor argument
-        self._is_read_only = read_only
-        self._storage = storage
-        self._read_only_fallback = read_only_fallback
-        self._username = username
-        self._password = password
-        self._realm = realm
-
         self._iterators = weakref.WeakValueDictionary()
         self._iterator_ids = set()
-
-        # Flag tracking disconnections in the middle of a transaction.  This
-        # is reset in tpc_begin() and set in notifyDisconnected().
-        self._midtxn_disconnect = 0
+        self._storage = storage
 
         # _server_addr is used by sortKey()
         self._server_addr = None
 
         self._client_label = client_label
 
-        self._pickler = self._tfile = None
-
         self._info = {'length': 0, 'size': 0, 'name': 'ZEO Client',
                       'supportsUndo': 0, 'interfaces': ()}
 
-        self._tbuf = self.TransactionBufferClass()
         self._db = None
-        self._ltid = None # the last committed transaction
 
-        # _serials: stores (oid, serialno) as returned by server
-        # _seriald: _check_serials() moves from _serials to _seriald,
-        #           which maps oid to serialno
+        self._oids = [] # List of pre-fetched oids from server
 
-        # TODO:  If serial number matches transaction id, then there is
-        # no need to have all this extra infrastructure for handling
-        # serial numbers.  The vote call can just return the tid.
-        # If there is a conflict error, we can't have a special method
-        # called just to propagate the error.
-        self._serials = []
-        self._seriald = {}
-
-        # A ClientStorage only allows one thread to commit at a time.
-        # Mutual exclusion is achieved using _tpc_cond, which
-        # protects _transaction.  A thread that wants to assign to
-        # self._transaction must acquire _tpc_cond first.  A thread
-        # that decides it's done with a transaction (whether via success
-        # or failure) must set _transaction to None and do
-        # _tpc_cond.notify() before releasing _tpc_cond.
-        self._tpc_cond = threading.Condition()
-        self._transaction = None
-
-        # Prevent multiple new_oid calls from going out.  The _oids
-        # variable should only be modified while holding the
-        # _oid_lock.
-        self._oid_lock = threading.Lock()
-        self._oids = [] # Object ids retrieved from new_oids()
-
-        # load() and tpc_finish() must be serialized to guarantee
-        # that cache modifications from each occur atomically.
-        # It also prevents multiple load calls occuring simultaneously,
-        # which simplifies the cache logic.
-        self._load_lock = threading.Lock()
-        # _load_oid and _load_status are protected by _lock
-        self._load_oid = None
-        self._load_status = None
-
-        # Can't read data in one thread while writing data
-        # (tpc_finish) in another thread.  In general, the lock
-        # must prevent access to the cache while _update_cache
-        # is executing.
-        self._lock = threading.Lock()
+        cache = self._cache = open_cache(cache, var, client, cache_size)
 
         # XXX need to check for POSIX-ness here
         self.blob_dir = blob_dir
@@ -396,15 +245,6 @@ class ClientStorage(object):
         else:
             self.fshelper = None
 
-        if client is not None:
-            dir = var or os.getcwd()
-            cache_path = os.path.join(dir, "%s-%s.zec" % (client, storage))
-        else:
-            cache_path = None
-
-        self._cache = self.ClientCacheClass(cache_path, size=cache_size)
-
-
         self._blob_cache_size = blob_cache_size
         self._blob_data_bytes_loaded = 0
         if blob_cache_size is not None:
@@ -413,65 +253,25 @@ class ClientStorage(object):
                 blob_cache_size * blob_cache_size_check // 100)
             self._check_blob_size()
 
-        self._rpc_mgr = self.ConnectionManagerClass(addr, self,
-                                                    tmin=min_disconnect_poll,
-                                                    tmax=max_disconnect_poll)
+        self._server = ZEO.asyncio.client.ClientThread(
+            addr, self, cache, storage,
+            ZEO.asyncio.client.Fallback if read_only_fallback else read_only,
+            wait_timeout or 30,
+            wait=wait,
+            )
+        self._call = self._server.call
+        self._async = self._server.async
+        self._async_iter = self._server.async_iter
 
-        if wait:
-            self._wait(wait_timeout)
-        else:
-            # attempt_connect() will make an attempt that doesn't block
-            # "too long," for a very vague notion of too long.  If that
-            # doesn't succeed, call connect() to start a thread.
-            if not self._rpc_mgr.attempt_connect():
-                self._rpc_mgr.connect()
+        self._commit_lock = threading.Lock()
 
     def new_addr(self, addr):
         self._addr = addr
-        self._rpc_mgr.new_addrs(addr)
-
-    def _wait(self, timeout=None):
-        if timeout is not None:
-            deadline = time.time() + timeout
-            logger.debug("%s Setting deadline to %f", self.__name__, deadline)
-        else:
-            deadline = None
-        # Wait for a connection to be established.
-        self._rpc_mgr.connect(sync=1)
-        # When a synchronous connect() call returns, there is
-        # a valid _connection object but cache validation may
-        # still be going on.  This code must wait until validation
-        # finishes, but if the connection isn't a zrpc async
-        # connection it also needs to poll for input.
-        while 1:
-            self._ready.wait(30)
-            if self._ready.isSet():
-                break
-            if timeout and time.time() > deadline:
-                logger.warning("%s Timed out waiting for connection",
-                               self.__name__)
-                break
-            logger.info("%s Waiting for cache verification to finish",
-                        self.__name__)
+        self._server.new_addrs(addr)
 
     def close(self):
         "Storage API: finalize the storage, releasing external resources."
-        _rpc_mgr = self._rpc_mgr
-        self._rpc_mgr = None
-        if _rpc_mgr is None:
-            return # already closed
-
-        if self._connection is not None:
-            self._connection.register_object(None) # Don't call me!
-        self._connection = None
-
-        _rpc_mgr.close()
-        self._tbuf.close()
-        if self._cache is not None:
-            self._cache.close()
-            self._cache = None
-        if self._tfile is not None:
-            self._tfile.close()
+        self._server.close()
 
         if self._check_blob_size_thread is not None:
             self._check_blob_size_thread.join()
@@ -510,153 +310,43 @@ class ClientStorage(object):
 
     def is_connected(self, test=False):
         """Return whether the storage is currently connected to a server."""
-        # This function is used by clients, so we only report that a
-        # connection exists when the connection is ready to use.
-        if test:
-            try:
-                self._server.lastTransaction()
-            except Exception:
-                pass
-        return self._ready.isSet()
+        return self._server.is_connected()
 
     def sync(self):
         # The separate async thread should keep us up to date
         pass
 
-    def doAuth(self, protocol, stub):
-        if not (self._username and self._password):
-            raise AuthError("empty username or password")
-
-        module = get_module(protocol)
-        if not module:
-            logger.error("%s %s: no such an auth protocol: %s",
-                         self.__name__, self.__class__.__name__, protocol)
-            return
-
-        storage_class, client, db_class = module
-
-        if not client:
-            logger.error(
-                "%s %s: %s isn't a valid protocol, must have a Client class",
-                self.__name__, self.__class__.__name__, protocol)
-            raise AuthError("invalid protocol")
-
-        c = client(stub)
-
-        # Initiate authentication, returns boolean specifying whether OK
-        return c.start(self._username, self._realm, self._password)
-
-    def testConnection(self, conn):
-        """Internal: test the given connection.
-
-        This returns:   1 if the connection is an optimal match,
-                        0 if it is a suboptimal but acceptable match.
-        It can also raise DisconnectedError or ReadOnlyError.
-
-        This is called by ZEO.zrpc.ConnectionManager to decide which
-        connection to use in case there are multiple, and some are
-        read-only and others are read-write.
-
-        This works by calling register() on the server.  In read-only
-        mode, register() is called with the read_only flag set.  In
-        writable mode and in read-only fallback mode, register() is
-        called with the read_only flag cleared.  In read-only fallback
-        mode only, if the register() call raises ReadOnlyError, it is
-        retried with the read-only flag set, and if this succeeds,
-        this is deemed a suboptimal match.  In all other cases, a
-        succeeding register() call is deemed an optimal match, and any
-        exception raised by register() is passed through.
-
-        """
-        logger.info("%s Testing connection %r", self.__name__, conn)
-        # TODO:  Should we check the protocol version here?
-        conn._is_read_only = self._is_read_only
-        stub = self.StorageServerStubClass(conn)
-
-        auth = stub.getAuthProtocol()
-        logger.info("%s Server authentication protocol %r", self.__name__, auth)
-        if auth:
-            skey = self.doAuth(auth, stub)
-            if skey:
-                logger.info("%s Client authentication successful",
-                            self.__name__)
-                conn.setSessionKey(skey)
-            else:
-                logger.info("%s Authentication failed",
-                            self.__name__)
-                raise AuthError("Authentication failed")
-
-        try:
-            stub.register(str(self._storage), self._is_read_only)
-            return 1
-        except POSException.ReadOnlyError:
-            if not self._read_only_fallback:
-                raise
-            logger.info("%s Got ReadOnlyError; trying again with read_only=1",
-                        self.__name__)
-            stub.register(str(self._storage), read_only=1)
-            conn._is_read_only = True
-            return 0
-
-    def notifyConnected(self, conn):
-        """Internal: start using the given connection.
-
-        This is called by ConnectionManager after it has decided which
-        connection should be used.
-        """
-        if self._cache is None:
-            # the storage was closed, but the connect thread called
-            # this method before it was stopped.
-            return
-
-
-        if self._connection is not None:
-            # If we are upgrading from a read-only fallback connection,
-            # we must close the old connection to prevent it from being
-            # used while the cache is verified against the new connection.
-            self._connection.register_object(None) # Don't call me!
-            self._connection.close()
-            self._connection = None
-            self._ready.clear()
-            reconnect = 1
-        else:
-            reconnect = 0
-
-        self.set_server_addr(conn.get_addr())
-        self._connection = conn
+    _connection_generation = 0
+    def notify_connected(self, conn, info):
+        reconnected = self._connection_generation
+        self.set_server_addr(conn.get_peername())
+        self.protocol_version = conn.protocol_version
+        self._is_read_only = conn.is_read_only()
 
         # invalidate our db cache
         if self._db is not None:
             self._db.invalidateCache()
 
-        if reconnect:
-            logger.info("%s Reconnected to storage: %s",
-                        self.__name__, self._server_addr)
-        else:
-            logger.info("%s Connected to storage: %s",
-                        self.__name__, self._server_addr)
+        logger.info("%s %s to storage: %s",
+                    self.__name__,
+                    'Reconnected' if self._connection_generation
+                    else 'Connected',
+                    self._server_addr)
 
-        stub = self.StorageServerStubClass(conn)
+        self._connection_generation += 1
 
-        if self._client_label and conn.peer_protocol_version >= b"Z310":
-            stub.set_client_label(self._client_label)
+        if self._client_label:
+            conn.call_async_from_same_thread(
+                'set_client_label', self._client_label)
 
-        if conn.peer_protocol_version < b"Z3101":
-            logger.warning("Old server doesn't suppport "
-                           "checkCurrentSerialInTransaction")
-            self.checkCurrentSerialInTransaction = lambda *args: None
+        self._info.update(info)
 
-        self._oids = []
-        self.verify_cache(stub)
-
-        # It's important to call get_info after calling verify_cache.
-        # If we end up doing a full-verification, we need to wait till
-        # it's done.  By doing a synchonous call, we are guarenteed
-        # that the verification will be done because operations are
-        # handled in order.
-        self._info.update(stub.get_info())
-
-        self._handle_extensions()
+        # for name in self._info.get('extensionMethods', {}).keys():
+        #     if not hasattr(self, name):
+        #         def mklambda(mname):
+        #             return (lambda *args, **kw:
+        #                     self._server.rpc.call(mname, *args, **kw))
+        #         setattr(self, name, mklambda(name))
 
         for iface in (
             ZODB.interfaces.IStorageRestoreable,
@@ -669,14 +359,6 @@ class ClientStorage(object):
             if (iface.__module__, iface.__name__) in self._info.get(
                 'interfaces', ()):
                 zope.interface.alsoProvides(self, iface)
-
-    def _handle_extensions(self):
-        for name in self.getExtensionMethods().keys():
-            if not hasattr(self, name):
-                def mklambda(mname):
-                    return (lambda *args, **kw:
-                            self._server.rpc.call(mname, *args, **kw))
-                setattr(self, name, mklambda(name))
 
     def set_server_addr(self, addr):
         # Normalize server address and convert to string
@@ -699,6 +381,8 @@ class ClientStorage(object):
             self._server_addr = str((canonical, addr[1]))
 
     def sortKey(self):
+        # XXX sortKey should be explicit, possibly based on database name.
+
         # If the client isn't connected to anything, it can't have a
         # valid sortKey().  Raise an error to stop the transaction early.
         if self._server_addr is None:
@@ -706,15 +390,7 @@ class ClientStorage(object):
         else:
             return '%s:%s' % (self._storage, self._server_addr)
 
-    ### Is there a race condition between notifyConnected and
-    ### notifyDisconnected? In Particular, what if we get
-    ### notifyDisconnected in the middle of notifyConnected?
-    ### The danger is that we'll proceed as if we were connected
-    ### without worrying if we were, but this would happen any way if
-    ### notifyDisconnected had to get the instance lock.  There's
-    ### nothing to gain by getting the instance lock.
-
-    def notifyDisconnected(self):
+    def notify_disconnected(self):
         """Internal: notify that the server connection was terminated.
 
         This is called by ConnectionManager when the connection is
@@ -723,11 +399,9 @@ class ClientStorage(object):
         """
         logger.info("%s Disconnected from storage: %r",
                     self.__name__, self._server_addr)
-        self._connection = None
-        self._ready.clear()
-        self._server = disconnected_stub
-        self._midtxn_disconnect = 1
         self._iterator_gc(True)
+        self._connection_generation += 1
+        self._is_read_only = self._server.is_read_only()
 
     def __len__(self):
         """Return the size of the storage."""
@@ -752,156 +426,73 @@ class ClientStorage(object):
         """Storage API: an approximate size of the database, in bytes."""
         return self._info['size']
 
-    def getExtensionMethods(self):
-        """getExtensionMethods
-
-        This returns a dictionary whose keys are names of extra methods
-        provided by this storage. Storage proxies (such as ZEO) should
-        call this method to determine the extra methods that they need
-        to proxy in addition to the standard storage methods.
-        Dictionary values should be None; this will be a handy place
-        for extra marshalling information, should we need it
-
-        """
-        return self._info.get('extensionMethods', {})
-
     def supportsUndo(self):
         """Storage API: return whether we support undo."""
         return self._info['supportsUndo']
 
-    def isReadOnly(self):
-        """Storage API: return whether we are in read-only mode."""
-        if self._is_read_only:
-            return True
-        else:
-            # If the client is configured for a read-write connection
-            # but has a read-only fallback connection, conn._is_read_only
-            # will be True.  If self._connection is None, we'll behave as
-            # read_only
-            try:
-                return self._connection._is_read_only
-            except AttributeError:
-                return True
+    def is_read_only(self):
+        """Storage API: return whether we are in read-only mode.
+        """
+        return self._is_read_only or self._server.is_read_only()
 
-    def _check_trans(self, trans):
+    isReadOnly = is_read_only
+
+    def _check_trans(self, trans, meth):
         """Internal helper to check a transaction argument for sanity."""
         if self._is_read_only:
             raise POSException.ReadOnlyError()
-        if self._transaction is not trans:
-            raise POSException.StorageTransactionError(self._transaction,
-                                                       trans)
+
+        try:
+            buf = trans.data(self)
+        except KeyError:
+            raise POSException.StorageTransactionError(
+                "Transaction not committing", meth, trans)
+
+        if buf.connection_generation != self._connection_generation:
+            # We were disconneected, so this one is poisoned
+            raise ClientDisconnected(meth, 'on a disconnected transaction')
+
+        return buf
 
     def history(self, oid, size=1):
         """Storage API: return a sequence of HistoryEntry objects.
         """
-        return self._server.history(oid, size)
+        return self._call('history', oid, size)
 
     def record_iternext(self, next=None):
         """Storage API: get the next database record.
 
         This is part of the conversion-support API.
         """
-        return self._server.record_iternext(next)
+        return self._call('record_iternext', next)
 
     def getTid(self, oid):
-        """Storage API: return current serial number for oid."""
-        return self._server.getTid(oid)
+        # XXX deprecated: used by storage server for full cache verification.
+        return self._call('getTid', oid)
 
     def loadSerial(self, oid, serial):
         """Storage API: load a historical revision of an object."""
-        return self._server.loadSerial(oid, serial)
+        return self._call('loadSerial', oid, serial)
 
     def load(self, oid, version=''):
-        """Storage API: return the data for a given object.
-
-        This returns the pickle data and serial number for the object
-        specified by the given object id, if they exist;
-        otherwise a KeyError is raised.
-
-        """
-        self._lock.acquire()    # for atomic processing of invalidations
-        try:
-            t = self._cache.load(oid)
-            if t:
-                return t
-        finally:
-            self._lock.release()
-
-        if self._server is None:
-            raise ClientDisconnected()
-
-        self._load_lock.acquire()
-        try:
-            self._lock.acquire()
-            try:
-                self._load_oid = oid
-                self._load_status = 1
-            finally:
-                self._lock.release()
-
-            data, tid = self._server.loadEx(oid)
-
-            self._lock.acquire()    # for atomic processing of invalidations
-            try:
-                if self._load_status:
-                    self._cache.store(oid, tid, None, data)
-                self._load_oid = None
-            finally:
-                self._lock.release()
-        finally:
-            self._load_lock.release()
-
-        return data, tid
+        return self._server.load(oid)
 
     def loadBefore(self, oid, tid):
-        self._lock.acquire()
-        try:
-            t = self._cache.loadBefore(oid, tid)
-            if t is not None:
-                return t
-        finally:
-            self._lock.release()
-
-        t = self._server.loadBefore(oid, tid)
-        if t is None:
-            return None
-        data, start, end = t
-        if end is None:
-            # This method should not be used to get current data.  It
-            # doesn't use the _load_lock, so it is possble to overlap
-            # this load with an invalidation for the same object.
-
-            # If we call again, we're guaranteed to get the
-            # post-invalidation data.  But if the data is still
-            # current, we'll still get end == None.
-
-            # Maybe the best thing to do is to re-run the test with
-            # the load lock in the case.  That's slow performance, but
-            # I don't think real application code will ever care about
-            # it.
-
-            return data, start, end
-        self._lock.acquire()
-        try:
-            self._cache.store(oid, start, end, data)
-        finally:
-            self._lock.release()
-
-        return data, start, end
+        return self._server.load_before(oid, tid)
 
     def new_oid(self):
-        """Storage API: return a new object identifier."""
+        """Storage API: return a new object identifier.
+        """
         if self._is_read_only:
             raise POSException.ReadOnlyError()
-        # avoid multiple oid requests to server at the same time
-        self._oid_lock.acquire()
-        try:
-            if not self._oids:
-                self._oids = self._server.new_oids()
-                self._oids.reverse()
-            return self._oids.pop()
-        finally:
-            self._oid_lock.release()
+
+        while 1:
+            try:
+                return self._oids.pop()
+            except IndexError:
+                pass # We ran out. We need to get some more.
+
+            self._oids[:0] = reversed(self._call('new_oids'))
 
     def pack(self, t=None, referencesf=None, wait=1, days=0):
         """Storage API: pack the storage.
@@ -922,40 +513,25 @@ class ClientStorage(object):
         if t is None:
             t = time.time()
         t = t - (days * 86400)
-        return self._server.pack(t, wait)
-
-    def _check_serials(self):
-        """Internal helper to move data from _serials to _seriald."""
-        # serials are always going to be the same, the only
-        # question is whether an exception has been raised.
-        if self._serials:
-            l = len(self._serials)
-            r = self._serials[:l]
-            del self._serials[:l]
-            for oid, s in r:
-                if isinstance(s, Exception):
-                    self._cache.invalidate(oid, None)
-                    raise s
-                self._seriald[oid] = s
-            return r
+        return self._call('pack', t, wait)
 
     def store(self, oid, serial, data, version, txn):
         """Storage API: store data for an object."""
         assert not version
 
-        self._check_trans(txn)
-        self._server.storea(oid, serial, data, id(txn))
-        self._tbuf.store(oid, data)
-        return self._check_serials()
+        tbuf = self._check_trans(txn, 'store')
+        self._async('storea', oid, serial, data, id(txn))
+        tbuf.store(oid, data)
 
     def checkCurrentSerialInTransaction(self, oid, serial, transaction):
-        self._check_trans(transaction)
-        self._server.checkCurrentSerialInTransaction(oid, serial,
-                                                     id(transaction))
+        self._check_trans(transaction, 'checkCurrentSerialInTransaction')
+        self._async(
+            'checkCurrentSerialInTransaction', oid, serial, id(transaction))
 
     def storeBlob(self, oid, serial, data, blobfilename, version, txn):
         """Storage API: store a blob object."""
         assert not version
+        tbuf = self._check_trans(txn, 'storeBlob')
 
         # Grab the file right away. That way, if we don't have enough
         # room for a copy, we'll know now rather than in tpc_finish.
@@ -973,11 +549,29 @@ class ClientStorage(object):
 
         serials = self.store(oid, serial, data, '', txn)
         if self.shared_blob_dir:
-            self._server.storeBlobShared(
+            self._async(
+                'storeBlobShared',
                 oid, serial, data, os.path.basename(target), id(txn))
         else:
-            self._server.storeBlob(oid, serial, data, target, txn)
-            self._tbuf.storeBlob(oid, target)
+
+            # Store a blob to the server.  We don't want to real all of
+            # the data into memory, so we use a message iterator.  This
+            # allows us to read the blob data as needed.
+
+            def store():
+                yield ('storeBlobStart', ())
+                f = open(blobfilename, 'rb')
+                while 1:
+                    chunk = f.read(59000)
+                    if not chunk:
+                        break
+                    yield ('storeBlobChunk', (chunk, ))
+                f.close()
+                yield ('storeBlobEnd', (oid, serial, data, id(txn)))
+
+            self._async_iter(store())
+            tbuf.storeBlob(oid, target)
+
         return serials
 
     def receiveBlobStart(self, oid, serial):
@@ -1006,9 +600,9 @@ class ClientStorage(object):
         os.chmod(blob_filename, stat.S_IREAD)
 
     def deleteObject(self, oid, serial, txn):
-        self._check_trans(txn)
-        self._server.deleteObject(oid, serial, id(txn))
-        self._tbuf.store(oid, None)
+        tbuf = self._check_trans(txn, 'deleteObject')
+        self._async('deleteObject', oid, serial, id(txn))
+        tbuf.store(oid, None)
 
     def loadBlob(self, oid, serial):
         # Load a blob.  If it isn't present and we have a shared blob
@@ -1053,7 +647,7 @@ class ClientStorage(object):
             # returns, it will have been sent. (The recieving will
             # have been handled by the asyncore thread.)
 
-            self._server.sendBlob(oid, serial)
+            self._call('sendBlob', oid, serial)
 
             if os.path.exists(blob_filename):
                 return _accessed(blob_filename)
@@ -1083,7 +677,7 @@ class ClientStorage(object):
                     # We're using a server shared cache.  If the file isn't
                     # here, it's not anywhere.
                     raise POSException.POSKeyError("No blob file", oid, serial)
-                self._server.sendBlob(oid, serial)
+                self._call('sendBlob', oid, serial)
                 if not os.path.exists(blob_filename):
                     raise POSException.POSKeyError("No blob file", oid, serial)
 
@@ -1100,12 +694,15 @@ class ClientStorage(object):
         return self.fshelper.temp_dir
 
     def tpc_vote(self, txn):
-        """Storage API: vote on a transaction."""
-        if txn is not self._transaction:
-            raise POSException.StorageTransactionError(
-                "tpc_vote called with wrong transaction")
-        self._server.vote(id(txn))
-        return self._check_serials()
+        """Storage API: vote on a transaction.
+        """
+        tbuf = self._check_trans(txn, 'tpc_vote')
+        self._call('vote', id(txn))
+
+        if tbuf.exception:
+            raise tbuf.exception
+
+        return list(tbuf.serials.items())
 
     def tpc_transaction(self):
         return self._transaction
@@ -1114,136 +711,86 @@ class ClientStorage(object):
         """Storage API: begin a transaction."""
         if self._is_read_only:
             raise POSException.ReadOnlyError()
-        self._tpc_cond.acquire()
-        try:
-            self._midtxn_disconnect = 0
-            while self._transaction is not None:
-                # It is allowable for a client to call two tpc_begins in a
-                # row with the same transaction, and the second of these
-                # must be ignored.
-                if self._transaction == txn:
-                    raise POSException.StorageTransactionError(
-                        "Duplicate tpc_begin calls for same transaction")
-
-                self._tpc_cond.wait(30)
-            self._transaction = txn
-        finally:
-            self._tpc_cond.release()
 
         try:
-            self._server.tpc_begin(id(txn), txn.user, txn.description,
-                                   txn._extension, tid, status)
-        except:
-            # Client may have disconnected during the tpc_begin().
-            if self._server is not disconnected_stub:
-                self.end_transaction()
+            tbuf = txn.data(self)
+        except KeyError:
+            pass
+        else:
+            if tbuf is not None:
+                raise POSException.StorageTransactionError(
+                    "Duplicate tpc_begin calls for same transaction")
+
+        txn.set_data(self, TransactionBuffer(self._connection_generation))
+
+        if self.protocol_version < b'Z5':
+            # Earlier protocols only allowed one transaction at a time :(
+            self._commit_lock.acquire()
+            self._tbuf = txn.data(self)
+
+        try:
+            self._async(
+                'tpc_begin', id(txn),
+                txn.user, txn.description, txn._extension, tid, status)
+        except ClientDisconnected:
+            self.tpc_end(txn)
             raise
 
-        self._tbuf.clear()
-        self._seriald.clear()
-        del self._serials[:]
-
-    def end_transaction(self):
-        """Internal helper to end a transaction."""
-        # the right way to set self._transaction to None
-        # calls notify() on _tpc_cond in case there are waiting threads
-        self._tpc_cond.acquire()
-        try:
-            self._transaction = None
-            self._tpc_cond.notify()
-        finally:
-            self._tpc_cond.release()
+    def tpc_end(self, txn):
+        tbuf = txn.data(self)
+        if tbuf is not None:
+            tbuf.close()
+            txn.set_data(self, None)
+            if self.protocol_version < b'Z5':
+                self._commit_lock.release()
 
     def lastTransaction(self):
         return self._cache.getLastTid()
 
     def tpc_abort(self, txn):
-        """Storage API: abort a transaction."""
-        if txn is not self._transaction:
+        """Storage API: abort a transaction.
+        """
+        try:
+            tbuf = txn.data(self)
+        except KeyError:
             return
+
         try:
             # Caution:  Are there any exceptions that should prevent an
             # abort from occurring?  It seems wrong to swallow them
             # all, yet you want to be sure that other abort logic is
             # executed regardless.
             try:
-                self._server.tpc_abort(id(txn))
+                self._call('tpc_abort', id(txn))
             except ClientDisconnected:
                 logger.debug("%s ClientDisconnected in tpc_abort() ignored",
                              self.__name__)
         finally:
-            self._tbuf.clear()
-            self._seriald.clear()
-            del self._serials[:]
             self._iterator_gc()
-            self.end_transaction()
+            self.tpc_end(txn)
 
-    def tpc_finish(self, txn, f=None):
+    def tpc_finish(self, txn, f=lambda tid: None):
         """Storage API: finish a transaction."""
-        if txn is not self._transaction:
-            raise POSException.StorageTransactionError(
-                "tpc_finish called with wrong transaction")
-        self._load_lock.acquire()
+        tbuf = self._check_trans(txn, 'tpc_finish')
+
         try:
-            if self._midtxn_disconnect:
-                raise ClientDisconnected(
-                       'Calling tpc_finish() on a disconnected transaction')
-
-            finished = 0
-            try:
-                self._lock.acquire()  # for atomic processing of invalidations
-                try:
-                    tid = self._server.tpc_finish(id(txn))
-                    finished = 1
-                    self._update_cache(tid)
-                    if f is not None:
-                        f(tid)
-                finally:
-                    self._lock.release()
-
-                r = self._check_serials()
-                assert r is None or len(r) == 0, "unhandled serialnos: %s" % r
-            except:
-                if finished:
-                    # The server successfully committed.  If we get a failure
-                    # here, our own state will be in question, so reconnect.
-                    self._connection.close()
-                raise
-
-            self.end_transaction()
+            tid = self._server.tpc_finish(id(txn), tbuf, f)
         finally:
-            self._load_lock.release()
+            self.tpc_end(txn)
             self._iterator_gc()
 
-    def _update_cache(self, tid):
-        """Internal helper to handle objects modified by a transaction.
+        self._update_blob_cache(tbuf, tid)
 
-        This iterates over the objects in the transaction buffer and
-        update or invalidate the cache.
-
+    def _update_blob_cache(self, tbuf, tid):
+        """Internal helper move blobs updated by a transaction to the cache.
         """
-        # Must be called with _lock already acquired.
 
         # Not sure why _update_cache() would be called on a closed storage.
         if self._cache is None:
             return
 
-        for oid, _ in six.iteritems(self._seriald):
-            self._cache.invalidate(oid, tid)
-
-        for oid, data in self._tbuf:
-            # If data is None, we just invalidate.
-            if data is not None:
-                s = self._seriald[oid]
-                if s != ResolvedSerial:
-                    assert s == tid, (s, tid)
-                    self._cache.store(oid, s, None, data)
-            else:
-                # object deletion
-                self._cache.invalidate(oid, tid)
-
         if self.fshelper is not None:
-            blobs = self._tbuf.blobs
+            blobs = tbuf.blobs
             had_blobs = False
             while blobs:
                 oid, blobfilename = blobs.pop()
@@ -1263,9 +810,6 @@ class ClientStorage(object):
             if had_blobs:
                 self._check_blob_size(self._blob_data_bytes_loaded)
 
-        self._cache.setLastTid(tid)
-        self._tbuf.clear()
-
     def undo(self, trans_id, txn):
         """Storage API: undo a transaction.
 
@@ -1276,12 +820,12 @@ class ClientStorage(object):
         a storage.
 
         """
-        self._check_trans(txn)
-        self._server.undoa(trans_id, id(txn))
+        self._check_trans(txn, 'undo')
+        self._async('undoa', trans_id, id(txn))
 
     def undoInfo(self, first=0, last=-20, specification=None):
         """Storage API: return undo information."""
-        return self._server.undoInfo(first, last, specification)
+        return self._call('undoInfo', first, last, specification)
 
     def undoLog(self, first=0, last=-20, filter=None):
         """Storage API: return a sequence of TransactionDescription objects.
@@ -1294,7 +838,7 @@ class ClientStorage(object):
         """
         if filter is not None:
             return []
-        return self._server.undoLog(first, last)
+        return self._call('undoLog', first, last)
 
     # Recovery support
 
@@ -1309,8 +853,8 @@ class ClientStorage(object):
     def restore(self, oid, serial, data, version, prev_txn, transaction):
         """Write data already committed in a separate database."""
         assert not version
-        self._check_trans(transaction)
-        self._server.restorea(oid, serial, data, prev_txn, id(transaction))
+        self._check_trans(transaction, 'restore')
+        self._async('restorea', oid, serial, data, prev_txn, id(transaction))
         # Don't update the transaction buffer, because current data are
         # unaffected.
         return self._check_serials()
@@ -1318,202 +862,19 @@ class ClientStorage(object):
     # Below are methods invoked by the StorageServer
 
     def serialnos(self, args):
-        """Server callback to pass a list of changed (oid, serial) pairs."""
-        self._serials.extend(args)
+        """Server callback to pass a list of changed (oid, serial) pairs.
+        """
+        for oid, s in args:
+            self._tbuf.serial(oid, s)
 
     def info(self, dict):
         """Server callback to update the info dictionary."""
         self._info.update(dict)
 
-    def verify_cache(self, server):
-        """Internal routine called to verify the cache.
-
-        The return value (indicating which path we took) is used by
-        the test suite.
-        """
-
-        self._pending_server = server
-
-        # setup tempfile to hold zeoVerify results and interim
-        # invalidation results
-        self._tfile = tempfile.TemporaryFile(suffix=".inv")
-        if PY3:
-            self._pickler = Pickler(self._tfile, 3)
-        else:
-            self._pickler = Pickler(self._tfile, 1)
-        self._pickler.fast = 1 # Don't use the memo
-
-        if self._connection.peer_protocol_version < b'Z309':
-            client = ClientStorage308Adapter(self)
-        else:
-            client = self
-
-        # allow incoming invalidations:
-        self._connection.register_object(client)
-
-        # If verify_cache() finishes the cache verification process,
-        # it should set self._server.  If it goes through full cache
-        # verification, then endVerify() should self._server.
-
-        server_tid = server.lastTransaction()
-        if not self._cache:
-            logger.info("%s No verification necessary -- empty cache",
-                        self.__name__)
-            if server_tid != utils.z64:
-                self._cache.setLastTid(server_tid)
-            self.finish_verification()
-            return "empty cache"
-
-        cache_tid = self._cache.getLastTid()
-        if cache_tid != utils.z64:
-            if server_tid == cache_tid:
-                logger.info(
-                    "%s No verification necessary"
-                    " (cache_tid up-to-date %r)",
-                    self.__name__, server_tid)
-                self.finish_verification()
-                return "no verification"
-            elif server_tid < cache_tid:
-                message = ("%s Client has seen newer transactions than server!"
-                           % self.__name__)
-                logger.critical(message)
-                raise ClientStorageError(message)
-
-            # log some hints about last transaction
-            logger.info("%s last inval tid: %r %s\n",
-                        self.__name__, cache_tid,
-                        tid2time(cache_tid))
-            logger.info("%s last transaction: %r %s",
-                        self.__name__, server_tid,
-                        server_tid and tid2time(server_tid))
-
-            pair = server.getInvalidations(cache_tid)
-            if pair is not None:
-                logger.info("%s Recovering %d invalidations",
-                            self.__name__, len(pair[1]))
-                self.finish_verification(pair)
-                return "quick verification"
-        elif server_tid != utils.z64:
-
-            # Hm, to have gotten here, the cache is non-empty, but
-            # it has no last tid. This doesn't seem like good situation.
-            # We'll have to verify the cache, if we're willing.
-            self._cache.setLastTid(server_tid)
-
-
-        ZODB.event.notify(ZEO.interfaces.StaleCache(self))
-
-        # From this point on, we do not have complete information about
-        # the missed transactions.  The reason is that cache
-        # verification only checks objects in the client cache and
-        # there may be objects in the object caches that aren't in the
-        # client cach that would need verification too. We avoid that
-        # problem by just invalidating the objects in the object caches.
-        if self._db is not None:
-            self._db.invalidateCache()
-
-        if self._cache and self._drop_cache_rather_verify:
-            logger.critical("%s dropping stale cache", self.__name__)
-            self._cache.clear()
-            if server_tid:
-                self._cache.setLastTid(server_tid)
-            self.finish_verification()
-            return "cache dropped"
-
-        logger.info("%s Verifying cache", self.__name__)
-        for oid, tid in self._cache.contents():
-            server.verify(oid, tid)
-        server.endZeoVerify()
-        return "full verification"
-
-    def invalidateVerify(self, oid):
-        """Server callback to invalidate an oid pair.
-
-        This is called as part of cache validation.
-        """
-        # Invalidation as result of verify_cache().
-        # Queue an invalidate for the end the verification procedure.
-        if self._pickler is None:
-            # This should never happen.
-            logger.error("%s invalidateVerify with no _pickler", self.__name__)
-            return
-        self._pickler.dump((None, [oid]))
-
-    def endVerify(self):
-        """Server callback to signal end of cache validation."""
-
-        logger.info("%s endVerify finishing", self.__name__)
-        self.finish_verification()
-        logger.info("%s endVerify finished", self.__name__)
-
-    def finish_verification(self, catch_up=None):
-        self._lock.acquire()
-        try:
-            if catch_up:
-                # process catch-up invalidations
-                self._process_invalidations(*catch_up)
-
-            if self._pickler is None:
-                return
-            # write end-of-data marker
-            self._pickler.dump((None, None))
-            self._pickler = None
-            self._tfile.seek(0)
-            unpickler = Unpickler(self._tfile)
-            min_tid = self._cache.getLastTid()
-            while 1:
-                tid, oids = unpickler.load()
-                logger.debug('pickled inval %r %r', tid, min_tid)
-                if oids is None:
-                    break
-                if ((tid is None)
-                    or (min_tid is None)
-                    or (tid > min_tid)
-                    ):
-                    self._process_invalidations(tid, oids)
-
-            self._tfile.close()
-            self._tfile = None
-        finally:
-            self._lock.release()
-
-        self._server = self._pending_server
-        self._ready.set()
-        self._pending_server = None
-
-
     def invalidateTransaction(self, tid, oids):
         """Server callback: Invalidate objects modified by tid."""
-        self._lock.acquire()
-        try:
-            if self._pickler is not None:
-                logger.debug(
-                    "%s Transactional invalidation during cache verification",
-                    self.__name__)
-                self._pickler.dump((tid, oids))
-            else:
-                self._process_invalidations(tid, oids)
-        finally:
-            self._lock.release()
-
-    def _process_invalidations(self, tid, oids):
-        for oid in oids:
-            if oid == self._load_oid:
-                self._load_status = 0
-            self._cache.invalidate(oid, tid)
-        self._cache.setLastTid(tid)
-
         if self._db is not None:
             self._db.invalidate(tid, oids)
-
-    # The following are for compatibility with protocol version 2.0.0
-
-    def invalidateTrans(self, oids):
-        return self.invalidateTransaction(None, oids)
-
-    invalidate = invalidateVerify
-    end = endVerify
-    Invalidate = invalidateTrans
 
     # IStorageIteration
 
@@ -1521,7 +882,7 @@ class ClientStorage(object):
         """Return an IStorageTransactionInformation iterator."""
         # iids are "iterator IDs" that can be used to query an iterator whose
         # status is held on the server.
-        iid = self._server.iterator_start(start, stop)
+        iid = self._call('iterator_start', start, stop)
         return self._setup_iterator(TransactionIterator, iid)
 
     def _setup_iterator(self, factory, iid, *args):
@@ -1558,10 +919,11 @@ class ClientStorage(object):
         # objects waiting to be cleaned up. So there's never any risk
         # of confusing TransactionIterator objects that are in use.
         iids = self._iterator_ids - set(self._iterators)
-        self._iterators._last_gc = time.time() # let tests know we've been called
+        # let tests know we've been called:
+        self._iterators._last_gc = time.time()
         if iids:
             try:
-                self._server.iterator_gc(list(iids))
+                self._async('iterator_gc', list(iids))
             except ClientDisconnected:
                 # If we get disconnected, all of the iterators on the
                 # server are thrown away.  We should clear ours too:
@@ -1569,8 +931,7 @@ class ClientStorage(object):
             self._iterator_ids -= iids
 
     def server_status(self):
-        return self._server.server_status()
-
+        return self._call('server_status')
 
 class TransactionIterator(object):
 
@@ -1589,7 +950,7 @@ class TransactionIterator(object):
         if self._iid < 0:
             raise ClientDisconnected("Disconnected iterator")
 
-        tx_data = self._storage._server.iterator_next(self._iid)
+        tx_data = self._storage._call('iterator_next', self._iid)
         if tx_data is None:
             # The iterator is exhausted, and the server has already
             # disposed it.
@@ -1619,8 +980,8 @@ class ClientStorageTransactionInformation(ZODB.BaseStorage.TransactionRecord):
         self.extension = extension
 
     def __iter__(self):
-        riid = self._storage._server.iterator_record_start(self._txiter._iid,
-                                                           self.tid)
+        riid = self._storage._call('iterator_record_start',
+                                   self._txiter._iid, self.tid)
         return self._storage._setup_iterator(RecordIterator, riid)
 
 
@@ -1639,7 +1000,7 @@ class RecordIterator(object):
             # We finished iteration once already and the server can't know
             # about the iteration anymore.
             raise StopIteration()
-        item = self._storage._server.iterator_record_next(self._riid)
+        item = self._storage._call('iterator_record_next', self._riid)
         if item is None:
             # The iterator is exhausted, and the server has already
             # disposed it.
@@ -1648,21 +1009,6 @@ class RecordIterator(object):
         return ZODB.BaseStorage.DataRecord(*item)
 
     next = __next__
-
-
-class ClientStorage308Adapter:
-
-    def __init__(self, client):
-        self.client = client
-
-    def invalidateTransaction(self, tid, args):
-        self.client.invalidateTransaction(tid, [arg[0] for arg in args])
-
-    def invalidateVerify(self, arg):
-        self.client.invalidateVerify(arg[0])
-
-    def __getattr__(self, name):
-        return getattr(self.client, name)
 
 
 class BlobCacheLayout(object):
@@ -1807,3 +1153,16 @@ def _lock_blob(path):
                 raise
         else:
             break
+
+def open_cache(cache, var, client, cache_size):
+    if isinstance(cache, (None.__class__, str)):
+        from ZEO.cache import ClientCache
+        if cache is None:
+            if client:
+                cache = os.path.join(var or os.getcwd(), client)
+            else:
+                return ClientCache(cache, cache_size)
+
+        cache = ClientCache(cache, cache_size)
+
+    return cache

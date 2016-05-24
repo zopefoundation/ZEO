@@ -17,7 +17,7 @@ import threading
 
 import transaction
 from ZODB.tests.StorageTestBase import zodb_pickle, MinPO
-import ZEO.ClientStorage
+import ZEO.Exceptions
 
 ZERO = '\0'*8
 
@@ -54,7 +54,7 @@ class GetsThroughVoteThread(BasicThread):
         self.doNextEvent.wait(10)
         try:
             self.storage.tpc_finish(self.trans)
-        except ZEO.ClientStorage.ClientStorageError:
+        except ZEO.Exceptions.ClientStorageError:
             self.gotValueError = 1
             self.storage.tpc_abort(self.trans)
 
@@ -67,7 +67,7 @@ class GetsThroughBeginThread(BasicThread):
     def run(self):
         try:
             self.storage.tpc_begin(self.trans)
-        except ZEO.ClientStorage.ClientStorageError:
+        except ZEO.Exceptions.ClientStorageError:
             self.gotValueError = 1
 
 

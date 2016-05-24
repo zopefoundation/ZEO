@@ -46,7 +46,6 @@ import threading
 import time
 import transaction
 import unittest
-import ZEO.ServerStub
 import ZEO.StorageServer
 import ZEO.tests.ConnectionTests
 import ZEO.zrpc.connection
@@ -1721,7 +1720,7 @@ def can_use_empty_string_for_local_host_on_client():
     """
 
 slow_test_classes = [
-    BlobAdaptedFileStorageTests, BlobWritableCacheTests,
+    #BlobAdaptedFileStorageTests, BlobWritableCacheTests,
     MappingStorageTests, DemoStorageTests,
     FileStorageTests, FileStorageHexTests, FileStorageClientHexTests,
     ]
@@ -1732,12 +1731,6 @@ quick_test_classes = [
     ]
 
 class ServerManagingClientStorage(ClientStorage):
-
-    class StorageServerStubClass(ZEO.ServerStub.StorageServer):
-
-        # Wait for abort for the benefit of blob_transaction.txt
-        def tpc_abort(self, id):
-            self.rpc.call('tpc_abort', id)
 
     def __init__(self, name, blob_dir, shared=False, extrafsoptions=''):
         if shared:

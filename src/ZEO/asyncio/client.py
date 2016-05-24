@@ -6,6 +6,7 @@ import concurrent.futures
 import logging
 import random
 import threading
+import traceback
 import ZEO.Exceptions
 import ZODB.POSException
 
@@ -73,7 +74,8 @@ class Protocol(asyncio.Protocol):
             if self.transport is not None:
                 self.transport.close()
             for future in self.futures.values():
-                future.set_exception(Closed())
+                future.set_exception(
+                    ZEO.Exceptions.ClientDisconnected("Closed"))
             self.futures.clear()
 
     def protocol_factory(self):
@@ -156,8 +158,7 @@ class Protocol(asyncio.Protocol):
         return self.transport.get_extra_info('peername')
 
     def connection_lost(self, exc):
-        if exc is None:
-            # we were closed
+        if self.closed:
             for f in self.futures.values():
                 f.cancel()
         else:
@@ -320,7 +321,8 @@ class Client:
     # connect.
 
     protocol = None
-    ready = False
+    ready = None # Tri-value: None=Never connected, True=connected,
+                 # False=Disconnected
 
     def __init__(self, loop,
                  addrs, client, cache, storage_key, read_only, connect_poll,
@@ -350,7 +352,9 @@ class Client:
     def close(self):
         if not self.closed:
             self.closed = True
-            self.protocol.close()
+            self.ready = False
+            if self.protocol is not None:
+                self.protocol.close()
             self.cache.close()
             self._clear_protocols()
 
@@ -364,7 +368,8 @@ class Client:
         if protocol is None or protocol is self.protocol:
             if protocol is self.protocol and protocol is not None:
                 self.client.notify_disconnected()
-            self.ready = False
+            if self.ready:
+                self.ready = False
             self.connected = concurrent.futures.Future()
             self.protocol = None
             self._clear_protocols()
@@ -468,8 +473,8 @@ class Client:
 
         @self.protocol.promise('get_info')
         def got_info(info):
-            self.connected.set_result(None)
             self.client.notify_connected(self, info)
+            self.connected.set_result(None)
 
         @got_info.catch
         def failed_info(exc):
@@ -497,16 +502,21 @@ class Client:
 
     def _when_ready(self, func, result_future, *args):
 
-        @self.connected.add_done_callback
-        def done(future):
-            e = future.exception()
-            if e is not None:
-                result_future.set_exception(e)
-            else:
-                if self.ready:
-                    func(result_future, *args)
+        if self.ready is None:
+            # We started without waiting for a connection. (prob tests :( )
+            result_future.set_exception(
+                ZEO.Exceptions.ClientDisconnected("never connected"))
+        else:
+            @self.connected.add_done_callback
+            def done(future):
+                e = future.exception()
+                if e is not None:
+                    future.set_exception(e)
                 else:
-                    self._when_ready(func, result_future, *args)
+                    if self.ready:
+                        func(result_future, *args)
+                    else:
+                        self._when_ready(func, result_future, *args)
 
     def call_threadsafe(self, future, method, args):
         if self.ready:
@@ -541,7 +551,7 @@ class Client:
                 future.set_result(data)
                 if data:
                     data, start, end = data
-                self.cache.store(oid, start, end, data)
+                    self.cache.store(oid, start, end, data)
 
             load_before.catch(future.set_exception)
         else:
@@ -558,7 +568,7 @@ class Client:
                         cache.store(oid, tid, None, data)
                 cache.setLastTid(tid)
                 f(tid)
-                future.set_result(None)
+                future.set_result(tid)
 
             committed.catch(future.set_exception)
         else:
@@ -579,6 +589,17 @@ class Client:
     def protocol_version(self):
         return self.protocol.protocol_version
 
+    def is_read_only(self):
+        try:
+            protocol = self.protocol
+        except AttributeError:
+            return self.read_only
+        else:
+            if protocol is None:
+                return self.read_only
+            else:
+                return protocol.read_only
+
 class ClientRunner:
 
     def set_options(self, addrs, wrapper, cache, storage_key, read_only,
@@ -591,6 +612,8 @@ class ClientRunner:
     def setup_delegation(self, loop):
         self.loop = loop
         self.client = Client(loop, *self.__args)
+        self.call_threadsafe = self.client.call_threadsafe
+        self.call_async_threadsafe = self.client.call_async_threadsafe
 
         from concurrent.futures import Future
         call_soon_threadsafe = loop.call_soon_threadsafe
@@ -614,10 +637,17 @@ class ClientRunner:
         return future.result(self.timeout if timeout is False else timeout)
 
     def call(self, method, *args, timeout=None):
-        return self.__call(self.client.call_threadsafe, method, args)
+        return self.__call(self.call_threadsafe, method, args)
+
+    def call_future(self, method, *args):
+        # for tests
+        result = concurrent.futures.Future()
+        self.loop.call_soon_threadsafe(
+            self.call_threadsafe, result, method, args)
+        return result
 
     def async(self, method, *args):
-        return self.__call(self.client.call_async_threadsafe, method, args)
+        return self.__call(self.call_async_threadsafe, method, args)
 
     def async_iter(self, it):
         return self.__call(self.client.call_async_iter_threadsafe, it)
@@ -648,6 +678,12 @@ class ClientRunner:
     def close(self):
         self.__call(self.client.close_threadsafe)
 
+        # Short circuit from now on. We're closed.
+        def call_closed(*a, **k):
+            raise ZEO.Exceptions.ClientDisconnected('closed')
+
+        self.__call = call_closed
+
     def new_addr(self, addrs):
         # This usually doesn't have an immediate effect, since the
         # addrs aren't used until the client disconnects.xs
@@ -663,21 +699,45 @@ class ClientThread(ClientRunner):
 
     def __init__(self, addrs, client, cache,
                  storage_key='1', read_only=False, timeout=30,
-                 disconnect_poll=1):
+                 disconnect_poll=1, wait=True):
         self.set_options(addrs, client, cache, storage_key, read_only,
                          timeout, disconnect_poll)
-        threading.Thread(
+        self.thread = threading.Thread(
             target=self.run,
             name='zeo_client_'+storage_key,
             daemon=True,
-            ).start()
-        self.connected.result(timeout)
+            )
+        self.started = threading.Event()
+        self.thread.start()
+        self.started.wait()
+        if wait:
+            self.connected.result(timeout)
 
+    exception = None
     def run(self):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        self.setup_delegation(loop)
-        loop.run_forever()
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            self.setup_delegation(loop)
+            self.started.set()
+            loop.run_forever()
+        except Exception as exc:
+            logger.exception("Client thread")
+            self.exception = exc
+            raise
+        else:
+            loop.close()
+            logger.debug('Stopping client thread')
+
+    closed = False
+    def close(self):
+        if not self.closed:
+            self.closed = True
+            super().close()
+            self.loop.call_soon_threadsafe(self.loop.stop)
+            self.thread.join(9)
+            if self.exception:
+                raise self.exception
 
 class Promise:
     """Lightweight future with a partial promise API.
