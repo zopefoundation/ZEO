@@ -7,8 +7,12 @@ import logging
 import random
 import threading
 import traceback
-import ZEO.Exceptions
+
+import ZODB.event
 import ZODB.POSException
+
+import ZEO.Exceptions
+import ZEO.interfaces
 
 logger = logging.getLogger(__name__)
 
@@ -272,6 +276,16 @@ class Protocol(asyncio.Protocol):
                 type(args[0]) == self.exception_type_type and
                 issubclass(args[0], Exception)
                 ):
+                if not issubclass(
+                    args[0], (
+                        ZODB.POSException.POSKeyError,
+                        ZODB.POSException.ConflictError,)
+                    ):
+                    logger.error("%s from server: %s.%s:%s",
+                                 self.name,
+                                 args[0].__module__,
+                                 args[0].__name__,
+                                 args[1])
                 future.set_exception(args[1])
             else:
                 future.set_result(args)
@@ -307,7 +321,7 @@ class Protocol(asyncio.Protocol):
         'receiveBlobStart', 'receiveBlobChunk', 'receiveBlobStop',
         # plus: notify_connected, notify_disconnected
         )
-    client_delegated = client_methods[1:]
+    client_delegated = client_methods[2:]
 
 class Client:
     """asyncio low-level ZEO client interface
@@ -432,6 +446,8 @@ class Client:
                     self.client.invalidateCache()
                     self.finished_verify(server_tid)
                 elif cache_tid > server_tid:
+                    logger.critical(
+                        'Client has seen newer transactions than server!')
                     raise AssertionError("Server behind client, %r < %r, %s",
                                          server_tid, cache_tid, protocol)
                 elif cache_tid == server_tid:
@@ -447,7 +463,15 @@ class Client:
                             return tid
                         else:
                             # cache is too old
-                            logger.info("cache too old %s", protocol)
+                            try:
+                                ZODB.event.notify(
+                                    ZEO.interfaces.StaleCache(self.client))
+                            except Exception:
+                                logger.exception("sending StaleCache event")
+                            logger.critical(
+                                "%s dropping stale cache",
+                                getattr(self.client, '__name__', ''),
+                                )
                             self.cache.clear()
                             self.client.invalidateCache()
                             return server_tid
@@ -561,14 +585,24 @@ class Client:
         if self.ready:
             @self.protocol.promise('tpc_finish', tid)
             def committed(tid):
-                cache = self.cache
-                for oid, data, resolved in updates:
-                    cache.invalidate(oid, tid)
-                    if data and not resolved:
-                        cache.store(oid, tid, None, data)
-                cache.setLastTid(tid)
-                f(tid)
-                future.set_result(tid)
+                try:
+                    cache = self.cache
+                    for oid, data, resolved in updates:
+                        cache.invalidate(oid, tid)
+                        if data and not resolved:
+                            cache.store(oid, tid, None, data)
+                    cache.setLastTid(tid)
+                except Exception as exc:
+                    future.set_exception(exc)
+
+                    # At this point, our cache is in an inconsistent
+                    # state.  We need to reconnect in hopes of
+                    # recovering to a consistent state.
+                    self.protocol.close()
+                    self.disconnected(self.protocol)
+                else:
+                    f(tid)
+                    future.set_result(tid)
 
             committed.catch(future.set_exception)
         else:
@@ -584,6 +618,18 @@ class Client:
                 self.cache.invalidate(oid, tid)
             self.cache.setLastTid(tid)
             self.client.invalidateTransaction(tid, oids)
+
+    def serialnos(self, serials):
+        # Before delegating, check for errors (likely ConflictErrors)
+        # and invalidate the oids they're associated with.  In the
+        # past, this was done by the client, but now we control the
+        # cache and this is our last chance, as the client won't call
+        # back into us when there's an error.
+        for oid, serial in serials:
+            if isinstance(serial, Exception):
+                self.cache.invalidate(oid, None)
+
+        self.client.serialnos(serials)
 
     @property
     def protocol_version(self):
@@ -699,19 +745,15 @@ class ClientThread(ClientRunner):
 
     def __init__(self, addrs, client, cache,
                  storage_key='1', read_only=False, timeout=30,
-                 disconnect_poll=1, wait=True):
+                 disconnect_poll=1):
         self.set_options(addrs, client, cache, storage_key, read_only,
                          timeout, disconnect_poll)
         self.thread = threading.Thread(
             target=self.run,
-            name='zeo_client_'+storage_key,
+            name="%s zeo client networking thread" % client.__name__,
             daemon=True,
             )
         self.started = threading.Event()
-        self.thread.start()
-        self.started.wait()
-        if wait:
-            self.connected.result(timeout)
 
     exception = None
     def run(self):
@@ -724,10 +766,23 @@ class ClientThread(ClientRunner):
         except Exception as exc:
             logger.exception("Client thread")
             self.exception = exc
-            raise
-        else:
+        finally:
+            if not self.closed:
+                if self.client.ready:
+                    self.closed = True
+                    self.client.ready = False
+                    self.client.client.notify_disconnected()
+                logger.critical("Client loop stopped unexpectedly")
             loop.close()
             logger.debug('Stopping client thread')
+
+    def start(self, wait=True):
+        self.thread.start()
+        self.started.wait()
+        if self.exception:
+            raise self.exception
+        if wait:
+            self.connected.result(self.timeout)
 
     closed = False
     def close(self):

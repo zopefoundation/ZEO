@@ -29,6 +29,8 @@ import time
 import weakref
 from binascii import hexlify
 
+import BTrees.OOBTree
+
 import zc.lockfile
 import ZODB
 import ZODB.BaseStorage
@@ -223,7 +225,8 @@ class ClientStorage(object):
 
         self._oids = [] # List of pre-fetched oids from server
 
-        cache = self._cache = open_cache(cache, var, client, cache_size)
+        cache = self._cache = open_cache(
+            cache, var, client, storage, cache_size)
 
         # XXX need to check for POSIX-ness here
         self.blob_dir = blob_dir
@@ -257,8 +260,8 @@ class ClientStorage(object):
             addr, self, cache, storage,
             ZEO.asyncio.client.Fallback if read_only_fallback else read_only,
             wait_timeout or 30,
-            wait=wait,
             )
+        self._server.start()
         self._call = self._server.call
         self._async = self._server.async
         self._async_iter = self._server.async_iter
@@ -340,13 +343,6 @@ class ClientStorage(object):
                 'set_client_label', self._client_label)
 
         self._info.update(info)
-
-        # for name in self._info.get('extensionMethods', {}).keys():
-        #     if not hasattr(self, name):
-        #         def mklambda(mname):
-        #             return (lambda *args, **kw:
-        #                     self._server.rpc.call(mname, *args, **kw))
-        #         setattr(self, name, mklambda(name))
 
         for iface in (
             ZODB.interfaces.IStorageRestoreable,
@@ -560,7 +556,7 @@ class ClientStorage(object):
 
             def store():
                 yield ('storeBlobStart', ())
-                f = open(blobfilename, 'rb')
+                f = open(target, 'rb')
                 while 1:
                     chunk = f.read(59000)
                     if not chunk:
@@ -714,6 +710,12 @@ class ClientStorage(object):
 
         try:
             tbuf = txn.data(self)
+        except AttributeError:
+            # Gaaaa. This is a recovery transaction. Work around this
+            # until we can think of something better. XXX
+            tb = {}
+            txn.data = tb.__getitem__
+            txn.set_data = tb.__setitem__
         except KeyError:
             pass
         else:
@@ -855,9 +857,6 @@ class ClientStorage(object):
         assert not version
         self._check_trans(transaction, 'restore')
         self._async('restorea', oid, serial, data, prev_txn, id(transaction))
-        # Don't update the transaction buffer, because current data are
-        # unaffected.
-        return self._check_serials()
 
     # Below are methods invoked by the StorageServer
 
@@ -870,6 +869,10 @@ class ClientStorage(object):
     def info(self, dict):
         """Server callback to update the info dictionary."""
         self._info.update(dict)
+
+    def invalidateCache(self):
+        if self._db is not None:
+            self._db.invalidateCache()
 
     def invalidateTransaction(self, tid, oids):
         """Server callback: Invalidate objects modified by tid."""
@@ -1154,14 +1157,16 @@ def _lock_blob(path):
         else:
             break
 
-def open_cache(cache, var, client, cache_size):
+def open_cache(cache, var, client, storage, cache_size):
     if isinstance(cache, (None.__class__, str)):
         from ZEO.cache import ClientCache
         if cache is None:
             if client:
-                cache = os.path.join(var or os.getcwd(), client)
+                cache = os.path.join(var or os.getcwd(),
+                                     "%s-%s.zec" % (client, storage))
             else:
-                return ClientCache(cache, cache_size)
+                # ephemeral cache
+                return ClientCache(None, cache_size)
 
         cache = ClientCache(cache, cache_size)
 

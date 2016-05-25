@@ -103,7 +103,7 @@ Now, let's see if we can break it. :)
     ...     path = s2.fshelper.getBlobFilename(*blob_id)
     ...     if os.path.exists(path):
     ...         ZODB.blob.remove_committed(path)
-    ...     s2._server.sendBlob(*blob_id)
+    ...     s2._call('sendBlob', *blob_id)
     ... else: print('Dang')
 
     >>> threadf.join()

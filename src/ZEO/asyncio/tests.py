@@ -96,7 +96,16 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         # Actually, the client isn't connected until it initializes it's cache:
         self.assertFalse(client.connected.done() or transport.data)
 
-        # If we try to make calls while the client is connecting, they're queued
+        # If we try to make calls while the client is *initially*
+        # connecting, we get an error. This is because some dufus
+        # decided to create a client storage without waiting for it to
+        # connect.
+        f1 = self.call('foo', 1, 2)
+        self.assertTrue(isinstance(f1.exception(), ClientDisconnected))
+
+        # When the client is reconnecting, it's ready flag is set to False and
+        # it queues calls:
+        client.ready = False
         f1 = self.call('foo', 1, 2)
         self.assertFalse(f1.done())
 
@@ -195,7 +204,7 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         self.assertEqual(parse(transport.pop()),
                          (8, False, 'tpc_finish', (b'd'*8,)))
         respond(8, b'e'*8)
-        self.assertEqual(committed.result(), None)
+        self.assertEqual(committed.result(), b'e'*8)
         self.assertEqual(cache.load(b'1'*8), None)
         self.assertEqual(cache.load(b'2'*8), ('committed 2', b'e'*8))
         self.assertEqual(cache.load(b'4'*8), ('committed 4', b'e'*8))

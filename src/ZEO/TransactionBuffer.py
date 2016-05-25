@@ -62,6 +62,7 @@ class TransactionBuffer:
     def serial(self, oid, serial):
         if isinstance(serial, Exception):
             self.exception = serial
+            self.serials[oid] = None
         else:
             self.serials[oid] = serial
 
