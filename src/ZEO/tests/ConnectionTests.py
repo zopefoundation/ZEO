@@ -45,23 +45,10 @@ class TestClientStorage(ClientStorage):
 
     connection_count_for_tests = 0
 
-    def notifyConnected(self, conn):
-        ClientStorage.notifyConnected(self, conn)
+    def notify_connected(self, conn, info):
+        ClientStorage.notify_connected(self, conn, info)
         self.connection_count_for_tests += 1
-
-    def verify_cache(self, stub):
-        self.end_verify = threading.Event()
-        self.verify_result = ClientStorage.verify_cache(self, stub)
-
-    def endVerify(self):
-        ClientStorage.endVerify(self)
-        self.end_verify.set()
-
-    def testConnection(self, conn):
-        try:
-            return ClientStorage.testConnection(self, conn)
-        finally:
-            self.test_connection = True
+        self.verify_result = conn.verify_result
 
 class DummyDB:
     def invalidate(self, *args, **kwargs):
@@ -658,13 +645,7 @@ class InvqTests(CommonSetupTearDown):
             revid = self._dostore(oid, revid)
 
         perstorage = self.openClientStorage(cache="test")
-        self.assertEqual(perstorage.verify_result, "full verification")
-        t = time.time() + 30
-        while not perstorage.end_verify.isSet():
-            perstorage.sync()
-            if time.time() > t:
-                self.fail("timed out waiting for endVerify")
-
+        self.assertEqual(perstorage.verify_result, "cache too old, clearing")
         self.assertEqual(self._storage.load(oid, '')[1], revid)
         self.assertEqual(perstorage.load(oid, ''),
                          self._storage.load(oid, ''))
@@ -800,8 +781,9 @@ class ReconnectionTests(CommonSetupTearDown):
         self._servers = []
         # Poll until the client disconnects
         self.pollDown()
-        # Stores should fail now
-        self.assertRaises(ClientDisconnected, self._dostore)
+
+        # Accesses should fail now
+        self.assertRaises(ClientDisconnected, self._storage.history, ZERO)
 
         # Restart the server, this time read-write
         self.startServer(create=0, keep=0)
@@ -855,7 +837,7 @@ class ReconnectionTests(CommonSetupTearDown):
         self.pollUp()
         # There were no transactions committed, so no verification
         # should be needed.
-        self.assertEqual(self._storage.verify_result, "no verification")
+        self.assertEqual(self._storage.verify_result, "Cache up to date")
 
     def checkNoVerificationOnServerRestartWith2Clients(self):
         perstorage = self.openClientStorage(cache="test")
@@ -886,8 +868,8 @@ class ReconnectionTests(CommonSetupTearDown):
         self.pollUp(storage=perstorage)
         # There were no transactions committed, so no verification
         # should be needed.
-        self.assertEqual(self._storage.verify_result, "no verification")
-        self.assertEqual(perstorage.verify_result, "no verification")
+        self.assertEqual(self._storage.verify_result, "Cache up to date")
+        self.assertEqual(perstorage.verify_result, "Cache up to date")
         perstorage.close()
         self._storage.close()
 
@@ -902,9 +884,8 @@ class ReconnectionTests(CommonSetupTearDown):
             self._storage.store(oid, None, data, '', txn)
         self.shutdownServer()
         self.assertRaises(ClientDisconnected, self._storage.tpc_vote, txn)
-        self._storage.tpc_abort(txn)
         self.startServer(create=0)
-        self._storage._wait()
+        self._storage.tpc_abort(txn)
         self._dostore()
 
         # This test is supposed to cover the following error, although
