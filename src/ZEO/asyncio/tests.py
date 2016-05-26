@@ -441,21 +441,19 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         self.assertEqual(self.unsized(transport.pop(2)), b'Z3101')
         # We see that the client tried a writable connection:
         self.assertEqual(self.parse(transport.pop()),
-                         [(1, False, 'register', ('TEST', False)),
-                          (2, False, 'lastTransaction', ()),
-                          ])
+                         (1, False, 'register', ('TEST', False)))
         # We respond with a read-only exception:
         respond(1, (ReadOnlyError, ReadOnlyError()))
         self.assertTrue(self.is_read_only())
 
         # The client tries for a read-only connection:
         self.assertEqual(self.parse(transport.pop()),
-                         [(3, False, 'register', ('TEST', True)),
-                          (4, False, 'lastTransaction', ()),
+                         [(2, False, 'register', ('TEST', True)),
+                          (3, False, 'lastTransaction', ()),
                           ])
         # We respond with successfully:
-        respond(3, None)
-        respond(4, 'b'*8)
+        respond(2, None)
+        respond(3, 'b'*8)
         self.assertTrue(self.is_read_only())
 
         # At this point, the client is ready and using the protocol,
@@ -467,8 +465,8 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
 
         # The client asks for info, and we respond:
         self.assertEqual(self.parse(transport.pop()),
-                         (5, False, 'get_info', ()))
-        respond(5, dict(length=42))
+                         (4, False, 'get_info', ()))
+        respond(4, dict(length=42))
 
         self.assert_(connected.done())
 
@@ -477,14 +475,17 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         loop.protocol.data_received(sized(b'Z3101'))
         self.assertEqual(self.unsized(loop.transport.pop(2)), b'Z3101')
         self.assertEqual(self.parse(loop.transport.pop()),
-                         [(1, False, 'register', ('TEST', False)),
-                          (2, False, 'lastTransaction', ()),
-                          ])
+                         (1, False, 'register', ('TEST', False)))
         self.assertTrue(self.is_read_only())
 
         # We respond and the writable connection succeeds:
         respond(1, None)
         self.assertFalse(self.is_read_only())
+
+        # at this point, a lastTransaction request is emitted:
+
+        self.assertEqual(self.parse(loop.transport.pop()),
+                         (2, False, 'lastTransaction', ()))
 
         # Now, the original protocol is closed, and the client is
         # no-longer ready:

@@ -78,9 +78,16 @@ class Protocol(asyncio.Protocol):
             self._connecting.cancel()
             if self.transport is not None:
                 self.transport.close()
-            for future in self.futures.values():
+            for future in self.pop_futures():
                 future.set_exception(ClientDisconnected("Closed"))
-            self.futures.clear()
+
+    def pop_futures(self):
+        # Remove and return futures from self.futures.  The caller
+        # will finalize them in some way and callbacks may modify
+        # self.futures.
+        futures = list(self.futures.values())
+        self.futures.clear()
+        return futures
 
     def protocol_factory(self):
         return self
@@ -137,38 +144,15 @@ class Protocol(asyncio.Protocol):
 
         self._writeit = writeit
 
-    def pause_writing(self):
-        self.paused.append(1)
-
-    def resume_writing(self):
-        paused = self.paused
-        del paused[:]
-        output = self.output
-        writelines = self.transport.writelines
-        from struct import pack
-        while output and not paused:
-            message = output.pop(0)
-            if isinstance(message, bytes):
-                writelines((pack(">I", len(message)), message))
-            else:
-                data = message
-                for message in data:
-                    writelines((pack(">I", len(message)), message))
-                    if paused: # paused again. Put iter back.
-                        output.insert(0, data)
-                        break
-
-    def get_peername(self):
-        return self.transport.get_extra_info('peername')
-
     def connection_lost(self, exc):
         if self.closed:
-            for f in self.futures.values():
+            for f in self.pop_futures():
                 f.cancel()
         else:
-            logger.info("Disconnected, %s, %r", self, exc)
             self.client.disconnected(self)
-            for f in self.futures.values():
+            # We have to be careful processing the futures, because
+            # exception callbacks might modufy them.
+            for f in self.pop_futures():
                 f.set_exception(ClientDisconnected(exc or 'connection lost'))
 
     def finish_connect(self, protocol_version):
@@ -199,15 +183,27 @@ class Protocol(asyncio.Protocol):
             'register', self.storage_key,
             self.read_only if self.read_only is not Fallback else False,
             )
-        # Get lastTransaction in flight right away to make successful
-        # connection quicker
-        lastTransaction = self.promise('lastTransaction')
+        if self.read_only is not Fallback:
+            # Get lastTransaction in flight right away to make
+            # successful connection quicker, but only if we're not
+            # doing read-only fallback.  If we might need to retry, we
+            # can't send lastTransaction because if the registration
+            # fails, it will be seen as an invalid message and the
+            # connection will close. :( It would be a lot better of
+            # registere returned the last transaction (and info while
+            # it's at it).
+            lastTransaction = self.promise('lastTransaction')
+        else:
+            lastTransaction = None # to make python happy
 
         @register
         def registered(_):
             if self.read_only is Fallback:
                 self.read_only = False
-            self.client.registered(self, lastTransaction)
+                r_lastTransaction = self.promise('lastTransaction')
+            else:
+                r_lastTransaction = lastTransaction
+            self.client.registered(self, r_lastTransaction)
 
         @register.catch
         def register_failed(exc):
@@ -215,8 +211,10 @@ class Protocol(asyncio.Protocol):
                 self.read_only is Fallback):
                 # We tried a write connection, degrade to a read-only one
                 self.read_only = True
-                register = self.promise(
-                    'register', self.storage_key, self.read_only)
+                logger.info("%s write connection failed. Trying read-only",
+                            self)
+                register = self.promise('register', self.storage_key, True)
+                # get lastTransaction in flight.
                 lastTransaction = self.promise('lastTransaction')
 
                 @register
@@ -311,6 +309,30 @@ class Protocol(asyncio.Protocol):
 
     def promise(self, method, *args):
         return self.call(Promise(), method, args)
+
+    def pause_writing(self):
+        self.paused.append(1)
+
+    def resume_writing(self):
+        paused = self.paused
+        del paused[:]
+        output = self.output
+        writelines = self.transport.writelines
+        from struct import pack
+        while output and not paused:
+            message = output.pop(0)
+            if isinstance(message, bytes):
+                writelines((pack(">I", len(message)), message))
+            else:
+                data = message
+                for message in data:
+                    writelines((pack(">I", len(message)), message))
+                    if paused: # paused again. Put iter back.
+                        output.insert(0, data)
+                        break
+
+    def get_peername(self):
+        return self.transport.get_extra_info('peername')
 
     # Methods called by the server.
     # WARNING WARNING we can't call methods that call back to us
@@ -759,6 +781,10 @@ class ClientThread(ClientRunner):
             daemon=True,
             )
         self.started = threading.Event()
+        self.thread.start()
+        self.started.wait()
+        if self.exception:
+            raise self.exception
 
     exception = None
     def run(self):
@@ -782,10 +808,6 @@ class ClientThread(ClientRunner):
             logger.debug('Stopping client thread')
 
     def start(self, wait=True):
-        self.thread.start()
-        self.started.wait()
-        if self.exception:
-            raise self.exception
         if wait:
             self.wait_for_result(self.connected, self.timeout)
 
