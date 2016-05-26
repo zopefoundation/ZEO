@@ -681,7 +681,6 @@ class ClientRunner:
         self.__args = (addrs, wrapper, cache, storage_key, read_only,
                        disconnect_poll)
         self.timeout = timeout
-        self.connected = concurrent.futures.Future()
 
     def setup_delegation(self, loop):
         self.loop = loop
@@ -698,14 +697,6 @@ class ClientRunner:
             return self.wait_for_result(result, timeout)
 
         self.__call = call
-
-        @self.client.connected.add_done_callback
-        def thread_done_connecting(future):
-            e = future.exception()
-            if e is not None:
-                self.connected.set_exception(e)
-            else:
-                self.connected.set_result(None)
 
     def wait_for_result(self, future, timeout):
         try:
@@ -816,7 +807,7 @@ class ClientThread(ClientRunner):
 
     def start(self, wait=True):
         if wait:
-            self.wait_for_result(self.connected, self.timeout)
+            self.wait_for_result(self.client.connected, self.timeout)
 
     closed = False
     def close(self):
