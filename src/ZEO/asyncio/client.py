@@ -805,9 +805,10 @@ class ClientThread(ClientRunner):
             loop.close()
             logger.debug('Stopping client thread')
 
-    def start(self, wait=True):
-        if wait:
-            self.wait_for_result(self.client.connected, self.timeout)
+    def wait(self, timeout=None):
+        if timeout is None:
+            timeout = self.timeout
+        self.wait_for_result(self.client.connected, timeout)
 
     closed = False
     def close(self):

@@ -266,15 +266,18 @@ class ClientStorage(object):
         self._call = self._server.call
         self._async = self._server.async
         self._async_iter = self._server.async_iter
+        self._wait = self._server.wait
 
         self._commit_lock = threading.Lock()
 
-        try:
-            self._server.start(wait=wait)
-        except Exception:
-            # No point in keeping the server going of the storage creation fails
-            self._server.close()
-            raise
+        if wait:
+            try:
+                self._wait()
+            except Exception:
+                # No point in keeping the server going of the storage
+                # creation fails
+                self._server.close()
+                raise
 
     def new_addr(self, addr):
         self._addr = addr
