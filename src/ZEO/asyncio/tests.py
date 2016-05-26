@@ -226,8 +226,10 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         protocol.connection_lost(exc)
         wrapper.notify_disconnected.assert_called_with()
 
-        self.assertEqual(loaded.exception(), exc)
-        self.assertEqual(f1.exception(), exc)
+        self.assertTrue(isinstance(loaded.exception(), ClientDisconnected))
+        self.assertEqual(loaded.exception().args, (exc,))
+        self.assertTrue(isinstance(f1.exception(), ClientDisconnected))
+        self.assertEqual(f1.exception().args, (exc,))
 
         # Because we reconnected, a new protocol and transport were created:
         self.assert_(protocol is not loop.protocol)

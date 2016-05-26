@@ -1,4 +1,5 @@
 from pickle import loads, dumps
+from ZEO.Exceptions import ClientDisconnected
 from ZODB.ConflictResolution import ResolvedSerial
 from struct import unpack
 import asyncio
@@ -78,8 +79,7 @@ class Protocol(asyncio.Protocol):
             if self.transport is not None:
                 self.transport.close()
             for future in self.futures.values():
-                future.set_exception(
-                    ZEO.Exceptions.ClientDisconnected("Closed"))
+                future.set_exception(ClientDisconnected("Closed"))
             self.futures.clear()
 
     def protocol_factory(self):
@@ -169,7 +169,7 @@ class Protocol(asyncio.Protocol):
             logger.info("Disconnected, %s, %r", self, exc)
             self.client.disconnected(self)
             for f in self.futures.values():
-                f.set_exception(exc)
+                f.set_exception(ClientDisconnected(exc or 'connection lost'))
 
     def finish_connect(self, protocol_version):
 
@@ -512,7 +512,7 @@ class Client:
             self.protocol.call_async(method, args)
             future.set_result(None)
         else:
-            future.set_exception(ZEO.Exceptions.ClientDisconnected())
+            future.set_exception(ClientDisconnected())
 
     def call_async_from_same_thread(self, method, *args):
         return self.protocol.call_async(method, args)
@@ -522,14 +522,13 @@ class Client:
             self.protocol.call_async_iter(it)
             future.set_result(None)
         else:
-            future.set_exception(ZEO.Exceptions.ClientDisconnected())
+            future.set_exception(ClientDisconnected())
 
     def _when_ready(self, func, result_future, *args):
 
         if self.ready is None:
             # We started without waiting for a connection. (prob tests :( )
-            result_future.set_exception(
-                ZEO.Exceptions.ClientDisconnected("never connected"))
+            result_future.set_exception(ClientDisconnected("never connected"))
         else:
             @self.connected.add_done_callback
             def done(future):
@@ -726,7 +725,7 @@ class ClientRunner:
 
         # Short circuit from now on. We're closed.
         def call_closed(*a, **k):
-            raise ZEO.Exceptions.ClientDisconnected('closed')
+            raise ClientDisconnected('closed')
 
         self.__call = call_closed
 
