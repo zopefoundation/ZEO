@@ -98,6 +98,8 @@ class ClientStorage(object):
                  wait=True,
                  drop_cache_rather_verify=True,
                  username=None, password=None, realm=None,
+                 # For tests:
+                 _client_factory=ZEO.asyncio.client.ClientThread,
                  ):
         """ClientStorage constructor.
 
@@ -256,17 +258,23 @@ class ClientStorage(object):
                 blob_cache_size * blob_cache_size_check // 100)
             self._check_blob_size()
 
-        self._server = ZEO.asyncio.client.ClientThread(
+        self._server = _client_factory(
             addr, self, cache, storage,
             ZEO.asyncio.client.Fallback if read_only_fallback else read_only,
             wait_timeout or 30,
             )
-        self._server.start()
         self._call = self._server.call
         self._async = self._server.async
         self._async_iter = self._server.async_iter
 
         self._commit_lock = threading.Lock()
+
+        try:
+            self._server.start(wait=wait)
+        except Exception:
+            # No point in keeping the server going of the storage creation fails
+            self._server.close()
+            raise
 
     def new_addr(self, addr):
         self._addr = addr
@@ -763,6 +771,12 @@ class ClientStorage(object):
             # all, yet you want to be sure that other abort logic is
             # executed regardless.
             try:
+                # It's tempting to make an asynchronous call here, but
+                # it's useful for it to be synchronous because, if we
+                # failed due to a disconnect, synchronous calls will
+                # wait a little while in hopes of reconnecting.  If
+                # we're able to reconnect and retry the transaction,
+                # ten it might succeed!
                 self._call('tpc_abort', id(txn))
             except ClientDisconnected:
                 logger.debug("%s ClientDisconnected in tpc_abort() ignored",

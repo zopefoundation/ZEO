@@ -11,7 +11,7 @@
 # FOR A PARTICULAR PURPOSE
 #
 ##############################################################################
-
+import concurrent.futures
 import os
 import time
 import socket
@@ -174,6 +174,7 @@ class CommonSetupTearDown(StorageTestBase):
                                     var='.',
                                     cache_size=cache_size,
                                     wait=wait,
+                                    wait_timeout=1,
                                     min_disconnect_poll=0.1,
                                     read_only=read_only,
                                     read_only_fallback=read_only_fallback,
@@ -454,7 +455,7 @@ class ConnectionTests(CommonSetupTearDown):
 
     def checkBadMessage1(self):
         # not even close to a real message
-        self._bad_message("salty")
+        self._bad_message(b"salty")
 
     def checkBadMessage2(self):
         # just like a real message, but with an unpicklable argument
@@ -474,22 +475,36 @@ class ConnectionTests(CommonSetupTearDown):
         self._storage = self.openClientStorage()
         self._dostore()
 
-        # break into the internals to send a bogus message
-        zrpc_conn = self._storage._server.rpc
-        zrpc_conn.message_output(msg)
+        generation = self._storage._connection_generation
 
+        future = concurrent.futures.Future()
+
+        def write():
+            try:
+                self._storage._server.client.protocol._write(msg)
+            except Exception as exc:
+                future.set_exception(exc)
+            else:
+                future.set_result(None)
+
+        # break into the internals to send a bogus message
+        self._storage._server.loop.call_soon_threadsafe(write)
+        future.result()
+
+        # If we manage to call _dostore before the server disconnects
+        # us, we'll get a ClientDisconnected error.  When we retry, it
+        # will succeed.  It will succeed because:
+        # - _dostore calls tpc_abort
+        # - tpc_abort makes a synchronous call to the server to abort
+        #   the transaction
+        # - when disconnected, synchronous calls are blocked for a little
+        #   while while reconnecting (or they timeout of it takes too long).
         try:
             self._dostore()
         except ClientDisconnected:
-            pass
-        else:
-            self._storage.close()
-            self.fail("Server did not disconnect after bogus message")
-        self._storage.close()
+            self._dostore()
 
-        self._storage = self.openClientStorage()
-        self._dostore()
-        self._storage.close()
+        self.assertTrue(self._storage._connection_generation > generation)
 
     # Test case for multiple storages participating in a single
     # transaction.  This is not really a connection test, but it needs

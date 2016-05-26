@@ -14,6 +14,8 @@
 import doctest
 import unittest
 
+import ZEO.asyncio.testing
+
 class FakeStorageBase:
 
     def __getattr__(self, name):
@@ -52,7 +54,7 @@ class FakeServer:
 
 def test_server_record_iternext():
     """
-    
+
 On the server, record_iternext calls are simply delegated to the
 underlying storage.
 
@@ -71,7 +73,7 @@ underlying storage.
     2
     3
     4
-    
+
 The storage info also reflects the fact that record_iternext is supported.
 
     >>> zeo.get_info()['supports_record_iternext']
@@ -85,9 +87,8 @@ The storage info also reflects the fact that record_iternext is supported.
 
 """
 
-
 def test_client_record_iternext():
-    """\
+    """Test client storage delegation to the network client
 
 The client simply delegates record_iternext calls to it's server stub.
 
@@ -96,21 +97,25 @@ stuff.  I'd rather do a lame test than a really lame test, so here goes.
 
 First, fake out the connection manager so we can make a connection:
 
-    >>> import ZEO.ClientStorage
-    >>> from ZEO.ClientStorage import ClientStorage
-    >>> oldConnectionManagerClass = ClientStorage.ConnectionManagerClass
-    >>> class FauxConnectionManagerClass:
-    ...     def __init__(*a, **k):
-    ...         pass
-    ...     def attempt_connect(self):
-    ...         return True
-    >>> ClientStorage.ConnectionManagerClass = FauxConnectionManagerClass
-    >>> client = ClientStorage('', wait=False)
-    >>> ClientStorage.ConnectionManagerClass = oldConnectionManagerClass
+    >>> import ZEO
+
+    >>> class Client(ZEO.asyncio.testing.ClientRunner):
+    ...
+    ...    def record_iternext(self, next=None):
+    ...        if next == None:
+    ...           next = '0'
+    ...        next = str(int(next) + 1)
+    ...        oid = next
+    ...        if next == '4':
+    ...            next = None
+    ...
+    ...        return oid, oid*8, 'data ' + oid, next
+
+    >>> client = ZEO.client(
+    ...     '', wait=False, _client_factory=Client)
 
 Now we'll have our way with it's private _server attr:
 
-    >>> client._server = FakeStorage()
     >>> next = None
     >>> while 1:
     ...     oid, serial, data, next = client.record_iternext(next)
@@ -124,35 +129,6 @@ Now we'll have our way with it's private _server attr:
 
 """
 
-def test_server_stub_record_iternext():
-    """\
-
-The server stub simply delegates record_iternext calls to it's rpc.
-
-There's really no decent way to test ZEO without running to much crazy
-stuff.  I'd rather do a lame test than a really lame test, so here goes.
-
-    >>> class FauxRPC:
-    ...     storage = FakeStorage()
-    ...     def call(self, meth, *args):
-    ...         return getattr(self.storage, meth)(*args)
-    ...     peer_protocol_version = 1
-
-    >>> import ZEO.ServerStub
-    >>> stub = ZEO.ServerStub.StorageServer(FauxRPC())
-    >>> next = None
-    >>> while 1:
-    ...     oid, serial, data, next = stub.record_iternext(next)
-    ...     print(oid)
-    ...     if next is None:
-    ...         break
-    1
-    2
-    3
-    4
-
-"""
-    
 def history_to_version_compatible_storage():
     """
     Some storages work under ZODB <= 3.8 and ZODB >= 3.9.
@@ -163,7 +139,7 @@ def history_to_version_compatible_storage():
     ...     return oid,version,size
 
     A ZEOStorage such as the following should support this type of storage:
-    
+
     >>> class OurFakeServer(FakeServer):
     ...   storages = {'1':VersionCompatibleStorage()}
     >>> import ZEO.StorageServer
@@ -181,7 +157,7 @@ def history_to_version_compatible_storage():
 
     >>> from ZEO.StorageServer import ZEOStorage308Adapter
     >>> zeo = ZEOStorage308Adapter(VersionCompatibleStorage())
-    
+
     The history method should still return the parameters it was called with:
 
     >>> zeo.history('oid','',99)
@@ -193,4 +169,3 @@ def test_suite():
 
 if __name__ == '__main__':
     unittest.main(defaultTest='test_suite')
-
