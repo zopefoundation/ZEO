@@ -454,6 +454,7 @@ class Client:
                 self.register_failed_poll + local_random.random(),
                 self.try_connecting)
 
+    verify_result = None # for tests
     def verify(self, last_transaction_promise):
         protocol = self.protocol
 
@@ -463,21 +464,25 @@ class Client:
             if cache:
                 cache_tid = cache.getLastTid()
                 if not cache_tid:
+                    self.verify_result = "Non-empty cache w/o tid"
                     logger.error("Non-empty cache w/o tid -- clearing")
                     cache.clear()
                     self.client.invalidateCache()
                     self.finished_verify(server_tid)
                 elif cache_tid > server_tid:
+                    self.verify_result = "Cache newer than server"
                     logger.critical(
                         'Client has seen newer transactions than server!')
                     raise AssertionError("Server behind client, %r < %r, %s",
                                          server_tid, cache_tid, protocol)
                 elif cache_tid == server_tid:
+                    self.verify_result = "Cache up to date"
                     self.finished_verify(server_tid)
                 else:
                     @protocol.promise('getInvalidations', cache_tid)
                     def verify_invalidations(vdata):
                         if vdata:
+                            self.verify_result = "quick verification"
                             tid, oids = vdata
                             for oid in oids:
                                 cache.invalidate(oid, None)
@@ -485,6 +490,7 @@ class Client:
                             return tid
                         else:
                             # cache is too old
+                            self.verify_result = "cache too old, clearing"
                             try:
                                 ZODB.event.notify(
                                     ZEO.interfaces.StaleCache(self.client))
@@ -503,6 +509,7 @@ class Client:
                         self.connected.set_exception,
                         )
             else:
+                self.verify_result = "empty cache"
                 self.finished_verify(server_tid)
 
         @finish_verify.catch
