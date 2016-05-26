@@ -111,3 +111,24 @@ class AsyncRPC:
 
     def __getattr__(self, name):
         return lambda *a, **kw: self.api.call(name, *a, **kw)
+
+class ClientRunner:
+
+    def __init__(self, addr, client, cache, storage, read_only, timeout,
+                 **kw):
+        self.addr = addr
+        self.client = client
+        self.cache = cache
+        self.storage = storage
+        self.read_only = read_only
+        self.timeout = timeout,
+        for name in kw:
+            self.__dict__[name] = kw[name]
+
+    def start(self, wait=True):
+        pass
+
+    def call(self, method, *args, timeout=None):
+        return getattr(self, method)(*args)
+
+    async = async_iter = call
