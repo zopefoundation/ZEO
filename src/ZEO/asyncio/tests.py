@@ -28,7 +28,7 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
 
         wrapper = mock.Mock()
         cache = MemoryCache()
-        self.set_options(addrs, wrapper, cache, 'TEST', read_only)
+        self.set_options(addrs, wrapper, cache, 'TEST', read_only, timeout=1)
 
         # We can also provide an event loop.  We'll use a testing loop
         # so we don't have to actually make any network connection.
@@ -603,6 +603,14 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
 
         client.call_async_from_same_thread('foo', 1)
         self.assertEqual(self.parse(transport.pop()), (0, True, 'foo', (1, )))
+
+    def test_ClientDisconnected_on_call_timeout(self):
+        wrapper, cache, loop, client, protocol, transport, send, respond = (
+            self.start())
+        self.wait_for_result = super().wait_for_result
+        self.assertRaises(ClientDisconnected, self.call, 'foo')
+        client.ready = False
+        self.assertRaises(ClientDisconnected, self.call, 'foo')
 
     def unsized(self, data, unpickle=False):
         result = []

@@ -679,7 +679,13 @@ class ClientRunner:
                 self.connected.set_result(None)
 
     def wait_for_result(self, future, timeout):
-        return future.result(self.timeout if timeout is False else timeout)
+        try:
+            return future.result(self.timeout if timeout is False else timeout)
+        except concurrent.futures.TimeoutError:
+            if not self.client.ready:
+                raise ClientDisconnected("timed out waiting for connection")
+            else:
+                raise
 
     def call(self, method, *args, timeout=None):
         return self.__call(self.call_threadsafe, method, args)
@@ -781,7 +787,7 @@ class ClientThread(ClientRunner):
         if self.exception:
             raise self.exception
         if wait:
-            self.connected.result(self.timeout)
+            self.wait_for_result(self.connected, self.timeout)
 
     closed = False
     def close(self):
