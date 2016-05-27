@@ -452,6 +452,9 @@ class ClientStorage(object):
         try:
             buf = trans.data(self)
         except KeyError:
+            buf = None
+
+        if buf is None:
             raise POSException.StorageTransactionError(
                 "Transaction not committing", meth, trans)
 
