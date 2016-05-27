@@ -760,6 +760,11 @@ class ClientRunner:
         # addrs aren't used until the client disconnects.xs
         self.client.addrs = addrs
 
+    def wait(self, timeout=None):
+        if timeout is None:
+            timeout = self.timeout
+        self.wait_for_result(self.client.connected, timeout)
+
 class ClientThread(ClientRunner):
     """Thread wrapper for client interface
 
@@ -804,11 +809,6 @@ class ClientThread(ClientRunner):
                 logger.critical("Client loop stopped unexpectedly")
             loop.close()
             logger.debug('Stopping client thread')
-
-    def wait(self, timeout=None):
-        if timeout is None:
-            timeout = self.timeout
-        self.wait_for_result(self.client.connected, timeout)
 
     closed = False
     def close(self):
