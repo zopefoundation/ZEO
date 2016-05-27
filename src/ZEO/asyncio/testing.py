@@ -132,3 +132,6 @@ class ClientRunner:
         return getattr(self, method)(*args)
 
     async = async_iter = call
+
+    def wait(self, timeout=None):
+        pass
