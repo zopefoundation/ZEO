@@ -208,6 +208,7 @@ class ClientStorage(object):
             )
 
         self._is_read_only = read_only
+        self._read_only_fallback = read_only_fallback
 
         self._addr = addr # For tests
 
