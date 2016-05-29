@@ -885,7 +885,7 @@ class ReconnectionTests(CommonSetupTearDown):
         self.shutdownServer()
         self.assertRaises(ClientDisconnected, self._storage.tpc_vote, txn)
         self.startServer(create=0)
-        self._storage.tpc_abort(txn)
+        self._storage.tpc_abort(txn, timeout=9)
         self._dostore()
 
         # This test is supposed to cover the following error, although
