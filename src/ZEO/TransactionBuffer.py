@@ -83,7 +83,7 @@ class TransactionBuffer:
         for i in range(self.count):
             oid, data = unpickler.load()
             seen.add(oid)
-            yield oid, data, serials[oid] == ResolvedSerial
+            yield oid, data, serials.get(oid) == ResolvedSerial
 
         # We may have leftover serials because undo
         for oid, serial in serials.items():

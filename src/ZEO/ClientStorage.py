@@ -724,7 +724,10 @@ class ClientStorage(object):
         if tbuf.exception:
             raise tbuf.exception
 
-        return list(tbuf.serials.items())
+        if tbuf.serials:
+            return list(tbuf.serials.items())
+        else:
+            return None
 
     def tpc_transaction(self):
         return self._transaction
