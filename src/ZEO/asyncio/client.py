@@ -705,7 +705,7 @@ class ClientRunner:
         from concurrent.futures import Future
         call_soon_threadsafe = loop.call_soon_threadsafe
 
-        def call(meth, *args, timeout=False):
+        def call(meth, *args, timeout=None):
             result = Future()
             call_soon_threadsafe(meth, result, *args)
             return self.wait_for_result(result, timeout)
@@ -714,7 +714,7 @@ class ClientRunner:
 
     def wait_for_result(self, future, timeout):
         try:
-            return future.result(self.timeout if timeout is False else timeout)
+            return future.result(self.timeout if timeout is None else timeout)
         except concurrent.futures.TimeoutError:
             if not self.client.ready:
                 raise ClientDisconnected("timed out waiting for connection")
@@ -722,7 +722,7 @@ class ClientRunner:
                 raise
 
     def call(self, method, *args, timeout=None):
-        return self.__call(self.call_threadsafe, method, args)
+        return self.__call(self.call_threadsafe, method, args, timeout=timeout)
 
     def call_future(self, method, *args):
         # for tests
