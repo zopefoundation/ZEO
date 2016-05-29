@@ -778,8 +778,11 @@ class ClientStorage(object):
     def lastTransaction(self):
         return self._cache.getLastTid()
 
-    def tpc_abort(self, txn):
+    def tpc_abort(self, txn, timeout=None):
         """Storage API: abort a transaction.
+
+        (The timeout keyword argument is for tests to wat longer than
+        they normally would.)
         """
         try:
             tbuf = txn.data(self)
@@ -798,7 +801,7 @@ class ClientStorage(object):
                 # wait a little while in hopes of reconnecting.  If
                 # we're able to reconnect and retry the transaction,
                 # ten it might succeed!
-                self._call('tpc_abort', id(txn))
+                self._call('tpc_abort', id(txn), timeout=timeout)
             except ClientDisconnected:
                 logger.debug("%s ClientDisconnected in tpc_abort() ignored",
                              self.__name__)
