@@ -29,6 +29,8 @@ Now, we'll restart the server and update the connection:
     >>> server = ZEO.StorageServer.StorageServer(
     ...     ('127.0.0.1', 0), {'1': ZODB.FileStorage.FileStorage('t.fs')})
     >>> server.start_thread()
+
+
     >>> client.new_addr(server.addr)
 
 

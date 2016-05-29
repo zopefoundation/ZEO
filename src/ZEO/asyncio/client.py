@@ -105,7 +105,7 @@ class Protocol(asyncio.Protocol):
         @cr.add_done_callback
         def done_connecting(future):
             if future.exception() is not None:
-                logger.info("Connection to %rfailed, retrying, %s",
+                logger.info("Connection to %r failed, retrying, %s",
                             self.addr, future.exception())
                 # keep trying
                 if not self.closed:
@@ -384,6 +384,20 @@ class Client:
         self.protocols = ()
         self.disconnected(None)
 
+    def new_addrs(self, addrs):
+        self.addrs = addrs
+        if self.trying_to_connect():
+            self.disconnected(None)
+
+    def trying_to_connect(self):
+        """Return whether we're trying to connect
+
+        Either because we're disconnected, or because we're connected
+        read-only, but want a writable connection if we can get one.
+        """
+        return (not self.ready or
+                self.is_read_only() and self.read_only is Fallback)
+
     closed = False
     def close(self):
         if not self.closed:
@@ -443,7 +457,7 @@ class Client:
             protocol.close() # too late, we went home with another
 
     def register_failed(self, protocol, exc):
-        # A protcol failed registration. That's weird.  If they've all
+        # A protocol failed registration. That's weird.  If they've all
         # failed, we should try again in a bit.
         protocol.close()
         logger.exception("Registration or cache validation failed, %s", exc)
@@ -755,10 +769,16 @@ class ClientRunner:
 
         self.__call = call_closed
 
-    def new_addr(self, addrs):
+    def apply_threadsafe(self, future, func, *args):
+        try:
+            future.set_result(func(*args))
+        except Exception as exc:
+            future.set_exception(exc)
+
+    def new_addrs(self, addrs):
         # This usually doesn't have an immediate effect, since the
         # addrs aren't used until the client disconnects.xs
-        self.client.addrs = addrs
+        self.__call(self.apply_threadsafe, self.client.new_addrs, addrs)
 
     def wait(self, timeout=None):
         if timeout is None:

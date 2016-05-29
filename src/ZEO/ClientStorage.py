@@ -282,7 +282,18 @@ class ClientStorage(object):
 
     def new_addr(self, addr):
         self._addr = addr
-        self._server.new_addrs(addr)
+        self._server.new_addrs(self._normalize_addr(addr))
+
+    def _normalize_addr(self, addr):
+        if isinstance(addr, int):
+            addr = ('127.0.0.1', addr)
+
+        if isinstance(addr, str):
+            addr = [addr]
+        elif (isinstance(addr, tuple) and len(addr) == 2 and
+              isinstance(addr[0], str) and isinstance(addr[1], int)):
+            addr = [addr]
+        return addr
 
     def close(self):
         "Storage API: finalize the storage, releasing external resources."
