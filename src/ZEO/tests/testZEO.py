@@ -937,10 +937,10 @@ def tpc_finish_error():
 
     tpc_finish will fail:
 
-    >>> client.tpc_finish(t)
+    >>> client.tpc_finish(t) # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    TypeError: 'NoneType' object is not subscriptable
+    AttributeError: ...
 
     >>> client.tpc_abort(t)
     >>> t.abort()
