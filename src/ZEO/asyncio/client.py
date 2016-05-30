@@ -235,30 +235,43 @@ class Protocol(asyncio.Protocol):
 
         # Low-level input handler collects data into sized messages.
 
+        # Note that the logic below assume that when new data pushes
+        # us over what we want, we process it in one call until we
+        # need more, because we assume that excess data is all in the
+        # last item of self.input. This is why the exception handling
+        # in the while loop is critical.  Without it, an exception
+        # might cause us to exit before processing all of the data we
+        # should, when then causes the logic to be broken in
+        # subsequent calls.
+
         self.got += len(data)
         self.input.append(data)
         while self.got >= self.want:
-            extra = self.got - self.want
-            if extra == 0:
-                collected = b''.join(self.input)
-                self.input = []
-            else:
-                input = self.input
-                self.input = [data[-extra:]]
-                input[-1] = input[-1][:-extra]
-                collected = b''.join(input)
+            try:
+                extra = self.got - self.want
+                if extra == 0:
+                    collected = b''.join(self.input)
+                    self.input = []
+                else:
+                    input = self.input
+                    self.input = [input[-1][-extra:]]
+                    input[-1] = input[-1][:-extra]
+                    collected = b''.join(input)
 
-            self.got = extra
+                self.got = extra
 
-            if self.getting_size:
-                # we were recieving the message size
-                assert self.want == 4
-                self.want = unpack(">I", collected)[0]
-                self.getting_size = False
-            else:
-                self.want = 4
-                self.getting_size = True
-                self.message_received(collected)
+                if self.getting_size:
+                    # we were recieving the message size
+                    assert self.want == 4
+                    self.want = unpack(">I", collected)[0]
+                    self.getting_size = False
+                else:
+                    self.want = 4
+                    self.getting_size = True
+                    self.message_received(collected)
+            except Exception:
+                logger.exception("data_received %s %s %s",
+                                 self.want, self.got, self.getting_size)
 
     def first_message_received(self, data):
         # Handler for first/handshake message, set up in __init__

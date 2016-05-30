@@ -613,6 +613,34 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         client.ready = False
         self.assertRaises(ClientDisconnected, self.call, 'foo')
 
+    def test_errors_in_data_received(self):
+        # There was a bug in ZEO.async.client.Protocol.data_recieved
+        # that caused it to fail badly if errors were raised while
+        # handling data.
+
+        wrapper, cache, loop, client, protocol, transport, send, respond = (
+            self.start(finish_start=True))
+
+        wrapper.receiveBlobStart.side_effect = ValueError('test')
+
+        chunk = 'x' * 99999
+        try:
+            loop.protocol.data_received(b''.join((
+                sized(pickle.dumps(
+                    (0, True, 'receiveBlobStart', ('oid', 'serial')), 3)),
+                sized(pickle.dumps(
+                    (0, True, 'receiveBlobChunk',
+                     ('oid', 'serial', chunk)), 3)),
+                )))
+        except ValueError:
+            pass
+        loop.protocol.data_received(
+            sized(pickle.dumps(
+                (0, True, 'receiveBlobStop', ('oid', 'serial')), 3)),
+            )
+        wrapper.receiveBlobChunk.assert_called_with('oid', 'serial', chunk)
+        wrapper.receiveBlobStop.assert_called_with('oid', 'serial')
+
     def unsized(self, data, unpickle=False):
         result = []
         while data:
