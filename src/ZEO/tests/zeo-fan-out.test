@@ -94,6 +94,8 @@ Now, let's see if we can break it. :)
 
     >>> s2 = db2.storage
     >>> start_time = time.time()
+    >>> import os
+    >>> from ZEO.ClientStorage import _lock_blob
     >>> while time.time() - start_time < 999:
     ...     t = tm2.begin()
     ...     if r2[1].v + r2[2].v:
@@ -103,7 +105,10 @@ Now, let's see if we can break it. :)
     ...     path = s2.fshelper.getBlobFilename(*blob_id)
     ...     if os.path.exists(path):
     ...         ZODB.blob.remove_committed(path)
-    ...     s2._call('sendBlob', *blob_id)
+    ...     _ = s2.fshelper.createPathForOID(blob_id[0])
+    ...     blob_lock = _lock_blob(path)
+    ...     s2._call('sendBlob', *blob_id, timeout=9999)
+    ...     blob_lock.close()
     ... else: print('Dang')
 
     >>> threadf.join()
