@@ -51,12 +51,22 @@ class Loop:
 
     def call_soon_threadsafe(self, func, *args):
         func(*args)
+        return Handle()
 
     def call_later(self, delay, func, *args):
-        self.later.append((delay, func, args))
+        handle = Handle()
+        self.later.append((delay, func, args, handle))
+        return handle
 
     def call_exception_handler(self, context):
         self.exceptions.append(context)
+
+class Handle:
+
+    cancelled = False
+
+    def cancel(self):
+        self.cancelled = True
 
 class Transport:
 

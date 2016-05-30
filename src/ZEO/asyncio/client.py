@@ -41,7 +41,8 @@ class Protocol(asyncio.Protocol):
     protocols = b"Z309", b"Z310", b"Z3101"
 
     def __init__(self, loop,
-                 addr, client, storage_key, read_only, connect_poll=1):
+                 addr, client, storage_key, read_only, connect_poll=1,
+                 heartbeat_interval=60):
         """Create a client interface
 
         addr is either a host,port tuple or a string file name.
@@ -58,6 +59,7 @@ class Protocol(asyncio.Protocol):
             self.__class__.__name__, addr, storage_key, read_only)
         self.client = client
         self.connect_poll = connect_poll
+        self.heartbeat_interval = heartbeat_interval
         self.futures = {} # { message_id -> future }
         self.input  = [] # Buffer when assembling messages
         self.output = [] # Buffer when paused
@@ -144,7 +146,10 @@ class Protocol(asyncio.Protocol):
 
         self._writeit = writeit
 
+        self.heartbeat(write=False)
+
     def connection_lost(self, exc):
+        self.heartbeat_handle.cancel()
         if self.closed:
             for f in self.pop_futures():
                 f.cancel()
@@ -357,6 +362,12 @@ class Protocol(asyncio.Protocol):
         # plus: notify_connected, notify_disconnected
         )
     client_delegated = client_methods[2:]
+
+    def heartbeat(self, write=True):
+        if write:
+            self._write(b'(J\xff\xff\xff\xffK\x00U\x06.replyNt.')
+        self.heartbeat_handle = self.loop.call_later(
+            self.heartbeat_interval, self.heartbeat)
 
 class Client:
     """asyncio low-level ZEO client interface

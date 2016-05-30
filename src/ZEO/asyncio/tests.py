@@ -368,7 +368,7 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         self.assertEqual(sorted(loop.connecting), addrs[1:])
 
         # The failed connection is attempted in the future:
-        delay, func, args = loop.later.pop(0)
+        delay, func, args, _ = loop.later.pop(0)
         self.assert_(1 <= delay <= 2)
         func(*args)
         self.assertEqual(sorted(loop.connecting), addrs)
@@ -384,10 +384,11 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
 
         # Now, when the first connection fails, it won't be retried,
         # because we're already connected.
-        self.assertEqual(sorted(loop.later), [])
+        # (first in later is heartbeat)
+        self.assertEqual(sorted(loop.later[1:]), [])
         loop.fail_connecting(addrs[0])
         self.assertEqual(sorted(loop.connecting), [])
-        self.assertEqual(sorted(loop.later), [])
+        self.assertEqual(sorted(loop.later[1:]), [])
 
     def test_bad_server_tid(self):
         # If in verification we get a server_tid behing the cache's, make sure
@@ -406,9 +407,9 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         respond(1, None)
         respond(2, 'a'*8)
         self.assertFalse(client.connected.done() or transport.data)
-        delay, func, args = loop.later.pop(0)
+        delay, func, args, _ = loop.later.pop(1) # first in later is heartbeat
         self.assert_(8 < delay < 10)
-        self.assertEqual(len(loop.later), 0)
+        self.assertEqual(len(loop.later), 1) # first in later is heartbeat
         func(*args) # connect again
         self.assertFalse(protocol is loop.protocol)
         self.assertFalse(transport is loop.transport)
@@ -640,6 +641,35 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
             )
         wrapper.receiveBlobChunk.assert_called_with('oid', 'serial', chunk)
         wrapper.receiveBlobStop.assert_called_with('oid', 'serial')
+
+    def test_heartbeat(self):
+        # Protocols run heartbeats on a configurable (sort of)
+        # heartbeat interval, which defaults to every 60 seconds.
+        wrapper, cache, loop, client, protocol, transport, send, respond = (
+            self.start(finish_start=True))
+
+        delay, func, args, handle = loop.later.pop()
+        self.assertEqual(
+            (delay, func, args, handle),
+            (60, protocol.heartbeat, (), protocol.heartbeat_handle),
+            )
+        self.assertFalse(loop.later or handle.cancelled)
+
+        # The heartbeat function sends heartbeat data and reschedules itself.
+        func()
+        self.assertEqual(self.parse(transport.pop()), (-1, 0, '.reply', None))
+        self.assertTrue(protocol.heartbeat_handle != handle)
+
+        delay, func, args, handle = loop.later.pop()
+        self.assertEqual(
+            (delay, func, args, handle),
+            (60, protocol.heartbeat, (), protocol.heartbeat_handle),
+            )
+        self.assertFalse(loop.later or handle.cancelled)
+
+        # The heartbeat is cancelled when the protocol connection is lost:
+        protocol.connection_lost(None)
+        self.assertTrue(handle.cancelled)
 
     def unsized(self, data, unpickle=False):
         result = []
