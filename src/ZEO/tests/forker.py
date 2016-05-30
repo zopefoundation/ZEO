@@ -22,11 +22,11 @@ import socket
 import subprocess
 import logging
 import tempfile
-import logging
 import six
 import ZODB.tests.util
 import zope.testing.setupstack
 from ZEO._compat import BytesIO
+
 logger = logging.getLogger('ZEO.tests.forker')
 
 class ZEOConfig:
@@ -388,3 +388,15 @@ def wait_connected(storage):
 def wait_disconnected(storage):
     wait_until("storage is disconnected",
                lambda : not storage.is_connected())
+
+def debug_logging(logger='ZEO', stream='stderr', level=logging.DEBUG):
+    handler = logging.StreamHandler(getattr(sys, stream))
+    logger = logging.getLogger(logger)
+    logger.addHandler(handler)
+    logger.setLevel(level)
+
+    def stop():
+        logger.removeHandler(handler)
+        logger.setLevel(logging.NOTSET)
+
+    return stop
