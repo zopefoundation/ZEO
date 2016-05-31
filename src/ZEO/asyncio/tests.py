@@ -1,9 +1,20 @@
+
+from .._compat import PY3
+
 from zope.testing import setupstack
 from concurrent.futures import Future
-from unittest import mock
+if PY3:
+    from unittest import mock
+else:
+    import mock
+
 from ZODB.POSException import ReadOnlyError
 
-import asyncio
+if PY3:
+    import asyncio
+else:
+    import trollius as asyncio
+
 import collections
 import logging
 import pdb
@@ -40,11 +51,11 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
 
         def send(meth, *args):
             loop.protocol.data_received(
-                sized(pickle.dumps((0, True, meth, args), 3)))
+                sized(pickle.dumps((0, True, meth, args), 2)))
 
         def respond(message_id, result):
             loop.protocol.data_received(
-                sized(pickle.dumps((message_id, False, '.reply', result), 3)))
+                sized(pickle.dumps((message_id, False, '.reply', result), 2)))
 
         if finish_start:
             protocol.data_received(sized(b'Z3101'))
@@ -609,7 +620,7 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
     def test_ClientDisconnected_on_call_timeout(self):
         wrapper, cache, loop, client, protocol, transport, send, respond = (
             self.start())
-        self.wait_for_result = super().wait_for_result
+        self.wait_for_result = super(AsyncTests, self).wait_for_result
         self.assertRaises(ClientDisconnected, self.call, 'foo')
         client.ready = False
         self.assertRaises(ClientDisconnected, self.call, 'foo')
@@ -628,16 +639,16 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         try:
             loop.protocol.data_received(b''.join((
                 sized(pickle.dumps(
-                    (0, True, 'receiveBlobStart', ('oid', 'serial')), 3)),
+                    (0, True, 'receiveBlobStart', ('oid', 'serial')), 2)),
                 sized(pickle.dumps(
                     (0, True, 'receiveBlobChunk',
-                     ('oid', 'serial', chunk)), 3)),
+                     ('oid', 'serial', chunk)), 2)),
                 )))
         except ValueError:
             pass
         loop.protocol.data_received(
             sized(pickle.dumps(
-                (0, True, 'receiveBlobStop', ('oid', 'serial')), 3)),
+                (0, True, 'receiveBlobStop', ('oid', 'serial')), 2)),
             )
         wrapper.receiveBlobChunk.assert_called_with('oid', 'serial', chunk)
         wrapper.receiveBlobStop.assert_called_with('oid', 'serial')
@@ -674,7 +685,8 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
     def unsized(self, data, unpickle=False):
         result = []
         while data:
-            size, message, *data = data
+            size = data.pop(0)
+            message = data.pop(0)
             self.assertEqual(struct.unpack(">I", size)[0], len(message))
             if unpickle:
                 message = pickle.loads(message)
@@ -688,7 +700,7 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         return self.unsized(data, True)
 
 def response(*data):
-    return sized(pickle.dumps(data, 3))
+    return sized(pickle.dumps(data, 2))
 
 def sized(message):
     return struct.pack(">I", len(message)) + message

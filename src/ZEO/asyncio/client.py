@@ -1,8 +1,15 @@
+from .._compat import PY3
+
 from pickle import loads, dumps
 from ZEO.Exceptions import ClientDisconnected
 from ZODB.ConflictResolution import ResolvedSerial
 from struct import unpack
-import asyncio
+
+if PY3:
+    import asyncio
+else:
+    import trollius as asyncio
+
 import concurrent.futures
 import logging
 import random
@@ -313,16 +320,16 @@ class Protocol(asyncio.Protocol):
                 raise AttributeError(name)
 
     def call_async(self, method, args):
-        self._write(dumps((0, True, method, args), 3))
+        self._write(dumps((0, True, method, args), 2))
 
     def call_async_iter(self, it):
-        self._writeit(dumps((0, True, method, args), 3) for method, args in it)
+        self._writeit(dumps((0, True, method, args), 2) for method, args in it)
 
     message_id = 0
     def call(self, future, method, args):
         self.message_id += 1
         self.futures[self.message_id] = future
-        self._write(dumps((self.message_id, False, method, args), 3))
+        self._write(dumps((self.message_id, False, method, args), 2))
         return future
 
     def promise(self, method, *args):
@@ -369,7 +376,7 @@ class Protocol(asyncio.Protocol):
         self.heartbeat_handle = self.loop.call_later(
             self.heartbeat_interval, self.heartbeat)
 
-class Client:
+class Client(object):
     """asyncio low-level ZEO client interface
     """
 
@@ -712,7 +719,7 @@ class Client:
             else:
                 return protocol.read_only
 
-class ClientRunner:
+class ClientRunner(object):
 
     def set_options(self, addrs, wrapper, cache, storage_key, read_only,
                     timeout=30, disconnect_poll=1):
@@ -729,9 +736,10 @@ class ClientRunner:
         from concurrent.futures import Future
         call_soon_threadsafe = loop.call_soon_threadsafe
 
-        def call(meth, *args, timeout=None):
+        def call(meth, *args, **kw):
+            timeout = kw.pop('timeout', None)
             result = Future()
-            call_soon_threadsafe(meth, result, *args)
+            call_soon_threadsafe(meth, result, *args, **kw)
             return self.wait_for_result(result, timeout)
 
         self.__call = call
@@ -745,7 +753,8 @@ class ClientRunner:
             else:
                 raise
 
-    def call(self, method, *args, timeout=None):
+    def call(self, method, *args, **kw):
+        timeout = kw.pop('timeout', None)
         return self.__call(self.call_threadsafe, method, args, timeout=timeout)
 
     def call_future(self, method, *args):
@@ -825,8 +834,8 @@ class ClientThread(ClientRunner):
         self.thread = threading.Thread(
             target=self.run,
             name="%s zeo client networking thread" % client.__name__,
-            daemon=True,
             )
+        self.thread.setDaemon(True)
         self.started = threading.Event()
         self.thread.start()
         self.started.wait()
@@ -858,7 +867,7 @@ class ClientThread(ClientRunner):
     def close(self):
         if not self.closed:
             self.closed = True
-            super().close()
+            super(ClientThread, self).close()
             self.loop.call_soon_threadsafe(self.loop.stop)
             self.thread.join(9)
             if self.exception:

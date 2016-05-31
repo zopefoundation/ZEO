@@ -14,13 +14,30 @@
 """Setup
 """
 version = '5.0.0a0'
+
 from setuptools import setup, find_packages
 import os
 import sys
 
+install_requires = [
+    'ZODB >= 4.2.0b1',
+    'six',
+    'transaction >= 1.6.0',
+    'persistent >= 4.1.0',
+    'zc.lockfile',
+    'ZConfig',
+    'zdaemon',
+    'zope.interface',
+    ]
+
+tests_require = ['zope.testing', 'manuel', 'random2']
+
 if sys.version_info < (2, 6):
     print("This version of ZEO requires Python 2.6 or higher")
     sys.exit(0)
+elif sys.version_info < (3, ):
+    install_requires.extend(['futures', 'trollius'])
+    tests_require.append('mock')
 
 classifiers = """\
 Intended Audience :: Developers
@@ -93,8 +110,6 @@ def alltests():
                     _unittests_only(suite, mod.test_suite())
     return suite
 
-tests_require = ['zope.testing', 'manuel', 'random2']
-
 long_description = (
     open('README.rst').read()
     + '\n' +
@@ -115,16 +130,7 @@ setup(name="ZEO",
       test_suite="__main__.alltests", # to support "setup.py test"
       tests_require = tests_require,
       extras_require = dict(test=tests_require),
-      install_requires = [
-          'ZODB >= 4.2.0b1',
-          'six',
-          'transaction >= 1.6.0',
-          'persistent >= 4.1.0',
-          'zc.lockfile',
-          'ZConfig',
-          'zdaemon',
-          'zope.interface',
-          ],
+      install_requires = install_requires,
       zip_safe = False,
       entry_points = """
       [console_scripts]

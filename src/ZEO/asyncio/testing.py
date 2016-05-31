@@ -1,4 +1,13 @@
-import asyncio
+
+from .._compat import PY3
+
+if PY3:
+    import asyncio
+else:
+    import trollius as asyncio
+    class ConnectionRefusedError(Exception):
+        pass
+
 import pprint
 
 class Loop:
@@ -138,7 +147,7 @@ class ClientRunner:
     def start(self, wait=True):
         pass
 
-    def call(self, method, *args, timeout=None):
+    def call(self, method, *args, **kw):
         return getattr(self, method)(*args)
 
     async = async_iter = call
