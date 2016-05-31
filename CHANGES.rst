@@ -4,7 +4,7 @@ Changelog
 4.2.0 (unreleased)
 ------------------
 
-- TBD
+- Drop support for Python 2.6 and 3.2.
 
 4.2.0b1 (2015-06-05)
 --------------------
