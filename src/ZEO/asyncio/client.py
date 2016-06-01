@@ -97,7 +97,8 @@ class Protocol(asyncio.Protocol):
     def connect(self):
         if isinstance(self.addr, tuple):
             host, port = self.addr
-            cr = self.loop.create_connection(self.protocol_factory, host, port)
+            cr = self.loop.create_connection(
+                self.protocol_factory, host or 'localhost', port)
         else:
             cr = self.loop.create_unix_connection(
                 self.protocol_factory, self.addr)
