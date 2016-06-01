@@ -489,7 +489,8 @@ class Client:
     def register_failed(self, protocol, exc):
         # A protocol failed registration. That's weird.  If they've all
         # failed, we should try again in a bit.
-        protocol.close()
+        if protocol is not self:
+            protocol.close()
         logger.exception("Registration or cache validation failed, %s", exc)
         if (self.protocol is None and not
             any(not p.closed for p in self.protocols)
