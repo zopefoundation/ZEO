@@ -149,16 +149,18 @@ class Protocol(asyncio.Protocol):
         self.heartbeat(write=False)
 
     def connection_lost(self, exc):
+        logger.debug('connection_lost %r', exc)
         self.heartbeat_handle.cancel()
         if self.closed:
             for f in self.pop_futures():
                 f.cancel()
         else:
-            self.client.disconnected(self)
             # We have to be careful processing the futures, because
             # exception callbacks might modufy them.
             for f in self.pop_futures():
                 f.set_exception(ClientDisconnected(exc or 'connection lost'))
+            self.closed = True
+            self.client.disconnected(self)
 
     def finish_connect(self, protocol_version):
 
@@ -439,6 +441,7 @@ class Client:
         self.protocols = ()
 
     def disconnected(self, protocol=None):
+        logger.debug('disconnected %r %r', self, protocol)
         if protocol is None or protocol is self.protocol:
             if protocol is self.protocol and protocol is not None:
                 self.client.notify_disconnected()
@@ -447,6 +450,8 @@ class Client:
             self.connected = concurrent.futures.Future()
             self.protocol = None
             self._clear_protocols()
+
+        if all(p.closed for p in self.protocols):
             self.try_connecting()
 
     def upgrade(self, protocol):
@@ -457,6 +462,7 @@ class Client:
         self._clear_protocols(protocol)
 
     def try_connecting(self):
+        logger.debug('try_connecting')
         if not self.closed:
             self.protocols = [
                 Protocol(self.loop, addr, self,
