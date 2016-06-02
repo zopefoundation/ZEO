@@ -1488,31 +1488,6 @@ def quick_close_doesnt_kill_server():
     >>> db.close()
     """
 
-def sync_connect_doesnt_hang():
-    r"""
-    >>> import threading
-    >>> import ZEO.zrpc.client
-    >>> ConnectThread = ZEO.zrpc.client.ConnectThread
-    >>> ZEO.zrpc.client.ConnectThread = lambda *a, **kw: threading.Thread()
-
-    >>> class CM(ZEO.zrpc.client.ConnectionManager):
-    ...     sync_wait = 1
-    ...     _start_asyncore_loop = lambda self: None
-    >>> cm = CM(('', 0), object())
-
-    Calling connect results in an exception being raised, instead of hanging
-    indefinitely when the thread dies without setting up the connection.
-
-    >>> cm.connect(sync=1)
-    Traceback (most recent call last):
-    ...
-    AssertionError
-
-    >>> cm.thread.isAlive()
-    False
-    >>> ZEO.zrpc.client.ConnectThread = ConnectThread
-    """
-
 def can_use_empty_string_for_local_host_on_client():
     """We should be able to spell localhost with ''.
 
