@@ -70,7 +70,17 @@ class Dispatcher(asyncore.dispatcher):
             self.create_socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.set_reuse_addr()
         log("listening on %s" % str(self.addr), logging.INFO)
-        self.bind(self.addr)
+        for i in range(25):
+            try:
+                self.bind(self.addr)
+            except Exception as exc:
+                log("bind failed %s waiting", i)
+                if i == 24:
+                    raise
+                else:
+                    time.sleep(5)
+            else:
+                break
         self.listen(5)
 
     def writable(self):
