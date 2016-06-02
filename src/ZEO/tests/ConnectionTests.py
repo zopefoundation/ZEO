@@ -161,7 +161,6 @@ class CommonSetupTearDown(StorageTestBase):
                                     var='.',
                                     cache_size=cache_size,
                                     wait=wait,
-                                    wait_timeout=1,
                                     min_disconnect_poll=0.1,
                                     read_only=read_only,
                                     read_only_fallback=read_only_fallback,
@@ -885,7 +884,7 @@ class ReconnectionTests(CommonSetupTearDown):
         self.shutdownServer()
         self.assertRaises(ClientDisconnected, self._storage.tpc_vote, txn)
         self.startServer(create=0)
-        self._storage.tpc_abort(txn, timeout=9)
+        self._storage.tpc_abort(txn)
         self._dostore()
 
         # This test is supposed to cover the following error, although
