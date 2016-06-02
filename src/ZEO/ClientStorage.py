@@ -476,10 +476,12 @@ class ClientStorage(object):
 
         return buf
 
-    def history(self, oid, size=1):
+    def history(self, oid, size=1,
+                timeout=None, # for tests
+                ):
         """Storage API: return a sequence of HistoryEntry objects.
         """
-        return self._call('history', oid, size)
+        return self._call('history', oid, size, timeout=timeout)
 
     def record_iternext(self, next=None):
         """Storage API: get the next database record.
