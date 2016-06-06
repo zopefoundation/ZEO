@@ -53,6 +53,9 @@ from ZODB import utils
 
 logger = logging.getLogger(__name__)
 
+# max signed 64-bit value ~ infinity :) Signed cuz LBTree and TimeStamp
+m64 = b'\x7f\xff\xff\xff\xff\xff\xff\xff'
+
 try:
     from ZODB.ConflictResolution import ResolvedSerial
 except ImportError:
@@ -819,75 +822,37 @@ class ClientStorage(object):
         otherwise a KeyError is raised.
 
         """
-        self._lock.acquire()    # for atomic processing of invalidations
-        try:
-            t = self._cache.load(oid)
-            if t:
-                return t
-        finally:
-            self._lock.release()
+        result = self.loadBefore(oid, m64)
+        if result is None:
+            raise POSException.POSKeyError(oid)
+        return result[:2]
+
+    def loadBefore(self, oid, tid):
+        """Load the object data written before a transaction id
+        """
+        with self._lock:    # for atomic processing of invalidations
+            result = self._cache.loadBefore(oid, tid)
+            if result:
+                return result
 
         if self._server is None:
             raise ClientDisconnected()
 
-        self._load_lock.acquire()
-        try:
-            self._lock.acquire()
-            try:
+        with self._load_lock:
+            with self._lock:
                 self._load_oid = oid
                 self._load_status = 1
-            finally:
-                self._lock.release()
 
-            data, tid = self._server.loadEx(oid)
+            result = self._server.loadBefore(oid, tid)
 
-            self._lock.acquire()    # for atomic processing of invalidations
-            try:
-                if self._load_status:
-                    self._cache.store(oid, tid, None, data)
-                self._load_oid = None
-            finally:
-                self._lock.release()
-        finally:
-            self._load_lock.release()
+            if result:
+                with self._lock:    # for atomic processing of invalidations
+                    if self._load_status:
+                        data, tid, end = result
+                        self._cache.store(oid, tid, end, data)
+                    self._load_oid = None
 
-        return data, tid
-
-    def loadBefore(self, oid, tid):
-        self._lock.acquire()
-        try:
-            t = self._cache.loadBefore(oid, tid)
-            if t is not None:
-                return t
-        finally:
-            self._lock.release()
-
-        t = self._server.loadBefore(oid, tid)
-        if t is None:
-            return None
-        data, start, end = t
-        if end is None:
-            # This method should not be used to get current data.  It
-            # doesn't use the _load_lock, so it is possble to overlap
-            # this load with an invalidation for the same object.
-
-            # If we call again, we're guaranteed to get the
-            # post-invalidation data.  But if the data is still
-            # current, we'll still get end == None.
-
-            # Maybe the best thing to do is to re-run the test with
-            # the load lock in the case.  That's slow performance, but
-            # I don't think real application code will ever care about
-            # it.
-
-            return data, start, end
-        self._lock.acquire()
-        try:
-            self._cache.store(oid, start, end, data)
-        finally:
-            self._lock.release()
-
-        return data, start, end
+        return result
 
     def new_oid(self):
         """Storage API: return a new object identifier."""
