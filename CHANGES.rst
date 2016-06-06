@@ -8,7 +8,7 @@ Changelog
   with regard to the load lock.  This allowes ZEO to work with the
   upcoming ZODB 5, which used loadbefore rather than load.
 
-  Reimplemented load using loadBefore, this testing loadBefore
+  Reimplemented load using loadBefore, thus testing loadBefore
   extensively via existing tests.
 
 - Fixed: the ZEO cache loadBefore method failed to utilize current data.
