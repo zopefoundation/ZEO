@@ -845,12 +845,11 @@ class ClientStorage(object):
 
             result = self._server.loadBefore(oid, tid)
 
-            if result:
-                with self._lock:    # for atomic processing of invalidations
-                    if self._load_status:
-                        data, tid, end = result
-                        self._cache.store(oid, tid, end, data)
-                    self._load_oid = None
+            with self._lock:    # for atomic processing of invalidations
+                if result and self._load_status:
+                    data, tid, end = result
+                    self._cache.store(oid, tid, end, data)
+                self._load_oid = None
 
         return result
 
