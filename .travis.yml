@@ -10,6 +10,6 @@ install:
     - python bootstrap.py
     - bin/buildout
 script:
-    - bin/test -v1 -j99
+    - bin/test -vvv1
 notifications:
     email: false
