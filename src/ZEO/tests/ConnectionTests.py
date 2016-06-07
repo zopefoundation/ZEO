@@ -617,12 +617,6 @@ class InvqTests(CommonSetupTearDown):
         revid = self._dostore(oid, revid)
 
         perstorage = self.openClientStorage(cache="test")
-
-        forker.wait_until(
-            func=(lambda : perstorage.verify_result == "quick verification"),
-            timeout=60,
-            label="perstorage.verify_result to be quick verification")
-
         self.assertEqual(perstorage.verify_result, "quick verification")
         self.assertEqual(perstorage._server._last_invals,
                          (revid, [oid]))
