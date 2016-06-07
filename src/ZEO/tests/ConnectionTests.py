@@ -609,6 +609,10 @@ class InvqTests(CommonSetupTearDown):
         revid2 = self._dostore(oid2)
         revid2 = self._dostore(oid2, revid2)
 
+        forker.wait_until(
+            lambda :
+            perstorage.lastTransaction() == self._storage.lastTransaction())
+
         perstorage.load(oid, '')
         perstorage.close()
 
