@@ -81,6 +81,7 @@ class Dispatcher(asyncore.dispatcher):
                 else:
                     time.sleep(5)
             else:
+                break
 
         self.listen(5)
 
