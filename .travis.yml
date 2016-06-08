@@ -12,8 +12,6 @@ matrix:
           python: 3.5
         - os: linux
           python: pypy
-        - os: linux
-          python: pypy3
         - os: osx
           language: generic
           env: TERRYFY_PYTHON='homebrew 2'
