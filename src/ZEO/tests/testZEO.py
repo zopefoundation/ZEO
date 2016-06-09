@@ -1227,9 +1227,9 @@ def client_asyncore_thread_has_name():
     """
     >>> addr, _ = start_server()
     >>> db = ZEO.DB(addr)
-    >>> len([t for t in threading.enumerate()
-    ...      if ' zeo client networking thread' in t.getName()])
-    1
+    >>> any(t for t in threading.enumerate()
+    ...     if ' zeo client networking thread' in t.getName())
+    True
     >>> db.close()
     """
 
