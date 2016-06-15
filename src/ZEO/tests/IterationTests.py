@@ -174,8 +174,9 @@ Start a server:
 
 Open a client storage to it and commit a some transactions:
 
-    >>> import ZEO, transaction
-    >>> db = ZEO.DB(addr)
+    >>> import ZEO, ZODB, transaction
+    >>> client = ZEO.client(addr)
+    >>> db = ZODB.DB(client)
     >>> conn = db.open()
     >>> for i in range(10):
     ...     conn.root().i = i
@@ -183,19 +184,19 @@ Open a client storage to it and commit a some transactions:
 
 Create an iterator:
 
-    >>> it = conn._storage.iterator()
+    >>> it = client.iterator()
     >>> tid1 = it.next().tid
 
 Restart the storage:
 
     >>> stop_server(adminaddr)
-    >>> wait_disconnected(conn._storage)
+    >>> wait_disconnected(client)
     >>> _ = start_server('<filestorage>\npath fs\n</filestorage>', addr=addr)
-    >>> wait_connected(conn._storage)
+    >>> wait_connected(client)
 
 Now, we'll create a second iterator:
 
-    >>> it2 = conn._storage.iterator()
+    >>> it2 = client.iterator()
 
 If we try to advance the first iterator, we should get an error:
 
