@@ -1119,7 +1119,8 @@ class ClientStorage(object):
             self._tpc_cond.release()
 
     def lastTransaction(self):
-        return self._cache.getLastTid()
+        with self._lock:
+            return self._cache.getLastTid()
 
     def tpc_abort(self, txn):
         """Storage API: abort a transaction."""
@@ -1388,6 +1389,15 @@ class ClientStorage(object):
         for oid, tid in self._cache.contents():
             server.verify(oid, tid)
         server.endZeoVerify()
+
+        with self._lock:
+            if server_tid > self._cache.getLastTid():
+                # We verified the cache, and got no new invalidations
+                # while doing so.  The records in the cache are valid,
+                # in that invalid current records were invalidated,
+                # but the last tid is wrong.  Let's fix it:
+                self._cache.setLastTid(server_tid)
+
         return "full verification"
 
     def invalidateVerify(self, oid):
@@ -1465,10 +1475,11 @@ class ClientStorage(object):
             if oid == self._load_oid:
                 self._load_status = 0
             self._cache.invalidate(oid, tid)
-        self._cache.setLastTid(tid)
 
         if self._db is not None:
             self._db.invalidate(tid, oids)
+
+        self._cache.setLastTid(tid)
 
     # The following are for compatibility with protocol version 2.0.0
 

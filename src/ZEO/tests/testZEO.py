@@ -1468,9 +1468,9 @@ But, if we abort, we'll get up to date data and we'll see the changes.
     >>> sorted(conn2.root.x.items())
     [('x', 1), ('y', 1)]
 
+    >>> conn2.close()
     >>> cs.close()
     >>> conn1.close()
-
     """
 
 
