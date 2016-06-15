@@ -1390,12 +1390,13 @@ class ClientStorage(object):
             server.verify(oid, tid)
         server.endZeoVerify()
 
-        if server_tid > self._cache.getLastTid():
-            # We verified the cache, and got no new invalidations
-            # while doing so.  The records in the cache are valid,
-            # in that invalid current records were invalidated,
-            # but the last tid is wrong.  Let's fix it:
-            self._cache.setLastTid(server_tid)
+        with self._lock:
+            if server_tid > self._cache.getLastTid():
+                # We verified the cache, and got no new invalidations
+                # while doing so.  The records in the cache are valid,
+                # in that invalid current records were invalidated,
+                # but the last tid is wrong.  Let's fix it:
+                self._cache.setLastTid(server_tid)
 
         return "full verification"
 
