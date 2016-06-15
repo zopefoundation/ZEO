@@ -11,9 +11,9 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-"""Setup
-"""
-version = '4.2.0.dev0'
+
+version = '4.2.0'
+
 from setuptools import setup, find_packages
 import os
 import sys
