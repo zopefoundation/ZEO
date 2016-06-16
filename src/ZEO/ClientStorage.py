@@ -1667,8 +1667,8 @@ def _check_blob_cache_size(blob_dir, target):
 
     logger = logging.getLogger(__name__+'.check_blob_cache')
 
-    layout = open(os.path.join(blob_dir, ZODB.blob.LAYOUT_MARKER)
-                  ).read().strip()
+    with open(os.path.join(blob_dir, ZODB.blob.LAYOUT_MARKER)) as layout_file:
+        layout = layout_file.read().strip()
     if not layout == 'zeocache':
         logger.critical("Invalid blob directory layout %s", layout)
         raise ValueError("Invalid blob directory layout", layout)
