@@ -478,7 +478,7 @@ class ClientCache(object):
     # @return (data record, serial number, tid), or None if the object is not
     #         in the cache
     # @defreturn 3-tuple: (string, string, string)
-    def load(self, oid):
+    def load(self, oid, before_tid=None):
         ofs = self.current.get(oid)
         if ofs is None:
             self._trace(0x20, oid)
@@ -492,6 +492,9 @@ class ClientCache(object):
         assert saved_oid == oid, (ofs, self.f.tell(), oid, saved_oid)
         assert end_tid == z64, (ofs, self.f.tell(), oid, tid, end_tid)
         assert lver == 0, "Versions aren't supported"
+
+        if before_tid and tid >= before_tid:
+            return None
 
         data = read(ldata)
         assert len(data) == ldata, (ofs, self.f.tell(), oid, len(data), ldata)
@@ -532,13 +535,22 @@ class ClientCache(object):
     def loadBefore(self, oid, before_tid):
         noncurrent_for_oid = self.noncurrent.get(u64(oid))
         if noncurrent_for_oid is None:
-            self._trace(0x24, oid, "", before_tid)
-            return None
+            result = self.load(oid, before_tid)
+            if result:
+                return result[0], result[1], None
+            else:
+                self._trace(0x24, oid, "", before_tid)
+                return result
 
         items = noncurrent_for_oid.items(None, u64(before_tid)-1)
         if not items:
-            self._trace(0x24, oid, "", before_tid)
-            return None
+            result = self.load(oid, before_tid)
+            if result:
+                return result[0], result[1], None
+            else:
+                self._trace(0x24, oid, "", before_tid)
+                return result
+
         tid, ofs = items[-1]
 
         self.f.seek(ofs)
@@ -559,8 +571,12 @@ class ClientCache(object):
         assert read(8) == oid, (ofs, self.f.tell(), oid)
 
         if end_tid < before_tid:
-            self._trace(0x24, oid, "", before_tid)
-            return None
+            result = self.load(oid, before_tid)
+            if result:
+                return result[0], result[1], None
+            else:
+                self._trace(0x24, oid, "", before_tid)
+                return result
 
         self._n_accesses += 1
         self._trace(0x26, oid, "", saved_tid)

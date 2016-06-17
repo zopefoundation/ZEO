@@ -1,8 +1,19 @@
 Changelog
 =========
 
-4.2.0 (unreleased)
+4.2.0 (2016-06-15)
 ------------------
+
+- Changed loadBefore to operate more like load behaved, especially
+  with regard to the load lock.  This allowes ZEO to work with the
+  upcoming ZODB 5, which used loadbefore rather than load.
+
+  Reimplemented load using loadBefore, thus testing loadBefore
+  extensively via existing tests.
+
+- Other changes to work with ZODB 5 (as well as ZODB 4)
+
+- Fixed: the ZEO cache loadBefore method failed to utilize current data.
 
 - Drop support for Python 2.6 and 3.2.
 

@@ -314,7 +314,9 @@ class CacheTests(ZODB.tests.util.TestCase):
             # We use large-2 for the same reason we used small-1 above.
             expected_len = large-2
             self.assertEquals(len(cache), expected_len)
-            expected_oids = set(list(range(11, 50))+list(range(106, 110))+list(range(200, 305)))
+            expected_oids = set(list(range(11, 50)) +
+                                list(range(106, 110)) +
+                                list(range(200, 305)))
             self.assertEquals(set(u64(oid) for (oid, tid) in cache.contents()),
                               expected_oids)
 
@@ -335,6 +337,21 @@ class CacheTests(ZODB.tests.util.TestCase):
         self.cache.setLastTid(p64(5))
         self.cache.setLastTid(p64(3))
         self.cache.setLastTid(p64(4))
+
+    def test_loadBefore_doesnt_miss_current(self):
+        # Make sure that loadBefore get's current data if there
+        # isn't non-current data
+
+        cache = self.cache
+        oid = n1
+        cache.store(oid, n1, None, b'first')
+        self.assertEqual(cache.loadBefore(oid, n1), None)
+        self.assertEqual(cache.loadBefore(oid, n2), (b'first', n1, None))
+        self.cache.invalidate(oid, n2)
+        cache.store(oid, n2, None, b'second')
+        self.assertEqual(cache.loadBefore(oid, n1), None)
+        self.assertEqual(cache.loadBefore(oid, n2), (b'first', n1, n2))
+        self.assertEqual(cache.loadBefore(oid, n3), (b'second', n2, None))
 
 def kill_does_not_cause_cache_corruption():
     r"""

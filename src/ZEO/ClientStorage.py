@@ -50,6 +50,9 @@ import ZEO.cache
 
 logger = logging.getLogger(__name__)
 
+# max signed 64-bit value ~ infinity :) Signed cuz LBTree and TimeStamp
+m64 = b'\x7f\xff\xff\xff\xff\xff\xff\xff'
+
 try:
     from ZODB.ConflictResolution import ResolvedSerial
 except ImportError:
@@ -499,7 +502,10 @@ class ClientStorage(object):
         return self._call('loadSerial', oid, serial)
 
     def load(self, oid, version=''):
-        return self._server.load(oid)
+        result = self.loadBefore(oid, m64)
+        if result is None:
+            raise POSException.POSKeyError(oid)
+        return result[:2]
 
     def loadBefore(self, oid, tid):
         return self._server.load_before(oid, tid)
@@ -778,7 +784,8 @@ class ClientStorage(object):
                 self._commit_lock.release()
 
     def lastTransaction(self):
-        return self._cache.getLastTid()
+        with self._lock:
+            return self._cache.getLastTid()
 
     def tpc_abort(self, txn, timeout=None):
         """Storage API: abort a transaction.
@@ -1081,8 +1088,8 @@ def _check_blob_cache_size(blob_dir, target):
 
     logger = logging.getLogger(__name__+'.check_blob_cache')
 
-    layout = open(os.path.join(blob_dir, ZODB.blob.LAYOUT_MARKER)
-                  ).read().strip()
+    with open(os.path.join(blob_dir, ZODB.blob.LAYOUT_MARKER)) as layout_file:
+        layout = layout_file.read().strip()
     if not layout == 'zeocache':
         logger.critical("Invalid blob directory layout %s", layout)
         raise ValueError("Invalid blob directory layout", layout)

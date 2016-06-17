@@ -162,10 +162,10 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
     else:
         pid = subprocess.Popen(args, env=d, close_fds=True).pid
 
-    # We need to wait until the server starts, but not forever.
-    # 30 seconds is a somewhat arbitrary upper bound.  A BDBStorage
-    # takes a long time to open -- more than 10 seconds on occasion.
-    for i in range(300):
+    # We need to wait until the server starts, but not forever.  150
+    # seconds is a somewhat arbitrary upper bound, but probably helps
+    # in an address already in use situation.
+    for i in range(1500):
         time.sleep(0.1)
         try:
             if isinstance(adminaddr, str) and not os.path.exists(adminaddr):

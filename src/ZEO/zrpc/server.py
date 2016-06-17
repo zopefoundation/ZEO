@@ -81,6 +81,7 @@ class Dispatcher(asyncore.dispatcher):
                     time.sleep(5)
             else:
                 break
+
         self.listen(5)
 
     def writable(self):

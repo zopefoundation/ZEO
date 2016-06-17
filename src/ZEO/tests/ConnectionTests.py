@@ -598,6 +598,10 @@ class InvqTests(CommonSetupTearDown):
         revid2 = self._dostore(oid2)
         revid2 = self._dostore(oid2, revid2)
 
+        forker.wait_until(
+            lambda :
+            perstorage.lastTransaction() == self._storage.lastTransaction())
+
         perstorage.load(oid, '')
         perstorage.close()
 
@@ -606,12 +610,6 @@ class InvqTests(CommonSetupTearDown):
         revid = self._dostore(oid, revid)
 
         perstorage = self.openClientStorage(cache="test")
-
-        forker.wait_until(
-            func=(lambda : perstorage.verify_result == "quick verification"),
-            timeout=60,
-            label="perstorage.verify_result to be quick verification")
-
         self.assertEqual(perstorage.verify_result, "quick verification")
 
         self.assertEqual(perstorage.load(oid, ''),

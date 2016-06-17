@@ -1058,9 +1058,9 @@ def client_asyncore_thread_has_name():
     """
     >>> addr, _ = start_server()
     >>> db = ZEO.DB(addr)
-    >>> len([t for t in threading.enumerate()
-    ...      if ' zeo client networking thread' in t.getName()])
-    1
+    >>> any(t for t in threading.enumerate()
+    ...     if ' zeo client networking thread' in t.getName())
+    True
     >>> db.close()
     """
 
@@ -1299,9 +1299,9 @@ But, if we abort, we'll get up to date data and we'll see the changes.
     >>> sorted(conn2.root.x.items())
     [('x', 1), ('y', 1)]
 
+    >>> conn2.close()
     >>> cs.close()
     >>> conn1.close()
-
     """
 
 
@@ -1392,7 +1392,8 @@ def gracefully_handle_abort_while_storing_many_blobs():
     >>> logging.getLogger().addHandler(handler)
 
     >>> addr, _ = start_server(blob_dir='blobs')
-    >>> c = ZEO.connection(addr, blob_dir='cblobs')
+    >>> client = ZEO.client(addr, blob_dir='cblobs')
+    >>> c = ZODB.connection(client)
     >>> c.root.x = ZODB.blob.Blob(b'z'*(1<<20))
     >>> c.root.y = ZODB.blob.Blob(b'z'*(1<<2))
     >>> t = c.transaction_manager.get()
@@ -1409,7 +1410,7 @@ Now we'll try to use the connection, mainly to wait for everything to
 get processed. Before we fixed this by making tpc_finish a synchronous
 call to the server. we'd get some sort of error here.
 
-    >>> _ = c._storage._call('loadEx', b'\0'*8)
+    >>> _ = client._call('loadEx', b'\0'*8)
 
     >>> c.close()
 
