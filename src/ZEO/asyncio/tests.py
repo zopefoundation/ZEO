@@ -15,6 +15,7 @@ import ZEO.Exceptions
 from .testing import Loop
 from .client import ClientRunner, Fallback
 from ..Exceptions import ClientDisconnected
+from ..ClientStorage import m64
 
 class AsyncTests(setupstack.TestCase, ClientRunner):
 
@@ -143,17 +144,17 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         self.assertEqual(parse(transport.pop()), (0, True, 'bar', (3, 4)))
 
         # Loading objects gets special handling to leverage the cache.
-        loaded = self.load(b'1'*8)
+        loaded = self.load_before(b'1'*8, m64)
 
         # The data wasn't in the cache, so we make a server call:
         self.assertEqual(parse(transport.pop()),
-                         (5, False, 'loadEx', (b'1'*8,)))
-        respond(5, (b'data', b'a'*8))
-        self.assertEqual(loaded.result(), (b'data', b'a'*8))
+                         (5, False, 'loadBefore', (b'1'*8, m64)))
+        respond(5, (b'data', b'a'*8, None))
+        self.assertEqual(loaded.result(), (b'data', b'a'*8, None))
 
         # If we make another request, it will be satisfied from the cache:
-        loaded = self.load(b'1'*8)
-        self.assertEqual(loaded.result(), (b'data', b'a'*8))
+        loaded = self.load_before(b'1'*8, m64)
+        self.assertEqual(loaded.result(), (b'data', b'a'*8, None))
         self.assertFalse(transport.data)
 
         # Let's send an invalidation:
@@ -162,11 +163,11 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
         wrapper.invalidateTransaction.reset_mock()
 
         # Now, if we try to load current again, we'll make a server request.
-        loaded = self.load(b'1'*8)
+        loaded = self.load_before(b'1'*8, m64)
         self.assertEqual(parse(transport.pop()),
-                         (6, False, 'loadEx', (b'1'*8,)))
-        respond(6, (b'data2', b'b'*8))
-        self.assertEqual(loaded.result(), (b'data2', b'b'*8))
+                         (6, False, 'loadBefore', (b'1'*8, m64)))
+        respond(6, (b'data2', b'b'*8, None))
+        self.assertEqual(loaded.result(), (b'data2', b'b'*8, None))
 
         # Loading non-current data may also be satisfied from cache
         loaded = self.load_before(b'1'*8, b'b'*8)
@@ -212,11 +213,11 @@ class AsyncTests(setupstack.TestCase, ClientRunner):
 
         # If the protocol is disconnected, it will reconnect and will
         # resolve outstanding requests with exceptions:
-        loaded = self.load(b'1'*8)
+        loaded = self.load_before(b'1'*8, m64)
         f1 = self.call('foo', 1, 2)
         self.assertFalse(loaded.done() or f1.done())
         self.assertEqual(parse(transport.pop()),
-                         [(9, False, 'loadEx', (b'1'*8,)),
+                         [(9, False, 'loadBefore', (b'1'*8, m64)),
                           (10, False, 'foo', (1, 2))],
                          )
         exc = TypeError(43)

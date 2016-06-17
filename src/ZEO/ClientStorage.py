@@ -784,8 +784,7 @@ class ClientStorage(object):
                 self._commit_lock.release()
 
     def lastTransaction(self):
-        with self._lock:
-            return self._cache.getLastTid()
+        return self._cache.getLastTid()
 
     def tpc_abort(self, txn, timeout=None):
         """Storage API: abort a transaction.

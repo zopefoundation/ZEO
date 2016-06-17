@@ -624,21 +624,6 @@ class Client:
 
     # Special methods because they update the cache.
 
-    def load_threadsafe(self, future, oid):
-        data = self.cache.load(oid)
-        if data is not None:
-            future.set_result(data)
-        elif self.ready:
-            @self.protocol.promise('loadEx', oid)
-            def load(data):
-                future.set_result(data)
-                data, tid = data
-                self.cache.store(oid, tid, None, data)
-
-            load.catch(future.set_exception)
-        else:
-            self._when_ready(self.load_threadsafe, future, oid)
-
     def load_before_threadsafe(self, future, oid, tid):
         data = self.cache.loadBefore(oid, tid)
         if data is not None:
@@ -690,8 +675,8 @@ class Client:
         if self.ready:
             for oid in oids:
                 self.cache.invalidate(oid, tid)
-            self.cache.setLastTid(tid)
             self.client.invalidateTransaction(tid, oids)
+            self.cache.setLastTid(tid)
 
     def serialnos(self, serials):
         # Before delegating, check for errors (likely ConflictErrors)
@@ -768,9 +753,6 @@ class ClientRunner:
 
     def async_iter(self, it):
         return self.__call(self.client.call_async_iter_threadsafe, it)
-
-    def load(self, oid):
-        return self.__call(self.client.load_threadsafe, oid)
 
     def load_before(self, oid, tid):
         return self.__call(self.client.load_before_threadsafe, oid, tid)

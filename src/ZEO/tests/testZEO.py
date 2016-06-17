@@ -920,12 +920,12 @@ def tpc_finish_error():
 
     >>> addr, admin = start_server()
 
-    >>> db = ZEO.DB(addr)
+    >>> client = ZEO.client(addr)
+    >>> db = ZODB.DB(client)
     >>> conn = db.open()
     >>> conn.root.x = 1
     >>> t = conn.transaction_manager.get()
-    >>> client = conn._storage
-    >>> client.tpc_begin(t)
+    >>> conn._storage.tpc_begin(t)
     >>> conn.commit(t)
     >>> _ = client.tpc_vote(t)
 
