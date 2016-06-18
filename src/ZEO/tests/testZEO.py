@@ -1593,8 +1593,6 @@ def test_suite():
                      "ClientDisconnected"),
                     )),
             ))
-    zeo.addTest(doctest.DocFileSuite(
-            'registerDB.test', globs={'print_function': print_function}))
     zeo.addTest(
         doctest.DocFileSuite(
             'zeo-fan-out.test', 'zdoptions.test',
