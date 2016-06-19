@@ -16,11 +16,10 @@ from __future__ import print_function
 import multiprocessing
 import re
 
-from ZEO.ClientStorage import ClientStorage
+from ZEO.ClientStorage import ClientStorage, m64
 from ZEO.tests.forker import get_port
 from ZEO.tests import forker, Cache, CommitLockTests, ThreadTests
 from ZEO.tests import IterationTests
-from ZEO.zrpc.error import DisconnectedError
 from ZEO._compat import PY3
 from ZODB.tests import StorageTestBase, BasicStorage,  \
      TransactionalUndoStorage,  \
@@ -48,7 +47,6 @@ import transaction
 import unittest
 import ZEO.StorageServer
 import ZEO.tests.ConnectionTests
-import ZEO.zrpc.connection
 import ZODB
 import ZODB.blob
 import ZODB.tests.hexstorage
@@ -168,11 +166,9 @@ class GenericTests(
         logger.info("setUp() %s", self.id())
         port = get_port(self)
         zconf = forker.ZEOConfig(('', port))
-        zport, adminaddr, pid, path = forker.start_zeo_server(self.getConfig(),
+        zport, stop = forker.start_zeo_server(self.getConfig(),
                                                               zconf, port)
-        self._pids = [pid]
-        self._servers = [adminaddr]
-        self._conf_path = path
+        self._servers = [stop]
         if not self.blob_cache_dir:
             # This is the blob cache for ClientStorage
             self.blob_cache_dir = tempfile.mkdtemp(
@@ -190,12 +186,8 @@ class GenericTests(
 
     def tearDown(self):
         self._storage.close()
-        for server in self._servers:
-            forker.shutdown_zeo_server(server)
-        if hasattr(os, 'waitpid'):
-            # Not in Windows Python until 2.3
-            for pid in self._pids:
-                os.waitpid(pid, 0)
+        for stop in self._servers:
+            stop()
         StorageTestBase.StorageTestBase.tearDown(self)
 
     def runTest(self):
@@ -278,10 +270,9 @@ class FileStorageRecoveryTests(StorageTestBase.StorageTestBase,
     def _new_storage(self):
         port = get_port(self)
         zconf = forker.ZEOConfig(('', port))
-        zport, adminaddr, pid, path = forker.start_zeo_server(self.getConfig(),
+        zport, stop = forker.start_zeo_server(self.getConfig(),
                                                               zconf, port)
-        self._pids.append(pid)
-        self._servers.append(adminaddr)
+        self._servers.append(stop)
 
         blob_cache_dir = tempfile.mkdtemp(dir='.')
 
@@ -294,7 +285,6 @@ class FileStorageRecoveryTests(StorageTestBase.StorageTestBase,
 
     def setUp(self):
         StorageTestBase.StorageTestBase.setUp(self)
-        self._pids = []
         self._servers = []
 
         self._storage = self._new_storage()
@@ -304,12 +294,8 @@ class FileStorageRecoveryTests(StorageTestBase.StorageTestBase,
         self._storage.close()
         self._dst.close()
 
-        for server in self._servers:
-            forker.shutdown_zeo_server(server)
-        if hasattr(os, 'waitpid'):
-            # Not in Windows Python until 2.3
-            for pid in self._pids:
-                os.waitpid(pid, 0)
+        for stop in self._servers:
+            stop()
         StorageTestBase.StorageTestBase.tearDown(self)
 
     def new_dest(self):
@@ -708,27 +694,23 @@ class BlobWritableCacheTests(FullGenericTests, CommonBlobTests):
 
 class FauxConn:
     addr = 'x'
-    peer_protocol_version = ZEO.zrpc.connection.Connection.current_protocol
+    protocol_version = ZEO.asyncio.server.best_protocol_version
+    peer_protocol_version = protocol_version
 
-class StorageServerClientWrapper:
+    serials = []
+    def async(self, method, *args):
+        if method == 'serialnos':
+            self.serials.extend(args[0])
 
-    def __init__(self):
-        self.serials = []
-
-    def serialnos(self, serials):
-        self.serials.extend(serials)
-
-    def info(self, info):
-        pass
+    call_soon_threadsafe = async
 
 class StorageServerWrapper:
 
     def __init__(self, server, storage_id):
         self.storage_id = storage_id
         self.server = ZEO.StorageServer.ZEOStorage(server, server.read_only)
-        self.server.notifyConnected(FauxConn())
+        self.server.notify_connected(FauxConn())
         self.server.register(storage_id, False)
-        self.server.client = StorageServerClientWrapper()
 
     def sortKey(self):
         return self.storage_id
@@ -751,8 +733,8 @@ class StorageServerWrapper:
     def tpc_vote(self, transaction):
         vote_result = self.server.vote(id(transaction))
         assert vote_result is None
-        result = self.server.client.serials[:]
-        del self.server.client.serials[:]
+        result = self.server.connection.serials[:]
+        del self.server.connection.serials[:]
         return result
 
     def store(self, oid, serial, data, version_ignored, transaction):
@@ -838,7 +820,7 @@ Now we'll open a storage server on the data, simulating a restart:
     >>> fs = FileStorage('t.fs')
     >>> sv = StorageServer(('', get_port()), dict(fs=fs))
     >>> s = ZEOStorage(sv, sv.read_only)
-    >>> s.notifyConnected(FauxConn())
+    >>> s.notify_connected(FauxConn())
     >>> s.register('fs', False)
 
 If we ask for the last transaction, we should get the last transaction
@@ -848,7 +830,7 @@ we saved:
     True
 
 If a storage implements the method lastInvalidations, as FileStorage
-does, then the stroage server will populate its invalidation data
+does, then the storage server will populate its invalidation data
 structure using lastTransactions.
 
 
@@ -1085,7 +1067,7 @@ def runzeo_without_configfile():
     ------
     --T INFO ZEO.StorageServer StorageServer created RW with storages 1RWt
     ------
-    --T INFO ZEO.zrpc () listening on ...
+    --T INFO ZEO.acceptor listening on ...
     ------
     --T INFO ZEO.StorageServer closing storage '1'
     testing exit immediately
@@ -1150,7 +1132,6 @@ def test_server_status():
      'start': 'Tue May  4 10:55:20 2010',
      'stores': 1,
      'timeout-thread-is-alive': True,
-     'verifying_clients': 0,
      'waiting': 0}
 
     >>> db.close()
@@ -1169,7 +1150,8 @@ def test_ruok():
     >>> _ = writer.write(struct.pack(">I", 4)+b"ruok")
     >>> writer.close()
     >>> proto = s.recv(struct.unpack(">I", s.recv(4))[0])
-    >>> data = json.loads(s.recv(struct.unpack(">I", s.recv(4))[0]).decode("ascii"))
+    >>> data = json.loads(
+    ...     s.recv(struct.unpack(">I", s.recv(4))[0]).decode("ascii"))
     >>> pprint.pprint(data['1'])
     {u'aborts': 0,
      u'active_txns': 0,
@@ -1183,7 +1165,6 @@ def test_ruok():
      u'start': u'Sun Jan  4 09:37:03 2015',
      u'stores': 1,
      u'timeout-thread-is-alive': True,
-     u'verifying_clients': 0,
      u'waiting': 0}
     >>> db.close(); s.close()
     """
@@ -1410,7 +1391,7 @@ Now we'll try to use the connection, mainly to wait for everything to
 get processed. Before we fixed this by making tpc_finish a synchronous
 call to the server. we'd get some sort of error here.
 
-    >>> _ = client._call('loadEx', b'\0'*8)
+    >>> _ = client._call('loadBefore', b'\0'*8, m64)
 
     >>> c.close()
 
@@ -1519,7 +1500,7 @@ class ServerManagingClientStorage(ClientStorage):
             server_blob_dir = 'server-'+blob_dir
         self.globs = {}
         port = forker.get_port2(self)
-        addr, admin, pid, config = forker.start_zeo_server(
+        addr, stop = forker.start_zeo_server(
             """
             <blobstorage>
                 blob-dir %s
@@ -1531,10 +1512,7 @@ class ServerManagingClientStorage(ClientStorage):
             """ % (server_blob_dir, name+'.fs', extrafsoptions),
             port=port,
             )
-        os.remove(config)
-        zope.testing.setupstack.register(self, os.waitpid, pid, 0)
-        zope.testing.setupstack.register(
-            self, forker.shutdown_zeo_server, admin)
+        zope.testing.setupstack.register(self, stop)
         if shared:
             ClientStorage.__init__(self, addr, blob_dir=blob_dir,
                                    shared_blob_dir=True)
@@ -1593,8 +1571,6 @@ def test_suite():
                      "ClientDisconnected"),
                     )),
             ))
-    zeo.addTest(doctest.DocFileSuite(
-            'registerDB.test', globs={'print_function': print_function}))
     zeo.addTest(
         doctest.DocFileSuite(
             'zeo-fan-out.test', 'zdoptions.test',

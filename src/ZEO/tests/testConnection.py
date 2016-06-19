@@ -28,8 +28,6 @@ else:
     import doctest
 import unittest
 import ZEO.tests.forker
-import ZEO.tests.testMonitor
-import ZEO.zrpc.connection
 import ZODB.tests.util
 
 class FileStorageConfig:
@@ -90,41 +88,6 @@ class MappingStorageTimeoutTests(
     ):
     pass
 
-class MonitorTests(ZEO.tests.testMonitor.MonitorTests):
-
-    def check_connection_management(self):
-        # Open and close a few connections, making sure that
-        # the resulting number of clients is 0.
-
-        s1 = self.openClientStorage()
-        s2 = self.openClientStorage()
-        s3 = self.openClientStorage()
-        stats = self.parse(self.get_monitor_output())[1]
-        self.assertEqual(stats.clients, 3)
-        s1.close()
-        s3.close()
-        s2.close()
-
-        ZEO.tests.forker.wait_until(
-            "Number of clients shown in monitor drops to 0",
-            lambda :
-            self.parse(self.get_monitor_output())[1].clients == 0
-            )
-
-    def check_connection_management_with_old_client(self):
-        # Check that connection management works even when using an
-        # older protcool that requires a connection adapter.
-        test_protocol = b"Z303"
-        current_protocol = ZEO.zrpc.connection.Connection.current_protocol
-        ZEO.zrpc.connection.Connection.current_protocol = test_protocol
-        ZEO.zrpc.connection.Connection.servers_we_can_talk_to.append(
-            test_protocol)
-        try:
-            self.check_connection_management()
-        finally:
-            ZEO.zrpc.connection.Connection.current_protocol = current_protocol
-            ZEO.zrpc.connection.Connection.servers_we_can_talk_to.pop()
-
 
 test_classes = [FileStorageConnectionTests,
                 FileStorageReconnectionTests,
@@ -132,7 +95,6 @@ test_classes = [FileStorageConnectionTests,
                 FileStorageTimeoutTests,
                 MappingStorageConnectionTests,
                 MappingStorageTimeoutTests,
-                MonitorTests,
                 ]
 
 def invalidations_while_connecting():

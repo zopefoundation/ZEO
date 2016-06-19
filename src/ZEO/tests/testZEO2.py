@@ -33,7 +33,7 @@ def proper_handling_of_blob_conflicts():
 Conflict errors weren't properly handled when storing blobs, the
 result being that the storage was left in a transaction.
 
-We originally saw this when restarting a block transaction, although
+We originally saw this when restarting a blob transaction, although
 it doesn't really matter.
 
 Set up the storage with some initial blob data.
@@ -44,7 +44,7 @@ Set up the storage with some initial blob data.
     >>> conn.root.b = ZODB.blob.Blob(b'x')
     >>> transaction.commit()
 
-Get the iod and first serial. We'll use the serial later to provide
+Get the oid and first serial. We'll use the serial later to provide
 out-of-date data.
 
     >>> oid = conn.root.b._p_oid
@@ -60,22 +60,15 @@ Create the server:
 
 And an initial client.
 
-    >>> zs1 = ZEO.StorageServer.ZEOStorage(server)
-    >>> conn1 = ZEO.tests.servertesting.Connection(1)
-    >>> zs1.notifyConnected(conn1)
-    >>> zs1.register('1', 0)
+    >>> zs1 = ZEO.tests.servertesting.client(server, 1)
     >>> zs1.tpc_begin('0', '', '', {})
     >>> zs1.storea(ZODB.utils.p64(99), ZODB.utils.z64, b'x', '0')
     >>> _ = zs1.vote('0') # doctest: +ELLIPSIS
-    1 callAsync serialnos ...
 
 In a second client, we'll try to commit using the old serial. This
 will conflict. It will be blocked at the vote call.
 
-    >>> zs2 = ZEO.StorageServer.ZEOStorage(server)
-    >>> conn2 = ZEO.tests.servertesting.Connection(2)
-    >>> zs2.notifyConnected(conn2)
-    >>> zs2.register('1', 0)
+    >>> zs2 = ZEO.tests.servertesting.client(server, 2)
     >>> zs2.tpc_begin('1', '', '', {})
     >>> zs2.storeBlobStart()
     >>> zs2.storeBlobChunk(b'z')
@@ -97,12 +90,11 @@ client will be restarted.  It will get a conflict error, that is
 handled correctly:
 
     >>> zs1.tpc_abort('0') # doctest: +ELLIPSIS
-    2 callAsync serialnos ...
     reply 1 None
 
     >>> fs.tpc_transaction() is not None
     True
-    >>> conn2.connected
+    >>> zs2.connected
     True
 
     >>> logger.setLevel(logging.NOTSET)
@@ -122,10 +114,7 @@ storage isn't left in tpc.
 
 And an initial client.
 
-    >>> zs1 = ZEO.StorageServer.ZEOStorage(server)
-    >>> conn1 = ZEO.tests.servertesting.Connection(1)
-    >>> zs1.notifyConnected(conn1)
-    >>> zs1.register('1', 0)
+    >>> zs1 = ZEO.tests.servertesting.client(server, 1)
     >>> zs1.tpc_begin('0', '', '', {})
     >>> zs1.storea(ZODB.utils.p64(99), ZODB.utils.z64, 'x', '0')
 
@@ -144,16 +133,12 @@ We're not in a transaction:
 
 We can start another client and get the storage lock.
 
-    >>> zs1 = ZEO.StorageServer.ZEOStorage(server)
-    >>> conn1 = ZEO.tests.servertesting.Connection(1)
-    >>> zs1.notifyConnected(conn1)
-    >>> zs1.register('1', 0)
+    >>> zs1 = ZEO.tests.servertesting.client(server, 1)
     >>> zs1.tpc_begin('1', '', '', {})
     >>> zs1.storea(ZODB.utils.p64(99), ZODB.utils.z64, 'x', '1')
     >>> _ = zs1.vote('1') # doctest: +ELLIPSIS
-    1 callAsync serialnos ...
 
-    >>> zs1.tpc_finish('1').set_sender(0, conn1)
+    >>> zs1.tpc_finish('1').set_sender(0, zs1.connection)
 
     >>> fs.close()
     """
@@ -173,10 +158,7 @@ So, we arrange to get an error in vote:
 
     >>> server = ZEO.tests.servertesting.StorageServer(
     ...      'x', {'1': MappingStorage()})
-    >>> zs = ZEO.StorageServer.ZEOStorage(server)
-    >>> conn = ZEO.tests.servertesting.Connection(1)
-    >>> zs.notifyConnected(conn)
-    >>> zs.register('1', 0)
+    >>> zs = ZEO.tests.servertesting.client(server, 1)
     >>> zs.tpc_begin('0', '', '', {})
     >>> zs.storea(ZODB.utils.p64(99), ZODB.utils.z64, 'x', '0')
     >>> zs.vote('0')
@@ -195,7 +177,6 @@ Of course, if vote suceeds, the lock will be held:
     >>> zs.tpc_begin('1', '', '', {})
     >>> zs.storea(ZODB.utils.p64(99), ZODB.utils.z64, 'x', '1')
     >>> _ = zs.vote('1') # doctest: +ELLIPSIS
-    1 callAsync serialnos ...
 
     >>> '1' in server._commit_locks
     True
@@ -234,18 +215,25 @@ quit working in Python 3.4:
 We start a transaction and vote, this leads to getting the lock.
 
     >>> zs1 = ZEO.tests.servertesting.client(server, '1')
+    ZEO.asyncio.base INFO
+    Connected server protocol
+    ZEO.asyncio.server INFO
+    received handshake b'Z5'
     >>> tid1 = start_trans(zs1)
     >>> zs1.vote(tid1) # doctest: +ELLIPSIS
     ZEO.StorageServer DEBUG
     (test-addr-1) ('1') lock: transactions waiting: 0
     ZEO.StorageServer BLATHER
-    (test-addr-1) Preparing to commit transaction: 1 objects, ... bytes
-    1 callAsync serialnos ...
+    (test-addr-1) Preparing to commit transaction: 1 objects, 108 bytes
 
 If another client tried to vote, it's lock request will be queued and
 a delay will be returned:
 
     >>> zs2 = ZEO.tests.servertesting.client(server, '2')
+    ZEO.asyncio.base INFO
+    Connected server protocol
+    ZEO.asyncio.server INFO
+    received handshake b'Z5'
     >>> tid2 = start_trans(zs2)
     >>> delay = zs2.vote(tid2)
     ZEO.StorageServer DEBUG
@@ -262,7 +250,6 @@ When we end the first transaction, the queued vote gets the lock.
     (test-addr-2) ('1') lock: transactions waiting: 0
     ZEO.StorageServer BLATHER
     (test-addr-2) Preparing to commit transaction: 1 objects, ... bytes
-    2 callAsync serialnos ...
 
 Let's try again with the first client. The vote will be queued:
 
@@ -306,29 +293,65 @@ increased, so does the logging level:
     ...     tid = start_trans(client)
     ...     delay = client.vote(tid)
     ...     clients.append(client)
+    ZEO.asyncio.base INFO
+    Connected server protocol
+    ZEO.asyncio.server INFO
+    received handshake b'Z5'
     ZEO.StorageServer DEBUG
     (test-addr-10) ('1') queue lock: transactions waiting: 2
+    ZEO.asyncio.base INFO
+    Connected server protocol
+    ZEO.asyncio.server INFO
+    received handshake b'Z5'
     ZEO.StorageServer DEBUG
     (test-addr-11) ('1') queue lock: transactions waiting: 3
+    ZEO.asyncio.base INFO
+    Connected server protocol
+    ZEO.asyncio.server INFO
+    received handshake b'Z5'
     ZEO.StorageServer WARNING
     (test-addr-12) ('1') queue lock: transactions waiting: 4
+    ZEO.asyncio.base INFO
+    Connected server protocol
+    ZEO.asyncio.server INFO
+    received handshake b'Z5'
     ZEO.StorageServer WARNING
     (test-addr-13) ('1') queue lock: transactions waiting: 5
+    ZEO.asyncio.base INFO
+    Connected server protocol
+    ZEO.asyncio.server INFO
+    received handshake b'Z5'
     ZEO.StorageServer WARNING
     (test-addr-14) ('1') queue lock: transactions waiting: 6
+    ZEO.asyncio.base INFO
+    Connected server protocol
+    ZEO.asyncio.server INFO
+    received handshake b'Z5'
     ZEO.StorageServer WARNING
     (test-addr-15) ('1') queue lock: transactions waiting: 7
+    ZEO.asyncio.base INFO
+    Connected server protocol
+    ZEO.asyncio.server INFO
+    received handshake b'Z5'
     ZEO.StorageServer WARNING
     (test-addr-16) ('1') queue lock: transactions waiting: 8
+    ZEO.asyncio.base INFO
+    Connected server protocol
+    ZEO.asyncio.server INFO
+    received handshake b'Z5'
     ZEO.StorageServer WARNING
     (test-addr-17) ('1') queue lock: transactions waiting: 9
+    ZEO.asyncio.base INFO
+    Connected server protocol
+    ZEO.asyncio.server INFO
+    received handshake b'Z5'
     ZEO.StorageServer CRITICAL
     (test-addr-18) ('1') queue lock: transactions waiting: 10
 
 If a client with the transaction lock disconnects, it will abort and
 release the lock and one of the waiting clients will get the lock.
 
-    >>> zs2.notifyDisconnected() # doctest: +ELLIPSIS
+    >>> zs2.notify_disconnected() # doctest: +ELLIPSIS
     ZEO.StorageServer INFO
     (test-addr-2) disconnected during locked transaction
     ZEO.StorageServer CRITICAL
@@ -337,7 +360,6 @@ release the lock and one of the waiting clients will get the lock.
     (test-addr-1) ('1') lock: transactions waiting: 9
     ZEO.StorageServer BLATHER
     (test-addr-1) Preparing to commit transaction: 1 objects, ... bytes
-    1 callAsync serialnos ...
 
 (In practice, waiting clients won't necessarily get the lock in order.)
 
@@ -350,23 +372,19 @@ statistics using the server_status method:
      'commits': 0,
      'conflicts': 0,
      'conflicts_resolved': 0,
-     'connections': 11,
+     'connections': 10,
      'last-transaction': '0000000000000000',
      'loads': 0,
      'lock_time': 1272653598.693882,
      'start': 'Fri Apr 30 14:53:18 2010',
      'stores': 13,
      'timeout-thread-is-alive': 'stub',
-     'verifying_clients': 0,
      'waiting': 9}
-
-(Note that the connections count above is off by 1 due to the way the
-test infrastructure works.)
 
 If clients disconnect while waiting, they will be dequeued:
 
     >>> for client in clients:
-    ...     client.notifyDisconnected()
+    ...     client.notify_disconnected()
     ZEO.StorageServer INFO
     (test-addr-10) disconnected during unlocked transaction
     ZEO.StorageServer WARNING
@@ -454,28 +472,33 @@ Now, we'll start a transaction, get the lock and then mark the
 ZEOStorage as closed and see if trying to get a lock cleans it up:
 
     >>> zs1 = ZEO.tests.servertesting.client(server, '1')
+    ZEO.asyncio.base INFO
+    Connected server protocol
+    ZEO.asyncio.server INFO
+    received handshake b'Z5'
     >>> tid1 = start_trans(zs1)
     >>> zs1.vote(tid1) # doctest: +ELLIPSIS
     ZEO.StorageServer DEBUG
     (test-addr-1) ('1') lock: transactions waiting: 0
     ZEO.StorageServer BLATHER
     (test-addr-1) Preparing to commit transaction: 1 objects, ... bytes
-    1 callAsync serialnos ...
 
-    >>> zs1.connection = None
+    >>> zs1.connection.connection_lost(None)
+    ZEO.StorageServer INFO
+    (test-addr-1) disconnected during locked transaction
 
     >>> zs2 = ZEO.tests.servertesting.client(server, '2')
+    ZEO.asyncio.base INFO
+    Connected server protocol
+    ZEO.asyncio.server INFO
+    received handshake b'Z5'
     >>> tid2 = start_trans(zs2)
     >>> zs2.vote(tid2) # doctest: +ELLIPSIS
-    ZEO.StorageServer CRITICAL
-    (test-addr-1) Still locked after disconnected. Unlocking.
     ZEO.StorageServer DEBUG
     (test-addr-2) ('1') lock: transactions waiting: 0
     ZEO.StorageServer BLATHER
     (test-addr-2) Preparing to commit transaction: 1 objects, ... bytes
-    2 callAsync serialnos ...
 
-    >>> zs1.txnlog.close()
     >>> zs2.tpc_abort(tid2)
 
     >>> logging.getLogger('ZEO').setLevel(logging.NOTSET)

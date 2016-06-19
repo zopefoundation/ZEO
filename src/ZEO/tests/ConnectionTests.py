@@ -12,6 +12,7 @@
 #
 ##############################################################################
 import concurrent.futures
+import contextlib
 import os
 import time
 import socket
@@ -21,7 +22,7 @@ import logging
 
 from ZEO.ClientStorage import ClientStorage
 from ZEO.Exceptions import ClientDisconnected
-from ZEO.zrpc.marshal import encode
+from ZEO.asyncio.marshal import encode
 from ZEO.tests import forker
 
 from ZODB.DB import DB
@@ -79,40 +80,22 @@ class CommonSetupTearDown(StorageTestBase):
         logging.info("setUp() %s", self.id())
         self.file = 'storage_conf'
         self.addr = []
-        self._pids = []
         self._servers = []
-        self.conf_paths = []
         self.caches = []
         self._newAddr()
         self.startServer()
 
-#         self._old_log_level = logging.getLogger().getEffectiveLevel()
-#         logging.getLogger().setLevel(logging.WARNING)
-#         self._log_handler = logging.StreamHandler()
-#         logging.getLogger().addHandler(self._log_handler)
-
     def tearDown(self):
         """Try to cause the tests to halt"""
-#         logging.getLogger().setLevel(self._old_log_level)
-#         logging.getLogger().removeHandler(self._log_handler)
-#         logging.info("tearDown() %s" % self.id())
 
-        for p in self.conf_paths:
-            os.remove(p)
         if getattr(self, '_storage', None) is not None:
             self._storage.close()
             if hasattr(self._storage, 'cleanup'):
                 logging.debug("cleanup storage %s" %
                          self._storage.__name__)
                 self._storage.cleanup()
-        for adminaddr in self._servers:
-            if adminaddr is not None:
-                forker.shutdown_zeo_server(adminaddr)
-        for pid in self._pids:
-            try:
-                os.waitpid(pid, 0)
-            except OSError:
-                pass # The subprocess module may already have waited
+        for stop in self._servers:
+            stop()
 
         for c in self.caches:
             for i in 0, 1:
@@ -183,7 +166,7 @@ class CommonSetupTearDown(StorageTestBase):
         return zconf
 
     def startServer(self, create=1, index=0, read_only=0, ro_svr=0, keep=None,
-                    path=None):
+                    path=None, **kw):
         addr = self.addr[index]
         logging.info("startServer(create=%d, index=%d, read_only=%d) @ %s" %
                      (create, index, read_only, addr))
@@ -193,19 +176,17 @@ class CommonSetupTearDown(StorageTestBase):
         zconf = self.getServerConfig(addr, ro_svr)
         if keep is None:
             keep = self.keep
-        zeoport, adminaddr, pid, path = forker.start_zeo_server(
-            sconf, zconf, addr[1], keep)
-        self.conf_paths.append(path)
-        self._pids.append(pid)
-        self._servers.append(adminaddr)
+        zeoport, stop = forker.start_zeo_server(
+            sconf, zconf, addr[1], keep, **kw)
+        self._servers.append(stop)
 
     def shutdownServer(self, index=0):
         logging.info("shutdownServer(index=%d) @ %s" %
                      (index, self._servers[index]))
-        adminaddr = self._servers[index]
-        if adminaddr is not None:
-            forker.shutdown_zeo_server(adminaddr)
-            self._servers[index] = None
+        stop = self._servers[index]
+        if stop is not None:
+            stop()
+            self._servers[index] = lambda : None
 
     def pollUp(self, timeout=30.0, storage=None):
         if storage is None:
@@ -310,8 +291,9 @@ class ConnectionTests(CommonSetupTearDown):
         # object is not in the cache.
         self.shutdownServer()
         self._storage = self.openClientStorage('test', 1000, wait=0)
-        self.assertRaises(ClientDisconnected,
-                          self._storage.load, b'fredwash', '')
+        with short_timeout(self):
+            self.assertRaises(ClientDisconnected,
+                              self._storage.load, b'fredwash', '')
         self._storage.close()
 
     def checkBasicPersistence(self):
@@ -377,7 +359,8 @@ class ConnectionTests(CommonSetupTearDown):
         self.assertEqual(expected2, self._storage.load(oid2, ''))
         # But oid1 should have been purged, so that trying to load it will
         # try to fetch it from the (non-existent) ZEO server.
-        self.assertRaises(ClientDisconnected, self._storage.load, oid1, '')
+        with short_timeout(self):
+            self.assertRaises(ClientDisconnected, self._storage.load, oid1, '')
         self._storage.close()
 
     def checkVerificationInvalidationPersists(self):
@@ -569,13 +552,17 @@ class ConnectionTests(CommonSetupTearDown):
         self._storage = self.openClientStorage()
         self._dostore()
         self.shutdownServer()
-        self.assertRaises(ClientDisconnected, self._storage.load, b'\0'*8, '')
+        with short_timeout(self):
+            self.assertRaises(ClientDisconnected,
+                              self._storage.load, b'\0'*8, '')
 
         self.startServer()
 
         # No matter how long we wait, the client won't reconnect:
         time.sleep(2)
-        self.assertRaises(ClientDisconnected, self._storage.load, b'\0'*8, '')
+        with short_timeout(self):
+            self.assertRaises(ClientDisconnected,
+                              self._storage.load, b'\0'*8, '')
 
 class InvqTests(CommonSetupTearDown):
     invq = 3
@@ -701,7 +688,8 @@ class ReconnectionTests(CommonSetupTearDown):
         # Poll until the client disconnects
         self.pollDown()
         # Stores should fail now
-        self.assertRaises(ClientDisconnected, self._dostore)
+        with short_timeout(self):
+            self.assertRaises(ClientDisconnected, self._dostore)
 
         # Restart the server
         self.startServer(create=0)
@@ -750,7 +738,8 @@ class ReconnectionTests(CommonSetupTearDown):
         # Poll until the client disconnects
         self.pollDown()
         # Stores should fail now
-        self.assertRaises(ClientDisconnected, self._dostore)
+        with short_timeout(self):
+            self.assertRaises(ClientDisconnected, self._dostore)
 
         # Restart the server
         self.startServer(create=0, read_only=1, keep=0)
@@ -780,8 +769,8 @@ class ReconnectionTests(CommonSetupTearDown):
         self.pollDown()
 
         # Accesses should fail now
-        self.assertRaises(ClientDisconnected, self._storage.history, ZERO,
-                          timeout=1)
+        with short_timeout(self):
+            self.assertRaises(ClientDisconnected, self._storage.history, ZERO)
 
         # Restart the server, this time read-write
         self.startServer(create=0, keep=0)
@@ -881,7 +870,8 @@ class ReconnectionTests(CommonSetupTearDown):
             data = zodb_pickle(MinPO(oid))
             self._storage.store(oid, None, data, '', txn)
         self.shutdownServer()
-        self.assertRaises(ClientDisconnected, self._storage.tpc_vote, txn)
+        with short_timeout(self):
+            self.assertRaises(ClientDisconnected, self._storage.tpc_vote, txn)
         self.startServer(create=0)
         self._storage.tpc_abort(txn)
         self._dostore()
@@ -967,12 +957,13 @@ class TimeoutTests(CommonSetupTearDown):
     timeout = 1
 
     def checkTimeout(self):
-        storage = self.openClientStorage()
+        self._storage = storage = self.openClientStorage()
         txn = Transaction()
         storage.tpc_begin(txn)
         storage.tpc_vote(txn)
         time.sleep(2)
-        self.assertRaises(ClientDisconnected, storage.tpc_finish, txn)
+        with short_timeout(self):
+            self.assertRaises(ClientDisconnected, storage.tpc_finish, txn)
 
         # Make sure it's logged as CRITICAL
         for line in open("server-%s.log" % self.addr[0][1]):
@@ -1187,6 +1178,14 @@ class MSTThread(threading.Thread):
                 c.close()
             except:
                 pass
+
+
+@contextlib.contextmanager
+def short_timeout(self):
+    old = self._storage._server.timeout
+    self._storage._server.timeout = 1
+    yield
+    self._storage._server.timeout = old
 
 # Run IPv6 tests if V6 sockets are supported
 try:

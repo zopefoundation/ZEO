@@ -5,7 +5,7 @@ A full test of all protocols isn't practical.  But we'll do a limited
 test that at least the current and previous protocols are supported in
 both directions.
 
-Let's start a Z308 server
+Let's start a Z309 server
 
     >>> storage_conf = '''
     ... <blobstorage>
@@ -16,8 +16,8 @@ Let's start a Z308 server
     ... </blobstorage>
     ... '''
 
-    >>> addr, admin = start_server(
-    ...    storage_conf, dict(invalidation_queue_size=5), protocol=b'Z309')
+    >>> addr, stop = start_server(
+    ...    storage_conf, dict(invalidation_queue_size=5), protocol=b'Z4')
 
 A current client should be able to connect to a old server:
 
@@ -25,7 +25,7 @@ A current client should be able to connect to a old server:
     >>> db = ZEO.DB(addr, client='client', blob_dir='blobs')
     >>> wait_connected(db.storage)
     >>> db.storage.protocol_version
-    b'Z309'
+    b'Z4'
 
     >>> conn = db.open()
     >>> conn.root().x = 0
@@ -87,7 +87,7 @@ A current client should be able to connect to a old server:
 
     >>> db2.close()
     >>> db.close()
-    >>> stop_server(admin)
+    >>> stop_server(stop)
 
     >>> import os, zope.testing.setupstack
     >>> os.remove('client-1.zec')
@@ -102,11 +102,11 @@ Note that we'll have to pull some hijinks:
 
     >>> import ZEO.asyncio.client
     >>> old_protocols = ZEO.asyncio.client.Protocol.protocols
-    >>> ZEO.asyncio.client.Protocol.protocols = [b'Z309']
+    >>> ZEO.asyncio.client.Protocol.protocols = [b'Z4']
 
     >>> db = ZEO.DB(addr, client='client', blob_dir='blobs')
     >>> db.storage.protocol_version
-    b'Z309'
+    b'Z4'
     >>> wait_connected(db.storage)
     >>> conn = db.open()
     >>> conn.root().x = 0

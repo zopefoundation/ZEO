@@ -42,11 +42,7 @@ class ZEOConfig:
         self.read_only = None
         self.invalidation_queue_size = None
         self.invalidation_age = None
-        self.monitor_address = None
         self.transaction_timeout = None
-        self.authentication_protocol = None
-        self.authentication_database = None
-        self.authentication_realm = None
         self.loglevel = 'INFO'
 
     def dump(self, f):
@@ -55,19 +51,12 @@ class ZEOConfig:
         if self.read_only is not None:
             print("read-only", self.read_only and "true" or "false", file=f)
         if self.invalidation_queue_size is not None:
-            print("invalidation-queue-size", self.invalidation_queue_size, file=f)
+            print("invalidation-queue-size",
+                  self.invalidation_queue_size, file=f)
         if self.invalidation_age is not None:
             print("invalidation-age", self.invalidation_age, file=f)
-        if self.monitor_address is not None:
-            print("monitor-address %s:%s" % self.monitor_address, file=f)
         if self.transaction_timeout is not None:
             print("transaction-timeout", self.transaction_timeout, file=f)
-        if self.authentication_protocol is not None:
-            print("authentication-protocol", self.authentication_protocol, file=f)
-        if self.authentication_database is not None:
-            print("authentication-database", self.authentication_database, file=f)
-        if self.authentication_realm is not None:
-            print("authentication-realm", self.authentication_realm, file=f)
         print("</zeo>", file=f)
 
         print("""
@@ -93,10 +82,81 @@ def encode_format(fmt):
         fmt = fmt.replace(*xform)
     return fmt
 
+def runner(config, qin, qout, timeout=None,
+           join_timeout=9, debug=False, name=None,
+           keep=False, protocol=None):
+
+    if debug:
+        debug_logging()
+
+    old_protocol = None
+    if protocol:
+        import ZEO.asyncio.server
+        old_protocol = ZEO.asyncio.server.best_protocol_version
+        ZEO.asyncio.server.best_protocol_version = protocol
+
+    try:
+        import ZEO.runzeo, threading
+        from six.moves.queue import Empty
+
+        options = ZEO.runzeo.ZEOOptions()
+        options.realize(['-C', config])
+        server = ZEO.runzeo.ZEOServer(options)
+        server.open_storages()
+        server.clear_socket()
+        server.create_server()
+        logger.debug('SERVER CREATED')
+        qout.put(server.server.acceptor.addr)
+        logger.debug('ADDRESS SENT')
+        thread = threading.Thread(
+            target=server.server.loop,
+            name = None if name is None else name + '-server',
+            )
+        thread.setDaemon(True)
+        thread.start()
+
+        try:
+            qin.get(timeout=timeout)
+        except Empty:
+            pass
+        server.server.close()
+        thread.join(join_timeout)
+
+        if not keep:
+            # Try to cleanup storage files
+            for storage in server.server.storages.values():
+                try:
+                    storage.cleanup()
+                except AttributeError:
+                    pass
+
+        qout.put('stopped')
+        if hasattr(qout, 'close'):
+            qout.close()
+            qout.join_thread()
+
+    except Exception:
+        logger.exception("In server thread")
+
+    finally:
+        if old_protocol:
+            ZEO.asyncio.server.best_protocol_version = protocol
+
+
+def stop_runner(thread, config, qin, qout, stop_timeout=9, pid=None):
+    qin.put('stop')
+    if hasattr(qin, 'close'):
+        qin.close()
+        qin.join_thread()
+    qout.get(timeout=stop_timeout)
+    thread.join(stop_timeout)
+    os.remove(config)
 
 def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
                      path='Data.fs', protocol=None, blob_dir=None,
-                     suicide=True, debug=False):
+                     suicide=True, debug=False,
+                     threaded=False, start_timeout=150, name=None,
+                     ):
     """Start a ZEO server in a separate process.
 
     Takes two positional arguments a string containing the storage conf
@@ -118,7 +178,6 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
 
     if isinstance(port, int):
         addr = 'localhost', port
-        adminaddr = 'localhost', port+1
     else:
         addr = port
         adminaddr = port+'-test'
@@ -136,59 +195,29 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
     fp.write(storage_conf)
     fp.close()
 
-    # Find the zeoserver script
-    import ZEO.tests.zeoserver
-    script = ZEO.tests.zeoserver.__file__
-    if script.endswith('.pyc'):
-        script = script[:-1]
-
-    # Create a list of arguments, which we'll tuplify below
-    qa = _quote_arg
-    args = [qa(sys.executable), qa(script), '-C', qa(tmpfile)]
-    if keep:
-        args.append("-k")
-    if debug:
-        args.append("-d")
-    if not suicide:
-        args.append("-S")
-    if protocol:
-        args.extend(["-v", protocol])
-
-    d = os.environ.copy()
-    d['PYTHONPATH'] = os.pathsep.join(sys.path)
-
-    if sys.platform.startswith('win'):
-        pid = os.spawnve(os.P_NOWAIT, sys.executable, tuple(args), d)
+    if threaded:
+        from threading import Thread
+        from six.moves.queue import Queue
     else:
-        pid = subprocess.Popen(args, env=d, close_fds=True).pid
+        from multiprocessing import Process as Thread
+        from multiprocessing import Queue
 
-    # We need to wait until the server starts, but not forever.  150
-    # seconds is a somewhat arbitrary upper bound, but probably helps
-    # in an address already in use situation.
-    for i in range(1500):
-        time.sleep(0.1)
-        try:
-            if isinstance(adminaddr, str) and not os.path.exists(adminaddr):
-                continue
-            logger.debug('connect %s', i)
-            if isinstance(adminaddr, str):
-                s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            else:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect(adminaddr)
-            ack = s.recv(1024)
-            s.close()
-            logging.debug('acked: %s' % ack)
-            break
-        except socket.error as e:
-            if e.args[0] not in (errno.ECONNREFUSED, errno.ECONNRESET):
-                raise
-            s.close()
-    else:
-        logging.debug('boo hoo')
-        raise RuntimeError("Failed to start server")
-    return addr, adminaddr, pid, tmpfile
+    qin = Queue()
+    qout = Queue()
+    thread = Thread(
+        target=runner,
+        args=[tmpfile, qin, qout, 999 if suicide else None],
+        kwargs=dict(debug=debug, name=name, protocol=protocol, keep=keep),
+        name = None if name is None else name + '-server-runner',
+        )
+    thread.daemon = True
+    thread.start()
+    addr = qout.get(timeout=start_timeout)
 
+    def stop(stop_timeout=9):
+        stop_runner(thread, tmpfile, qin, qout, stop_timeout)
+
+    return addr, stop
 
 if sys.platform[:3].lower() == "win":
     def _quote_arg(s):
@@ -197,40 +226,8 @@ else:
     def _quote_arg(s):
         return s
 
-
-def shutdown_zeo_server(adminaddr):
-    # Do this in a loop to guard against the possibility that the
-    # client failed to connect to the adminaddr earlier.  That really
-    # only requires two iterations, but do a third for pure
-    # superstition.
-    for i in range(3):
-        if isinstance(adminaddr, str):
-            s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        else:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(.3)
-        try:
-            s.connect(adminaddr)
-        except socket.timeout:
-            # On FreeBSD 5.3 the connection just timed out
-            if i > 0:
-                break
-            raise
-        except socket.error as e:
-            if (e.args[0] == errno.ECONNREFUSED
-                or
-                # MAC OS X uses EINVAL when connecting to a port
-                # that isn't being listened on.
-                (sys.platform == 'darwin' and e.args[0] == errno.EINVAL)
-                ) and i > 0:
-                break
-            raise
-        try:
-            ack = s.recv(1024)
-        except socket.error as e:
-            ack = 'no ack received'
-        logger.debug('shutdown_zeo_server(): acked: %s' % ack)
-        s.close()
+def shutdown_zeo_server(stop):
+    stop()
 
 def get_port(test=None):
     """Return a port that is not in use.
@@ -311,11 +308,11 @@ def can_connect(port):
 def setUp(test):
     ZODB.tests.util.setUp(test)
 
-    servers = {}
+    servers = []
 
     def start_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
                      addr=None, path='Data.fs', protocol=None, blob_dir=None,
-                     suicide=True, debug=False):
+                     suicide=True, debug=False, **kw):
         """Start a ZEO server.
 
         Return the server and admin addresses.
@@ -327,12 +324,19 @@ def setUp(test):
                 port = addr[1]
         elif addr is not None:
             raise TypeError("Can't specify port and addr")
-        addr, adminaddr, pid, config_path = start_zeo_server(
-            storage_conf, zeo_conf, port, keep, path, protocol, blob_dir,
-            suicide, debug)
-        os.remove(config_path)
-        servers[adminaddr] = pid
-        return addr, adminaddr
+        addr, stop = start_zeo_server(
+            storage_conf=storage_conf,
+            zeo_conf=zeo_conf,
+            port=port,
+            keep=keep,
+            path=path,
+            protocol=protocol,
+            blob_dir=blob_dir,
+            suicide=suicide,
+            debug=debug,
+            **kw)
+        servers.append(stop)
+        return addr, stop
 
     test.globs['start_server'] = start_server
 
@@ -341,16 +345,15 @@ def setUp(test):
 
     test.globs['get_port'] = get_port
 
-    def stop_server(adminaddr):
-        pid = servers.pop(adminaddr)
-        shutdown_zeo_server(adminaddr)
-        os.waitpid(pid, 0)
+    def stop_server(stop):
+        stop()
+        servers.remove(stop)
 
     test.globs['stop_server'] = stop_server
 
     def cleanup_servers():
-        for adminaddr in list(servers):
-            stop_server(adminaddr)
+        for stop in list(servers):
+            stop()
 
     zope.testing.setupstack.register(test, cleanup_servers)
 
@@ -400,3 +403,4 @@ def debug_logging(logger='ZEO', stream='stderr', level=logging.DEBUG):
         logger.setLevel(logging.NOTSET)
 
     return stop
+

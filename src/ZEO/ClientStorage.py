@@ -165,7 +165,7 @@ class ClientStorage(object):
         shared_blob_dir
             Flag whether the blob_dir is a server-shared filesystem
             that should be used instead of transferring blob data over
-            zrpc.
+            ZEO protocol.
 
         blob_cache_size
             Maximum size of the ZEO blob cache, in bytes.  If not set, then
@@ -479,12 +479,10 @@ class ClientStorage(object):
 
         return buf
 
-    def history(self, oid, size=1,
-                timeout=None, # for tests
-                ):
+    def history(self, oid, size=1):
         """Storage API: return a sequence of HistoryEntry objects.
         """
-        return self._call('history', oid, size, timeout=timeout)
+        return self._call('history', oid, size)
 
     def record_iternext(self, next=None):
         """Storage API: get the next database record.
@@ -762,10 +760,10 @@ class ClientStorage(object):
 
         txn.set_data(self, TransactionBuffer(self._connection_generation))
 
-        if self.protocol_version < b'Z5':
-            # Earlier protocols only allowed one transaction at a time :(
-            self._commit_lock.acquire()
-            self._tbuf = txn.data(self)
+        # XXX we'd like to allow multiple transactions at a time at some point,
+        # but for now, due to server limitations, TCBOO.
+        self._commit_lock.acquire()
+        self._tbuf = txn.data(self)
 
         try:
             self._async(
@@ -780,8 +778,7 @@ class ClientStorage(object):
         if tbuf is not None:
             tbuf.close()
             txn.set_data(self, None)
-            if self.protocol_version < b'Z5':
-                self._commit_lock.release()
+            self._commit_lock.release()
 
     def lastTransaction(self):
         return self._cache.getLastTid()
