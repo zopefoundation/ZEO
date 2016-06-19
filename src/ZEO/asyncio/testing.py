@@ -30,13 +30,18 @@ class Loop:
         if not future.cancelled():
             future.set_exception(ConnectionRefusedError())
 
-    def create_connection(self, protocol_factory, host, port):
+    def create_connection(
+        self, protocol_factory, host=None, port=None, sock=None
+        ):
         future = asyncio.Future(loop=self)
-        addr = host, port
-        if addr in self.addrs:
-            self._connect(future, protocol_factory)
+        if sock is None:
+            addr = host, port
+            if addr in self.addrs:
+                self._connect(future, protocol_factory)
+            else:
+                self.connecting[addr] = future, protocol_factory
         else:
-            self.connecting[addr] = future, protocol_factory
+            self._connect(future, protocol_factory)
 
         return future
 
@@ -60,6 +65,14 @@ class Loop:
 
     def call_exception_handler(self, context):
         self.exceptions.append(context)
+
+    closed = False
+    def close(self):
+        self.closed = True
+
+    stopped = False
+    def stop(self):
+        self.stopped = True
 
 class Handle:
 

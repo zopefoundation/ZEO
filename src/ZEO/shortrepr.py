@@ -11,27 +11,6 @@
 # FOR A PARTICULAR PURPOSE
 #
 ##############################################################################
-import os
-import threading
-import logging
-
-from ZODB.loglevels import BLATHER
-
-LOG_THREAD_ID = 0 # Set this to 1 during heavy debugging
-
-logger = logging.getLogger('ZEO.zrpc')
-
-_label = "%s" % os.getpid()
-
-def new_label():
-    global _label
-    _label = str(os.getpid())
-
-def log(message, level=BLATHER, label=None, exc_info=False):
-    label = label or _label
-    if LOG_THREAD_ID:
-        label = label + ':' + threading.currentThread().getName()
-    logger.log(level, '(%s) %s' % (label, message), exc_info=exc_info)
 
 REPR_LIMIT = 60
 

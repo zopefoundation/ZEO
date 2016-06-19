@@ -31,33 +31,31 @@ else:
     s.close()
     del s
 
-from ZEO.zrpc.connection import Connection
-from ZEO.zrpc.log import log
-import ZEO.zrpc.log
 import logging
 
-# Export the main asyncore loop
-loop = asyncore.loop
+logger = logging.getLogger(__name__)
 
-class Dispatcher(asyncore.dispatcher):
+class Acceptor(asyncore.dispatcher):
     """A server that accepts incoming RPC connections"""
-    __super_init = asyncore.dispatcher.__init__
 
-    def __init__(self, addr, factory=Connection, map=None):
-        self.__super_init(map=map)
+    def __init__(self, addr, factory):
+        self.socket_map = {}
+        asyncore.dispatcher.__init__(self, map=self.socket_map)
         self.addr = addr
         self.factory = factory
         self._open_socket()
 
     def _open_socket(self):
-        if type(self.addr) == tuple:
-            if self.addr[0] == '' and _has_dualstack:
+        addr = self.addr
+
+        if type(addr) == tuple:
+            if addr[0] == '' and _has_dualstack:
                 # Wildcard listen on all interfaces, both IPv4 and
                 # IPv6 if possible
                 self.create_socket(socket.AF_INET6, socket.SOCK_STREAM)
                 self.socket.setsockopt(
                     socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, False)
-            elif ':' in self.addr[0]:
+            elif ':' in addr[0]:
                 self.create_socket(socket.AF_INET6, socket.SOCK_STREAM)
                 if _has_dualstack:
                     # On Linux, IPV6_V6ONLY is off by default.
@@ -68,20 +66,28 @@ class Dispatcher(asyncore.dispatcher):
                 self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
         else:
             self.create_socket(socket.AF_UNIX, socket.SOCK_STREAM)
+
         self.set_reuse_addr()
-        log("listening on %s" % str(self.addr), logging.INFO)
+
         for i in range(25):
             try:
-                self.bind(self.addr)
+                self.bind(addr)
             except Exception as exc:
-                log("bind failed %s waiting", i)
+                logger.info("bind on %s failed %s waiting", addr, i)
                 if i == 24:
                     raise
                 else:
                     time.sleep(5)
+            except:
+                logger.exception('binding')
+                raise
             else:
                 break
 
+        if isinstance(addr, tuple) and addr[1] == 0:
+            self.addr = addr = self.socket.getsockname()
+
+        logger.info("listening on %s", str(addr))
         self.listen(5)
 
     def writable(self):
@@ -94,7 +100,7 @@ class Dispatcher(asyncore.dispatcher):
         try:
             sock, addr = self.accept()
         except socket.error as msg:
-            log("accepted failed: %s" % msg)
+            logger.info("accepted failed: %s", msg)
             return
 
 
@@ -115,9 +121,24 @@ class Dispatcher(asyncore.dispatcher):
 
         try:
             c = self.factory(sock, addr)
-        except:
+        except Exception:
             if sock.fileno() in asyncore.socket_map:
                 del asyncore.socket_map[sock.fileno()]
-            ZEO.zrpc.log.logger.exception("Error in handle_accept")
+            logger.exception("Error in handle_accept")
         else:
-            log("connect from %s: %s" % (repr(addr), c))
+            logger.info("connect from %s: %s", repr(addr), c)
+
+    def loop(self):
+        try:
+            asyncore.loop(map=self.socket_map)
+        except Exception:
+            if not self.__closed:
+                raise # Unexpected exc
+
+        logger.debug('acceptor %s loop stopped', self.addr)
+
+    __closed = False
+    def close(self):
+        if not self.__closed:
+            self.__closed = True
+            asyncore.dispatcher.close(self)

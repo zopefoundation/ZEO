@@ -30,9 +30,8 @@ from __future__ import print_function
 # Here, we'll try to provide some testing infrastructure to isolate
 # servers from the network.
 
+import ZEO.asyncio.tests
 import ZEO.StorageServer
-import ZEO.zrpc.connection
-import ZEO.zrpc.error
 import ZODB.MappingStorage
 
 class StorageServer(ZEO.StorageServer.StorageServer):
@@ -42,44 +41,10 @@ class StorageServer(ZEO.StorageServer.StorageServer):
             storages = {'1': ZODB.MappingStorage.MappingStorage()}
         ZEO.StorageServer.StorageServer.__init__(self, addr, storages, **kw)
 
-
-    class DispatcherClass:
-        __init__ = lambda *a, **kw: None
-        class socket:
-            getsockname = staticmethod(lambda : 'socket')
-
-class Connection:
-
-    peer_protocol_version = ZEO.zrpc.connection.Connection.current_protocol
-    connected = True
-
-    def __init__(self, name='connection', addr=''):
-        name = str(name)
-        self.name = name
-        self.addr = addr or 'test-addr-'+name
-
-    def close(self):
-        print(self.name, 'closed')
-        self.connected = False
-
-    def poll(self):
-        if not self.connected:
-            raise ZEO.zrpc.error.DisconnectedError()
-
-    def callAsync(self, meth, *args):
-        print(self.name, 'callAsync', meth, repr(args))
-
-    callAsyncNoPoll = callAsync
-
-    def call_from_thread(self, *args):
-        if args:
-            args[0](*args[1:])
-
-    def send_reply(self, *args):
-        pass
-
-def client(server, name='client', addr=''):
+def client(server, name='client'):
     zs = ZEO.StorageServer.ZEOStorage(server)
-    zs.notifyConnected(Connection(name, addr))
+    protocol = ZEO.asyncio.tests.server_protocol(
+        zs, protocol_version=b'Z5', addr='test-addr-%s' % name)
+    zs.notify_connected(protocol)
     zs.register('1', 0)
     return zs

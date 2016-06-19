@@ -1,13 +1,10 @@
-from pickle import loads, dumps
 from ZEO.Exceptions import ClientDisconnected
 from ZODB.ConflictResolution import ResolvedSerial
-from struct import unpack
 import asyncio
 import concurrent.futures
 import logging
 import random
 import threading
-import traceback
 
 import ZODB.event
 import ZODB.POSException
@@ -15,17 +12,16 @@ import ZODB.POSException
 import ZEO.Exceptions
 import ZEO.interfaces
 
+from . import base
+from .marshal import decode
+
 logger = logging.getLogger(__name__)
 
 Fallback = object()
 
 local_random = random.Random() # use separate generator to facilitate tests
 
-class Closed(Exception):
-    """A connection has been closed
-    """
-
-class Protocol(asyncio.Protocol):
+class Protocol(base.Protocol):
     """asyncio low-level ZEO client interface
     """
 
@@ -36,9 +32,7 @@ class Protocol(asyncio.Protocol):
     # One place where special care was required was in cache setup on
     # connect. See finish connect below.
 
-    transport = protocol_version = None
-
-    protocols = b"Z309", b"Z310", b"Z3101"
+    protocols = b'Z309', b'Z310', b'Z3101', b'Z4', b'Z5'
 
     def __init__(self, loop,
                  addr, client, storage_key, read_only, connect_poll=1,
@@ -51,8 +45,7 @@ class Protocol(asyncio.Protocol):
 
         cache is a ZEO.interfaces.IClientCache.
         """
-        self.loop = loop
-        self.addr = addr
+        super(Protocol, self).__init__(loop, addr)
         self.storage_key = storage_key
         self.read_only = read_only
         self.name = "%s(%r, %r, %r)" % (
@@ -61,19 +54,9 @@ class Protocol(asyncio.Protocol):
         self.connect_poll = connect_poll
         self.heartbeat_interval = heartbeat_interval
         self.futures = {} # { message_id -> future }
-        self.input  = [] # Buffer when assembling messages
-        self.output = [] # Buffer when paused
-        self.paused = [] # Paused indicator, mutable to avoid attr lookup
-
-        # Handle the first message, the protocol handshake, differently
-        self.message_received = self.first_message_received
 
         self.connect()
 
-    def __repr__(self):
-        return self.name
-
-    closed = False
     def close(self):
         if not self.closed:
             self.closed = True
@@ -118,35 +101,7 @@ class Protocol(asyncio.Protocol):
                         )
 
     def connection_made(self, transport):
-        logger.info("Connected %s", self)
-        self.transport = transport
-        paused = self.paused
-        output = self.output
-        append = output.append
-        writelines = transport.writelines
-        from struct import pack
-
-        def write(message):
-            if paused:
-                append(message)
-            else:
-                writelines((pack(">I", len(message)), message))
-
-        self._write = write
-
-        def writeit(data):
-            # Note, don't worry about combining messages.  Iters
-            # will be used with blobs, in which case, the individual
-            # messages will be big to begin with.
-            data = iter(data)
-            for message in data:
-                writelines((pack(">I", len(message)), message))
-                if paused:
-                    append(data)
-                    break
-
-        self._writeit = writeit
-
+        super(Protocol, self).connection_made(transport)
         self.heartbeat(write=False)
 
     def connection_lost(self, exc):
@@ -181,6 +136,7 @@ class Protocol(asyncio.Protocol):
         # invalidations.
 
         self.protocol_version = min(protocol_version, self.protocols[-1])
+
         if self.protocol_version not in self.protocols:
             self.client.register_failed(
                 self, ZEO.Exceptions.ProtocolError(protocol_version))
@@ -236,59 +192,9 @@ class Protocol(asyncio.Protocol):
             else:
                 self.client.register_failed(self, exc)
 
-    got = 0
-    want = 4
-    getting_size = True
-    def data_received(self, data):
-
-        # Low-level input handler collects data into sized messages.
-
-        # Note that the logic below assume that when new data pushes
-        # us over what we want, we process it in one call until we
-        # need more, because we assume that excess data is all in the
-        # last item of self.input. This is why the exception handling
-        # in the while loop is critical.  Without it, an exception
-        # might cause us to exit before processing all of the data we
-        # should, when then causes the logic to be broken in
-        # subsequent calls.
-
-        self.got += len(data)
-        self.input.append(data)
-        while self.got >= self.want:
-            try:
-                extra = self.got - self.want
-                if extra == 0:
-                    collected = b''.join(self.input)
-                    self.input = []
-                else:
-                    input = self.input
-                    self.input = [input[-1][-extra:]]
-                    input[-1] = input[-1][:-extra]
-                    collected = b''.join(input)
-
-                self.got = extra
-
-                if self.getting_size:
-                    # we were recieving the message size
-                    assert self.want == 4
-                    self.want = unpack(">I", collected)[0]
-                    self.getting_size = False
-                else:
-                    self.want = 4
-                    self.getting_size = True
-                    self.message_received(collected)
-            except Exception:
-                logger.exception("data_received %s %s %s",
-                                 self.want, self.got, self.getting_size)
-
-    def first_message_received(self, data):
-        # Handler for first/handshake message, set up in __init__
-        del self.message_received # use default handler from here on
-        self.finish_connect(data)
-
     exception_type_type = type(Exception)
     def message_received(self, data):
-        msgid, async, name, args = loads(data)
+        msgid, async, name, args = decode(data)
         if name == '.reply':
             future = self.futures.pop(msgid)
             if (isinstance(args, tuple) and len(args) > 1 and
@@ -315,45 +221,15 @@ class Protocol(asyncio.Protocol):
             else:
                 raise AttributeError(name)
 
-    def call_async(self, method, args):
-        self._write(dumps((0, True, method, args), 3))
-
-    def call_async_iter(self, it):
-        self._writeit(dumps((0, True, method, args), 3) for method, args in it)
-
     message_id = 0
     def call(self, future, method, args):
         self.message_id += 1
         self.futures[self.message_id] = future
-        self._write(dumps((self.message_id, False, method, args), 3))
+        self._write(self.encode(self.message_id, False, method, args))
         return future
 
     def promise(self, method, *args):
         return self.call(Promise(), method, args)
-
-    def pause_writing(self):
-        self.paused.append(1)
-
-    def resume_writing(self):
-        paused = self.paused
-        del paused[:]
-        output = self.output
-        writelines = self.transport.writelines
-        from struct import pack
-        while output and not paused:
-            message = output.pop(0)
-            if isinstance(message, bytes):
-                writelines((pack(">I", len(message)), message))
-            else:
-                data = message
-                for message in data:
-                    writelines((pack(">I", len(message)), message))
-                    if paused: # paused again. Put iter back.
-                        output.insert(0, data)
-                        break
-
-    def get_peername(self):
-        return self.transport.get_extra_info('peername')
 
     # Methods called by the server.
     # WARNING WARNING we can't call methods that call back to us
@@ -825,6 +701,7 @@ class ClientThread(ClientRunner):
 
     exception = None
     def run(self):
+        loop = None
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
@@ -832,16 +709,21 @@ class ClientThread(ClientRunner):
             self.started.set()
             loop.run_forever()
         except Exception as exc:
+            raise
             logger.exception("Client thread")
             self.exception = exc
         finally:
             if not self.closed:
-                if self.client.ready:
-                    self.closed = True
-                    self.client.ready = False
-                    self.client.client.notify_disconnected()
+                self.closed = True
+                try:
+                    if self.client.ready:
+                        self.client.ready = False
+                        self.client.client.notify_disconnected()
+                except AttributeError:
+                    pass
                 logger.critical("Client loop stopped unexpectedly")
-            loop.close()
+            if loop is not None:
+                loop.close()
             logger.debug('Stopping client thread')
 
     closed = False

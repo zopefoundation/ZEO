@@ -1,6 +1,31 @@
 Changelog
 =========
 
+5.0.0 (unreleases)
+------------------
+
+This is a major ZEO revision, which replaces the ZEO network protocol
+implementation.
+
+New features:
+
+
+Dropped features:
+
+- The ZEO authentication protocol.
+
+  This will be replaced by new authentication mechanims leveraging SSL.
+
+- The ZEO monitor server.
+
+- Full cache verification.
+
+- Client suppprt for servers older than ZODB 3.9
+
+- Server support for clients older than ZEO 4.2.0
+
+
+
 4.2.0 (2016-06-15)
 ------------------
 

@@ -10,133 +10,212 @@ An object history is a sequence of object revisions. Each revision has
 a tid, which is essentially a time stamp.
 
 We load objects using either ``load``, which returns the current
-object. or loadBefore, which returns the object before a specific time/tid.
+object. or ``loadBefore``, which returns the object before a specific time/tid.
 
 When we cache revisions, we record the tid and the next/end tid, which
 may be None. The end tid is important for choosing a revision for
-loadBefore, as well as for determining whether a cached value is
-current, for load.
+``loadBefore``, as well as for determining whether a cached value is
+current, for ``load``.
 
 Because the client and server are multi-threaded, the client may see
 data out of order.  Let's consider some scenarios.  In these
-scenarios, we'll consider a single object with revisions t1, t2, etc.
-We consider loading pretty generically, as bath load and loadBefore
-are similar in that they may have data about current revisions.
+scenarios
 
 Scenarios
 =========
 
-S1
-  Client sees load results before earlier invalidations
+When considering ordering scenarioes, we'll consider 2 different
+client behaviors, traditional (T) and loadBefore (B).
 
-  - server commits t1
+The *traditional* behaviors is that used in ZODB 4.  It uses the storage
+``load(oid)`` method to load objects if it hasn't seen an invalidation
+for the object.  If it has seen an invalidation, it uses
+``loadBefore(oid, START)``, where ``START`` is the transaction time of
+the first invalidation it's seen.  If it hasn't seen an invalidation
+*for an object*, it uses ``load(oid)`` and then checks again for an
+invalidation. If it sees an invalidation, then it retries using
+``loadBefore``.  This approach **assumes that invalidations for a tid
+are returned before loads for a tid**.
 
-  - server commits t2
+The *loadBefore* behavior, used in ZODB5, always determines
+transaction start time, ``START`` at the beginning of a transaction by
+calling the storage's ``sync`` method and then querying the storage's
+``lastTransaction`` method (and adding 1). It loads objects
+exclusively using ``loadBefore(oid, START)``.
 
-  - client makes load request, server loads t2
+Scenario 1, Invalidations seen after loads for transaction
+----------------------------------------------------------
 
-  - client gets load result for t2
+This scenario could occur because the commits are for a different
+client, and a hypothetical; server doesn't block loads while
+committing, or sends invalidations in a way that might delay them (but
+not send them out of order).
 
-  - client gets invalidation for t1, client should ignore
+T1
 
-  - client gets invalidation for t2, client should ignore
+  - client starts a transaction
 
-  This scenario could occur because the commits are for a different
-  client, and a hypothetical; server doesn't block loads while
-  committing. This situation is pretty easy to deal with, as we just
-  ignore invalidations for earlier revisions.
+  - client load(O1) gets O1-T1
 
-  Note that invalidations will never come out of order from the server.
+  - client load(O2)
 
-S2
-  Client sees load results before finish results (for another client thread)
+  - Server commits O2-T2
 
-  - Client commits, server commits t1
+  - Server loads (O2-T2)
 
-  - Client commits, server commits t2
+  - Client gets O2-T2, updates the client cache, and completes load
 
-  - Client makes load request, server reads t2.
+  - Client sees invalidation for O2-T2.  If the
+    client is smart, it doesn't update the cache.
 
-  - Client receives t2 in load result.
+    The transaction now has inconsistent data, because it should have
+    loaded whatever O2 was before T2.  Because the invalidation came
+    in after O2 was loaded, the load was unaffected.
 
-  - Client receives t1 in tpc_finish result, doesn't invalidate anything
+ B1
 
-  - Client receives t2 in tpc_finish result, doesn't invalidate anything
+  - client starts a transaction. Sets START to T1+1
 
-  This scenario is equivalent to S1.
+  - client loadBefore(O1, T1+1) gets O1-T1, T1, None
 
-S3
-  Client sees invalidations before load results.
+  - client loadBefore(O2, T1+1)
 
-  - Client loads, storage reads t1.
+  - Server commits O2-T2
 
-  - server commits t2
+  - Server loadBefore(O2, T1+1) -> O2-T0-T2
 
-  - Client receives invalidation for t2.
+    (assuming that the revision of O2 before T2 was T0)
 
-  - Client receives load result for t1.
+  - Client gets O2-T0-T2, updates cache.
 
-  This scenario is worrisome because the data that needs to be
-  invalidated isn't present when the invalidation arrives.
+  - Client sees invalidation for O2-T2. No update to the cache is
+    necessary.
 
-S4
-  Client sees commit results before load results.
+  In this scenario, loadBefore prevents reading incorrect data.
 
-  - Client loads, storage reads t1.
+A variation on this scenario is that client sees invalidations
+tpc_finish in another thread after loads for the same transaction.
 
-  - Client commits, storage commits t2.
+Scenario 2, Client sees invalidations for later transaction before load result
+------------------------------------------------------------------------------
 
-  - Client receives t2 in tpc_finish result.
+T2
 
-  - Client receives load result for t1.
+  - client starts a transaction
 
-  This scenario is equivalent to S3.
+  - client load(O1) gets O1-T1
+
+  - client load(O2)
+
+  - Server loads (O2-T0)
+
+  - Server commits O2-T2
+
+  - Client sees invalidation for O2-T2.  O2 isn't in the cache, so
+    nothing to do.
+
+  - Client gets O2-T0, updates the client cache, and completes load
+
+    The cache is now incorrect. It has O2-T0-None, meaning it thinks
+    O2-T0 is current.
+
+    The transaction is OK, because it got a consistent value for O2.
+
+B2
+
+  - client starts a transaction. Sets START to T1+1
+
+  - client loadBefore(O1, T1+1) gets O1-T1, T1, None
+
+  - client loadBefore(O2, T1+1)
+
+  - Server loadBefore(O2, T1+1) -> O2-T0-None
+
+  - Server commits O2-T2
+
+  - Client sees invalidation for O2-T2.  O2 isn't in the cache, so
+    nothing to do.
+
+  - Client gets O2-T0-None, and completes load
+
+    ZEO 4 doesn't cache loadBefore results with no ending transaction.
+
+    Assume ZEO 5 updates the client cache.
+
+    For ZEO 5, the cache is now incorrect. It has O2-T0-None, meaning
+    it thinks O2-T0 is current.
+
+    The transaction is OK, because it got a consistent value for O2.
+
+  In this case, ``loadBefore`` didn't prevent an invalid cache value.
+
+Scenario 3, client sees invalidation after lastTransaction result
+------------------------------------------------------------------
+
+(This doesn't effect the traditional behavior.)
+
+B3
+
+  - The client cache has a last tid of T1.
+
+  - ZODB calls sync() then calls lastTransaction.  Is so configured,
+    ZEO calls lastTransaction on the server. This is mainly to make a
+    round trip to get in-flight invalidations. We don't necessarily
+    need to use the value. In fact, in protocol 5, we could just add a
+    sync method that just makes a round trip, but does nothing else.
+
+  - Server commits O1-T2, O2-T2.
+
+  - Server reads and returns T2. (It doesn't mater what it returns
+
+  - client sets START to T1+1, because lastTransaction is based on
+    what's in the cache, which is based on invalidations.
+
+  - Client loadBefore(O1, T2+1), finds O1-T1-None in cache and uses
+    it.
+
+  - Client gets invalidation for O1-T2. Updates cache to O1-T1-T2.
+
+  - Client loadBefore(O2, T1+1), gets O2-T1-None
+
+  This is OK, as long as the client doesn't do anything with the
+  lastTransaction result in ``sync``.
 
 Implementation notes
 ===================
 
-First, it's worth noting that the server sends data to the client in
-correct order with respect to loads and invalidations (or tpc_finish
-results). This is a consequence of the fact that invalidations are
-sent in a callback called when the storage lock is held, blocking
-loadd while committing, and the fact that client requests, for a
-particular client, are handled by a single thread on the server.
-
-Invalidations are sent from different threads that clients.  Outgoing
-data is queued, however, using Python lists, which are protected by
-the GIL.  This means that the serialization provided though storage
-locks is preserved by the way that server outputs are queued.
-
-
 ZEO 4
 -----
 
-In ZEO 4, invalidations and loads are handled by separate
+The ZEO 4 server sends data to the client in correct order with
+respect to loads and invalidations (or tpc_finish results). This is a
+consequence of the fact that invalidations are sent in a callback
+called when the storage lock is held, blocking loads while committing,
+and, fact that client requests, for a particular client, are
+handled by a single thread on the server, and that all output for a
+client goes through a thread-safe queue.
+
+Invalidations are sent from different threads than clients.  Outgoing
+data is queued, however, using Python lists, which are protected by
+the GIL.  This means that the serialization provided though storage
+locks is preserved by the way that server outputs are queued.  **The
+queueing mechanism is in part a consequence of the way asyncore, used
+by ZEO4, works.
+
+In ZEO 4 clients, invalidations and loads are handled by separate
 threads. This means that even though data arive in order, they may not
 be processed in order,
 
-S1
+T1
   The existing servers mitigate this by blocking loads while
   committing. On the client, this is still a potential issue because loads
-  and invalidations are handled by separate threads.
+  and invalidations are handled by separate threads, however, locks are
+  used on the client to assure that invalidations are processed before
+  blocked loads complete.
 
-  The client cache is conservative because it always forgets current data in
-  memory when it sees an invalidation data for an object.
-
-  The client gets this scenario wrong, in an edge case, because it
-  checks for invalidations matching the current tid, but not
-  invalidations before the current tid.  If the thread handling
-  invalidations was slow enough for this scenario to occur, then the
-  cache would end up with an end tid < a starting tid. This is
-  probably very unlikely.
-
-S2
-  The existing clients prevent this by serializing commits with each
-  other (only one at a time on the client) and with loads.
-
-S3
-  Existing storages serialize commits (and thus sending of
-  invalidations) and loads. As with scenario S1, threading on the
+T2
+  Existing storage servers serialize commits (and thus sending of
+  invalidations) and loads. As with scenario T1, threading on the
   client can cause load results and invalidations to be processed out
   of order.  To mitigate this, the client uses a load lock to track
   when loads are invalidated while in flight and doesn't save to the
@@ -145,9 +224,10 @@ S3
   to the cache unnecessarily, if the invalidation is for a revision
   before the one that was loaded.
 
-S4
-  As with S2, clients mitigate this by preventing simultaneous loads
-  and commits.
+B2
+  Here, we avoid incorrect returned values and incorrect cache at the
+  cost of caching nothing. For this reason, a future ZEO 4 revision
+  will require ZODB 4 or earlier.
 
 ZEO 5
 -----
@@ -156,34 +236,39 @@ In ZEO(/ZODB) 5, we want to get more concurrency, both on the client,
 and on the server.  On the client, cache invalidations and loads are
 done by the same thread, which makes things a bit simpler. This let's
 us get rid of the client load lock and prevents the scenarios above
-with existing servers and storages.
+with existing servers.
 
 On the client, we'd like to stop serializing loads and commits.  We'd
-like commits (tpc_finish calls) to in flight with loads (and with
+like commits (tpc_finish calls) to be in flight with loads (and with
 other commits).  In the current protocol, tpc_finish, load and
 loadBefore are all synchronous calls that are handled by a single
 thread on the server, so these calls end up being serialized on the
-server.
+server anyway.
 
-If we ever allowed multiple threads to service client requests, then
-we'd need to consider scenario S4, but this isn't an issue now (or for
-the foreseeable future).
+The server-side hndling of invalidations is a bit tricker in ZEO 5
+because there isn't a thread-safe queue of outgoing messages in ZEO 5
+as there was in ZEO 4.  The natural approach in ZEO 5 would be to use
+asyncio's ``call_soon_threadsafe`` to send invalidations in a client's
+thread.  This could easily cause invalidations to be sent after loads.
+As shown above, this isn't a problem for ZODB 5, at least assuming
+that invalidations arrive in order.  This would be a problem for
+ZODB 4.
+
+Note that this approach can't cause invalidations to be sent early,
+because they could only be sent by the thread that's busy loading, so
+scenario 2 wouldn't happen.
+
+To mitigate T1, we could create a thread-safe server-side message
+queue that's used when sending results.  Unfortunately, this puts us
+back in the position of having to wake up the event loop again (via
+``call_soon_threadsafe``). Maybe that's OK.
 
 The main server opportunity is allowing commits for separate oids to
 happen concurrently. This wouldn't effect the invalidation/load
-ordering though, assuming we continued to block loading an oid while
-it was being committed in tpc_finish.
+ordering though.
 
-We could also allow loads to proceed while invalidations are being
-queued for an object. Queuing invalidations is pretty fast though. It's
-not clear that this would be much of a win.  This probably isn't worth
-fooling with for now. If we did want to relax this, we could, on the
-client, track invalidations for outstanding load requests and adjust
-how we wrote data to the cache accordingly.  Again, we won't bother in
-the short term.
-
-So, for now, we can rely on the server sending clients
-properly-ordered loads and invalidations.  Also, because invalidations
-and loads will be performed by a single thread on the client, we can
-count on the ordering being preserved on the client.
+It would be nice not to block loads while making tpc_finish calls, but
+storages do this anyway now, so there's nothing to be done about it
+now.  Storage locking requirements aren't well specified, and probably
+should be rethought in light of ZODB5/loadBefore.
 

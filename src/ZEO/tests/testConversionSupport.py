@@ -52,6 +52,10 @@ class FakeServer:
     def register_connection(*args):
         return None, None
 
+class FakeConnection:
+    protocol_version = b'Z4'
+    addr = 'test'
+
 def test_server_record_iternext():
     """
 
@@ -61,6 +65,7 @@ underlying storage.
     >>> import ZEO.StorageServer
 
     >>> zeo = ZEO.StorageServer.ZEOStorage(FakeServer(), False)
+    >>> zeo.notify_connected(FakeConnection())
     >>> zeo.register('1', False)
 
     >>> next = None
@@ -80,6 +85,7 @@ The storage info also reflects the fact that record_iternext is supported.
     True
 
     >>> zeo = ZEO.StorageServer.ZEOStorage(FakeServer(), False)
+    >>> zeo.notify_connected(FakeConnection())
     >>> zeo.register('2', False)
 
     >>> zeo.get_info()['supports_record_iternext']
@@ -128,41 +134,6 @@ Now we'll have our way with it's private _server attr:
     4
 
 """
-
-def history_to_version_compatible_storage():
-    """
-    Some storages work under ZODB <= 3.8 and ZODB >= 3.9.
-    This means they have a history method that accepts a version parameter:
-
-    >>> class VersionCompatibleStorage(FakeStorageBase):
-    ...   def history(self,oid,version='',size=1):
-    ...     return oid,version,size
-
-    A ZEOStorage such as the following should support this type of storage:
-
-    >>> class OurFakeServer(FakeServer):
-    ...   storages = {'1':VersionCompatibleStorage()}
-    >>> import ZEO.StorageServer
-    >>> zeo = ZEO.StorageServer.ZEOStorage(OurFakeServer(), False)
-    >>> zeo.register('1', False)
-
-    The ZEOStorage should sort out the following call such that the storage gets
-    the correct parameters and so should return the parameters it was called with:
-
-    >>> zeo.history('oid',99)
-    ('oid', '', 99)
-
-    The same problem occurs when a Z308 client connects to a Z309 server,
-    but different code is executed:
-
-    >>> from ZEO.StorageServer import ZEOStorage308Adapter
-    >>> zeo = ZEOStorage308Adapter(VersionCompatibleStorage())
-
-    The history method should still return the parameters it was called with:
-
-    >>> zeo.history('oid','',99)
-    ('oid', '', 99)
-    """
 
 def test_suite():
     return doctest.DocTestSuite()

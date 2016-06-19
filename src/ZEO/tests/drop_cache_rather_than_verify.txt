@@ -20,7 +20,7 @@ verification is no longer supported.
 
 Here's an example that shows that this is actually what happens.
 
-Start a server, create a cient to it and commit some data
+Start a server, create a client to it and commit some data
 
     >>> addr, admin = start_server(keep=1)
     >>> import ZEO, transaction
@@ -57,6 +57,7 @@ logging and event data:
     ...     'ZEO', level=logging.ERROR)
     >>> events = []
     >>> def event_handler(e):
+    ...   if hasattr(e, 'storage'):
     ...     events.append((
     ...       len(e.storage._server.client.cache), str(handler), e.__class__.__name__))
 
@@ -70,7 +71,8 @@ is generated before the cache is dropped or the message is logged.
 Now, we'll restart the server on the original address:
 
     >>> _, admin = start_server(zeo_conf=dict(invalidation_queue_size=1),
-    ...                         addr=addr, keep=1)
+    ...                         addr=addr, keep=1, threaded=True)
+
     >>> wait_connected(db.storage)
 
 Now, let's verify our assertions above:

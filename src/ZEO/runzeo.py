@@ -22,7 +22,6 @@ Options:
 -f/--filename FILENAME -- filename for FileStorage
 -t/--timeout TIMEOUT -- transaction timeout in seconds (default no timeout)
 -h/--help -- print this usage message and exit
--m/--monitor ADDRESS -- address of monitor server ([HOST:]PORT or PATH)
 --pid-file PATH -- relative path to output file containing this process's pid;
                    default $(INSTANCE_HOME)/var/ZEO.pid but only if envar
                    INSTANCE_HOME is defined
@@ -72,9 +71,6 @@ class ZEOOptionsMixin:
     def handle_address(self, arg):
         self.family, self.address = parse_binding_address(arg)
 
-    def handle_monitor_address(self, arg):
-        self.monitor_family, self.monitor_address = parse_binding_address(arg)
-
     def handle_filename(self, arg):
         from ZODB.config import FileStorage # That's a FileStorage *opener*!
         class FSConfig:
@@ -107,14 +103,6 @@ class ZEOOptionsMixin:
         self.add("invalidation_age", "zeo.invalidation_age")
         self.add("transaction_timeout", "zeo.transaction_timeout",
                  "t:", "timeout=", float)
-        self.add("monitor_address", "zeo.monitor_address.address",
-                 "m:", "monitor=", self.handle_monitor_address)
-        self.add('auth_protocol', 'zeo.authentication_protocol',
-                 None, 'auth-protocol=', default=None)
-        self.add('auth_database', 'zeo.authentication_database',
-                 None, 'auth-database=')
-        self.add('auth_realm', 'zeo.authentication_realm',
-                 None, 'auth-realm=')
         self.add('pid_file', 'zeo.pid_filename',
                  None, 'pid-file=')
 
@@ -184,6 +172,7 @@ class ZEOServer:
             self.options.address[1] is None):
             self.options.address = self.options.address[0], 0
             return
+
         if self.can_connect(self.options.family, self.options.address):
             self.options.usage("address %s already in use" %
                                repr(self.options.address))
@@ -352,10 +341,6 @@ def create_server(storages, options):
         invalidation_queue_size = options.invalidation_queue_size,
         invalidation_age = options.invalidation_age,
         transaction_timeout = options.transaction_timeout,
-        monitor_address = options.monitor_address,
-        auth_protocol = options.auth_protocol,
-        auth_database = options.auth_database,
-        auth_realm = options.auth_realm,
         )
 
 
@@ -392,6 +377,12 @@ def main(args=None):
     options.realize(args)
     s = ZEOServer(options)
     s.main()
+
+def run(args):
+    options = ZEOOptions()
+    options.realize(args)
+    s = ZEOServer(options)
+    s.run()
 
 if __name__ == "__main__":
     main()
