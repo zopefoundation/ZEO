@@ -226,8 +226,11 @@ T2
 
 B2
   Here, we avoid incorrect returned values and incorrect cache at the
-  cost of caching nothing. For this reason, a future ZEO 4 revision
-  will require ZODB 4 or earlier.
+  cost of caching nothing.
+
+  ZEO 4.2.0 addressed this by using the same locking strategy for
+  ``loadBefore`` that was used for ``load``, thus mitigating B2 the
+  same way it mitigates T2.
 
 ZEO 5
 -----
@@ -252,16 +255,16 @@ asyncio's ``call_soon_threadsafe`` to send invalidations in a client's
 thread.  This could easily cause invalidations to be sent after loads.
 As shown above, this isn't a problem for ZODB 5, at least assuming
 that invalidations arrive in order.  This would be a problem for
-ZODB 4.
+ZODB 4.  For this reason, we require ZODB 5 for ZEO 5.
 
 Note that this approach can't cause invalidations to be sent early,
 because they could only be sent by the thread that's busy loading, so
 scenario 2 wouldn't happen.
 
-To mitigate T1, we could create a thread-safe server-side message
-queue that's used when sending results.  Unfortunately, this puts us
-back in the position of having to wake up the event loop again (via
-``call_soon_threadsafe``). Maybe that's OK.
+B2
+  Because the server send invalidations by calling
+  ``call_soon_threadsafe``, it's impoossible for invalidations to be
+  send while a load request is being handled.
 
 The main server opportunity is allowing commits for separate oids to
 happen concurrently. This wouldn't effect the invalidation/load
@@ -271,4 +274,3 @@ It would be nice not to block loads while making tpc_finish calls, but
 storages do this anyway now, so there's nothing to be done about it
 now.  Storage locking requirements aren't well specified, and probably
 should be rethought in light of ZODB5/loadBefore.
-
