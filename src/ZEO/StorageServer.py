@@ -1080,6 +1080,7 @@ class StorageServer:
         for sid, zeo_storages in self.zeo_storages_by_storage_id.items():
             for zs in zeo_storages[:]:
                 try:
+                    logger.debug("Closing %s", zs.connection)
                     zs.connection.call_soon_threadsafe(
                         zs.connection.close)
                 except Exception:

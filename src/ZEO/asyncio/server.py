@@ -34,6 +34,7 @@ class ServerProtocol(base.Protocol):
 
     closed = False
     def close(self):
+        logger.debug("Closing server protocol")
         if not self.closed:
             self.closed = True
             if self.transport is not None:
