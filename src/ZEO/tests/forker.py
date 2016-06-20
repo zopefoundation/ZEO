@@ -109,7 +109,7 @@ def runner(config, qin, qout, timeout=None,
         qout.put(server.server.acceptor.addr)
         logger.debug('ADDRESS SENT')
         thread = threading.Thread(
-            target=server.server.loop,
+            target=server.server.loop, kwargs=dict(timeout=.2),
             name = None if name is None else name + '-server',
             )
         thread.setDaemon(True)
@@ -121,6 +121,10 @@ def runner(config, qin, qout, timeout=None,
             pass
         server.server.close()
         thread.join(join_timeout)
+        if thread.is_alive():
+            logger.warning("server thread didn't stop")
+        else:
+            logger.debug('server thread stopped')
 
         if not keep:
             # Try to cleanup storage files

@@ -128,9 +128,9 @@ class Acceptor(asyncore.dispatcher):
         else:
             logger.info("connect from %s: %s", repr(addr), c)
 
-    def loop(self):
+    def loop(self, timeout=30.0):
         try:
-            asyncore.loop(map=self.socket_map)
+            asyncore.loop(map=self.socket_map, timeout=timeout)
         except Exception:
             if not self.__closed:
                 raise # Unexpected exc
@@ -142,3 +142,4 @@ class Acceptor(asyncore.dispatcher):
         if not self.__closed:
             self.__closed = True
             asyncore.dispatcher.close(self)
+            logger.debug("Closed accepter, %s", len(self.socket_map))
