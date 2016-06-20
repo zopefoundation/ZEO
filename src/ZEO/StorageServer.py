@@ -358,6 +358,7 @@ class ZEOStorage:
 
         self.stats.commits += 1
         self.storage.tpc_finish(self.transaction, self._invalidate)
+        self.connection.async('info', self.get_size_info())
         # Note that the tid is still current because we still hold the
         # commit lock. We'll relinquish it in _clear_transaction.
         tid = self.storage.lastTransaction()
@@ -366,8 +367,7 @@ class ZEOStorage:
 
     def _invalidate(self, tid):
         if self.invalidated:
-            self.server.invalidate(self, self.storage_id, tid,
-                                   self.invalidated, self.get_size_info())
+            self.server.invalidate(self, self.storage_id, tid, self.invalidated)
 
     def tpc_abort(self, tid):
         if not self._check_tid(tid):
