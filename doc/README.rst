@@ -2,7 +2,7 @@
 ZEO HOWTO
 ==========================
 
-.. contents;;
+.. contents::
 
 Introduction
 ============
