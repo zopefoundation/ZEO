@@ -607,6 +607,8 @@ SSL configuration
 
 An ``ssl`` subsection can be used to enable and configure SSL, as in::
 
+  %import ZEO
+
   <clientstorage>
     server 8200
     <ssl>
