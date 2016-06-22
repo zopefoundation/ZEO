@@ -298,7 +298,7 @@ subsection of the ZEO section, as in::
       address zeo.example.com:8090
       <ssl>
         certificate server_certificate.pem
-        key = server_certificate_key.pem
+        key server_certificate_key.pem
       </ssl>
     </zeo>
 
