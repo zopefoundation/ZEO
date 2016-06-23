@@ -40,9 +40,6 @@ class ZEOConfig:
             addr = '%s:%s' % addr
         self.address = addr
         self.read_only = None
-        self.invalidation_queue_size = None
-        self.invalidation_age = None
-        self.transaction_timeout = None
         self.loglevel = 'INFO'
 
     def dump(self, f):
@@ -50,13 +47,16 @@ class ZEOConfig:
         print("address " + self.address, file=f)
         if self.read_only is not None:
             print("read-only", self.read_only and "true" or "false", file=f)
-        if self.invalidation_queue_size is not None:
-            print("invalidation-queue-size",
-                  self.invalidation_queue_size, file=f)
-        if self.invalidation_age is not None:
-            print("invalidation-age", self.invalidation_age, file=f)
-        if self.transaction_timeout is not None:
-            print("transaction-timeout", self.transaction_timeout, file=f)
+
+        for name in (
+            'invalidation_queue_size', 'invalidation_age',
+            'transaction_timeout', 'pid_filename',
+            'ssl_certificate', 'ssl_key',
+            ):
+            v = getattr(self, name, None)
+            if v:
+                print(name.replace('_', '-'), v, file=f)
+
         print("</zeo>", file=f)
 
         print("""
@@ -177,25 +177,24 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
         storage_conf = '<blobstorage>\nblob-dir %s\n%s\n</blobstorage>' % (
             blob_dir, storage_conf)
 
-    if port is None:
-        raise AssertionError("The port wasn't specified")
-
-    if isinstance(port, int):
-        addr = 'localhost', port
-    else:
-        addr = port
-        adminaddr = port+'-test'
-
     if zeo_conf is None or isinstance(zeo_conf, dict):
+        if port is None:
+            raise AssertionError("The port wasn't specified")
+
+        if isinstance(port, int):
+            addr = 'localhost', port
+        else:
+            addr = port
+
         z = ZEOConfig(addr)
         if zeo_conf:
             z.__dict__.update(zeo_conf)
-        zeo_conf = z
+        zeo_conf = str(z)
 
     # Store the config info in a temp file.
     tmpfile = tempfile.mktemp(".conf", dir=os.getcwd())
     fp = open(tmpfile, 'w')
-    zeo_conf.dump(fp)
+    fp.write(zeo_conf + '\n\n')
     fp.write(storage_conf)
     fp.close()
 

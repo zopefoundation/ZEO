@@ -105,6 +105,7 @@ class ZEOOptionsMixin:
                  "t:", "timeout=", float)
         self.add('pid_file', 'zeo.pid_filename',
                  None, 'pid-file=')
+        self.add("ssl", "zeo.ssl")
 
 class ZEOOptions(ZDOptions, ZEOOptionsMixin):
 
@@ -341,6 +342,7 @@ def create_server(storages, options):
         invalidation_queue_size = options.invalidation_queue_size,
         invalidation_age = options.invalidation_age,
         transaction_timeout = options.transaction_timeout,
+        ssl = options.ssl,
         )
 
 

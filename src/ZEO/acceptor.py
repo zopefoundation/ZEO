@@ -38,12 +38,33 @@ logger = logging.getLogger(__name__)
 class Acceptor(asyncore.dispatcher):
     """A server that accepts incoming RPC connections"""
 
-    def __init__(self, addr, factory):
-        self.socket_map = {}
-        asyncore.dispatcher.__init__(self, map=self.socket_map)
+    def __init__(self, addr, factory, ssl=None):
+        self.__socket_map = {}
+        asyncore.dispatcher.__init__(self, map=self.__socket_map)
         self.addr = addr
-        self.factory = factory
+
+        self.__ssl = ssl
+        if ssl is not None:
+            from ssl import SSLError
+
+            wrap_socket = ssl.wrap_socket
+            def ssl_factory(sock, addr):
+                try:
+                    conn = wrap_socket(sock, server_side=True)
+                except SSLError:
+                    logger.debug("SSL failure", exc_info=True)
+                else:
+                    return factory(conn, addr)
+
+            self.__factory = ssl_factory
+        else:
+            self.__factory = factory
+
         self._open_socket()
+
+    __ssl_context = None
+    def __ssl_wrap_socket(self, sock):
+        return sock
 
     def _open_socket(self):
         addr = self.addr
@@ -119,18 +140,20 @@ class Acceptor(asyncore.dispatcher):
         if addr: # Sometimes None on Mac. See above.
             addr = addr[:2]
 
+        sock = self.__ssl_wrap_socket(sock)
+
         try:
-            c = self.factory(sock, addr)
+            c = self.__factory(sock, addr)
         except Exception:
-            if sock.fileno() in asyncore.socket_map:
-                del asyncore.socket_map[sock.fileno()]
+            if sock.fileno() in self.__socket_map:
+                del self.__socket_map[sock.fileno()]
             logger.exception("Error in handle_accept")
         else:
             logger.info("connect from %s: %s", repr(addr), c)
 
     def loop(self, timeout=30.0):
         try:
-            asyncore.loop(map=self.socket_map, timeout=timeout)
+            asyncore.loop(map=self.__socket_map, timeout=timeout)
         except Exception:
             if not self.__closed:
                 raise # Unexpected exc
@@ -142,4 +165,4 @@ class Acceptor(asyncore.dispatcher):
         if not self.__closed:
             self.__closed = True
             asyncore.dispatcher.close(self)
-            logger.debug("Closed accepter, %s", len(self.socket_map))
+            logger.debug("Closed accepter, %s", len(self.__socket_map))

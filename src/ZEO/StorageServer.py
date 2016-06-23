@@ -769,6 +769,7 @@ class StorageServer:
                  invalidation_queue_size=100,
                  invalidation_age=None,
                  transaction_timeout=None,
+                 ssl=None,
                  ):
         """StorageServer constructor.
 
@@ -841,7 +842,7 @@ class StorageServer:
             storage.registerDB(StorageServerDB(self, name))
         self.invalidation_age = invalidation_age
         self.zeo_storages_by_storage_id = {} # {storage_id -> [ZEOStorage]}
-        self.acceptor = ZEO.acceptor.Acceptor(addr, self.new_connection)
+        self.acceptor = ZEO.acceptor.Acceptor(addr, self.new_connection, ssl)
         if isinstance(addr, tuple) and addr[0]:
             self.addr = self.acceptor.addr
         else:
@@ -1395,3 +1396,7 @@ class Serving(ServerEvent):
 class Closed(ServerEvent):
     pass
 
+default_cert_authenticate = 'SIGNED'
+def ssl_config(section):
+    from .sslconfig import ssl_config
+    return ssl_config(section, True)

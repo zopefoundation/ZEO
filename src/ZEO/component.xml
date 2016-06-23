@@ -1,87 +1,165 @@
 <component>
 
-  <sectiontype name="zeo">
+  <import package="ZODB"/>
 
-    <description>
-      The content of a ZEO section describe operational parameters
-      of a ZEO server except for the storage(s) to be served.
-    </description>
+  <sectiontype name="ssl" datatype="ZEO.zconfig.client_ssl">
 
-    <key name="address" datatype="socket-binding-address"
-         required="yes">
+    <key name="certificate" datatype="existing-dirpath" required="yes">
       <description>
-        The address at which the server should listen.  This can be in
-        the form 'host:port' to signify a TCP/IP connection or a
-        pathname string to signify a Unix domain socket connection (at
-        least one '/' is required).  A hostname may be a DNS name or a
-        dotted IP address.  If the hostname is omitted, the platform's
-        default behavior is used when binding the listening socket (''
-        is passed to socket.bind() as the hostname portion of the
-        address).
+        The full path to an SSL certificate file.
       </description>
     </key>
 
-    <key name="read-only" datatype="boolean"
-         required="no"
-         default="false">
+    <key name="key" datatype="existing-dirpath" required="no">
       <description>
-        Flag indicating whether the server should operate in read-only
-        mode.  Defaults to false.  Note that even if the server is
-        operating in writable mode, individual storages may still be
-        read-only.  But if the server is in read-only mode, no write
-        operations are allowed, even if the storages are writable.  Note
-        that pack() is considered a read-only operation.
+        The full path to an SSL key file for the client certificate.
       </description>
     </key>
 
-    <key name="invalidation-queue-size" datatype="integer"
-         required="no"
-         default="100">
+    <key name="password-function" required="no">
       <description>
-        The storage server keeps a queue of the objects modified by the
-        last N transactions, where N == invalidation_queue_size.  This
-        queue is used to speed client cache verification when a client
-        disconnects for a short period of time.
+        Dotted name of importable function for retrieving a password
+        for the client certificate key.
       </description>
     </key>
 
-    <key name="invalidation-age" datatype="float" required="no">
+    <key name="authenticate" datatype="existing-dirpath" required="no">
       <description>
-        The maximum age of a client for which quick-verification
-        invalidations will be provided by iterating over the served
-        storage. This option should only be used if the served storage
-        supports efficient iteration from a starting point near the
-        end of the transaction history (e.g. end of file).
+        Path to a file or directory containing server certificates to be
+        authenticated.
       </description>
     </key>
 
-    <key name="transaction-timeout" datatype="integer"
-         required="no">
+    <key name="check-hostname" datatype="boolean" required="no">
       <description>
-        The maximum amount of time to wait for a transaction to commit
-        after acquiring the storage lock, specified in seconds.  If the
-        transaction takes too long, the client connection will be closed
-        and the transaction aborted.
+        Verify the host name in the server certificate is as expected.
       </description>
     </key>
 
-    <key name="pid-filename" datatype="existing-dirpath"
-         required="no">
+    <key name="server-hostname" required="no">
       <description>
-        The full path to the file in which to write the ZEO server's Process ID
-        at startup. If omitted, $INSTANCE/var/ZEO.pid is used.
+         Host name to use for SSL host name checks.
+
+         If ``check-hostname`` is true then use this as the
+         value to check.  If an address is a host/port pair, then this
+         defaults to the host in the address.
       </description>
-      <metadefault>$INSTANCE/var/ZEO.pid (or $clienthome/ZEO.pid)</metadefault>
     </key>
 
-    <!-- DM 2006-06-12: added option -->
-    <key name="drop-cache-rather-verify" datatype="boolean"
-         required="no" default="false">
-       <description>
-         indicates that the cache should be dropped rather than
-	 verified when the verification optimization is not
-	 available (e.g. when the ZEO server restarted).
-       </description>
+  </sectiontype>
+
+  <sectiontype name="clientstorage" datatype="ZEO.zconfig.ClientStorageConfig"
+               implements="ZODB.storage">
+
+    <section type="ssl" name="*" attribute="ssl" />
+
+    <multikey name="server" datatype="socket-connection-address" required="yes"
+              />
+
+    <key name="cache-size" datatype="byte-size" default="20MB">
+      <description>
+         The cache size in bytes, KB or MB. This defaults to a 20MB.
+         Optional ``KB`` or ``MB`` suffixes can (and usually are) used to
+         specify units other than bytes.
+      </description>
+    </key>
+
+    <key name="cache-path" required="no">
+      <description>
+         The file path of a persistent cache file
+      </description>
+    </key>
+
+    <key name="blob-dir" required="no">
+      <description>
+        Path name to the blob cache directory.
+      </description>
+    </key>
+
+    <key name="shared-blob-dir" required="no" default="no"
+        datatype="boolean">
+      <description>
+          Tells whether the cache is a shared writable directory
+          and that the ZEO protocol should not transfer the file
+          but only the filename when committing.
+      </description>
+    </key>
+
+    <key name="blob-cache-size" required="no" datatype="byte-size">
+      <description>
+            Maximum size of the ZEO blob cache, in bytes.  If not set, then
+            the cache size isn't checked and the blob directory will
+            grow without bound.
+
+            This option is ignored if shared_blob_dir is true.
+      </description>
+    </key>
+
+    <key name="blob-cache-size-check" required="no" datatype="integer">
+      <description>
+            ZEO check size as percent of blob_cache_size.  The ZEO
+            cache size will be checked when this many bytes have been
+            loaded into the cache. Defaults to 10% of the blob cache
+            size.   This option is ignored if shared_blob_dir is true.
+      </description>
+    </key>
+
+    <key name="read-only" datatype="boolean" default="off">
+      <description>
+        A flag indicating whether this should be a read-only storage,
+        defaulting to false (i.e. writing is allowed by default).
+      </description>
+    </key>
+
+    <key name="read-only-fallback" datatype="boolean" default="off">
+      <description>
+        A flag indicating whether a read-only remote storage should be
+        acceptable as a fallback when no writable storages are
+        available.  Defaults to false.  At most one of read_only and
+        read_only_fallback should be true.
+      </description>
+    </key>
+
+    <key name="wait-timeout" datatype="integer" default="30">
+      <description>
+         How long to wait for an initial connection, defaulting to 30
+         seconds.  If an initial connection can't be made within this time
+         limit, then creation of the client storage will fail with a
+         ``ZEO.Exceptions.ClientDisconnected`` exception.
+
+         After the initial connection, if the client is disconnected:
+
+         - In-flight server requests will fail with a
+           ``ZEO.Exceptions.ClientDisconnected`` exception.
+
+         - New requests will block for up to ``wait_timeout`` waiting for a
+           connection to be established before failing with a
+           ``ZEO.Exceptions.ClientDisconnected`` exception.
+      </description>
+    </key>
+
+    <key name="client-label" required="no">
+      <description>
+        A label for the client in server logs
+      </description>
+    </key>
+
+    <!-- The following are undocumented, but not gone. :) -->
+
+    <key name="storage" default="1">
+      <description>
+        The name of the storage that the client wants to use.  If the
+        ZEO server serves more than one storage, the client selects
+        the storage it wants to use by name.  The default name is '1',
+        which is also the default name for the ZEO server.
+      </description>
+    </key>
+
+    <key name="name" default="">
+      <description>
+        The storage name.  If unspecified, the address of the server
+        will be used as the name.
+      </description>
     </key>
 
   </sectiontype>

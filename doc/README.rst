@@ -124,10 +124,13 @@ it will continue to poll for a read-write connection.
 If a single address resolves to multiple IPv4 or IPv6 addresses,
 the client will connect to an arbitrary of these addresses.
 
-Authentication
---------------
+SSL
+---
 
-ZEO supports SSL certificate authentication.
+ZEO supports the use of SSL connections between servers and clients,
+including certificate authentication.
+
+
 
 Installing software
 ===================
@@ -288,8 +291,8 @@ transaction-timeout
 
         This defaults to 30 seconds.
 
-SSL configuration
-~~~~~~~~~~~~~~~~~
+Server SSL configuration
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 A server can optionally support SSL.  Do do so, include a `ssl`
 subsection of the ZEO section, as in::
@@ -316,20 +319,26 @@ subsection of the ZEO section, as in::
 The ``ssl`` section has settings:
 
 certificate
-        The path to an SSL certificate file for the server.
+  The path to an SSL certificate file for the server.
 
 key
-        The path to the SSL key file for the server certificate.
+  The path to the SSL key file for the server certificate.
+
+password-function
+  A dotted name if an importable function that, when imported, returns
+  the password needed to unlock the key (if the key requires a password.)
 
 authenticate
-        The path to a file or directory containing client certificates
-        to authenticate.  ((See the ``cafile`` and ``capath``
-        parameters in the Python documentation for
-        ``ssl.SSLContext.load_verify_locations``.)
+  The path to a file or directory containing client certificates
+  to authenticate.  ((See the ``cafile`` and ``capath``
+  parameters in the Python documentation for
+  ``ssl.SSLContext.load_verify_locations``.)
 
-        If this setting is used. then certificate authentication is
-        used to authenticate clients.  A client must be configuted
-        with one of the certificates supplied using this setting.
+  If this setting is used. then certificate authentication is
+  used to authenticate clients.  A client must be configured
+  with one of the certificates supplied using this setting.
+
+  This option assumes that you're using self-signed certificates.
 
 Running the ZEO server as a daemon
 ----------------------------------
@@ -602,59 +611,59 @@ disconnect_poll
    The delay in seconds between attempts to connect to the
    server, in seconds.  Defaults to 1 second.
 
-SSL configuration
-~~~~~~~~~~~~~~~~~
+Client SSL configuration
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 An ``ssl`` subsection can be used to enable and configure SSL, as in::
 
   %import ZEO
 
   <clientstorage>
-    server 8200
+    server zeo.example.com8200
     <ssl>
     </ssl>
   </clientstorage>
 
 In the example above, SSL is enabled in it's simplest form:
 
-- No authentication certificate is supplied
+- The cient expects the server to have a signed certificate, which the
+  client validates.
 
-- The server isn't authenticated against certificates.
-
-- The server's host name isn't checked.
+- The server server host name ``zeo.example.com`` is checked against
+  the server's certificate.
 
 A number of settings can be provided to configure SSL:
 
 certificate
-        The path to an SSL certificate file for the client.  This is
-        needed to allow the server to authenticate the client.
+  The path to an SSL certificate file for the client.  This is
+  needed to allow the server to authenticate the client.
 
 key
-        The path to the SSL key file for the client certificate.
+  The path to the SSL key file for the client certificate.
+
+password-function
+  A dotted name if an importable function that, when imported, returns
+  the password needed to unlock the key (if the key requires a password.)
 
 authenticate
-        The path to a file or directory containing server certificates
-        to authenticate.  ((See the ``cafile`` and ``capath``
-        parameters in the Python documentation for
-        ``ssl.SSLContext.load_verify_locations``.)
+  The path to a file or directory containing server certificates
+  to authenticate.  ((See the ``cafile`` and ``capath``
+  parameters in the Python documentation for
+  ``ssl.SSLContext.load_verify_locations``.)
 
-        If this setting is used. then certificate authentication is
-        used to authenticate server.  The server must be configuted
-        with one of the certificates supplied using this setting.
-
-        If this setting has the value ``SIGNED`` or ``-``, then
-        default certificate authoritied from the client host system
-        will be used.
+  If this setting is used. then certificate authentication is
+  used to authenticate the server.  The server must be configuted
+  with one of the certificates supplied using this setting.
 
 check-hostname
-        This is a boolean setting that defaults to false. Verify the
-        host name in the server certificate is as expected.
+  This is a boolean setting that defaults to true. Verify the
+  host name in the server certificate is as expected.
 
 server-hostname
-        The expected server host name.  This defaults to the host name
-        used in the server address.  This option must be used when
-        ``verify-host`` is true and when a server address has no host
-        name (localhost, or unix domain socket) or when there is more
-        than one seerver and server hostnames differ.
+  The expected server host name.  This defaults to the host name
+  used in the server address.  This option must be used when
+  ``check-hostname`` is true and when a server address has no host
+  name (localhost, or unix domain socket) or when there is more
+  than one seerver and server hostnames differ.
 
-        Using this setting implies the ``verify-host`` setting.
+  Using this setting implies a true value for the ``check-hostname`` setting.

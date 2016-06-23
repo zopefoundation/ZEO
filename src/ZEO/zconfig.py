@@ -2,33 +2,37 @@
 """
 import os
 
-default_cert_authenticate = 'SIGNED', '-'
 def ssl_config(section, server):
     import ssl
 
-    context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
-    if section.certificate:
-        context.load_cert_chain(section.certificate,
-                                keyfile=section.key)
+    cafile = capath = None
     auth = section.authenticate
     if auth:
-        if auth in default_cert_authenticate:
-            context.load_default_certs(
-                ssl.Purpose.CLIENT_AUTH if server else ssl.Purpose.SERVER_AUTH)
-        elif os.path.isdir(auth):
-            context.load_verify_locations(capath=auth)
+        if os.path.isdir(auth):
+            capath=auth
         else:
-            context.load_verify_locations(cafile=auth)
+            cafile=auth
 
-        context.verify_mode = ssl.CERT_REQUIRED
-    else:
-        context.verify_mode = ssl.CERT_NONE
+    context = ssl.create_default_context(
+        ssl.Purpose.CLIENT_AUTH, cafile=cafile, capath=capath)
+
+    if section.certificate:
+        password = section.password_function
+        if password:
+            module, name = password.rsplit('.', 1)
+            module = __import__(module, globals(), locals(), ['*'], 0)
+            password = getattr(module, name)
+        context.load_cert_chain(section.certificate, section.key, password)
+
+    context.verify_mode = ssl.CERT_REQUIRED
 
     if server:
         context.check_hostname = False
         return context
 
-    context.check_hostname = section.check_hostname or section.server_hostname
+    context.check_hostname = bool(
+        section.check_hostname is None and (section.server_hostname or not auth)
+        or section.check_hostname)
 
     return context, section.server_hostname
 
