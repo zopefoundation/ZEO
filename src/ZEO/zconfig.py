@@ -30,9 +30,7 @@ def ssl_config(section, server):
         context.check_hostname = False
         return context
 
-    context.check_hostname = bool(
-        section.check_hostname is None and (section.server_hostname or not auth)
-        or section.check_hostname)
+    context.check_hostname = section.check_hostname
 
     return context, section.server_hostname
 

@@ -30,7 +30,7 @@
       </description>
     </key>
 
-    <key name="check-hostname" datatype="boolean" required="no">
+    <key name="check-hostname" datatype="boolean" required="no" default="true">
       <description>
         Verify the host name in the server certificate is as expected.
       </description>

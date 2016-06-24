@@ -60,6 +60,7 @@ class SSLConfigTest(ZEOConfigTest):
                 certificate {}
                 key {}
                 authenticate {}
+                server-hostname zodb.org
                 </ssl>""".format(client_cert, client_key, server_cert))
         self._client_assertions(client, addr)
         client.close()
@@ -200,6 +201,7 @@ class SSLConfigTest(ZEOConfigTest):
         self.assert_context(
             factory, context, (client_cert, client_key, None),
             capath=here,
+            check_hostname=True,
             )
 
     @mock.patch('ssl.create_default_context')
@@ -215,6 +217,7 @@ class SSLConfigTest(ZEOConfigTest):
         self.assert_context(
             factory, context, (client_cert, client_key, None),
             cafile=server_cert,
+            check_hostname=True,
             )
 
     @mock.patch('ssl.create_default_context')
@@ -231,8 +234,8 @@ class SSLConfigTest(ZEOConfigTest):
                          None)
         self.assert_context(
             factory, context, (client_cert, client_key, pwfunc),
-            check_hostname=False,
             cafile=server_cert,
+            check_hostname=True,
             )
 
     @mock.patch('ssl.create_default_context')
@@ -259,14 +262,14 @@ class SSLConfigTest(ZEOConfigTest):
         ):
         client = ssl_client(
             certificate=client_cert, key=client_key, authenticate=server_cert,
-            check_hostname=True)
+            check_hostname=False)
         context = ClientStorage.call_args[1]['ssl']
         self.assertEqual(ClientStorage.call_args[1]['ssl_server_hostname'],
                          None)
         self.assert_context(
             factory, context, (client_cert, client_key, None),
             cafile=server_cert,
-            check_hostname=True,
+            check_hostname=False,
             )
 
 def args(*a, **kw):
