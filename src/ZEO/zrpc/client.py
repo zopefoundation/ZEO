@@ -452,12 +452,10 @@ class ConnectThread(threading.Thread):
             if domain == socket.AF_INET:
                 host, port = addr
                 for (family, socktype, proto, cannoname, sockaddr
-                     ) in socket.getaddrinfo(host or 'localhost', port):
-                    # we only speak TCP, so let's skip UDP and RAW sockets
-                    # otherwise we'll try to connect to the same address
-                    # three times in a row
-                    if socktype != socket.SOCK_STREAM:
-                        continue
+                     ) in socket.getaddrinfo(host or 'localhost', port,
+                                             socket.AF_INET,
+                                             socket.SOCK_STREAM
+                                            ): # prune non-TCP results
                     # for IPv6, drop flowinfo, and restrict addresses
                     # to [host]:port
                     yield family, sockaddr[:2]
