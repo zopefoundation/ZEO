@@ -29,7 +29,6 @@ from ZEO.zrpc.error import DisconnectedError
 from ZODB.POSException import ReadOnlyError
 from ZODB.loglevels import BLATHER
 from six.moves import map
-from six.moves import zip
 
 
 def client_timeout():
