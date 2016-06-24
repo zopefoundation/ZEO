@@ -128,9 +128,8 @@ SSL
 ---
 
 ZEO supports the use of SSL connections between servers and clients,
-including certificate authentication.
-
-
+including certificate authentication.  We're still understanding use
+cases for this, so details of operation may change.
 
 Installing software
 ===================
@@ -319,13 +318,14 @@ subsection of the ZEO section, as in::
 The ``ssl`` section has settings:
 
 certificate
-  The path to an SSL certificate file for the server.
+  The path to an SSL certificate file for the server. (required)
 
 key
-  The path to the SSL key file for the server certificate.
+  The path to the SSL key file for the server certificate (if not
+  included in certificate file).
 
 password-function
-  A dotted name if an importable function that, when imported, returns
+  The dotted name if an importable function that, when imported, returns
   the password needed to unlock the key (if the key requires a password.)
 
 authenticate
@@ -550,31 +550,6 @@ blob-cache-size-check
    reduction. The defaukt is 10 (percent).  This controls how often to
    remove blobs from the cache.
 
-ssl-certificate
-   The full path to an SSL certificate file. For the client. This
-   is needed if the server requires client authentication.
-
-ssl-key
-   The full path to an SSL key file for the client certificate.
-
-ssl-server-certificates
-   The full path to a file containing server certificates to be
-   authenticated.
-
-ssl-server-certificate-directory
-   The full path to a directory containing server certificates to be
-   authenticated.
-
-ssl-check-hostname
-   Set this to true to require checking of the server's host name.
-
-ssl-server-hostname
-   Host name to use for SSL host name checks.
-
-   If using SSL and ``ssl-check-hostname`` then use this as the
-   value to check.  If an address is a host/port pair, then this
-   defaults to the host in the address.
-
 read-only
    Set to true for a read-only connection.
 
@@ -639,7 +614,8 @@ certificate
   needed to allow the server to authenticate the client.
 
 key
-  The path to the SSL key file for the client certificate.
+  The path to the SSL key file for the client certificate (if not
+  included in the certificate file).
 
 password-function
   A dotted name if an importable function that, when imported, returns
