@@ -87,7 +87,7 @@ class Protocol(base.Protocol):
                 ssl=self.ssl, server_hostname=self.ssl_server_hostname)
         else:
             cr = self.loop.create_unix_connection(
-                self.protocol_factory, self.addr)
+                self.protocol_factory, self.addr, ssl=self.ssl)
 
         self._connecting = cr = asyncio.async(cr, loop=self.loop)
 

@@ -36,6 +36,8 @@ import ZODB.tests.util
 import transaction
 from transaction import Transaction
 
+from . import testssl
+
 logger = logging.getLogger('ZEO.tests.ConnectionTests')
 
 ZERO = '\0'*8
@@ -66,7 +68,6 @@ class CommonSetupTearDown(StorageTestBase):
     keep = 0
     invq = None
     timeout = None
-    monitor = 0
     db_class = DummyDB
 
     def setUp(self, before=None):
@@ -147,18 +148,17 @@ class CommonSetupTearDown(StorageTestBase):
                                     min_disconnect_poll=0.1,
                                     read_only=read_only,
                                     read_only_fallback=read_only_fallback,
-                                    username=username,
-                                    password=password,
-                                    realm=realm)
+                                    **self._client_options())
         storage.registerDB(DummyDB())
         return storage
+
+    def _client_options(self):
+        return {}
 
     def getServerConfig(self, addr, ro_svr):
         zconf = forker.ZEOConfig(addr)
         if ro_svr:
             zconf.read_only = 1
-        if self.monitor:
-            zconf.monitor_address = ("", 42000)
         if self.invq:
             zconf.invalidation_queue_size = self.invq
         if self.timeout:
@@ -563,6 +563,18 @@ class ConnectionTests(CommonSetupTearDown):
         with short_timeout(self):
             self.assertRaises(ClientDisconnected,
                               self._storage.load, b'\0'*8, '')
+
+class SSLConnectionTests(ConnectionTests):
+
+    def getServerConfig(self, addr, ro_svr):
+        return testssl.server_config.replace(
+            '127.0.0.1:0',
+            '{}: {}\nread-only {}'.format(
+                addr[0], addr[1], 'true' if ro_svr else 'false'))
+
+    def _client_options(self):
+        return {'ssl': testssl.client_ssl()}
+
 
 class InvqTests(CommonSetupTearDown):
     invq = 3

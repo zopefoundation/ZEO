@@ -39,6 +39,7 @@ import re
 import shutil
 import signal
 import stat
+import ssl
 import sys
 import tempfile
 import threading
@@ -54,6 +55,8 @@ import ZODB.tests.testblob
 import ZODB.tests.util
 import ZODB.utils
 import zope.testing.setupstack
+
+from . import testssl
 
 logger = logging.getLogger('ZEO.tests.testZEO')
 
@@ -99,7 +102,7 @@ class MiscZEOTests:
     def checkZEOInvalidation(self):
         addr = self._storage._addr
         storage2 = self._wrap_client(
-            ClientStorage(addr, wait=1, min_disconnect_poll=0.1))
+            ClientStorage(addr, wait=1, **self._client_options()))
         try:
             oid = self._storage.new_oid()
             ob = MinPO('first')
@@ -128,13 +131,13 @@ class MiscZEOTests:
         # Earlier, a ClientStorage would not have the last transaction id
         # available right after successful connection, this is required now.
         addr = self._storage._addr
-        storage2 = ClientStorage(addr)
+        storage2 = ClientStorage(addr, **self._client_options())
         self.assert_(storage2.is_connected())
         self.assertEquals(ZODB.utils.z64, storage2.lastTransaction())
         storage2.close()
 
         self._dostore()
-        storage3 = ClientStorage(addr)
+        storage3 = ClientStorage(addr, **self._client_options())
         self.assert_(storage3.is_connected())
         self.assertEquals(8, len(storage3.lastTransaction()))
         self.assertNotEquals(ZODB.utils.z64, storage3.lastTransaction())
@@ -164,25 +167,32 @@ class GenericTests(
     def setUp(self):
         StorageTestBase.StorageTestBase.setUp(self)
         logger.info("setUp() %s", self.id())
-        port = get_port(self)
-        zconf = forker.ZEOConfig(('', port))
         zport, stop = forker.start_zeo_server(self.getConfig(),
-                                                              zconf, port)
+                                              self.getZEOConfig())
         self._servers = [stop]
         if not self.blob_cache_dir:
             # This is the blob cache for ClientStorage
             self.blob_cache_dir = tempfile.mkdtemp(
                 'blob_cache',
                 dir=os.path.abspath(os.getcwd()))
-        self._storage = self._wrap_client(ClientStorage(
-            zport, '1', cache_size=20000000,
-            min_disconnect_poll=0.5, wait=1,
-            wait_timeout=60, blob_dir=self.blob_cache_dir,
-            shared_blob_dir=self.shared_blob_dir))
+        self._storage = self._wrap_client(
+            ClientStorage(
+                zport, '1', cache_size=20000000,
+                min_disconnect_poll=0.5, wait=1,
+                wait_timeout=60, blob_dir=self.blob_cache_dir,
+                shared_blob_dir=self.shared_blob_dir,
+                **self._client_options()),
+            )
         self._storage.registerDB(DummyDB())
+
+    def getZEOConfig(self):
+        return forker.ZEOConfig(('', get_port(self)))
 
     def _wrap_client(self, client):
         return client
+
+    def _client_options(self):
+        return {}
 
     def tearDown(self):
         self._storage.close()
@@ -204,7 +214,8 @@ class GenericTests(
         # cleaner way.
         addr = self._storage._addr
         self._storage.close()
-        self._storage = ClientStorage(addr, read_only=read_only, wait=1)
+        self._storage = ClientStorage(
+            addr, read_only=read_only, wait=1, **self._client_options())
 
     def checkWriteMethods(self):
         # ReadOnlyStorage defines checkWriteMethods.  The decision
@@ -223,7 +234,8 @@ class GenericTests(
     def _do_store_in_separate_thread(self, oid, revid, voted):
 
         def do_store():
-            store = ZEO.ClientStorage.ClientStorage(self._storage._addr)
+            store = ZEO.ClientStorage.ClientStorage(
+                self._storage._addr, **self._client_options())
             try:
                 t = transaction.get()
                 store.tpc_begin(t)
@@ -334,6 +346,16 @@ class FileStorageTests(FullGenericTests):
         self.assertEquals(self._expected_interfaces,
             self._storage._info['interfaces']
             )
+
+
+class FileStorageSSLTests(FileStorageTests):
+
+    def getZEOConfig(self):
+        return testssl.server_config
+
+    def _client_options(self):
+        return {'ssl': testssl.client_ssl()}
+
 
 class FileStorageHexTests(FileStorageTests):
     _expected_interfaces = (
@@ -1486,7 +1508,8 @@ def can_use_empty_string_for_local_host_on_client():
 slow_test_classes = [
     #BlobAdaptedFileStorageTests, BlobWritableCacheTests,
     MappingStorageTests, DemoStorageTests,
-    FileStorageTests, FileStorageHexTests, FileStorageClientHexTests,
+    FileStorageTests, FileStorageSSLTests,
+    FileStorageHexTests, FileStorageClientHexTests,
     ]
 
 quick_test_classes = [FileStorageRecoveryTests, ZRPCConnectionTests]

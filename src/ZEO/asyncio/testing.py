@@ -31,7 +31,8 @@ class Loop:
             future.set_exception(ConnectionRefusedError())
 
     def create_connection(
-        self, protocol_factory, host=None, port=None, sock=None
+        self, protocol_factory, host=None, port=None, sock=None,
+        ssl=None, server_hostname=None
         ):
         future = asyncio.Future(loop=self)
         if sock is None:

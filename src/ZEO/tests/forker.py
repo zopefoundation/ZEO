@@ -25,7 +25,7 @@ import tempfile
 import six
 import ZODB.tests.util
 import zope.testing.setupstack
-from ZEO._compat import BytesIO
+from ZEO._compat import StringIO
 
 logger = logging.getLogger('ZEO.tests.forker')
 
@@ -69,9 +69,9 @@ class ZEOConfig:
         """ % (self.loglevel, self.logpath), file=f)
 
     def __str__(self):
-        f = BytesIO()
+        f = StringIO()
         self.dump(f)
-        return f.getvalue().decode()
+        return f.getvalue()
 
 
 def encode_format(fmt):
@@ -194,7 +194,7 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
     # Store the config info in a temp file.
     tmpfile = tempfile.mktemp(".conf", dir=os.getcwd())
     fp = open(tmpfile, 'w')
-    fp.write(zeo_conf + '\n\n')
+    fp.write(str(zeo_conf) + '\n\n')
     fp.write(storage_conf)
     fp.close()
 
