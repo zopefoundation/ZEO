@@ -1,6 +1,7 @@
 """SSL configuration support
 """
 import os
+import sys
 
 def ssl_config(section, server):
     import ssl
@@ -25,6 +26,10 @@ def ssl_config(section, server):
         context.load_cert_chain(section.certificate, section.key, password)
 
     context.verify_mode = ssl.CERT_REQUIRED
+
+    if sys.version_info >= (3, 4):
+        context.verify_flags |= ssl.VERIFY_X509_STRICT | (
+            context.cert_store_stats()['crl'] and ssl.VERIFY_CRL_CHECK_LEAF)
 
     if server:
         context.check_hostname = False
