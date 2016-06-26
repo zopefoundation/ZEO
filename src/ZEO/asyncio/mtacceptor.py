@@ -11,8 +11,41 @@
 # FOR A PARTICULAR PURPOSE
 #
 ##############################################################################
+"""Multi-threaded server connectin acceptor
+
+Each connection is run in it's own thread. Testing serveral years ago
+suggsted that this was a win, but ZODB shootout and another
+lower-level tests suggest otherwise.  It's really unclear, which is
+why we're keeping this around for now.
+
+Asyncio doesn't let you accept connections in one thread and handle
+them in another.  To get around this, we have a listener implemented
+using asyncore, but when we get a connection, we hand the socket to
+asyncio.  This worked well until we added SSL support.  (Even then, it
+worked on Mac OS X for some reason.)
+
+SSL + non-blocking sockets requires special care, which asyncio
+provides.  Unfortunately, create_connection, assumes it's creating a
+client connection. It would be easy to fix this, but it's hard to
+justify the fix to get it accepted, so we won't bother for now.
+
+To use this module, replace::
+
+  from .asyncio.server import Acceptor
+
+with:
+
+  from .asyncio.mtacceptor import Acceptor
+
+in ZEO.StorageServer.
+"""
+
+import asyncio
 import asyncore
 import socket
+import threading
+
+from .server import ServerProtocol
 
 # _has_dualstack: True if the dual-stack sockets are supported
 try:
@@ -36,34 +69,23 @@ import logging
 logger = logging.getLogger(__name__)
 
 class Acceptor(asyncore.dispatcher):
-    """A server that accepts incoming RPC connections"""
+    """A server that accepts incoming RPC connections
 
-    def __init__(self, addr, factory, ssl=None):
+    And creates a separate thread for each.
+    """
+
+    def __init__(self, storage_server, addr, ssl):
+        self.storage_server = storage_server
+        self.addr = addr
         self.__socket_map = {}
         asyncore.dispatcher.__init__(self, map=self.__socket_map)
-        self.addr = addr
 
-        self.__ssl = ssl
+        self.ssl_context = ssl
         if ssl is not None:
-            from ssl import SSLError
-
-            wrap_socket = ssl.wrap_socket
-            def ssl_factory(sock, addr):
-                try:
-                    conn = wrap_socket(sock, server_side=True)
-                except SSLError:
-                    logger.debug("SSL failure", exc_info=True)
-                else:
-                    return factory(conn, addr)
-
-            self.__factory = ssl_factory
-        else:
-            self.__factory = factory
-
+            self.ssl_wrap_socket = ssl.wrap_socket
         self._open_socket()
 
-    __ssl_context = None
-    def __ssl_wrap_socket(self, sock):
+    def ssl_wrap_socket(self, sock, server_side):
         return sock
 
     def _open_socket(self):
@@ -140,16 +162,32 @@ class Acceptor(asyncore.dispatcher):
         if addr: # Sometimes None on Mac. See above.
             addr = addr[:2]
 
-        sock = self.__ssl_wrap_socket(sock)
-
         try:
-            c = self.__factory(sock, addr)
+            logger.debug("new connection %s" % (addr,))
+
+            sock = self.ssl_wrap_socket(sock, server_side=True)
+
+            def run():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                zs = self.storage_server.create_client_handler()
+                protocol = ServerProtocol(loop, self.addr, zs)
+                protocol.stop = loop.stop
+                asyncio.async(loop.create_connection((lambda : protocol),
+                                                     sock=sock),
+                              loop=loop)
+                loop.run_forever()
+                loop.close()
+
+            thread = threading.Thread(target=run, name='zeo_client_hander')
+            thread.setDaemon(True)
+            thread.start()
         except Exception:
             if sock.fileno() in self.__socket_map:
                 del self.__socket_map[sock.fileno()]
             logger.exception("Error in handle_accept")
         else:
-            logger.info("connect from %s: %s", repr(addr), c)
+            logger.info("connect from %s", repr(addr))
 
     def loop(self, timeout=30.0):
         try:

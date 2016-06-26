@@ -116,7 +116,7 @@ class SSLConfigTest(ZEOConfigTest):
     def test_ssl_mockiavellian_server_no_ssl(self, factory):
         server = create_server()
         self.assertFalse(factory.called)
-        self.assertEqual(server.acceptor._Acceptor__ssl, None)
+        self.assertEqual(server.acceptor.ssl_context, None)
         server.close()
 
     def assert_context(
@@ -143,7 +143,7 @@ class SSLConfigTest(ZEOConfigTest):
     def test_ssl_mockiavellian_server_ssl_auth_file(self, factory):
         server = create_server(
             certificate=server_cert, key=server_key, authenticate=__file__)
-        context = server.acceptor._Acceptor__ssl
+        context = server.acceptor.ssl_context
         self.assert_context(factory, context, cafile=__file__)
         server.close()
 
@@ -151,7 +151,7 @@ class SSLConfigTest(ZEOConfigTest):
     def test_ssl_mockiavellian_server_ssl_auth_dir(self, factory):
         server = create_server(
             certificate=server_cert, key=server_key, authenticate=here)
-        context = server.acceptor._Acceptor__ssl
+        context = server.acceptor.ssl_context
         self.assert_context(factory, context, capath=here)
         server.close()
 
@@ -163,7 +163,7 @@ class SSLConfigTest(ZEOConfigTest):
             password_function='ZEO.tests.testssl.pwfunc',
             authenticate=here,
             )
-        context = server.acceptor._Acceptor__ssl
+        context = server.acceptor.ssl_context
         self.assert_context(
             factory, context, (server_cert, server_key, pwfunc), capath=here)
         server.close()

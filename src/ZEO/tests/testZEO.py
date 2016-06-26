@@ -1089,7 +1089,7 @@ def runzeo_without_configfile():
     ------
     --T INFO ZEO.StorageServer StorageServer created RW with storages 1RWt
     ------
-    --T INFO ZEO.acceptor listening on ...
+    --T INFO ZEO.asyncio.server listening on ...
     ------
     --T INFO ZEO.StorageServer closing storage '1'
     testing exit immediately
@@ -1470,7 +1470,8 @@ def quick_close_doesnt_kill_server():
 
     Start a server:
 
-    >>> addr, _ = start_server()
+    >>> from .testssl import server_config, client_ssl
+    >>> addr, _ = start_server(zeo_conf=server_config)
 
     Now connect and immediately disconnect. This caused the server to
     die in the past:
@@ -1483,9 +1484,12 @@ def quick_close_doesnt_kill_server():
     ...     s.connect(addr)
     ...     s.close()
 
+
+    >>> print("\n\nXXX WARNING: running quick_close_doesnt_kill_server with ssl as hack pending http://bugs.python.org/issue27386\n", file=sys.stderr) # Intentional long line to be annoying till this is fixed
+
     Now we should be able to connect as normal:
 
-    >>> db = ZEO.DB(addr)
+    >>> db = ZEO.DB(addr, ssl=client_ssl())
     >>> db.storage.is_connected()
     True
 
