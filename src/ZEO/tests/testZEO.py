@@ -1566,8 +1566,6 @@ class ServerManagingClientStorageForIExternalGCTest(
 def test_suite():
     suite = unittest.TestSuite()
 
-    # Collect misc tests into their own layer to reduce size of
-    # unit test layer
     zeo = unittest.TestSuite()
     zeo.addTest(unittest.makeSuite(ZODB.tests.util.AAAA_Test_Runner_Hack))
     patterns = [
@@ -1598,12 +1596,16 @@ def test_suite():
                      "ClientDisconnected"),
                     )),
             ))
+    zeo.layer = ZODB.tests.util.MininalTestLayer('testZeo-misc')
+    suite.addTest(zeo)
+
+    zeo = unittest.TestSuite()
     zeo.addTest(
         doctest.DocFileSuite(
-            'zeo-fan-out.test', 'zdoptions.test',
+            'zdoptions.test',
             'drop_cache_rather_than_verify.txt', 'client-config.test',
             'protocols.test', 'zeo_blob_cache.test', 'invalidation-age.txt',
-            'dynamic_server_ports.test', 'new_addr.test', '../nagios.rst',
+            'dynamic_server_ports.test', '../nagios.rst',
             setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
             checker=renormalizing.RENormalizing(patterns),
             globs={'print_function': print_function},
@@ -1616,8 +1618,22 @@ def test_suite():
         ))
     for klass in quick_test_classes:
         zeo.addTest(unittest.makeSuite(klass, "check"))
-    zeo.layer = ZODB.tests.util.MininalTestLayer('testZeo-misc')
+    zeo.layer = ZODB.tests.util.MininalTestLayer('testZeo-misc2')
     suite.addTest(zeo)
+
+    # tests that often fail, maybe if they have their own layers
+    for name in 'zeo-fan-out.test', 'new_addr.test':
+        zeo = unittest.TestSuite()
+        zeo.addTest(
+            doctest.DocFileSuite(
+                name,
+                setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
+                checker=renormalizing.RENormalizing(patterns),
+                globs={'print_function': print_function},
+                ),
+            )
+        zeo.layer = ZODB.tests.util.MininalTestLayer('testZeo-' + name)
+        suite.addTest(zeo)
 
     suite.addTest(unittest.makeSuite(MultiprocessingTests))
 
