@@ -723,7 +723,13 @@ class ClientStorage(object):
         """Storage API: vote on a transaction.
         """
         tbuf = self._check_trans(txn, 'tpc_vote')
-        self._call('vote', id(txn))
+        try:
+            self._call('vote', id(txn))
+        except POSException.StorageTransactionError:
+            # Hm, we got disconnected and reconnected bwtween
+            # _check_trans and voting. Let's chack the transaction again:
+            tbuf = self._check_trans(txn, 'tpc_vote')
+            raise
 
         if tbuf.exception:
             raise tbuf.exception
