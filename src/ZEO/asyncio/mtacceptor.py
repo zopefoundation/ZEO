@@ -81,12 +81,7 @@ class Acceptor(asyncore.dispatcher):
         asyncore.dispatcher.__init__(self, map=self.__socket_map)
 
         self.ssl_context = ssl
-        if ssl is not None:
-            self.ssl_wrap_socket = ssl.wrap_socket
         self._open_socket()
-
-    def ssl_wrap_socket(self, sock, server_side):
-        return sock
 
     def _open_socket(self):
         addr = self.addr
@@ -165,17 +160,32 @@ class Acceptor(asyncore.dispatcher):
         try:
             logger.debug("new connection %s" % (addr,))
 
-            sock = self.ssl_wrap_socket(sock, server_side=True)
-
             def run():
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 zs = self.storage_server.create_client_handler()
                 protocol = ServerProtocol(loop, self.addr, zs)
                 protocol.stop = loop.stop
-                asyncio.async(loop.create_connection((lambda : protocol),
-                                                     sock=sock),
-                              loop=loop)
+
+                if self.ssl_context is None:
+                    cr = loop.create_connection((lambda : protocol), sock=sock)
+                else:
+                    #######################################################
+                    # XXX See http://bugs.python.org/issue27392 :(
+                    _make_ssl_transport = loop._make_ssl_transport
+                    def make_ssl_transport(*a, **kw):
+                        kw['server_side'] = True
+                        return _make_ssl_transport(*a, **kw)
+                    loop._make_ssl_transport = make_ssl_transport
+                    #
+                    #######################################################
+                    cr = loop.create_connection(
+                        (lambda : protocol), sock=sock,
+                        ssl=self.ssl_context,
+                        server_hostname='fu' # http://bugs.python.org/issue27391
+                        )
+
+                asyncio.async(cr, loop=loop)
                 loop.run_forever()
                 loop.close()
 

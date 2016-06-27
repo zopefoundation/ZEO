@@ -1089,7 +1089,7 @@ def runzeo_without_configfile():
     ------
     --T INFO ZEO.StorageServer StorageServer created RW with storages 1RWt
     ------
-    --T INFO ZEO.asyncio.server listening on ...
+    --T INFO ZEO.asyncio... listening on ...
     ------
     --T INFO ZEO.StorageServer closing storage '1'
     testing exit immediately
