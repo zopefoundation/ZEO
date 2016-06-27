@@ -212,7 +212,8 @@ class Acceptor:
         self.event_loop = loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         if isinstance(addr, tuple):
-            cr = loop.create_server(self.factory, addr[0], addr[1], ssl=ssl)
+            cr = loop.create_server(self.factory, addr[0], addr[1],
+                                    reuse_address=True, ssl=ssl)
         else:
             cr = loop.create_unix_server(self.factory, addr, ssl=ssl)
 
@@ -245,12 +246,28 @@ class Acceptor:
 
     def loop(self, timeout=None):
         self.event_loop.run_forever()
-        self.event_loop.run_until_complete(self.server.wait_closed())
         self.event_loop.close()
 
-    __closed = False
+    closed = False
     def close(self):
-        if not self.__closed:
-            self.__closed = True
-            self.server.close()
-            self.event_loop.call_soon_threadsafe(self.event_loop.stop)
+        if not self.closed:
+            self.closed = True
+            self.event_loop.call_soon_threadsafe(self._close)
+
+    def _close(self):
+        loop = self.event_loop
+
+        self.server.close()
+
+        f = asyncio.async(self.server.wait_closed(), loop=loop)
+        @f.add_done_callback
+        def server_closed(f):
+            # stop the loop when the server closes:
+            loop.call_soon(loop.stop)
+
+        def timeout():
+            logger.warning("Timed out closing asyncio.Server")
+            loop.call_soon(loop.stop)
+
+        # But if the server doesn't close in a second, stop the loop anyway.
+        loop.call_later(1, timeout)

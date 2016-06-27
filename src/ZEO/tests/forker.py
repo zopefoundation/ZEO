@@ -13,6 +13,7 @@
 ##############################################################################
 """Library for forking storage server and connecting client storage"""
 from __future__ import print_function
+import gc
 import os
 import random
 import sys
@@ -83,7 +84,7 @@ def encode_format(fmt):
     return fmt
 
 def runner(config, qin, qout, timeout=None,
-           join_timeout=9, debug=False, name=None,
+           debug=False, name=None,
            keep=False, protocol=None):
 
     if debug:
@@ -120,11 +121,7 @@ def runner(config, qin, qout, timeout=None,
         except Empty:
             pass
         server.server.close()
-        thread.join(join_timeout)
-        if thread.is_alive():
-            logger.warning("server thread didn't stop")
-        else:
-            logger.debug('server thread stopped')
+        thread.join(3)
 
         if not keep:
             # Try to cleanup storage files
@@ -134,10 +131,11 @@ def runner(config, qin, qout, timeout=None,
                 except AttributeError:
                     pass
 
-        qout.put('stopped')
+        qout.put(thread.is_alive())
+        qin.get(timeout=11) # ack
         if hasattr(qout, 'close'):
             qout.close()
-            qout.join_thread()
+            qout.cancel_join_thread()
 
     except Exception:
         logger.exception("In server thread")
@@ -149,12 +147,25 @@ def runner(config, qin, qout, timeout=None,
 
 def stop_runner(thread, config, qin, qout, stop_timeout=9, pid=None):
     qin.put('stop')
-    if hasattr(qin, 'close'):
-        qin.close()
-        qin.join_thread()
-    qout.get(timeout=stop_timeout)
+    dirty = qout.get(timeout=stop_timeout)
+    qin.put('ack')
+    if dirty:
+        print("WARNING SERVER DIDN'T STOP CLEANLY", file=sys.stderr)
+
+        # The runner thread didn't stop. If it was a process,
+        # give it some time to exit
+        if hasattr(thread, 'pid') and thread.pid:
+            os.waitpid(thread.pid)
+        else:
+            # Gaaaa, force gc in hopes of maybe getting the unclosed
+            # sockets to get GCed
+            gc.collect()
+
     thread.join(stop_timeout)
     os.remove(config)
+    if hasattr(qin, 'close'):
+        qin.close()
+        qin.cancel_join_thread()
 
 def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
                      path='Data.fs', protocol=None, blob_dir=None,
@@ -169,6 +180,8 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
     Returns the ZEO address, the test server address, the pid, and the path
     to the config file.
     """
+
+    import logging; logging.basicConfig(level='DEBUG')
 
     if not storage_conf:
         storage_conf = '<filestorage>\npath %s\n</filestorage>' % path
@@ -217,7 +230,7 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
     thread.start()
     addr = qout.get(timeout=start_timeout)
 
-    def stop(stop_timeout=9):
+    def stop(stop_timeout=99):
         stop_runner(thread, tmpfile, qin, qout, stop_timeout)
 
     return addr, stop
