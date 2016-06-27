@@ -50,7 +50,7 @@ from ZODB.POSException import TransactionError, ReadOnlyError, ConflictError
 from ZODB.serialize import referencesf
 from ZODB.utils import oid_repr, p64, u64, z64
 
-from .asyncio.mtacceptor import Acceptor
+from .asyncio.server import Acceptor
 
 logger = logging.getLogger('ZEO.StorageServer')
 
