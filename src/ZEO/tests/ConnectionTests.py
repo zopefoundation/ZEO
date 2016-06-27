@@ -80,10 +80,9 @@ class CommonSetupTearDown(StorageTestBase):
         self.__super_setUp()
         logging.info("setUp() %s", self.id())
         self.file = 'storage_conf'
-        self.addr = []
         self._servers = []
         self.caches = []
-        self._newAddr()
+        self.addr = [('localhost', 0)]
         self.startServer()
 
     def tearDown(self):
@@ -179,6 +178,8 @@ class CommonSetupTearDown(StorageTestBase):
         zeoport, stop = forker.start_zeo_server(
             sconf, zconf, addr[1], keep, **kw)
         self._servers.append(stop)
+        if addr[1] == 0:
+            self.addr[index] = zeoport
 
     def shutdownServer(self, index=0):
         logging.info("shutdownServer(index=%d) @ %s" %
@@ -978,7 +979,7 @@ class TimeoutTests(CommonSetupTearDown):
             self.assertRaises(ClientDisconnected, storage.tpc_finish, txn)
 
         # Make sure it's logged as CRITICAL
-        for line in open("server-%s.log" % self.addr[0][1]):
+        for line in open("server-0.log"):
             if (('Transaction timeout after' in line) and
                 ('CRITICAL ZEO.StorageServer' in line)
                 ):
