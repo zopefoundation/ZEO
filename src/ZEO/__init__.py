@@ -78,7 +78,7 @@ def server(path=None, blob_dir=None, storage_conf=None, zeo_conf=None,
     port
        If no ZEO configuration is supplied, the one will be computed
        from the port.  If no port is supplied, one will be chosedn
-       randomly.
+       dynamically.
 
     """
     import os, ZEO.tests.forker
