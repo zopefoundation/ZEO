@@ -181,8 +181,6 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
     to the config file.
     """
 
-    import logging; logging.basicConfig(level='DEBUG')
-
     if not storage_conf:
         storage_conf = '<filestorage>\npath %s\n</filestorage>' % path
 
