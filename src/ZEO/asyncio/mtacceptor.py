@@ -26,8 +26,10 @@ worked on Mac OS X for some reason.)
 
 SSL + non-blocking sockets requires special care, which asyncio
 provides.  Unfortunately, create_connection, assumes it's creating a
-client connection. It would be easy to fix this, but it's hard to
-justify the fix to get it accepted, so we won't bother for now.
+client connection. It would be easy to fix this,
+http://bugs.python.org/issue27392, but it's hard to justify the fix to
+get it accepted, so we won't bother for now.  This currently uses a
+horrible monley patch to work with SSL.
 
 To use this module, replace::
 
