@@ -1,7 +1,7 @@
 Changelog
 =========
 
-4.2.1 (unreleased)
+4.2.1 (2016-06-30)
 ------------------
 
 - Fix bug connecting to ``localhost`` on Windows. (#8).
