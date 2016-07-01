@@ -17,7 +17,7 @@ class ServerProtocol(base.Protocol):
     """asyncio low-level ZEO server interface
     """
 
-    protocols = b'Z4', b'Z5'
+    protocols = (b'Z5', )
 
     name = 'server protocol'
     methods = set(('register', ))
@@ -161,7 +161,7 @@ class Delay:
 
     def error(self, exc_info):
         self.sent = 'error'
-        log("Error raised in delayed method", logging.ERROR, exc_info=exc_info)
+        logger.error("Error raised in delayed method", exc_info=exc_info)
         self.protocol.send_error(self.msgid, exc_info[1])
 
     def __repr__(self):
@@ -198,5 +198,4 @@ class MTDelay(Delay):
 
     def error(self, exc_info):
         self.ready.wait()
-        log("Error raised in delayed method", logging.ERROR, exc_info=exc_info)
         self.protocol.call_soon_threadsafe(Delay.error, self, exc_info)

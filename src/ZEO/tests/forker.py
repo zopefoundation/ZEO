@@ -94,6 +94,10 @@ def runner(config, qin, qout, timeout=None,
         import ZEO.asyncio.server
         old_protocol = ZEO.asyncio.server.best_protocol_version
         ZEO.asyncio.server.best_protocol_version = protocol
+        old_protocols = ZEO.asyncio.server.ServerProtocol.protocols
+        ZEO.asyncio.server.ServerProtocol.protocols = tuple(sorted(
+            set(old_protocols) | set([protocol])
+            ))
 
     try:
         import ZEO.runzeo, threading
@@ -144,8 +148,8 @@ def runner(config, qin, qout, timeout=None,
 
     finally:
         if old_protocol:
-            ZEO.asyncio.server.best_protocol_version = protocol
-
+            ZEO.asyncio.server.best_protocol_version = old_protocol
+            ZEO.asyncio.server.ServerProtocol.protocols = old_protocols
 
 def stop_runner(thread, config, qin, qout, stop_timeout=9, pid=None):
     qin.put('stop')
