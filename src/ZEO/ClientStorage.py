@@ -725,7 +725,20 @@ class ClientStorage(object):
         """Storage API: vote on a transaction.
         """
         tbuf = self._check_trans(txn, 'tpc_vote')
-        self._call('vote', id(txn))
+        try:
+            self._call('vote', id(txn))
+        except POSException.ConflictError as err:
+            oid = getattr(err, 'oid', None)
+            if oid is not None:
+                # This is a band-aid to help recover from a situation
+                # that shouldn't happen.  A Client somehow misses some
+                # invalidations and has out of date data in its
+                # cache. We need some whay to invalidate the cache
+                # entry without invalidations. So, if we see a
+                # (unresolved) conflict error, we assume that the
+                # cache entry is bad and invalidate it.
+                self._cache.invalidate(oid, None)
+            raise
 
         if tbuf.exception:
             raise tbuf.exception
