@@ -229,7 +229,7 @@ We start a transaction and vote, this leads to getting the lock.
     ZEO.asyncio.server INFO
     received handshake b'Z5'
     >>> tid1 = start_trans(zs1)
-    >>> zs1.vote(tid1) # doctest: +ELLIPSIS
+    >>> resolved1 = zs1.vote(tid1) # doctest: +ELLIPSIS
     ZEO.StorageServer DEBUG
     (test-addr-1) ('1') lock: transactions waiting: 0
     ZEO.StorageServer BLATHER
@@ -486,7 +486,7 @@ ZEOStorage as closed and see if trying to get a lock cleans it up:
     ZEO.asyncio.server INFO
     received handshake b'Z5'
     >>> tid1 = start_trans(zs1)
-    >>> zs1.vote(tid1) # doctest: +ELLIPSIS
+    >>> resolved1 = zs1.vote(tid1) # doctest: +ELLIPSIS
     ZEO.StorageServer DEBUG
     (test-addr-1) ('1') lock: transactions waiting: 0
     ZEO.StorageServer BLATHER
@@ -502,7 +502,7 @@ ZEOStorage as closed and see if trying to get a lock cleans it up:
     ZEO.asyncio.server INFO
     received handshake b'Z5'
     >>> tid2 = start_trans(zs2)
-    >>> zs2.vote(tid2) # doctest: +ELLIPSIS
+    >>> resolved2 = zs2.vote(tid2) # doctest: +ELLIPSIS
     ZEO.StorageServer DEBUG
     (test-addr-2) ('1') lock: transactions waiting: 0
     ZEO.StorageServer BLATHER

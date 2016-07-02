@@ -53,10 +53,7 @@ logger = logging.getLogger(__name__)
 # max signed 64-bit value ~ infinity :) Signed cuz LBTree and TimeStamp
 m64 = b'\x7f\xff\xff\xff\xff\xff\xff\xff'
 
-try:
-    from ZODB.ConflictResolution import ResolvedSerial
-except ImportError:
-    ResolvedSerial = 'rs'
+from ZODB.ConflictResolution import ResolvedSerial
 
 def tid2time(tid):
     return str(TimeStamp(tid))
@@ -77,6 +74,7 @@ def get_timestamp(prev_ts=None):
 
 MB = 1024**2
 
+@zope.interface.implementer(ZODB.interfaces.IMultiCommitStorage)
 class ClientStorage(object):
     """A storage class that is a network client to a remote storage.
 
@@ -726,7 +724,8 @@ class ClientStorage(object):
         """
         tbuf = self._check_trans(txn, 'tpc_vote')
         try:
-            self._call('vote', id(txn))
+            for oid in self._call('vote', id(txn)) or ():
+                tbuf.serial(oid, ResolvedSerial)
         except POSException.ConflictError as err:
             oid = getattr(err, 'oid', None)
             if oid is not None:
@@ -743,8 +742,8 @@ class ClientStorage(object):
         if tbuf.exception:
             raise tbuf.exception
 
-        if tbuf.serials:
-            return list(tbuf.serials.items())
+        if tbuf.resolved:
+            return list(tbuf.resolved)
         else:
             return None
 
@@ -838,6 +837,8 @@ class ClientStorage(object):
             self._iterator_gc()
 
         self._update_blob_cache(tbuf, tid)
+
+        return tid
 
     def _update_blob_cache(self, tbuf, tid):
         """Internal helper move blobs updated by a transaction to the cache.

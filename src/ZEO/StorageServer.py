@@ -427,7 +427,6 @@ class ZEOStorage:
                 for op, args in self.txnlog:
                     getattr(self, op)(*args)
 
-
                 # Blob support
                 while self.blob_log:
                     oid, oldserial, data, blobfilename = self.blob_log.pop()
@@ -435,9 +434,11 @@ class ZEOStorage:
 
                 serials = self.storage.tpc_vote(self.transaction)
                 if serials:
-                    self.serials.extend(serials)
+                    if not isinstance(serials[0], bytes):
+                        serials = (oid for (oid, serial) in serials
+                                   if serial == ResolvedSerial)
 
-                self.connection.async('serialnos', self.serials)
+                    self.serials.extend(serials)
 
             except Exception as err:
                 self.storage.tpc_abort(self.transaction)
@@ -455,9 +456,9 @@ class ZEOStorage:
                     raise
             else:
                 if delay is not None:
-                    delay.reply(None)
+                    delay.reply(self.serials)
                 else:
-                    return None
+                    return self.serials
 
         else:
             return delay
@@ -567,17 +568,18 @@ class ZEOStorage:
         if serial != b"\0\0\0\0\0\0\0\0":
             self.invalidated.append(oid)
 
-        if isinstance(newserial, bytes):
-            newserial = [(oid, newserial)]
+        if newserial:
 
-        for oid, s in newserial or ():
+            if isinstance(newserial, bytes):
+                newserial = [(oid, newserial)]
 
-            if s == ResolvedSerial:
-                self.stats.conflicts_resolved += 1
-                self.log("conflict resolved oid=%s"
-                         % oid_repr(oid), BLATHER)
+            for oid, s in newserial:
 
-            self.serials.append((oid, s))
+                if s == ResolvedSerial:
+                    self.stats.conflicts_resolved += 1
+                    self.log("conflict resolved oid=%s"
+                             % oid_repr(oid), BLATHER)
+                    self.serials.append(oid)
 
     def _restore(self, oid, serial, data, prev_txn):
         self.storage.restore(oid, serial, data, '', prev_txn,
@@ -586,7 +588,7 @@ class ZEOStorage:
     def _undo(self, trans_id):
         tid, oids = self.storage.undo(trans_id, self.transaction)
         self.invalidated.extend(oids)
-        self.serials.extend((oid, ResolvedSerial) for oid in oids)
+        self.serials.extend(oids)
 
     # IStorageIteration support
 
