@@ -1,9 +1,15 @@
+from .._compat import PY3
+
+if PY3:
+    import asyncio
+else:
+    import trollius as asyncio
+
 from zope.testing import setupstack
 from concurrent.futures import Future
-from unittest import mock
+import mock
 from ZODB.POSException import ReadOnlyError
 
-import asyncio
 import collections
 import logging
 import pdb
@@ -27,7 +33,8 @@ class Base(object):
     def unsized(self, data, unpickle=False):
         result = []
         while data:
-            size, message, *data = data
+            size, message = data[:2]
+            data = data[2:]
             self.assertEqual(struct.unpack(">I", size)[0], len(message))
             if unpickle:
                 message = decode(message)
@@ -622,7 +629,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
 
     def test_ClientDisconnected_on_call_timeout(self):
         wrapper, cache, loop, client, protocol, transport = self.start()
-        self.wait_for_result = super().wait_for_result
+        self.wait_for_result = super(ClientTests, self).wait_for_result
         self.assertRaises(ClientDisconnected, self.call, 'foo')
         client.ready = False
         self.assertRaises(ClientDisconnected, self.call, 'foo')
@@ -686,7 +693,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertTrue(handle.cancelled)
 
 
-class MemoryCache:
+class MemoryCache(object):
 
     def __init__(self):
         # { oid -> [(start, end, data)] }
@@ -837,7 +844,7 @@ def response(*data):
 def sized(message):
     return struct.pack(">I", len(message)) + message
 
-class Logging:
+class Logging(object):
 
     def __init__(self, level=logging.ERROR):
         self.level = level

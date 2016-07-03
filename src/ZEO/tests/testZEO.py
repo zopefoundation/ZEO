@@ -471,7 +471,7 @@ class ZRPCConnectionTests(ZEO.tests.ConnectionTests.CommonSetupTearDown):
         handler = InstalledHandler('ZEO.asyncio.client')
         import ZODB.POSException
         self.assertRaises(TypeError, self._storage.history, z64, None)
-        self.assertTrue(" from server: builtins.TypeError" in str(handler))
+        self.assertTrue(re.search(" from server: .*TypeError", str(handler)))
 
         # POSKeyErrors and ConflictErrors aren't logged:
         handler.clear()
@@ -684,15 +684,7 @@ class BlobAdaptedFileStorageTests(FullGenericTests, CommonBlobTests):
             check_data(server_filename)
 
             # If we remove it from the cache and call loadBlob, it should
-            # come back. We can do this in many threads.  We'll instrument
-            # the method that is used to request data from teh server to
-            # verify that it is only called once.
-
-            sendBlob_org = ZEO.ServerStub.StorageServer.sendBlob
-            calls = []
-            def sendBlob(self, oid, serial):
-                calls.append((oid, serial))
-                sendBlob_org(self, oid, serial)
+            # come back. We can do this in many threads.
 
             ZODB.blob.remove_committed(filename)
             returns = []
@@ -1510,7 +1502,7 @@ def can_use_empty_string_for_local_host_on_client():
     """
 
 slow_test_classes = [
-    #BlobAdaptedFileStorageTests, BlobWritableCacheTests,
+    BlobAdaptedFileStorageTests, BlobWritableCacheTests,
     MappingStorageTests, DemoStorageTests,
     FileStorageTests, FileStorageSSLTests,
     FileStorageHexTests, FileStorageClientHexTests,

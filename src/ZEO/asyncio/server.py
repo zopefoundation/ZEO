@@ -1,4 +1,10 @@
-import asyncio
+from .._compat import PY3
+
+if PY3:
+    import asyncio
+else:
+    import trollius as asyncio
+
 import json
 import logging
 import os
@@ -62,7 +68,8 @@ class ServerProtocol(base.Protocol):
             self.close()
         else:
             if protocol_version in self.protocols:
-                logger.info("received handshake %r" % protocol_version)
+                logger.info("received handshake %r" %
+                            str(protocol_version.decode('ascii')))
                 self.protocol_version = protocol_version
                 self.zeo_storage.notify_connected(self)
             else:
@@ -142,7 +149,7 @@ def new_connection(loop, addr, socket, zeo_storage):
     cr = loop.create_connection((lambda : protocol), sock=socket)
     asyncio.async(cr, loop=loop)
 
-class Delay:
+class Delay(object):
     """Used to delay response to client for synchronous calls.
 
     When a synchronous call is made and the original handler returns
@@ -203,7 +210,7 @@ class MTDelay(Delay):
         self.protocol.call_soon_threadsafe(Delay.error, self, exc_info)
 
 
-class Acceptor:
+class Acceptor(object):
 
     def __init__(self, storage_server, addr, ssl):
         self.storage_server = storage_server

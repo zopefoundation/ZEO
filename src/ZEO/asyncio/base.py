@@ -1,6 +1,12 @@
-from struct import unpack
-import asyncio
+from .._compat import PY3
+
+if PY3:
+    import asyncio
+else:
+    import trollius as asyncio
+
 import logging
+from struct import unpack
 
 from .marshal import encoder
 

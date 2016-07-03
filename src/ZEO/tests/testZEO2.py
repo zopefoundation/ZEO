@@ -218,13 +218,13 @@ We start a transaction and vote, this leads to getting the lock.
     ZEO.asyncio.base INFO
     Connected server protocol
     ZEO.asyncio.server INFO
-    received handshake b'Z5'
+    received handshake 'Z5'
     >>> tid1 = start_trans(zs1)
     >>> zs1.vote(tid1) # doctest: +ELLIPSIS
     ZEO.StorageServer DEBUG
     (test-addr-1) ('1') lock: transactions waiting: 0
     ZEO.StorageServer BLATHER
-    (test-addr-1) Preparing to commit transaction: 1 objects, 108 bytes
+    (test-addr-1) Preparing to commit transaction: 1 objects, ... bytes
 
 If another client tried to vote, it's lock request will be queued and
 a delay will be returned:
@@ -233,7 +233,7 @@ a delay will be returned:
     ZEO.asyncio.base INFO
     Connected server protocol
     ZEO.asyncio.server INFO
-    received handshake b'Z5'
+    received handshake 'Z5'
     >>> tid2 = start_trans(zs2)
     >>> delay = zs2.vote(tid2)
     ZEO.StorageServer DEBUG
@@ -296,55 +296,55 @@ increased, so does the logging level:
     ZEO.asyncio.base INFO
     Connected server protocol
     ZEO.asyncio.server INFO
-    received handshake b'Z5'
+    received handshake 'Z5'
     ZEO.StorageServer DEBUG
     (test-addr-10) ('1') queue lock: transactions waiting: 2
     ZEO.asyncio.base INFO
     Connected server protocol
     ZEO.asyncio.server INFO
-    received handshake b'Z5'
+    received handshake 'Z5'
     ZEO.StorageServer DEBUG
     (test-addr-11) ('1') queue lock: transactions waiting: 3
     ZEO.asyncio.base INFO
     Connected server protocol
     ZEO.asyncio.server INFO
-    received handshake b'Z5'
+    received handshake 'Z5'
     ZEO.StorageServer WARNING
     (test-addr-12) ('1') queue lock: transactions waiting: 4
     ZEO.asyncio.base INFO
     Connected server protocol
     ZEO.asyncio.server INFO
-    received handshake b'Z5'
+    received handshake 'Z5'
     ZEO.StorageServer WARNING
     (test-addr-13) ('1') queue lock: transactions waiting: 5
     ZEO.asyncio.base INFO
     Connected server protocol
     ZEO.asyncio.server INFO
-    received handshake b'Z5'
+    received handshake 'Z5'
     ZEO.StorageServer WARNING
     (test-addr-14) ('1') queue lock: transactions waiting: 6
     ZEO.asyncio.base INFO
     Connected server protocol
     ZEO.asyncio.server INFO
-    received handshake b'Z5'
+    received handshake 'Z5'
     ZEO.StorageServer WARNING
     (test-addr-15) ('1') queue lock: transactions waiting: 7
     ZEO.asyncio.base INFO
     Connected server protocol
     ZEO.asyncio.server INFO
-    received handshake b'Z5'
+    received handshake 'Z5'
     ZEO.StorageServer WARNING
     (test-addr-16) ('1') queue lock: transactions waiting: 8
     ZEO.asyncio.base INFO
     Connected server protocol
     ZEO.asyncio.server INFO
-    received handshake b'Z5'
+    received handshake 'Z5'
     ZEO.StorageServer WARNING
     (test-addr-17) ('1') queue lock: transactions waiting: 9
     ZEO.asyncio.base INFO
     Connected server protocol
     ZEO.asyncio.server INFO
-    received handshake b'Z5'
+    received handshake 'Z5'
     ZEO.StorageServer CRITICAL
     (test-addr-18) ('1') queue lock: transactions waiting: 10
 
@@ -475,7 +475,7 @@ ZEOStorage as closed and see if trying to get a lock cleans it up:
     ZEO.asyncio.base INFO
     Connected server protocol
     ZEO.asyncio.server INFO
-    received handshake b'Z5'
+    received handshake 'Z5'
     >>> tid1 = start_trans(zs1)
     >>> zs1.vote(tid1) # doctest: +ELLIPSIS
     ZEO.StorageServer DEBUG
@@ -491,7 +491,7 @@ ZEOStorage as closed and see if trying to get a lock cleans it up:
     ZEO.asyncio.base INFO
     Connected server protocol
     ZEO.asyncio.server INFO
-    received handshake b'Z5'
+    received handshake 'Z5'
     >>> tid2 = start_trans(zs2)
     >>> zs2.vote(tid2) # doctest: +ELLIPSIS
     ZEO.StorageServer DEBUG
