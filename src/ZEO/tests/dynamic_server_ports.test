@@ -14,67 +14,46 @@ ZODB.notify.
 
 Now, let's start a server and verify that we get a serving event:
 
-    >>> import ZEO.StorageServer, ZODB.MappingStorage
-    >>> server = ZEO.StorageServer.StorageServer(
-    ...     ('127.0.0.1', 0), {'1': ZODB.MappingStorage.MappingStorage()})
+    >>> import ZEO
+    >>> addr, stop = ZEO.server()
 
     >>> isinstance(last_event, ZEO.StorageServer.Serving)
     True
-    >>> last_event.server is server
+
+    >>> last_event.address == addr
     True
 
-    >>> last_event.address[0], last_event.address[1] > 0
-    ('127.0.0.1', True)
-
-If the host part pf the address passed to the constructor is not an
-empty string. then the server addr attribute is the same as the
-address attribute of the event:
-
-    >>> server.addr == last_event.address
+    >>> server = last_event.server
+    >>> server.addr == addr
     True
 
-Let's run the server in a thread, to make sure we can connect.
+Let's make sure we can connect.
 
-    >>> server.start_thread()
-
-    >>> client = ZEO.client(last_event.address)
-    >>> client.is_connected()
-    True
+    >>> client = ZEO.client(last_event.address).close()
 
 If we close the server, we'll get a closed event:
 
-    >>> server.close()
+    >>> stop()
     >>> isinstance(last_event, ZEO.StorageServer.Closed)
     True
     >>> last_event.server is server
     True
 
-    >>> wait_until(lambda : not client.is_connected(test=True))
-    >>> client.close()
-
 If we pass an empty string as the host part of the server address, we
 can't really assign a single address, so the server addr attribute is
 left alone:
 
-    >>> server = ZEO.StorageServer.StorageServer(
-    ...     ('', 0), {'1': ZODB.MappingStorage.MappingStorage()})
-
+    >>> addr, stop = ZEO.server(port=('', 0))
     >>> isinstance(last_event, ZEO.StorageServer.Serving)
-    True
-    >>> last_event.server is server
     True
 
     >>> last_event.address[1] > 0
     True
 
-If the host part pf the address passed to the constructor is not an
-empty string. then the server addr attribute is the same as the
-address attribute of the event:
-
-    >>> server.addr
+    >>> last_event.server.addr
     ('', 0)
 
-    >>> server.close()
+    >>> stop()
 
 The runzeo module provides some process support, including getting the
 server configuration via a ZConfig configuration file.  To spell a

@@ -36,7 +36,7 @@ class Protocol(base.Protocol):
 
     def __init__(self, loop,
                  addr, client, storage_key, read_only, connect_poll=1,
-                 heartbeat_interval=60):
+                 heartbeat_interval=60, ssl=None, ssl_server_hostname=None):
         """Create a client interface
 
         addr is either a host,port tuple or a string file name.
@@ -54,6 +54,8 @@ class Protocol(base.Protocol):
         self.connect_poll = connect_poll
         self.heartbeat_interval = heartbeat_interval
         self.futures = {} # { message_id -> future }
+        self.ssl = ssl
+        self.ssl_server_hostname = ssl_server_hostname
 
         self.connect()
 
@@ -81,10 +83,11 @@ class Protocol(base.Protocol):
         if isinstance(self.addr, tuple):
             host, port = self.addr
             cr = self.loop.create_connection(
-                self.protocol_factory, host or 'localhost', port)
+                self.protocol_factory, host or 'localhost', port,
+                ssl=self.ssl, server_hostname=self.ssl_server_hostname)
         else:
             cr = self.loop.create_unix_connection(
-                self.protocol_factory, self.addr)
+                self.protocol_factory, self.addr, ssl=self.ssl)
 
         self._connecting = cr = asyncio.async(cr, loop=self.loop)
 
@@ -265,7 +268,8 @@ class Client:
 
     def __init__(self, loop,
                  addrs, client, cache, storage_key, read_only, connect_poll,
-                 register_failed_poll=9):
+                 register_failed_poll=9,
+                 ssl=None, ssl_server_hostname=None):
         """Create a client interface
 
         addr is either a host,port tuple or a string file name.
@@ -281,6 +285,8 @@ class Client:
         self.connect_poll = connect_poll
         self.register_failed_poll = register_failed_poll
         self.client = client
+        self.ssl = ssl
+        self.ssl_server_hostname = ssl_server_hostname
         for name in Protocol.client_delegated:
             setattr(self, name, getattr(client, name))
         self.cache = cache
@@ -344,6 +350,8 @@ class Client:
             self.protocols = [
                 Protocol(self.loop, addr, self,
                          self.storage_key, self.read_only, self.connect_poll,
+                         ssl=self.ssl,
+                         ssl_server_hostname=self.ssl_server_hostname,
                          )
                 for addr in self.addrs
                 ]
@@ -584,14 +592,16 @@ class Client:
 class ClientRunner:
 
     def set_options(self, addrs, wrapper, cache, storage_key, read_only,
-                    timeout=30, disconnect_poll=1):
+                    timeout=30, disconnect_poll=1,
+                    **kwargs):
         self.__args = (addrs, wrapper, cache, storage_key, read_only,
                        disconnect_poll)
+        self.__kwargs = kwargs
         self.timeout = timeout
 
     def setup_delegation(self, loop):
         self.loop = loop
-        self.client = Client(loop, *self.__args)
+        self.client = Client(loop, *self.__args, **self.__kwargs)
         self.call_threadsafe = self.client.call_threadsafe
         self.call_async_threadsafe = self.client.call_async_threadsafe
 
@@ -685,9 +695,10 @@ class ClientThread(ClientRunner):
 
     def __init__(self, addrs, client, cache,
                  storage_key='1', read_only=False, timeout=30,
-                 disconnect_poll=1):
+                 disconnect_poll=1, ssl=None, ssl_server_hostname=None):
         self.set_options(addrs, client, cache, storage_key, read_only,
-                         timeout, disconnect_poll)
+                         timeout, disconnect_poll,
+                         ssl=ssl, ssl_server_hostname=ssl_server_hostname)
         self.thread = threading.Thread(
             target=self.run,
             name="%s zeo client networking thread" % client.__name__,

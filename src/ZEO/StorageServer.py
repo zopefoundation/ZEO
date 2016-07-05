@@ -31,7 +31,6 @@ import threading
 import time
 import transaction
 import warnings
-import ZEO.acceptor
 import ZEO.asyncio.server
 import ZODB.blob
 import ZODB.event
@@ -50,6 +49,8 @@ from ZODB.POSException import StorageError, StorageTransactionError
 from ZODB.POSException import TransactionError, ReadOnlyError, ConflictError
 from ZODB.serialize import referencesf
 from ZODB.utils import oid_repr, p64, u64, z64
+
+from .asyncio.server import Acceptor
 
 logger = logging.getLogger('ZEO.StorageServer')
 
@@ -695,6 +696,7 @@ class StorageServer:
                  invalidation_queue_size=100,
                  invalidation_age=None,
                  transaction_timeout=None,
+                 ssl=None,
                  ):
         """StorageServer constructor.
 
@@ -767,7 +769,7 @@ class StorageServer:
             storage.registerDB(StorageServerDB(self, name))
         self.invalidation_age = invalidation_age
         self.zeo_storages_by_storage_id = {} # {storage_id -> [ZEOStorage]}
-        self.acceptor = ZEO.acceptor.Acceptor(addr, self.new_connection)
+        self.acceptor = Acceptor(self, addr, ssl)
         if isinstance(addr, tuple) and addr[0]:
             self.addr = self.acceptor.addr
         else:
@@ -789,6 +791,9 @@ class StorageServer:
                 timeout.start()
             self.timeouts[name] = timeout
 
+    def create_client_handler(self):
+        return ZEOStorage(self, self.read_only)
+
     def _setup_invq(self, name, storage):
         lastInvalidations = getattr(storage, 'lastInvalidations', None)
         if lastInvalidations is None:
@@ -802,23 +807,6 @@ class StorageServer:
         else:
             self.invq[name] = list(lastInvalidations(self.invq_bound))
             self.invq[name].reverse()
-
-    def new_connection(self, sock, addr):
-        """Internal: factory to create a new connection.
-        """
-        logger.debug("new connection %s" % (addr,))
-
-        def run():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            ZEO.asyncio.server.new_connection(
-                loop, addr, sock, ZEOStorage(self, self.read_only))
-            loop.run_forever()
-            loop.close()
-
-        thread = threading.Thread(target=run, name='zeo_client_hander')
-        thread.setDaemon(True)
-        thread.start()
 
     def register_connection(self, storage_id, zeo_storage):
         """Internal: register a ZEOStorage with a particular storage.
@@ -1321,3 +1309,7 @@ class Serving(ServerEvent):
 class Closed(ServerEvent):
     pass
 
+default_cert_authenticate = 'SIGNED'
+def ssl_config(section):
+    from .sslconfig import ssl_config
+    return ssl_config(section, True)

@@ -16,7 +16,6 @@ import contextlib
 import os
 import time
 import socket
-import asyncore
 import threading
 import logging
 
@@ -35,6 +34,8 @@ import ZODB.tests.util
 
 import transaction
 from transaction import Transaction
+
+from . import testssl
 
 logger = logging.getLogger('ZEO.tests.ConnectionTests')
 
@@ -66,7 +67,6 @@ class CommonSetupTearDown(StorageTestBase):
     keep = 0
     invq = None
     timeout = None
-    monitor = 0
     db_class = DummyDB
 
     def setUp(self, before=None):
@@ -79,10 +79,9 @@ class CommonSetupTearDown(StorageTestBase):
         self.__super_setUp()
         logging.info("setUp() %s", self.id())
         self.file = 'storage_conf'
-        self.addr = []
         self._servers = []
         self.caches = []
-        self._newAddr()
+        self.addr = [('localhost', 0)]
         self.startServer()
 
     def tearDown(self):
@@ -147,18 +146,17 @@ class CommonSetupTearDown(StorageTestBase):
                                     min_disconnect_poll=0.1,
                                     read_only=read_only,
                                     read_only_fallback=read_only_fallback,
-                                    username=username,
-                                    password=password,
-                                    realm=realm)
+                                    **self._client_options())
         storage.registerDB(DummyDB())
         return storage
+
+    def _client_options(self):
+        return {}
 
     def getServerConfig(self, addr, ro_svr):
         zconf = forker.ZEOConfig(addr)
         if ro_svr:
             zconf.read_only = 1
-        if self.monitor:
-            zconf.monitor_address = ("", 42000)
         if self.invq:
             zconf.invalidation_queue_size = self.invq
         if self.timeout:
@@ -179,6 +177,8 @@ class CommonSetupTearDown(StorageTestBase):
         zeoport, stop = forker.start_zeo_server(
             sconf, zconf, addr[1], keep, **kw)
         self._servers.append(stop)
+        if addr[1] == 0:
+            self.addr[index] = zeoport
 
     def shutdownServer(self, index=0):
         logging.info("shutdownServer(index=%d) @ %s" %
@@ -191,31 +191,16 @@ class CommonSetupTearDown(StorageTestBase):
     def pollUp(self, timeout=30.0, storage=None):
         if storage is None:
             storage = self._storage
-        # Poll until we're connected.
-        now = time.time()
-        giveup = now + timeout
-        while not storage.is_connected():
-            asyncore.poll(0.1)
-            now = time.time()
-            if now > giveup:
-                self.fail("timed out waiting for storage to connect")
-            # When the socket map is empty, poll() returns immediately,
-            # and this is a pure busy-loop then.  At least on some Linux
-            # flavors, that can starve the thread trying to connect,
-            # leading to grossly increased runtime (typical) or bogus
-            # "timed out" failures.  A little sleep here cures both.
-            time.sleep(0.1)
+        storage.server_status()
 
     def pollDown(self, timeout=30.0):
         # Poll until we're disconnected.
         now = time.time()
         giveup = now + timeout
         while self._storage.is_connected():
-            asyncore.poll(0.1)
             now = time.time()
             if now > giveup:
                 self.fail("timed out waiting for storage to disconnect")
-            # See pollUp() for why we sleep a little here.
             time.sleep(0.1)
 
 
@@ -563,6 +548,18 @@ class ConnectionTests(CommonSetupTearDown):
         with short_timeout(self):
             self.assertRaises(ClientDisconnected,
                               self._storage.load, b'\0'*8, '')
+
+class SSLConnectionTests(ConnectionTests):
+
+    def getServerConfig(self, addr, ro_svr):
+        return testssl.server_config.replace(
+            '127.0.0.1:0',
+            '{}: {}\nread-only {}'.format(
+                addr[0], addr[1], 'true' if ro_svr else 'false'))
+
+    def _client_options(self):
+        return {'ssl': testssl.client_ssl()}
+
 
 class InvqTests(CommonSetupTearDown):
     invq = 3
@@ -966,7 +963,7 @@ class TimeoutTests(CommonSetupTearDown):
             self.assertRaises(ClientDisconnected, storage.tpc_finish, txn)
 
         # Make sure it's logged as CRITICAL
-        for line in open("server-%s.log" % self.addr[0][1]):
+        for line in open("server-0.log"):
             if (('Transaction timeout after' in line) and
                 ('CRITICAL ZEO.StorageServer' in line)
                 ):

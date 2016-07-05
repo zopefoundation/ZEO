@@ -31,7 +31,8 @@ class Loop:
             future.set_exception(ConnectionRefusedError())
 
     def create_connection(
-        self, protocol_factory, host=None, port=None, sock=None
+        self, protocol_factory, host=None, port=None, sock=None,
+        ssl=None, server_hostname=None
         ):
         future = asyncio.Future(loop=self)
         if sock is None:
@@ -85,7 +86,7 @@ class Transport:
 
     capacity = 1 << 64
     paused = False
-    extra = dict(peername='1.2.3.4')
+    extra = dict(peername='1.2.3.4', sockname=('127.0.0.1', 4200))
 
     def __init__(self, protocol):
         self.data = []

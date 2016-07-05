@@ -92,7 +92,7 @@ def alltests():
                     _unittests_only(suite, mod.test_suite())
     return suite
 
-tests_require = ['zope.testing', 'manuel', 'random2']
+tests_require = ['zope.testing', 'manuel', 'random2', 'mock']
 
 long_description = (
     open('README.rst').read()

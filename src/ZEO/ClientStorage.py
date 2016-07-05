@@ -93,6 +93,7 @@ class ClientStorage(object):
                  blob_cache_size=None, blob_cache_size_check=10,
                  client_label=None,
                  cache=None,
+                 ssl = None, ssl_server_hostname=None,
                  # Mostly ignored backward-compatability options
                  client=None, var=None,
                  min_disconnect_poll=1, max_disconnect_poll=None,
@@ -136,10 +137,6 @@ class ClientStorage(object):
             directory, used to construct persistent cache filenames.
             Defaults to None, in which case the cache is not
             persistent.  See ClientCache for more info.
-
-        disconnect_poll
-            The delay in seconds between attempts to connect to the
-            server, in seconds.  Defaults to 1 second.
 
         wait_timeout
             Maximum time to wait for results, including connecting.
@@ -264,6 +261,7 @@ class ClientStorage(object):
             addr, self, cache, storage,
             ZEO.asyncio.client.Fallback if read_only_fallback else read_only,
             wait_timeout or 30,
+            ssl = ssl, ssl_server_hostname=ssl_server_hostname,
             )
         self._call = self._server.call
         self._async = self._server.async
@@ -737,6 +735,11 @@ class ClientStorage(object):
                 # (unresolved) conflict error, we assume that the
                 # cache entry is bad and invalidate it.
                 self._cache.invalidate(oid, None)
+            raise
+        except POSException.StorageTransactionError:
+            # Hm, we got disconnected and reconnected bwtween
+            # _check_trans and voting. Let's chack the transaction again:
+            tbuf = self._check_trans(txn, 'tpc_vote')
             raise
 
         if tbuf.exception:
