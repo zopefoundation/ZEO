@@ -1308,8 +1308,3 @@ class Serving(ServerEvent):
 
 class Closed(ServerEvent):
     pass
-
-default_cert_authenticate = 'SIGNED'
-def ssl_config(section):
-    from .sslconfig import ssl_config
-    return ssl_config(section, True)
