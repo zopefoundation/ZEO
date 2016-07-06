@@ -115,7 +115,7 @@ setup(name="ZEO",
       tests_require = tests_require,
       extras_require = dict(test=tests_require),
       install_requires = [
-          'ZODB >= 5.0.0a1',
+          'ZODB >= 5.0.0a5',
           'six',
           'transaction >= 1.6.0',
           'persistent >= 4.1.0',
