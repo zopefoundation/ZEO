@@ -107,6 +107,14 @@
       <metadefault>$INSTANCE/var/ZEO.pid (or $clienthome/ZEO.pid)</metadefault>
     </key>
 
+    <key name="client-conflict-resolution" datatype="boolean"
+         required="no" default="false">
+      <description>
+        Flag indicating whether the server should return conflict
+        errors to the client, for resolution there.
+      </description>
+    </key>
+
   </sectiontype>
 
 </component>

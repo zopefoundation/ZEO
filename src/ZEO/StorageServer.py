@@ -89,8 +89,7 @@ class ZEOStorage:
 
     def __init__(self, server, read_only=0):
         self.server = server
-        self.client_side_conflict_resolution = (
-            server.client_side_conflict_resolution)
+        self.client_conflict_resolution = server.client_conflict_resolution
         # timeout and stats will be initialized in register()
         self.read_only = read_only
         # The authentication protocol may define extra methods.
@@ -442,7 +441,7 @@ class ZEOStorage:
                     try:
                         serials = self.storage.tpc_vote(self.transaction)
                     except ConflictError as err:
-                        if (self.client_side_conflict_resolution and
+                        if (self.client_conflict_resolution and
                             err.oid and err.serials and err.data
                             ):
                             self.conflicts[err.oid] = dict(
@@ -586,7 +585,7 @@ class ZEOStorage:
                 self.storage.storeBlob(
                     oid, serial, data, blobfile, '', self.transaction)
         except ConflictError as err:
-            if self.client_side_conflict_resolution and err.serials:
+            if self.client_conflict_resolution and err.serials:
                 self.conflicts[oid] = dict(
                     oid=oid, serials=err.serials, data=data)
             else:
@@ -594,7 +593,6 @@ class ZEOStorage:
         else:
             if oid in self.conflicts:
                 del self.conflicts[oid]
-                self.serials.append(oid)
 
             if serial != b"\0\0\0\0\0\0\0\0":
                 self.invalidated.append(oid)
@@ -714,7 +712,7 @@ class StorageServer:
                  invalidation_age=None,
                  transaction_timeout=None,
                  ssl=None,
-                 client_side_conflict_resolution=False,
+                 client_conflict_resolution=False,
                  ):
         """StorageServer constructor.
 
@@ -785,13 +783,13 @@ class StorageServer:
         for name, storage in storages.items():
             self._setup_invq(name, storage)
             storage.registerDB(StorageServerDB(self, name))
-            if client_side_conflict_resolution:
+            if client_conflict_resolution:
                 # XXX this may go away later, when storages grow
                 # configuration for this.
                 storage.tryToResolveConflict = never_resolve_conflict
         self.invalidation_age = invalidation_age
         self.zeo_storages_by_storage_id = {} # {storage_id -> [ZEOStorage]}
-        self.client_side_conflict_resolution = client_side_conflict_resolution
+        self.client_conflict_resolution = client_conflict_resolution
 
         if addr is not None:
             self.acceptor = Acceptor(self, addr, ssl)

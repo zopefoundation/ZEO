@@ -52,7 +52,7 @@ class ZEOConfig:
         for name in (
             'invalidation_queue_size', 'invalidation_age',
             'transaction_timeout', 'pid_filename',
-            'ssl_certificate', 'ssl_key',
+            'ssl_certificate', 'ssl_key', 'client_conflict_resolution',
             ):
             v = getattr(self, name, None)
             if v:

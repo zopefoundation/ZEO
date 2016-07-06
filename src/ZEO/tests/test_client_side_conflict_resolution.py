@@ -7,6 +7,8 @@ from ZODB.DemoStorage import DemoStorage
 from ZODB.utils import p64, z64, maxtid
 from ZODB.broken import find_global
 
+import ZEO
+
 from .utils import StorageServer
 
 class Var(object):
@@ -61,7 +63,7 @@ class ClientSideConflictResolutionTests(zope.testing.setupstack.TestCase):
         # resolve conflicts:
 
         server = StorageServer(
-            self, DemoStorage(), client_side_conflict_resolution=True)
+            self, DemoStorage(), client_conflict_resolution=True)
         zs = server.zs
 
         # 2 non-conflicting transactions:
@@ -97,7 +99,7 @@ class ClientSideConflictResolutionTests(zope.testing.setupstack.TestCase):
         # tid2 as the starting tid:
         ob.change(1)
         zs.storea(ob._p_oid, tid2, writer.serialize(ob), 3)
-        self.assertEqual(zs.vote(3), [ob._p_oid])
+        self.assertEqual(zs.vote(3), [])
         tid3 = server.unpack_result(zs.tpc_finish(3))
         server.assert_calls(self, ('info', {'size': Var(), 'length': 1}))
 
@@ -105,6 +107,44 @@ class ClientSideConflictResolutionTests(zope.testing.setupstack.TestCase):
         self.assertEqual((serial, next_serial), (tid3, None))
         self.assertEqual(reader.getClassName(p), 'BTrees.Length.Length')
         self.assertEqual(reader.getState(p), 3)
+
+    def test_client_side(self):
+        # First, traditional:
+        addr, stop = ZEO.server('data.fs')
+        db = ZEO.DB(addr)
+        with db.transaction() as conn:
+            conn.root.l = Length(0)
+        conn2 = db.open()
+        conn2.root.l.change(1)
+        with db.transaction() as conn:
+            conn.root.l.change(1)
+
+        conn2.transaction_manager.commit()
+
+        self.assertEqual(conn2.root.l.value, 2)
+
+        db.close(); stop()
+
+        # Now, do conflict resolution on the client.
+        addr2, stop = ZEO.server(
+            storage_conf='<mappingstorage>\n</mappingstorage>\n',
+            zeo_conf=dict(client_conflict_resolution=True),
+            )
+
+        db = ZEO.DB(addr2)
+        with db.transaction() as conn:
+            conn.root.l = Length(0)
+        conn2 = db.open()
+        conn2.root.l.change(1)
+        with db.transaction() as conn:
+            conn.root.l.change(1)
+
+        self.assertEqual(conn2.root.l.value, 1)
+        conn2.transaction_manager.commit()
+
+        self.assertEqual(conn2.root.l.value, 2)
+
+        db.close(); stop()
 
 def test_suite():
     return unittest.makeSuite(ClientSideConflictResolutionTests)
