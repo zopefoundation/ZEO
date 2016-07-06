@@ -24,8 +24,7 @@ class StaleCache(object):
 class IClientCache(zope.interface.Interface):
     """Client cache interface.
 
-    Note that caches need not be thread safe, fpr the most part,
-    except for getLastTid, which may be called from multiple threads.
+    Note that caches need to be thread safe.
     """
 
     def close():

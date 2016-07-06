@@ -46,7 +46,7 @@ class TransactionBuffer:
         # stored are builtin types -- strings or None.
         self.pickler = Pickler(self.file, 1)
         self.pickler.fast = 1
-        self.serials = {} # processed { oid -> serial }
+        self.resolved = set() # {oid}
         self.exception = None
 
     def close(self):
@@ -61,10 +61,9 @@ class TransactionBuffer:
 
     def serial(self, oid, serial):
         if isinstance(serial, Exception):
-            self.exception = serial
-            self.serials[oid] = None
-        else:
-            self.serials[oid] = serial
+            self.exception = serial # This transaction will never be committed
+        elif serial == ResolvedSerial:
+            self.resolved.add(oid)
 
     def storeBlob(self, oid, blobfilename):
         self.blobs.append((oid, blobfilename))
@@ -72,7 +71,7 @@ class TransactionBuffer:
     def __iter__(self):
         self.file.seek(0)
         unpickler = Unpickler(self.file)
-        serials = self.serials
+        resolved = self.resolved
 
         # Gaaaa, this is awkward. There can be entries in serials that
         # aren't in the buffer, because undo.  Entries can be repeated
@@ -83,9 +82,9 @@ class TransactionBuffer:
         for i in range(self.count):
             oid, data = unpickler.load()
             seen.add(oid)
-            yield oid, data, serials.get(oid) == ResolvedSerial
+            yield oid, data, oid in resolved
 
-        # We may have leftover serials because undo
-        for oid, serial in serials.items():
+        # We may have leftover oids because undo
+        for oid in resolved:
             if oid not in seen:
-                yield oid, None, serial == ResolvedSerial
+                yield oid, None, True
