@@ -59,6 +59,9 @@ class DummyDB:
     def invalidateCache(self):
         pass
 
+    transform_record_data = untransform_record_data = lambda self, data: data
+
+
 class CommonSetupTearDown(StorageTestBase):
     """Common boilerplate"""
 

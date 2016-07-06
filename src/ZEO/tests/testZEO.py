@@ -492,6 +492,8 @@ class ZRPCConnectionTests(ZEO.tests.ConnectionTests.CommonSetupTearDown):
                 self._invalidatedCache += 1
             def invalidate(*a, **k):
                 pass
+            transform_record_data = untransform_record_data = \
+                                    lambda self, data: data
 
         db = DummyDB()
         storage.registerDB(db)
@@ -936,14 +938,14 @@ def tpc_finish_error():
     buffer, sadly, using implementation details:
 
     >>> tbuf = t.data(client)
-    >>> tbuf.resolved = None
+    >>> tbuf.client_resolved = None
 
     tpc_finish will fail:
 
     >>> client.tpc_finish(t) # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    TypeError: ...
+    AttributeError: ...
 
     >>> client.tpc_abort(t)
     >>> t.abort()
