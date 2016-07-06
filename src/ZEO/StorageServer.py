@@ -85,7 +85,7 @@ class ZEOStorage:
     blob_tempfile = None
     log_label = 'unconnected'
     locked = False             # Don't have storage lock
-    verifying = store_failed = 0
+    verifying = 0
 
     def __init__(self, server, read_only=0):
         self.server = server
@@ -339,7 +339,6 @@ class ZEOStorage:
         self.blob_log = []
         self.tid = tid
         self.status = status
-        self.store_failed = 0
         self.stats.active_txns += 1
 
         # Assign the transaction attribute last. This is so we don't
@@ -427,38 +426,40 @@ class ZEOStorage:
                     self.storage.tpc_begin(self.transaction)
 
                 for op, args in self.txnlog:
-                    if not getattr(self, op)(*args):
-                        break
-
+                    getattr(self, op)(*args)
 
                 # Blob support
-                while self.blob_log and not self.store_failed:
+                while self.blob_log:
                     oid, oldserial, data, blobfilename = self.blob_log.pop()
                     self._store(oid, oldserial, data, blobfilename)
 
-                if not self.store_failed:
-                    # Only call tpc_vote of no store call failed,
-                    # otherwise the serialnos() call will deliver an
-                    # exception that will be handled by the client in
-                    # its tpc_vote() method.
-                    serials = self.storage.tpc_vote(self.transaction)
-                    if serials:
-                        self.serials.extend(serials)
+                serials = self.storage.tpc_vote(self.transaction)
+                if serials:
+                    if not isinstance(serials[0], bytes):
+                        serials = (oid for (oid, serial) in serials
+                                   if serial == ResolvedSerial)
 
-                self.connection.async('serialnos', self.serials)
+                    self.serials.extend(serials)
 
-            except Exception:
+            except Exception as err:
                 self.storage.tpc_abort(self.transaction)
                 self._clear_transaction()
+
+                if isinstance(err, ConflictError):
+                    self.stats.conflicts += 1
+                    self.log("conflict error %s" % err, BLATHER)
+                if not isinstance(err, TransactionError):
+                    logger.exception("While voting")
+
                 if delay is not None:
                     delay.error(sys.exc_info())
                 else:
                     raise
             else:
                 if delay is not None:
-                    delay.reply(None)
+                    delay.reply(self.serials)
                 else:
-                    return None
+                    return self.serials
 
         else:
             return delay
@@ -550,120 +551,45 @@ class ZEOStorage:
         self._check_tid(tid, exc=StorageTransactionError)
         self.txnlog.undo(trans_id)
 
-    def _op_error(self, oid, err, op):
-        self.store_failed = 1
-        if isinstance(err, ConflictError):
-            self.stats.conflicts += 1
-            self.log("conflict error oid=%s msg=%s" %
-                     (oid_repr(oid), str(err)), BLATHER)
-        if not isinstance(err, TransactionError):
-            # Unexpected errors are logged and passed to the client
-            self.log("%s error: %s, %s" % ((op,)+ sys.exc_info()[:2]),
-                     logging.ERROR, exc_info=True)
-        err = self._marshal_error(err)
-        # The exception is reported back as newserial for this oid
-        self.serials.append((oid, err))
-
     def _delete(self, oid, serial):
-        err = None
-        try:
-            self.storage.deleteObject(oid, serial, self.transaction)
-        except (SystemExit, KeyboardInterrupt):
-            raise
-        except Exception as e:
-            err = e
-            self._op_error(oid, err, 'delete')
-
-        return err is None
+        self.storage.deleteObject(oid, serial, self.transaction)
 
     def _checkread(self, oid, serial):
-        err = None
-        try:
-            self.storage.checkCurrentSerialInTransaction(
-                oid, serial, self.transaction)
-        except (SystemExit, KeyboardInterrupt):
-            raise
-        except Exception as e:
-            err = e
-            self._op_error(oid, err, 'checkCurrentSerialInTransaction')
-
-        return err is None
+        self.storage.checkCurrentSerialInTransaction(
+            oid, serial, self.transaction)
 
     def _store(self, oid, serial, data, blobfile=None):
-        err = None
-        try:
-            if blobfile is None:
-                newserial = self.storage.store(
-                    oid, serial, data, '', self.transaction)
-            else:
-                newserial = self.storage.storeBlob(
-                    oid, serial, data, blobfile, '', self.transaction)
-        except (SystemExit, KeyboardInterrupt):
-            raise
-        except Exception as error:
-            self._op_error(oid, error, 'store')
-            err = error
+        if blobfile is None:
+            newserial = self.storage.store(
+                oid, serial, data, '', self.transaction)
         else:
-            if serial != b"\0\0\0\0\0\0\0\0":
-                self.invalidated.append(oid)
+            newserial = self.storage.storeBlob(
+                oid, serial, data, blobfile, '', self.transaction)
+
+        if serial != b"\0\0\0\0\0\0\0\0":
+            self.invalidated.append(oid)
+
+        if newserial:
 
             if isinstance(newserial, bytes):
                 newserial = [(oid, newserial)]
 
-            for oid, s in newserial or ():
+            for oid, s in newserial:
 
                 if s == ResolvedSerial:
                     self.stats.conflicts_resolved += 1
                     self.log("conflict resolved oid=%s"
                              % oid_repr(oid), BLATHER)
-
-                self.serials.append((oid, s))
-
-        return err is None
+                    self.serials.append(oid)
 
     def _restore(self, oid, serial, data, prev_txn):
-        err = None
-        try:
-            self.storage.restore(oid, serial, data, '', prev_txn,
-                                 self.transaction)
-        except (SystemExit, KeyboardInterrupt):
-            raise
-        except Exception as err:
-            self._op_error(oid, err, 'restore')
-
-        return err is None
+        self.storage.restore(oid, serial, data, '', prev_txn,
+                             self.transaction)
 
     def _undo(self, trans_id):
-        err = None
-        try:
-            tid, oids = self.storage.undo(trans_id, self.transaction)
-        except (SystemExit, KeyboardInterrupt):
-            raise
-        except Exception as e:
-            err = e
-            self._op_error(z64, err, 'undo')
-        else:
-            self.invalidated.extend(oids)
-            self.serials.extend((oid, ResolvedSerial) for oid in oids)
-
-        return err is None
-
-    def _marshal_error(self, error):
-        # Try to pickle the exception.  If it can't be pickled,
-        # the RPC response would fail, so use something that can be pickled.
-        if PY3:
-            pickler = Pickler(BytesIO(), 3)
-        else:
-            # The pure-python version requires at least one argument (PyPy)
-            pickler = Pickler(0)
-        pickler.fast = 1
-        try:
-            pickler.dump(error)
-        except:
-            msg = "Couldn't pickle storage exception: %s" % repr(error)
-            self.log(msg, logging.ERROR)
-            error = StorageServerError(msg)
-        return error
+        tid, oids = self.storage.undo(trans_id, self.transaction)
+        self.invalidated.extend(oids)
+        self.serials.extend(oids)
 
     # IStorageIteration support
 
