@@ -745,24 +745,23 @@ class StorageServerWrapper:
         self.server.tpc_begin(id(transaction), '', '', {}, None, ' ')
 
     def tpc_vote(self, transaction):
-        vote_result = self.server.vote(id(transaction))
-        assert vote_result is None
-        result = self.server.connection.serials[:]
+        result = self.server.vote(id(transaction))
+        assert result == self.server.connection.serials[:]
         del self.server.connection.serials[:]
         return result
 
     def store(self, oid, serial, data, version_ignored, transaction):
         self.server.storea(oid, serial, data, id(transaction))
 
-    def send_reply(self, *args):        # Masquerade as conn
-        pass
+    def send_reply(self, _, result):        # Masquerade as conn
+        self._result = result
 
     def tpc_abort(self, transaction):
         self.server.tpc_abort(id(transaction))
 
     def tpc_finish(self, transaction, func = lambda: None):
         self.server.tpc_finish(id(transaction)).set_sender(0, self)
-
+        return self._result
 
 def multiple_storages_invalidation_queue_is_not_insane():
     """
@@ -929,14 +928,14 @@ def tpc_finish_error():
     buffer, sadly, using implementation details:
 
     >>> tbuf = t.data(client)
-    >>> tbuf.serials = None
+    >>> tbuf.resolved = None
 
     tpc_finish will fail:
 
     >>> client.tpc_finish(t) # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    AttributeError: ...
+    TypeError: ...
 
     >>> client.tpc_abort(t)
     >>> t.abort()

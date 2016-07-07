@@ -53,10 +53,7 @@ logger = logging.getLogger(__name__)
 # max signed 64-bit value ~ infinity :) Signed cuz LBTree and TimeStamp
 m64 = b'\x7f\xff\xff\xff\xff\xff\xff\xff'
 
-try:
-    from ZODB.ConflictResolution import ResolvedSerial
-except ImportError:
-    ResolvedSerial = 'rs'
+from ZODB.ConflictResolution import ResolvedSerial
 
 def tid2time(tid):
     return str(TimeStamp(tid))
@@ -77,6 +74,7 @@ def get_timestamp(prev_ts=None):
 
 MB = 1024**2
 
+@zope.interface.implementer(ZODB.interfaces.IMultiCommitStorage)
 class ClientStorage(object):
     """A storage class that is a network client to a remote storage.
 
@@ -724,18 +722,31 @@ class ClientStorage(object):
         """
         tbuf = self._check_trans(txn, 'tpc_vote')
         try:
-            self._call('vote', id(txn))
+            for oid in self._call('vote', id(txn)) or ():
+                tbuf.serial(oid, ResolvedSerial)
         except POSException.StorageTransactionError:
             # Hm, we got disconnected and reconnected bwtween
             # _check_trans and voting. Let's chack the transaction again:
-            tbuf = self._check_trans(txn, 'tpc_vote')
+            self._check_trans(txn, 'tpc_vote')
+            raise
+        except POSException.ConflictError as err:
+            oid = getattr(err, 'oid', None)
+            if oid is not None:
+                # This is a band-aid to help recover from a situation
+                # that shouldn't happen.  A Client somehow misses some
+                # invalidations and has out of date data in its
+                # cache. We need some whay to invalidate the cache
+                # entry without invalidations. So, if we see a
+                # (unresolved) conflict error, we assume that the
+                # cache entry is bad and invalidate it.
+                self._cache.invalidate(oid, None)
             raise
 
         if tbuf.exception:
             raise tbuf.exception
 
-        if tbuf.serials:
-            return list(tbuf.serials.items())
+        if tbuf.resolved:
+            return list(tbuf.resolved)
         else:
             return None
 
@@ -829,6 +840,8 @@ class ClientStorage(object):
             self._iterator_gc()
 
         self._update_blob_cache(tbuf, tid)
+
+        return tid
 
     def _update_blob_cache(self, tbuf, tid):
         """Internal helper move blobs updated by a transaction to the cache.

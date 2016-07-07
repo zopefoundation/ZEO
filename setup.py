@@ -26,7 +26,7 @@ if (3, 0) < sys.version_info < (3, 4):
     sys.exit(0)
 
 install_requires = [
-    'ZODB >= 5.0.0a1',
+    'ZODB >= 5.0.0a5',
     'six',
     'transaction >= 1.6.0',
     'persistent >= 4.1.0',
