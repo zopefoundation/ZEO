@@ -51,11 +51,12 @@ class ServerProtocol(base.Protocol):
         if exc:
             logger.error("Disconnected %s:%s", exc.__class__.__name__, exc)
         self.zeo_storage.notify_disconnected()
+        self.stop()
 
-        self.loop.stop()
+    def stop(self):
+        pass # Might be replaced when running a thread per client
 
     def finish_connect(self, protocol_version):
-
         if protocol_version == b'ruok':
             self._write(json.dumps(self.zeo_storage.ruok()).encode("ascii"))
             self.close()
@@ -199,3 +200,73 @@ class MTDelay(Delay):
     def error(self, exc_info):
         self.ready.wait()
         self.protocol.call_soon_threadsafe(Delay.error, self, exc_info)
+
+
+class Acceptor:
+
+    def __init__(self, storage_server, addr, ssl):
+        self.storage_server = storage_server
+        self.addr = addr
+        self.ssl_context = ssl
+        self.event_loop = loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        if isinstance(addr, tuple):
+            cr = loop.create_server(self.factory, addr[0], addr[1],
+                                    reuse_address=True, ssl=ssl)
+        else:
+            cr = loop.create_unix_server(self.factory, addr, ssl=ssl)
+
+        f = asyncio.async(cr)
+
+        @f.add_done_callback
+        def listenting(f):
+            server = f.result()
+            self.server = server
+            if isinstance(addr, tuple) and addr[1] == 0:
+                addrs = [s.getsockname() for s in server.sockets]
+                addrs = [a for a in addrs if len(a) == len(addr)]
+                if addrs:
+                    self.addr = addrs[0]
+                else:
+                    self.addr = server.sockets[0].getsockname()[:len(addr)]
+        logger.info("listening on %s", str(addr))
+
+        loop.run_until_complete(f)
+
+    def factory(self):
+        try:
+            logger.debug("Accepted connection")
+            zs = self.storage_server.create_client_handler()
+            protocol = ServerProtocol(self.event_loop, self.addr, zs)
+        except Exception:
+            logger.exception("Failure in protocol factory")
+
+        return protocol
+
+    def loop(self, timeout=None):
+        self.event_loop.run_forever()
+        self.event_loop.close()
+
+    closed = False
+    def close(self):
+        if not self.closed:
+            self.closed = True
+            self.event_loop.call_soon_threadsafe(self._close)
+
+    def _close(self):
+        loop = self.event_loop
+
+        self.server.close()
+
+        f = asyncio.async(self.server.wait_closed(), loop=loop)
+        @f.add_done_callback
+        def server_closed(f):
+            # stop the loop when the server closes:
+            loop.call_soon(loop.stop)
+
+        def timeout():
+            logger.warning("Timed out closing asyncio.Server")
+            loop.call_soon(loop.stop)
+
+        # But if the server doesn't close in a second, stop the loop anyway.
+        loop.call_later(1, timeout)

@@ -13,6 +13,7 @@
 ##############################################################################
 """Library for forking storage server and connecting client storage"""
 from __future__ import print_function
+import gc
 import os
 import random
 import sys
@@ -25,7 +26,7 @@ import tempfile
 import six
 import ZODB.tests.util
 import zope.testing.setupstack
-from ZEO._compat import BytesIO
+from ZEO._compat import StringIO
 
 logger = logging.getLogger('ZEO.tests.forker')
 
@@ -40,9 +41,6 @@ class ZEOConfig:
             addr = '%s:%s' % addr
         self.address = addr
         self.read_only = None
-        self.invalidation_queue_size = None
-        self.invalidation_age = None
-        self.transaction_timeout = None
         self.loglevel = 'INFO'
 
     def dump(self, f):
@@ -50,13 +48,16 @@ class ZEOConfig:
         print("address " + self.address, file=f)
         if self.read_only is not None:
             print("read-only", self.read_only and "true" or "false", file=f)
-        if self.invalidation_queue_size is not None:
-            print("invalidation-queue-size",
-                  self.invalidation_queue_size, file=f)
-        if self.invalidation_age is not None:
-            print("invalidation-age", self.invalidation_age, file=f)
-        if self.transaction_timeout is not None:
-            print("transaction-timeout", self.transaction_timeout, file=f)
+
+        for name in (
+            'invalidation_queue_size', 'invalidation_age',
+            'transaction_timeout', 'pid_filename',
+            'ssl_certificate', 'ssl_key',
+            ):
+            v = getattr(self, name, None)
+            if v:
+                print(name.replace('_', '-'), v, file=f)
+
         print("</zeo>", file=f)
 
         print("""
@@ -69,9 +70,9 @@ class ZEOConfig:
         """ % (self.loglevel, self.logpath), file=f)
 
     def __str__(self):
-        f = BytesIO()
+        f = StringIO()
         self.dump(f)
-        return f.getvalue().decode()
+        return f.getvalue()
 
 
 def encode_format(fmt):
@@ -83,7 +84,7 @@ def encode_format(fmt):
     return fmt
 
 def runner(config, qin, qout, timeout=None,
-           join_timeout=9, debug=False, name=None,
+           debug=False, name=None,
            keep=False, protocol=None):
 
     if debug:
@@ -124,11 +125,7 @@ def runner(config, qin, qout, timeout=None,
         except Empty:
             pass
         server.server.close()
-        thread.join(join_timeout)
-        if thread.is_alive():
-            logger.warning("server thread didn't stop")
-        else:
-            logger.debug('server thread stopped')
+        thread.join(3)
 
         if not keep:
             # Try to cleanup storage files
@@ -138,10 +135,11 @@ def runner(config, qin, qout, timeout=None,
                 except AttributeError:
                     pass
 
-        qout.put('stopped')
+        qout.put(thread.is_alive())
+        qin.get(timeout=11) # ack
         if hasattr(qout, 'close'):
             qout.close()
-            qout.join_thread()
+            qout.cancel_join_thread()
 
     except Exception:
         logger.exception("In server thread")
@@ -153,12 +151,25 @@ def runner(config, qin, qout, timeout=None,
 
 def stop_runner(thread, config, qin, qout, stop_timeout=9, pid=None):
     qin.put('stop')
-    if hasattr(qin, 'close'):
-        qin.close()
-        qin.join_thread()
-    qout.get(timeout=stop_timeout)
+    dirty = qout.get(timeout=stop_timeout)
+    qin.put('ack')
+    if dirty:
+        print("WARNING SERVER DIDN'T STOP CLEANLY", file=sys.stderr)
+
+        # The runner thread didn't stop. If it was a process,
+        # give it some time to exit
+        if hasattr(thread, 'pid') and thread.pid:
+            os.waitpid(thread.pid)
+        else:
+            # Gaaaa, force gc in hopes of maybe getting the unclosed
+            # sockets to get GCed
+            gc.collect()
+
     thread.join(stop_timeout)
     os.remove(config)
+    if hasattr(qin, 'close'):
+        qin.close()
+        qin.cancel_join_thread()
 
 def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
                      path='Data.fs', protocol=None, blob_dir=None,
@@ -181,25 +192,24 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
         storage_conf = '<blobstorage>\nblob-dir %s\n%s\n</blobstorage>' % (
             blob_dir, storage_conf)
 
-    if port is None:
-        raise AssertionError("The port wasn't specified")
-
-    if isinstance(port, int):
-        addr = 'localhost', port
-    else:
-        addr = port
-        adminaddr = port+'-test'
-
     if zeo_conf is None or isinstance(zeo_conf, dict):
+        if port is None:
+            raise AssertionError("The port wasn't specified")
+
+        if isinstance(port, int):
+            addr = 'localhost', port
+        else:
+            addr = port
+
         z = ZEOConfig(addr)
         if zeo_conf:
             z.__dict__.update(zeo_conf)
-        zeo_conf = z
+        zeo_conf = str(z)
 
     # Store the config info in a temp file.
     tmpfile = tempfile.mktemp(".conf", dir=os.getcwd())
     fp = open(tmpfile, 'w')
-    zeo_conf.dump(fp)
+    fp.write(str(zeo_conf) + '\n\n')
     fp.write(storage_conf)
     fp.close()
 
@@ -222,7 +232,7 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
     thread.start()
     addr = qout.get(timeout=start_timeout)
 
-    def stop(stop_timeout=9):
+    def stop(stop_timeout=99):
         stop_runner(thread, tmpfile, qin, qout, stop_timeout)
 
     return addr, stop

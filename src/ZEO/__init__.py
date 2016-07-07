@@ -43,7 +43,7 @@ def connection(*args, **kw):
         ra
 
 def server(path=None, blob_dir=None, storage_conf=None, zeo_conf=None,
-           port=0, **kw):
+           port=0, threaded=True, **kw):
     """Convenience function to start a server for interactive exploration
 
     This fuction starts a ZEO server, given a storage configuration or
@@ -78,7 +78,7 @@ def server(path=None, blob_dir=None, storage_conf=None, zeo_conf=None,
     port
        If no ZEO configuration is supplied, the one will be computed
        from the port.  If no port is supplied, one will be chosedn
-       randomly.
+       dynamically.
 
     """
     import os, ZEO.tests.forker
@@ -87,4 +87,4 @@ def server(path=None, blob_dir=None, storage_conf=None, zeo_conf=None,
 
     return ZEO.tests.forker.start_zeo_server(
         storage_conf, zeo_conf, port, keep=True, path=path,
-        blob_dir=blob_dir, suicide=False, threaded=True, **kw)
+        blob_dir=blob_dir, suicide=False, threaded=threaded, **kw)

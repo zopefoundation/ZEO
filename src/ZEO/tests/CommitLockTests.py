@@ -127,7 +127,8 @@ class CommitLockTests:
         # list is a socket domain (AF_INET, AF_UNIX, etc.) and an
         # address.
         addr = self._storage._addr
-        new = ZEO.ClientStorage.ClientStorage(addr, wait=1)
+        new = ZEO.ClientStorage.ClientStorage(
+            addr, wait=1, **self._client_options())
         new.registerDB(DummyDB())
         return new
 

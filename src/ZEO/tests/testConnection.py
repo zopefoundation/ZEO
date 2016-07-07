@@ -79,12 +79,24 @@ class MappingStorageConnectionTests(
     ):
     """Mapping storage connection tests."""
 
+class SSLConnectionTests(
+    MappingStorageConfig,
+    ConnectionTests.SSLConnectionTests,
+    ):
+    pass
+
 # The ReconnectionTests can't work with MappingStorage because it's only an
 # in-memory storage and has no persistent state.
 
 class MappingStorageTimeoutTests(
     MappingStorageConfig,
     ConnectionTests.TimeoutTests
+    ):
+    pass
+
+class SSLConnectionTests(
+    MappingStorageConfig,
+    ConnectionTests.SSLConnectionTests,
     ):
     pass
 
@@ -95,6 +107,7 @@ test_classes = [FileStorageConnectionTests,
                 FileStorageTimeoutTests,
                 MappingStorageConnectionTests,
                 MappingStorageTimeoutTests,
+                SSLConnectionTests,
                 ]
 
 def invalidations_while_connecting():
