@@ -46,13 +46,12 @@ class Protocol(asyncio.Protocol):
     def connection_made(self, transport):
         logger.info("Connected %s", self)
 
-        if (sys.version_info < (3, 6) and
-            hasattr(transport, '_sock') and
-            transport._sock.family in INET_FAMILIES
-            ):
-            # See https://bugs.python.org/issue27456 :(
-            transport._sock.setsockopt(
-                socket.IPPROTO_TCP, socket.TCP_NODELAY, True)
+
+        if sys.version_info < (3, 6):
+            sock = transport.get_extra_info('socket')
+            if sock is not None and sock.family in INET_FAMILIES:
+                # See https://bugs.python.org/issue27456 :(
+                sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, True)
         self.transport = transport
 
         paused = self.paused
