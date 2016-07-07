@@ -33,7 +33,7 @@ logger = logging.getLogger('ZEO.tests.forker')
 class ZEOConfig:
     """Class to generate ZEO configuration file. """
 
-    def __init__(self, addr):
+    def __init__(self, addr, **options):
         if isinstance(addr, str):
             self.logpath = addr+'.log'
         else:
@@ -42,6 +42,7 @@ class ZEOConfig:
         self.address = addr
         self.read_only = None
         self.loglevel = 'INFO'
+        self.__dict__.update(options)
 
     def dump(self, f):
         print("<zeo>", file=f)
