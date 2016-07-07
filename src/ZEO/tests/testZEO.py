@@ -557,10 +557,9 @@ class CommonBlobTests:
         t = transaction.Transaction()
         try:
             self._storage.tpc_begin(t)
-            r1 = self._storage.storeBlob(oid, ZERO, data, tfname, '', t)
-            r2 = self._storage.tpc_vote(t)
-            revid = handle_serials(oid, r1, r2)
-            self._storage.tpc_finish(t)
+            self._storage.storeBlob(oid, ZERO, data, tfname, '', t)
+            self._storage.tpc_vote(t)
+            revid = self._storage.tpc_finish(t)
         except:
             self._storage.tpc_abort(t)
             raise
@@ -598,10 +597,9 @@ class CommonBlobTests:
         t = transaction.Transaction()
         try:
             self._storage.tpc_begin(t)
-            r1 = self._storage.storeBlob(oid, ZERO, data, tfname, '', t)
-            r2 = self._storage.tpc_vote(t)
-            serial = handle_serials(oid, r1, r2)
-            self._storage.tpc_finish(t)
+            self._storage.storeBlob(oid, ZERO, data, tfname, '', t)
+            self._storage.tpc_vote(t)
+            serial = self._storage.tpc_finish(t)
         except:
             self._storage.tpc_abort(t)
             raise
@@ -665,10 +663,9 @@ class BlobAdaptedFileStorageTests(FullGenericTests, CommonBlobTests):
             t = transaction.Transaction()
             try:
                 self._storage.tpc_begin(t)
-                r1 = self._storage.storeBlob(oid, ZERO, data, tfname, '', t)
-                r2 = self._storage.tpc_vote(t)
-                revid = handle_serials(oid, r1, r2)
-                self._storage.tpc_finish(t)
+                self._storage.storeBlob(oid, ZERO, data, tfname, '', t)
+                self._storage.tpc_vote(t)
+                revid = self._storage.tpc_finish(t)
             except:
                 self._storage.tpc_abort(t)
                 raise
