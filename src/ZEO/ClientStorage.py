@@ -745,6 +745,12 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
 
                 vote_attempts += 1
 
+        except POSException.StorageTransactionError:
+            # Hm, we got disconnected and reconnected bwtween
+            # _check_trans and voting. Let's chack the transaction again:
+            self._check_trans(txn, 'tpc_vote')
+            raise
+
         except POSException.ConflictError as err:
             oid = getattr(err, 'oid', None)
             if oid is not None:
@@ -756,11 +762,6 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                 # (unresolved) conflict error, we assume that the
                 # cache entry is bad and invalidate it.
                 self._cache.invalidate(oid, None)
-            raise
-        except POSException.StorageTransactionError:
-            # Hm, we got disconnected and reconnected bwtween
-            # _check_trans and voting. Let's chack the transaction again:
-            tbuf = self._check_trans(txn, 'tpc_vote')
             raise
 
         if tbuf.exception:
