@@ -224,21 +224,18 @@ class Acceptor(object):
             cr = loop.create_unix_server(self.factory, addr, ssl=ssl)
 
         f = asyncio.async(cr, loop=loop)
+        server = loop.run_until_complete(f)
 
-        @f.add_done_callback
-        def listenting(f):
-            server = f.result()
-            self.server = server
-            if isinstance(addr, tuple) and addr[1] == 0:
-                addrs = [s.getsockname() for s in server.sockets]
-                addrs = [a for a in addrs if len(a) == len(addr)]
-                if addrs:
-                    self.addr = addrs[0]
-                else:
-                    self.addr = server.sockets[0].getsockname()[:len(addr)]
+        self.server = server
+        if isinstance(addr, tuple) and addr[1] == 0:
+            addrs = [s.getsockname() for s in server.sockets]
+            addrs = [a for a in addrs if len(a) == len(addr)]
+            if addrs:
+                self.addr = addrs[0]
+            else:
+                self.addr = server.sockets[0].getsockname()[:len(addr)]
+
         logger.info("listening on %s", str(addr))
-
-        loop.run_until_complete(f)
 
     def factory(self):
         try:
