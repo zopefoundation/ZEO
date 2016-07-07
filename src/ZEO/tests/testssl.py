@@ -1,3 +1,5 @@
+from .._compat import PY3
+
 import mock
 import os
 import ssl
@@ -7,7 +9,7 @@ from ZODB.config import storageFromString
 from ..Exceptions import ClientDisconnected
 from .. import runzeo
 
-from .testConfig import ZEOConfigTest
+from .testConfig import ZEOConfigTestBase
 
 here = os.path.dirname(__file__)
 server_cert = os.path.join(here, 'server.pem')
@@ -17,7 +19,7 @@ serverpw_key  = os.path.join(here, 'serverpw_key.pem')
 client_cert = os.path.join(here, 'client.pem')
 client_key  = os.path.join(here, 'client_key.pem')
 
-class SSLConfigTest(ZEOConfigTest):
+class SSLConfigTest(ZEOConfigTestBase):
 
     def test_ssl_basic(self):
         # This shows that configuring ssl has an actual effect on connections.
@@ -112,8 +114,13 @@ class SSLConfigTest(ZEOConfigTest):
             )
         stop()
 
+@mock.patch(('asyncio' if PY3 else 'trollius') + '.async')
+@mock.patch(('asyncio' if PY3 else 'trollius') + '.set_event_loop')
+@mock.patch(('asyncio' if PY3 else 'trollius') + '.new_event_loop')
+class SSLConfigTestMockiavellian(ZEOConfigTestBase):
+
     @mock.patch('ssl.create_default_context')
-    def test_ssl_mockiavellian_server_no_ssl(self, factory):
+    def test_ssl_mockiavellian_server_no_ssl(self, factory, *_):
         server = create_server()
         self.assertFalse(factory.called)
         self.assertEqual(server.acceptor.ssl_context, None)
@@ -134,13 +141,13 @@ class SSLConfigTest(ZEOConfigTest):
         self.assertEqual(context.check_hostname, check_hostname)
 
     @mock.patch('ssl.create_default_context')
-    def test_ssl_mockiavellian_server_ssl_no_auth(self, factory):
+    def test_ssl_mockiavellian_server_ssl_no_auth(self, factory, *_):
         with self.assertRaises(SystemExit):
             # auth is required
             create_server(certificate=server_cert, key=server_key)
 
     @mock.patch('ssl.create_default_context')
-    def test_ssl_mockiavellian_server_ssl_auth_file(self, factory):
+    def test_ssl_mockiavellian_server_ssl_auth_file(self, factory, *_):
         server = create_server(
             certificate=server_cert, key=server_key, authenticate=__file__)
         context = server.acceptor.ssl_context
@@ -148,7 +155,7 @@ class SSLConfigTest(ZEOConfigTest):
         server.close()
 
     @mock.patch('ssl.create_default_context')
-    def test_ssl_mockiavellian_server_ssl_auth_dir(self, factory):
+    def test_ssl_mockiavellian_server_ssl_auth_dir(self, factory, *_):
         server = create_server(
             certificate=server_cert, key=server_key, authenticate=here)
         context = server.acceptor.ssl_context
@@ -156,7 +163,7 @@ class SSLConfigTest(ZEOConfigTest):
         server.close()
 
     @mock.patch('ssl.create_default_context')
-    def test_ssl_mockiavellian_server_ssl_pw(self, factory):
+    def test_ssl_mockiavellian_server_ssl_pw(self, factory, *_):
         server = create_server(
             certificate=server_cert,
             key=server_key,
@@ -170,7 +177,7 @@ class SSLConfigTest(ZEOConfigTest):
 
     @mock.patch('ssl.create_default_context')
     @mock.patch('ZEO.ClientStorage.ClientStorage')
-    def test_ssl_mockiavellian_client_no_ssl(self, ClientStorage, factory):
+    def test_ssl_mockiavellian_client_no_ssl(self, ClientStorage, factory, *_):
         client = ssl_client()
         self.assertFalse('ssl' in ClientStorage.call_args[1])
         self.assertFalse('ssl_server_hostname' in ClientStorage.call_args[1])
@@ -178,7 +185,7 @@ class SSLConfigTest(ZEOConfigTest):
     @mock.patch('ssl.create_default_context')
     @mock.patch('ZEO.ClientStorage.ClientStorage')
     def test_ssl_mockiavellian_client_server_signed(
-        self, ClientStorage, factory
+        self, ClientStorage, factory, *_
         ):
         client = ssl_client(certificate=client_cert, key=client_key)
         context = ClientStorage.call_args[1]['ssl']
@@ -191,7 +198,7 @@ class SSLConfigTest(ZEOConfigTest):
     @mock.patch('ssl.create_default_context')
     @mock.patch('ZEO.ClientStorage.ClientStorage')
     def test_ssl_mockiavellian_client_auth_dir(
-        self, ClientStorage, factory
+        self, ClientStorage, factory, *_
         ):
         client = ssl_client(
             certificate=client_cert, key=client_key, authenticate=here)
@@ -207,7 +214,7 @@ class SSLConfigTest(ZEOConfigTest):
     @mock.patch('ssl.create_default_context')
     @mock.patch('ZEO.ClientStorage.ClientStorage')
     def test_ssl_mockiavellian_client_auth_file(
-        self, ClientStorage, factory
+        self, ClientStorage, factory, *_
         ):
         client = ssl_client(
             certificate=client_cert, key=client_key, authenticate=server_cert)
@@ -223,7 +230,7 @@ class SSLConfigTest(ZEOConfigTest):
     @mock.patch('ssl.create_default_context')
     @mock.patch('ZEO.ClientStorage.ClientStorage')
     def test_ssl_mockiavellian_client_pw(
-        self, ClientStorage, factory
+        self, ClientStorage, factory, *_
         ):
         client = ssl_client(
             certificate=client_cert, key=client_key,
@@ -241,7 +248,7 @@ class SSLConfigTest(ZEOConfigTest):
     @mock.patch('ssl.create_default_context')
     @mock.patch('ZEO.ClientStorage.ClientStorage')
     def test_ssl_mockiavellian_client_server_hostname(
-        self, ClientStorage, factory
+        self, ClientStorage, factory, *_
         ):
         client = ssl_client(
             certificate=client_cert, key=client_key, authenticate=server_cert,
@@ -258,7 +265,7 @@ class SSLConfigTest(ZEOConfigTest):
     @mock.patch('ssl.create_default_context')
     @mock.patch('ZEO.ClientStorage.ClientStorage')
     def test_ssl_mockiavellian_client_check_hostname(
-        self, ClientStorage, factory
+        self, ClientStorage, factory, *_
         ):
         client = ssl_client(
             certificate=client_cert, key=client_key, authenticate=server_cert,
@@ -320,7 +327,10 @@ pwfunc = lambda : '1234'
 
 
 def test_suite():
-    return unittest.makeSuite(SSLConfigTest)
+    return unittest.TestSuite((
+        unittest.makeSuite(SSLConfigTest),
+        unittest.makeSuite(SSLConfigTestMockiavellian),
+        ))
 
 # Helpers for other tests:
 
