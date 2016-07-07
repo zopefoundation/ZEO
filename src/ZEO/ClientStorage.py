@@ -34,6 +34,7 @@ import BTrees.OOBTree
 import zc.lockfile
 import ZODB
 import ZODB.BaseStorage
+import ZODB.ConflictResolution
 import ZODB.interfaces
 import zope.interface
 import six
@@ -75,7 +76,7 @@ def get_timestamp(prev_ts=None):
 MB = 1024**2
 
 @zope.interface.implementer(ZODB.interfaces.IMultiCommitStorage)
-class ClientStorage(object):
+class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
     """A storage class that is a network client to a remote storage.
 
     This is a faithful implementation of the Storage API.
@@ -331,6 +332,7 @@ class ClientStorage(object):
 
         The storage isn't really ready to use until after this call.
         """
+        super(ClientStorage, self).registerDB(db)
         self._db = db
 
     def is_connected(self, test=False):
@@ -722,13 +724,33 @@ class ClientStorage(object):
         """
         tbuf = self._check_trans(txn, 'tpc_vote')
         try:
-            for oid in self._call('vote', id(txn)) or ():
-                tbuf.serial(oid, ResolvedSerial)
+
+            conflicts = True
+            vote_attempts = 0
+            while conflicts and vote_attempts < 9: # 9? Mainly avoid inf. loop
+                conflicts = False
+                for oid in self._call('vote', id(txn)) or ():
+                    if isinstance(oid, dict):
+                        # Conflict, let's try to resolve it
+                        conflicts = True
+                        conflict = oid
+                        oid = conflict['oid']
+                        committed, read = conflict['serials']
+                        data = self.tryToResolveConflict(
+                            oid, committed, read, conflict['data'])
+                        self._async('storea', oid, committed, data, id(txn))
+                        tbuf.resolve(oid, data)
+                    else:
+                        tbuf.serial(oid, ResolvedSerial)
+
+                vote_attempts += 1
+
         except POSException.StorageTransactionError:
             # Hm, we got disconnected and reconnected bwtween
             # _check_trans and voting. Let's chack the transaction again:
             self._check_trans(txn, 'tpc_vote')
             raise
+
         except POSException.ConflictError as err:
             oid = getattr(err, 'oid', None)
             if oid is not None:
@@ -745,8 +767,8 @@ class ClientStorage(object):
         if tbuf.exception:
             raise tbuf.exception
 
-        if tbuf.resolved:
-            return list(tbuf.resolved)
+        if tbuf.server_resolved or tbuf.client_resolved:
+            return list(tbuf.server_resolved) + list(tbuf.client_resolved)
         else:
             return None
 

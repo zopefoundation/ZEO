@@ -89,6 +89,7 @@ class ZEOStorage:
 
     def __init__(self, server, read_only=0):
         self.server = server
+        self.client_conflict_resolution = server.client_conflict_resolution
         # timeout and stats will be initialized in register()
         self.read_only = read_only
         # The authentication protocol may define extra methods.
@@ -334,6 +335,7 @@ class ZEOStorage:
         t._extension = ext
 
         self.serials = []
+        self.conflicts = {}
         self.invalidated = []
         self.txnlog = CommitLog()
         self.blob_log = []
@@ -413,6 +415,7 @@ class ZEOStorage:
 
         self.locked, delay = self.server.lock_storage(self, delay)
         if self.locked:
+            result = None
             try:
                 self.log(
                     "Preparing to commit transaction: %d objects, %d bytes"
@@ -433,13 +436,29 @@ class ZEOStorage:
                     oid, oldserial, data, blobfilename = self.blob_log.pop()
                     self._store(oid, oldserial, data, blobfilename)
 
-                serials = self.storage.tpc_vote(self.transaction)
-                if serials:
-                    if not isinstance(serials[0], bytes):
-                        serials = (oid for (oid, serial) in serials
-                                   if serial == ResolvedSerial)
 
-                    self.serials.extend(serials)
+                if not self.conflicts:
+                    try:
+                        serials = self.storage.tpc_vote(self.transaction)
+                    except ConflictError as err:
+                        if (self.client_conflict_resolution and
+                            err.oid and err.serials and err.data
+                            ):
+                            self.conflicts[err.oid] = dict(
+                                oid=err.oid, serials=err.serials, data=err.data)
+                        else:
+                            raise
+                    else:
+                        if serials:
+                            self.serials.extend(serials)
+                        result = self.serials
+
+                if self.conflicts:
+                    result = list(self.conflicts.values())
+                    self.storage.tpc_abort(self.transaction)
+                    self.server.unlock_storage(self)
+                    self.locked = False
+                    self.server.stop_waiting(self)
 
             except Exception as err:
                 self.storage.tpc_abort(self.transaction)
@@ -457,9 +476,9 @@ class ZEOStorage:
                     raise
             else:
                 if delay is not None:
-                    delay.reply(self.serials)
+                    delay.reply(result)
                 else:
-                    return self.serials
+                    return result
 
         else:
             return delay
@@ -559,28 +578,24 @@ class ZEOStorage:
             oid, serial, self.transaction)
 
     def _store(self, oid, serial, data, blobfile=None):
-        if blobfile is None:
-            newserial = self.storage.store(
-                oid, serial, data, '', self.transaction)
+        try:
+            if blobfile is None:
+                self.storage.store(oid, serial, data, '', self.transaction)
+            else:
+                self.storage.storeBlob(
+                    oid, serial, data, blobfile, '', self.transaction)
+        except ConflictError as err:
+            if self.client_conflict_resolution and err.serials:
+                self.conflicts[oid] = dict(
+                    oid=oid, serials=err.serials, data=data)
+            else:
+                raise
         else:
-            newserial = self.storage.storeBlob(
-                oid, serial, data, blobfile, '', self.transaction)
+            if oid in self.conflicts:
+                del self.conflicts[oid]
 
-        if serial != b"\0\0\0\0\0\0\0\0":
-            self.invalidated.append(oid)
-
-        if newserial:
-
-            if isinstance(newserial, bytes):
-                newserial = [(oid, newserial)]
-
-            for oid, s in newserial:
-
-                if s == ResolvedSerial:
-                    self.stats.conflicts_resolved += 1
-                    self.log("conflict resolved oid=%s"
-                             % oid_repr(oid), BLATHER)
-                    self.serials.append(oid)
+            if serial != b"\0\0\0\0\0\0\0\0":
+                self.invalidated.append(oid)
 
     def _restore(self, oid, serial, data, prev_txn):
         self.storage.restore(oid, serial, data, '', prev_txn,
@@ -697,6 +712,7 @@ class StorageServer:
                  invalidation_age=None,
                  transaction_timeout=None,
                  ssl=None,
+                 client_conflict_resolution=False,
                  ):
         """StorageServer constructor.
 
@@ -767,15 +783,23 @@ class StorageServer:
         for name, storage in storages.items():
             self._setup_invq(name, storage)
             storage.registerDB(StorageServerDB(self, name))
+            if client_conflict_resolution:
+                # XXX this may go away later, when storages grow
+                # configuration for this.
+                storage.tryToResolveConflict = never_resolve_conflict
         self.invalidation_age = invalidation_age
         self.zeo_storages_by_storage_id = {} # {storage_id -> [ZEOStorage]}
-        self.acceptor = Acceptor(self, addr, ssl)
-        if isinstance(addr, tuple) and addr[0]:
-            self.addr = self.acceptor.addr
-        else:
-            self.addr = addr
-        self.loop = self.acceptor.loop
-        ZODB.event.notify(Serving(self, address=self.acceptor.addr))
+        self.client_conflict_resolution = client_conflict_resolution
+
+        if addr is not None:
+            self.acceptor = Acceptor(self, addr, ssl)
+            if isinstance(addr, tuple) and addr[0]:
+                self.addr = self.acceptor.addr
+            else:
+                self.addr = addr
+            self.loop = self.acceptor.loop
+            ZODB.event.notify(Serving(self, address=self.acceptor.addr))
+
         self.stats = {}
         self.timeouts = {}
         for name in self.storages.keys():
@@ -1308,3 +1332,8 @@ class Serving(ServerEvent):
 
 class Closed(ServerEvent):
     pass
+
+def never_resolve_conflict(oid, committedSerial, oldSerial, newpickle,
+                           committedData=b''):
+    raise ConflictError(oid=oid, serials=(committedSerial, oldSerial),
+                        data=newpickle)

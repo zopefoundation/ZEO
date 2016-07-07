@@ -30,6 +30,8 @@ class DummyDB:
     def invalidate(self, *args, **kwargs):
         pass
 
+    transform_record_data = untransform_record_data = lambda self, data: data
+
 class WorkerThread(TestThread):
 
     # run the entire test in a thread so that the blocking call for

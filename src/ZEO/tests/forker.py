@@ -33,7 +33,7 @@ logger = logging.getLogger('ZEO.tests.forker')
 class ZEOConfig:
     """Class to generate ZEO configuration file. """
 
-    def __init__(self, addr):
+    def __init__(self, addr, **options):
         if isinstance(addr, str):
             self.logpath = addr+'.log'
         else:
@@ -42,6 +42,7 @@ class ZEOConfig:
         self.address = addr
         self.read_only = None
         self.loglevel = 'INFO'
+        self.__dict__.update(options)
 
     def dump(self, f):
         print("<zeo>", file=f)
@@ -52,7 +53,7 @@ class ZEOConfig:
         for name in (
             'invalidation_queue_size', 'invalidation_age',
             'transaction_timeout', 'pid_filename',
-            'ssl_certificate', 'ssl_key',
+            'ssl_certificate', 'ssl_key', 'client_conflict_resolution',
             ):
             v = getattr(self, name, None)
             if v:
@@ -159,7 +160,7 @@ def stop_runner(thread, config, qin, qout, stop_timeout=9, pid=None):
         # The runner thread didn't stop. If it was a process,
         # give it some time to exit
         if hasattr(thread, 'pid') and thread.pid:
-            os.waitpid(thread.pid)
+            os.waitpid(thread.pid, 0)
         else:
             # Gaaaa, force gc in hopes of maybe getting the unclosed
             # sockets to get GCed
