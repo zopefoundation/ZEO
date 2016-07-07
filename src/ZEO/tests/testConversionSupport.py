@@ -52,6 +52,8 @@ class FakeServer:
     def register_connection(*args):
         return None, None
 
+    client_conflict_resolution = False
+
 class FakeConnection:
     protocol_version = b'Z4'
     addr = 'test'

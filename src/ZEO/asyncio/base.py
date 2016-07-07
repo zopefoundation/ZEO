@@ -1,10 +1,14 @@
 from struct import unpack
 import asyncio
 import logging
+import socket
+import sys
 
 from .marshal import encoder
 
 logger = logging.getLogger(__name__)
+
+INET_FAMILIES = socket.AF_INET, socket.AF_INET6
 
 class Protocol(asyncio.Protocol):
     """asyncio low-level ZEO base interface
@@ -41,7 +45,15 @@ class Protocol(asyncio.Protocol):
 
     def connection_made(self, transport):
         logger.info("Connected %s", self)
+
+
+        if sys.version_info < (3, 6):
+            sock = transport.get_extra_info('socket')
+            if sock is not None and sock.family in INET_FAMILIES:
+                # See https://bugs.python.org/issue27456 :(
+                sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, True)
         self.transport = transport
+
         paused = self.paused
         output = self.output
         append = output.append

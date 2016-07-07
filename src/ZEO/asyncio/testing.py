@@ -86,7 +86,7 @@ class Transport:
 
     capacity = 1 << 64
     paused = False
-    extra = dict(peername='1.2.3.4', sockname=('127.0.0.1', 4200))
+    extra = dict(peername='1.2.3.4', sockname=('127.0.0.1', 4200), socket=None)
 
     def __init__(self, protocol):
         self.data = []

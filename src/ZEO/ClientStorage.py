@@ -34,6 +34,7 @@ import BTrees.OOBTree
 import zc.lockfile
 import ZODB
 import ZODB.BaseStorage
+import ZODB.ConflictResolution
 import ZODB.interfaces
 import zope.interface
 import six
@@ -53,10 +54,7 @@ logger = logging.getLogger(__name__)
 # max signed 64-bit value ~ infinity :) Signed cuz LBTree and TimeStamp
 m64 = b'\x7f\xff\xff\xff\xff\xff\xff\xff'
 
-try:
-    from ZODB.ConflictResolution import ResolvedSerial
-except ImportError:
-    ResolvedSerial = 'rs'
+from ZODB.ConflictResolution import ResolvedSerial
 
 def tid2time(tid):
     return str(TimeStamp(tid))
@@ -77,7 +75,8 @@ def get_timestamp(prev_ts=None):
 
 MB = 1024**2
 
-class ClientStorage(object):
+@zope.interface.implementer(ZODB.interfaces.IMultiCommitStorage)
+class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
     """A storage class that is a network client to a remote storage.
 
     This is a faithful implementation of the Storage API.
@@ -333,6 +332,7 @@ class ClientStorage(object):
 
         The storage isn't really ready to use until after this call.
         """
+        super(ClientStorage, self).registerDB(db)
         self._db = db
 
     def is_connected(self, test=False):
@@ -724,18 +724,51 @@ class ClientStorage(object):
         """
         tbuf = self._check_trans(txn, 'tpc_vote')
         try:
-            self._call('vote', id(txn))
+
+            conflicts = True
+            vote_attempts = 0
+            while conflicts and vote_attempts < 9: # 9? Mainly avoid inf. loop
+                conflicts = False
+                for oid in self._call('vote', id(txn)) or ():
+                    if isinstance(oid, dict):
+                        # Conflict, let's try to resolve it
+                        conflicts = True
+                        conflict = oid
+                        oid = conflict['oid']
+                        committed, read = conflict['serials']
+                        data = self.tryToResolveConflict(
+                            oid, committed, read, conflict['data'])
+                        self._async('storea', oid, committed, data, id(txn))
+                        tbuf.resolve(oid, data)
+                    else:
+                        tbuf.serial(oid, ResolvedSerial)
+
+                vote_attempts += 1
+
         except POSException.StorageTransactionError:
             # Hm, we got disconnected and reconnected bwtween
             # _check_trans and voting. Let's chack the transaction again:
-            tbuf = self._check_trans(txn, 'tpc_vote')
+            self._check_trans(txn, 'tpc_vote')
+            raise
+
+        except POSException.ConflictError as err:
+            oid = getattr(err, 'oid', None)
+            if oid is not None:
+                # This is a band-aid to help recover from a situation
+                # that shouldn't happen.  A Client somehow misses some
+                # invalidations and has out of date data in its
+                # cache. We need some whay to invalidate the cache
+                # entry without invalidations. So, if we see a
+                # (unresolved) conflict error, we assume that the
+                # cache entry is bad and invalidate it.
+                self._cache.invalidate(oid, None)
             raise
 
         if tbuf.exception:
             raise tbuf.exception
 
-        if tbuf.serials:
-            return list(tbuf.serials.items())
+        if tbuf.server_resolved or tbuf.client_resolved:
+            return list(tbuf.server_resolved) + list(tbuf.client_resolved)
         else:
             return None
 
@@ -829,6 +862,8 @@ class ClientStorage(object):
             self._iterator_gc()
 
         self._update_blob_cache(tbuf, tid)
+
+        return tid
 
     def _update_blob_cache(self, tbuf, tid):
         """Internal helper move blobs updated by a transaction to the cache.

@@ -46,7 +46,8 @@ class TransactionBuffer:
         # stored are builtin types -- strings or None.
         self.pickler = Pickler(self.file, 1)
         self.pickler.fast = 1
-        self.serials = {} # processed { oid -> serial }
+        self.server_resolved = set() # {oid}
+        self.client_resolved = {} # {oid -> buffer_record_number}
         self.exception = None
 
     def close(self):
@@ -59,12 +60,17 @@ class TransactionBuffer:
         # Estimate per-record cache size
         self.size = self.size + (data and len(data) or 0) + 31
 
+    def resolve(self, oid, data):
+        """Record client-resolved data
+        """
+        self.store(oid, data)
+        self.client_resolved[oid] = self.count - 1
+
     def serial(self, oid, serial):
         if isinstance(serial, Exception):
-            self.exception = serial
-            self.serials[oid] = None
-        else:
-            self.serials[oid] = serial
+            self.exception = serial # This transaction will never be committed
+        elif serial == ResolvedSerial:
+            self.server_resolved.add(oid)
 
     def storeBlob(self, oid, blobfilename):
         self.blobs.append((oid, blobfilename))
@@ -72,7 +78,8 @@ class TransactionBuffer:
     def __iter__(self):
         self.file.seek(0)
         unpickler = Unpickler(self.file)
-        serials = self.serials
+        server_resolved = self.server_resolved
+        client_resolved = self.client_resolved
 
         # Gaaaa, this is awkward. There can be entries in serials that
         # aren't in the buffer, because undo.  Entries can be repeated
@@ -82,10 +89,11 @@ class TransactionBuffer:
         seen = set()
         for i in range(self.count):
             oid, data = unpickler.load()
-            seen.add(oid)
-            yield oid, data, serials.get(oid) == ResolvedSerial
+            if client_resolved.get(oid, i) == i:
+                seen.add(oid)
+                yield oid, data, oid in server_resolved
 
-        # We may have leftover serials because undo
-        for oid, serial in serials.items():
+        # We may have leftover oids because undo
+        for oid in server_resolved:
             if oid not in seen:
-                yield oid, None, serial == ResolvedSerial
+                yield oid, None, True
