@@ -160,7 +160,7 @@ def stop_runner(thread, config, qin, qout, stop_timeout=9, pid=None):
         # The runner thread didn't stop. If it was a process,
         # give it some time to exit
         if hasattr(thread, 'pid') and thread.pid:
-            os.waitpid(thread.pid)
+            os.waitpid(thread.pid, 0)
         else:
             # Gaaaa, force gc in hopes of maybe getting the unclosed
             # sockets to get GCed
