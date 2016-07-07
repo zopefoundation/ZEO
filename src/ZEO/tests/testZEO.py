@@ -172,7 +172,7 @@ class GenericTestBase(
         self._storage.registerDB(DummyDB())
 
     def getZEOConfig(self):
-        return forker.ZEOConfig(('', get_port(self)))
+        return forker.ZEOConfig(('127.0.0.1', 0))
 
     def _wrap_client(self, client):
         return client
