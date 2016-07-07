@@ -750,7 +750,7 @@ class ServerTests(Base, setupstack.TestCase):
         self.target = protocol.zeo_storage
         if finish:
             self.assertEqual(self.pop(parse=False), best_protocol_version)
-            protocol.data_received(sized(b'Z4'))
+            protocol.data_received(sized(b'Z5'))
         return protocol
 
     message_id = 0
@@ -788,9 +788,9 @@ class ServerTests(Base, setupstack.TestCase):
         self.assertEqual(self.pop(parse=False), best_protocol_version)
 
         # The client sends it's protocol:
-        protocol.data_received(sized(b'Z4'))
+        protocol.data_received(sized(b'Z5'))
 
-        self.assertEqual(protocol.protocol_version, b'Z4')
+        self.assertEqual(protocol.protocol_version, b'Z5')
 
         protocol.zeo_storage.notify_connected.assert_called_once_with(protocol)
 
