@@ -143,23 +143,9 @@ class MiscZEOTests:
         self.assertNotEquals(ZODB.utils.z64, storage3.lastTransaction())
         storage3.close()
 
-class GenericTests(
+class GenericTestBase(
     # Base class for all ZODB tests
-    StorageTestBase.StorageTestBase,
-    # ZODB test mixin classes (in the same order as imported)
-    BasicStorage.BasicStorage,
-    PackableStorage.PackableStorage,
-    Synchronization.SynchronizedStorage,
-    MTStorage.MTStorage,
-    ReadOnlyStorage.ReadOnlyStorage,
-    # ZEO test mixin classes (in the same order as imported)
-    CommitLockTests.CommitLockVoteTests,
-    ThreadTests.ThreadTests,
-    # Locally defined (see above)
-    MiscZEOTests,
-    ):
-
-    """Combine tests from various origins in one class."""
+    StorageTestBase.StorageTestBase):
 
     shared_blob_dir = False
     blob_cache_dir = None
@@ -200,14 +186,23 @@ class GenericTests(
             stop()
         StorageTestBase.StorageTestBase.tearDown(self)
 
-    def runTest(self):
-        try:
-            super(GenericTests, self).runTest()
-        except:
-            self._failed = True
-            raise
-        else:
-            self._failed = False
+class GenericTests(
+    GenericTestBase,
+
+    # ZODB test mixin classes (in the same order as imported)
+    BasicStorage.BasicStorage,
+    PackableStorage.PackableStorage,
+    Synchronization.SynchronizedStorage,
+    MTStorage.MTStorage,
+    ReadOnlyStorage.ReadOnlyStorage,
+    # ZEO test mixin classes (in the same order as imported)
+    CommitLockTests.CommitLockVoteTests,
+    ThreadTests.ThreadTests,
+    # Locally defined (see above)
+    MiscZEOTests,
+    ):
+    """Combine tests from various origins in one class.
+    """
 
     def open(self, read_only=0):
         # Needed to support ReadOnlyStorage tests.  Ought to be a
@@ -394,7 +389,16 @@ class FileStorageClientHexTests(FileStorageHexTests):
     def _wrap_client(self, client):
         return ZODB.tests.hexstorage.HexStorage(client)
 
+class ClientConflictResolutionTests(
+    GenericTestBase,
+    ConflictResolution.ConflictResolvingStorage,
+    ):
 
+    def getConfig(self):
+        return '<mappingstorage>\n</mappingstorage>\n'
+
+    def getZEOConfig(self):
+        return forker.ZEOConfig(('', 0), client_conflict_resolution=True)
 
 class MappingStorageTests(GenericTests):
     """ZEO backed by a Mapping storage."""
@@ -492,6 +496,8 @@ class ZRPCConnectionTests(ZEO.tests.ConnectionTests.CommonSetupTearDown):
                 self._invalidatedCache += 1
             def invalidate(*a, **k):
                 pass
+            transform_record_data = untransform_record_data = \
+                                    lambda self, data: data
 
         db = DummyDB()
         storage.registerDB(db)
@@ -928,14 +934,14 @@ def tpc_finish_error():
     buffer, sadly, using implementation details:
 
     >>> tbuf = t.data(client)
-    >>> tbuf.resolved = None
+    >>> tbuf.client_resolved = None
 
     tpc_finish will fail:
 
     >>> client.tpc_finish(t) # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    TypeError: ...
+    AttributeError: ...
 
     >>> client.tpc_abort(t)
     >>> t.abort()
@@ -1587,6 +1593,7 @@ def test_suite():
                      "ClientDisconnected"),
                     )),
             ))
+    zeo.addTest(unittest.makeSuite(ClientConflictResolutionTests, 'check'))
     zeo.layer = ZODB.tests.util.MininalTestLayer('testZeo-misc')
     suite.addTest(zeo)
 

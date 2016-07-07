@@ -41,6 +41,9 @@ tests_require = ['zope.testing', 'manuel', 'random2', 'mock']
 if sys.version_info[:2] < (3, ):
     install_requires.extend(('futures', 'trollius'))
 
+elif sys.version_info >= (3, 5):
+    install_requires.append('uvloop')
+
 classifiers = """\
 Intended Audience :: Developers
 License :: OSI Approved :: Zope Public License
