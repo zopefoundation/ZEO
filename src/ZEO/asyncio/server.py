@@ -216,7 +216,7 @@ class Acceptor(object):
         self.addr = addr
         self.ssl_context = ssl
         self.event_loop = loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+
         if isinstance(addr, tuple):
             cr = loop.create_server(self.factory, addr[0], addr[1],
                                     reuse_address=True, ssl=ssl)

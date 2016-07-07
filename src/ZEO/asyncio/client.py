@@ -723,7 +723,6 @@ class ClientThread(ClientRunner):
         loop = None
         try:
             loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
             self.setup_delegation(loop)
             self.started.set()
             loop.run_forever()
