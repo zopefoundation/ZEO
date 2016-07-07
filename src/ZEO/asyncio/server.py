@@ -223,7 +223,7 @@ class Acceptor(object):
         else:
             cr = loop.create_unix_server(self.factory, addr, ssl=ssl)
 
-        f = asyncio.async(cr)
+        f = asyncio.async(cr, loop=loop)
 
         @f.add_done_callback
         def listenting(f):
