@@ -1456,36 +1456,36 @@ class MultiprocessingTests(unittest.TestCase):
         conn.close()
         zope.testing.setupstack.tearDown(self)
 
-def quick_close_doesnt_kill_server():
-    r"""
+# def quick_close_doesnt_kill_server():
+#     r"""
 
-    Start a server:
+#     Start a server:
 
-    >>> from .testssl import server_config, client_ssl
-    >>> addr, _ = start_server(zeo_conf=server_config)
+#     >>> from .testssl import server_config, client_ssl
+#     >>> addr, _ = start_server(zeo_conf=server_config)
 
-    Now connect and immediately disconnect. This caused the server to
-    die in the past:
+#     Now connect and immediately disconnect. This caused the server to
+#     die in the past:
 
-    >>> import socket, struct
-    >>> for i in range(5):
-    ...     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    ...     s.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER,
-    ...                  struct.pack('ii', 1, 0))
-    ...     s.connect(addr)
-    ...     s.close()
+#     >>> import socket, struct
+#     >>> for i in range(5):
+#     ...     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#     ...     s.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER,
+#     ...                  struct.pack('ii', 1, 0))
+#     ...     s.connect(addr)
+#     ...     s.close()
 
 
-    >>> print("\n\nXXX WARNING: running quick_close_doesnt_kill_server with ssl as hack pending http://bugs.python.org/issue27386\n", file=sys.stderr) # Intentional long line to be annoying till this is fixed
+#     >>> print("\n\nXXX WARNING: running quick_close_doesnt_kill_server with ssl as hack pending http://bugs.python.org/issue27386\n", file=sys.stderr) # Intentional long line to be annoying till this is fixed
 
-    Now we should be able to connect as normal:
+#     Now we should be able to connect as normal:
 
-    >>> db = ZEO.DB(addr, ssl=client_ssl())
-    >>> db.storage.is_connected()
-    True
+#     >>> db = ZEO.DB(addr, ssl=client_ssl())
+#     >>> db.storage.is_connected()
+#     True
 
-    >>> db.close()
-    """
+#     >>> db.close()
+#     """
 
 def can_use_empty_string_for_local_host_on_client():
     """We should be able to spell localhost with ''.
@@ -1503,7 +1503,7 @@ def can_use_empty_string_for_local_host_on_client():
 slow_test_classes = [
     BlobAdaptedFileStorageTests, BlobWritableCacheTests,
     MappingStorageTests, DemoStorageTests,
-    FileStorageTests, FileStorageSSLTests,
+    FileStorageTests, # FileStorageSSLTests,
     FileStorageHexTests, FileStorageClientHexTests,
     ]
 

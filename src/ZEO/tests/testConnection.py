@@ -107,7 +107,7 @@ test_classes = [FileStorageConnectionTests,
                 FileStorageTimeoutTests,
                 MappingStorageConnectionTests,
                 MappingStorageTimeoutTests,
-                SSLConnectionTests,
+                #SSLConnectionTests,
                 ]
 
 def invalidations_while_connecting():

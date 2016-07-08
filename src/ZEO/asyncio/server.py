@@ -219,9 +219,9 @@ class Acceptor(object):
 
         if isinstance(addr, tuple):
             cr = loop.create_server(self.factory, addr[0], addr[1],
-                                    reuse_address=True, ssl=ssl)
+                                    reuse_address=True)
         else:
-            cr = loop.create_unix_server(self.factory, addr, ssl=ssl)
+            cr = loop.create_unix_server(self.factory, addr)
 
         f = asyncio.async(cr, loop=loop)
         server = loop.run_until_complete(f)
