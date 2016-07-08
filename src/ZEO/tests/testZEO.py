@@ -17,7 +17,6 @@ import multiprocessing
 import re
 
 from ZEO.ClientStorage import ClientStorage, m64
-from ZEO.tests.forker import get_port
 from ZEO.tests import forker, Cache, CommitLockTests, ThreadTests
 from ZEO.tests import IterationTests
 from ZEO._compat import PY3
@@ -275,10 +274,9 @@ class FileStorageRecoveryTests(StorageTestBase.StorageTestBase,
         """ % tempfile.mktemp(dir='.')
 
     def _new_storage(self):
-        port = get_port(self)
-        zconf = forker.ZEOConfig(('', port))
+        zconf = forker.ZEOConfig(('127.0.0.1', 0))
         zport, stop = forker.start_zeo_server(self.getConfig(),
-                                                              zconf, port)
+                                              zconf)
         self._servers.append(stop)
 
         blob_cache_dir = tempfile.mkdtemp(dir='.')
@@ -775,7 +773,7 @@ def multiple_storages_invalidation_queue_is_not_insane():
     >>> from transaction import commit
     >>> fs1 = FileStorage('t1.fs')
     >>> fs2 = FileStorage('t2.fs')
-    >>> server = StorageServer(('', get_port()), dict(fs1=fs1, fs2=fs2))
+    >>> server = StorageServer(None, storages=dict(fs1=fs1, fs2=fs2))
 
     >>> s1 = StorageServerWrapper(server, 'fs1')
     >>> s2 = StorageServerWrapper(server, 'fs2')
@@ -804,7 +802,7 @@ def multiple_storages_invalidation_queue_is_not_insane():
     >>> sorted([int(u64(oid)) for oid in oids])
     [10, 11, 12, 13, 14]
 
-    >>> server.close()
+    >>> fs1.close(); fs2.close()
     """
 
 def getInvalidationsAfterServerRestart():
@@ -834,7 +832,7 @@ Let's create a file storage and stuff some data into it:
 Now we'll open a storage server on the data, simulating a restart:
 
     >>> fs = FileStorage('t.fs')
-    >>> sv = StorageServer(('', get_port()), dict(fs=fs))
+    >>> sv = StorageServer(None, dict(fs=fs))
     >>> s = ZEOStorage(sv, sv.read_only)
     >>> s.notify_connected(FauxConn())
     >>> s.register('fs', False)
@@ -868,7 +866,6 @@ need to be invalidated.  This means we'll invalidate objects that
 dont' need to be invalidated, however, that's better than verifying
 caches.)
 
-    >>> sv.close()
     >>> fs.close()
 
 If a storage doesn't implement lastInvalidations, a client can still
@@ -880,7 +877,7 @@ without this method:
     ...     lastInvalidations = property()
 
     >>> fs = FS('t.fs')
-    >>> sv = StorageServer(('', get_port()), dict(fs=fs))
+    >>> sv = StorageServer(None, dict(fs=fs))
     >>> st = StorageServerWrapper(sv, 'fs')
     >>> s = st.server
 
@@ -1074,7 +1071,7 @@ def runzeo_without_configfile():
 
     >>> import subprocess, re
     >>> print(re.sub(b'\d\d+|[:]', b'', subprocess.Popen(
-    ...     [sys.executable, 'runzeo', '-a:%s' % get_port(), '-ft', '--test'],
+    ...     [sys.executable, 'runzeo', '-a:0', '-ft', '--test'],
     ...     stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
     ...     ).stdout.read()).decode('ascii'))
     ... # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
@@ -1322,6 +1319,7 @@ def read(filename):
 
 def runzeo_logrotate_on_sigusr2():
     """
+    >>> from ZEO.tests.forker import get_port
     >>> port = get_port()
     >>> with open('c', 'w') as r:
     ...    _ = r.write('''

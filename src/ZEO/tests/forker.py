@@ -340,8 +340,6 @@ def setUp(test):
 
     test.globs['start_server'] = start_server
 
-    test.globs['get_port'] = get_port
-
     def stop_server(stop):
         stop()
         servers.remove(stop)
