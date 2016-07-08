@@ -1,14 +1,19 @@
 Changelog
 =========
 
-5.0.0 (unreleases)
-------------------
+5.0.0a0 (2016-07-08)
+--------------------
 
 This is a major ZEO revision, which replaces the ZEO network protocol
 implementation.
 
 New features:
 
+- SSL support
+
+- Optional client-side conflict resolution.
+
+- Lots of modtly internal clean ups.
 
 Dropped features:
 
