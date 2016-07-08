@@ -736,7 +736,6 @@ class StorageServer:
 
 
         self._lock = Lock()
-        self._commit_locks = {}
 
         self.read_only = read_only
         self.database = None
