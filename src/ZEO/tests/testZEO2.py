@@ -175,22 +175,22 @@ So, we arrange to get an error in vote:
     ...
     ValueError
 
-# When we do, the storage server's transaction lock shouldn't be held:
+When we do, the storage server's transaction lock shouldn't be held:
 
-#     >>> '1' in server._commit_locks
-#     False
+    >>> zs.lock_manager.locked is not None
+    False
 
-# Of course, if vote suceeds, the lock will be held:
+Of course, if vote suceeds, the lock will be held:
 
-#     >>> vote_should_fail = False
-#     >>> zs.tpc_begin('1', '', '', {})
-#     >>> zs.storea(ZODB.utils.p64(99), ZODB.utils.z64, 'x', '1')
-#     >>> _ = zs.vote('1') # doctest: +ELLIPSIS
+    >>> vote_should_fail = False
+    >>> zs.tpc_begin('1', '', '', {})
+    >>> zs.storea(ZODB.utils.p64(99), ZODB.utils.z64, 'x', '1')
+    >>> _ = zs.vote('1') # doctest: +ELLIPSIS
 
-#     >>> '1' in server._commit_locks
-#     True
+    >>> zs.lock_manager.locked is not None
+    True
 
-#     >>> zs.tpc_abort('1')
+    >>> zs.tpc_abort('1')
     """
 
 
