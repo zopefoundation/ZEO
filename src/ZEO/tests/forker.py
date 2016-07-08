@@ -37,7 +37,7 @@ class ZEOConfig:
         if isinstance(addr, str):
             self.logpath = addr+'.log'
         else:
-            self.logpath = 'server-%s.log' % addr[1]
+            self.logpath = 'server.log'
             addr = '%s:%s' % addr
         self.address = addr
         self.read_only = None
@@ -195,10 +195,10 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
 
     if zeo_conf is None or isinstance(zeo_conf, dict):
         if port is None:
-            raise AssertionError("The port wasn't specified")
+            port = 0
 
         if isinstance(port, int):
-            addr = 'localhost', port
+            addr = '127.0.0.1', port
         else:
             addr = port
 
@@ -256,7 +256,7 @@ else:
 def shutdown_zeo_server(stop):
     stop()
 
-def get_port(test=None):
+def get_port(ignored=None):
     """Return a port that is not in use.
 
     Checks if a port is in use by trying to connect to it.  Assumes it
@@ -267,23 +267,20 @@ def get_port(test=None):
     Raises RuntimeError after 10 tries.
     """
 
-    if test is not None:
-        return get_port2(test)
-
     for i in range(10):
         port = random.randrange(20000, 30000)
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             try:
-                s.connect(('localhost', port))
+                s.connect(('127.0.0.1', port))
             except socket.error:
                 pass  # Perhaps we should check value of error too.
             else:
                 continue
 
             try:
-                s1.connect(('localhost', port+1))
+                s1.connect(('127.0.0.1', port+1))
             except socket.error:
                 pass  # Perhaps we should check value of error too.
             else:
@@ -296,35 +293,11 @@ def get_port(test=None):
             s1.close()
     raise RuntimeError("Can't find port")
 
-def get_port2(test):
-    for i in range(10):
-        while 1:
-            port = random.randrange(20000, 30000)
-            if port%3 == 0:
-                break
-
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            s.bind(('localhost', port+2))
-        except socket.error as e:
-            if e.args[0] != errno.EADDRINUSE:
-                raise
-            s.close()
-            continue
-
-        if not (can_connect(port) or can_connect(port+1)):
-            zope.testing.setupstack.register(test, s.close)
-            return port
-
-        s.close()
-
-    raise RuntimeError("Can't find port")
-
 def can_connect(port):
     c = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         try:
-            c.connect(('localhost', port))
+            c.connect(('127.0.0.1', port))
         except socket.error:
             return False  # Perhaps we should check value of error too.
         else:
@@ -346,7 +319,7 @@ def setUp(test):
         """
         if port is None:
             if addr is None:
-                port = get_port2(test)
+                port = 0
             else:
                 port = addr[1]
         elif addr is not None:
@@ -366,9 +339,6 @@ def setUp(test):
         return addr, stop
 
     test.globs['start_server'] = start_server
-
-    def get_port():
-        return get_port2(test)
 
     test.globs['get_port'] = get_port
 

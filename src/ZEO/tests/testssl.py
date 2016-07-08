@@ -298,7 +298,7 @@ def ssl_client(**ssl_settings):
         """%import ZEO
 
         <clientstorage>
-          server localhost:0
+          server 127.0.0.1:0
           {}
         </clientstorage>
         """.format(ssl_conf(**ssl_settings))
@@ -309,7 +309,7 @@ def create_server(**ssl_settings):
         f.write(
             """
             <zeo>
-              address localhost:0
+              address 127.0.0.1:0
               {}
             </zeo>
             <mappingstorage>

@@ -1025,7 +1025,7 @@ def dont_log_poskeyerrors_on_server():
 
     >>> cs.close()
     >>> stop_server(admin)
-    >>> with open('server-%s.log' % addr[1]) as f:
+    >>> with open('server.log') as f:
     ...     'POSKeyError' in f.read()
     False
     """
@@ -1199,7 +1199,7 @@ constructor.
     >>> db.close()
     >>> @wait_until
     ... def check_for_test_label_1():
-    ...    with open('server-%s.log' % addr[1]) as f:
+    ...    with open('server.log') as f:
     ...        for line in f:
     ...            if 'test-label-1' in line:
     ...                print(line.split()[1:4])
@@ -1220,11 +1220,10 @@ You can specify the client label via a configuration file as well:
     >>> db.close()
     >>> @wait_until
     ... def check_for_test_label_2():
-    ...    with open('server-%s.log' % addr[1]) as f:
-    ...        for line in open('server-%s.log' % addr[1]):
-    ...            if 'test-label-2' in line:
-    ...                print(line.split()[1:4])
-    ...                return True
+    ...     for line in open('server.log'):
+    ...         if 'test-label-2' in line:
+    ...             print(line.split()[1:4])
+    ...             return True
     ['INFO', 'ZEO.StorageServer', '(test-label-2']
 
     """
@@ -1520,7 +1519,6 @@ class ServerManagingClientStorage(ClientStorage):
         else:
             server_blob_dir = 'server-'+blob_dir
         self.globs = {}
-        port = forker.get_port2(self)
         addr, stop = forker.start_zeo_server(
             """
             <blobstorage>
@@ -1531,7 +1529,6 @@ class ServerManagingClientStorage(ClientStorage):
                 </filestorage>
             </blobstorage>
             """ % (server_blob_dir, name+'.fs', extrafsoptions),
-            port=port,
             )
         zope.testing.setupstack.register(self, stop)
         if shared:

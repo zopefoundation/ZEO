@@ -18,7 +18,7 @@ The simplest client configuration specified a server address:
 
     >>> storage.getName(), storage.__class__.__name__
     ... # doctest: +ELLIPSIS
-    ("[('localhost', ...)] (connected)", 'ClientStorage')
+    ("[('127.0.0.1', ...)] (connected)", 'ClientStorage')
 
     >>> storage.blob_dir
     >>> storage._storage
