@@ -169,27 +169,28 @@ So, we arrange to get an error in vote:
     >>> zs = ZEO.tests.servertesting.client(server, 1)
     >>> zs.tpc_begin('0', '', '', {})
     >>> zs.storea(ZODB.utils.p64(99), ZODB.utils.z64, 'x', '0')
+
     >>> zs.vote('0')
     Traceback (most recent call last):
     ...
     ValueError
 
-When we do, the storage server's transaction lock shouldn't be held:
+# When we do, the storage server's transaction lock shouldn't be held:
 
-    >>> '1' in server._commit_locks
-    False
+#     >>> '1' in server._commit_locks
+#     False
 
-Of course, if vote suceeds, the lock will be held:
+# Of course, if vote suceeds, the lock will be held:
 
-    >>> vote_should_fail = False
-    >>> zs.tpc_begin('1', '', '', {})
-    >>> zs.storea(ZODB.utils.p64(99), ZODB.utils.z64, 'x', '1')
-    >>> _ = zs.vote('1') # doctest: +ELLIPSIS
+#     >>> vote_should_fail = False
+#     >>> zs.tpc_begin('1', '', '', {})
+#     >>> zs.storea(ZODB.utils.p64(99), ZODB.utils.z64, 'x', '1')
+#     >>> _ = zs.vote('1') # doctest: +ELLIPSIS
 
-    >>> '1' in server._commit_locks
-    True
+#     >>> '1' in server._commit_locks
+#     True
 
-    >>> zs.tpc_abort('1')
+#     >>> zs.tpc_abort('1')
     """
 
 
@@ -229,10 +230,10 @@ We start a transaction and vote, this leads to getting the lock.
     received handshake 'Z5'
     >>> tid1 = start_trans(zs1)
     >>> resolved1 = zs1.vote(tid1) # doctest: +ELLIPSIS
-    ZEO.StorageServer DEBUG
-    (test-addr-1) ('1') lock: transactions waiting: 0
     ZEO.StorageServer BLATHER
     (test-addr-1) Preparing to commit transaction: 1 objects, ... bytes
+    ZEO.StorageServer DEBUG
+    (test-addr-1) ('1') lock: transactions waiting: 0
 
 If another client tried to vote, it's lock request will be queued and
 a delay will be returned:
@@ -254,10 +255,10 @@ When we end the first transaction, the queued vote gets the lock.
     >>> zs1.tpc_abort(tid1) # doctest: +ELLIPSIS
     ZEO.StorageServer DEBUG
     (test-addr-1) ('1') unlock: transactions waiting: 1
-    ZEO.StorageServer DEBUG
-    (test-addr-2) ('1') lock: transactions waiting: 0
     ZEO.StorageServer BLATHER
     (test-addr-2) Preparing to commit transaction: 1 objects, ... bytes
+    ZEO.StorageServer DEBUG
+    (test-addr-2) ('1') lock: transactions waiting: 0
 
 Let's try again with the first client. The vote will be queued:
 
@@ -364,10 +365,10 @@ release the lock and one of the waiting clients will get the lock.
     (test-addr-2) disconnected during locked transaction
     ZEO.StorageServer CRITICAL
     (test-addr-2) ('1') unlock: transactions waiting: 10
-    ZEO.StorageServer WARNING
-    (test-addr-1) ('1') lock: transactions waiting: 9
     ZEO.StorageServer BLATHER
     (test-addr-1) Preparing to commit transaction: 1 objects, ... bytes
+    ZEO.StorageServer WARNING
+    (test-addr-1) ('1') lock: transactions waiting: 9
 
 (In practice, waiting clients won't necessarily get the lock in order.)
 
@@ -431,6 +432,8 @@ If clients disconnect while waiting, they will be dequeued:
     (test-addr-18) ('1') dequeue lock: transactions waiting: 0
 
     >>> zs1.tpc_abort(tid1)
+    ZEO.StorageServer DEBUG
+    (test-addr-1) ('1') unlock: transactions waiting: 0
 
     >>> logging.getLogger('ZEO').setLevel(logging.NOTSET)
     >>> logging.getLogger('ZEO').removeHandler(handler)
@@ -486,14 +489,16 @@ ZEOStorage as closed and see if trying to get a lock cleans it up:
     received handshake 'Z5'
     >>> tid1 = start_trans(zs1)
     >>> resolved1 = zs1.vote(tid1) # doctest: +ELLIPSIS
-    ZEO.StorageServer DEBUG
-    (test-addr-1) ('1') lock: transactions waiting: 0
     ZEO.StorageServer BLATHER
     (test-addr-1) Preparing to commit transaction: 1 objects, ... bytes
+    ZEO.StorageServer DEBUG
+    (test-addr-1) ('1') lock: transactions waiting: 0
 
     >>> zs1.connection.connection_lost(None)
     ZEO.StorageServer INFO
     (test-addr-1) disconnected during locked transaction
+    ZEO.StorageServer DEBUG
+    (test-addr-1) ('1') unlock: transactions waiting: 0
 
     >>> zs2 = ZEO.tests.servertesting.client(server, '2')
     ZEO.asyncio.base INFO
@@ -502,12 +507,14 @@ ZEOStorage as closed and see if trying to get a lock cleans it up:
     received handshake 'Z5'
     >>> tid2 = start_trans(zs2)
     >>> resolved2 = zs2.vote(tid2) # doctest: +ELLIPSIS
-    ZEO.StorageServer DEBUG
-    (test-addr-2) ('1') lock: transactions waiting: 0
     ZEO.StorageServer BLATHER
     (test-addr-2) Preparing to commit transaction: 1 objects, ... bytes
+    ZEO.StorageServer DEBUG
+    (test-addr-2) ('1') lock: transactions waiting: 0
 
     >>> zs2.tpc_abort(tid2)
+    ZEO.StorageServer DEBUG
+    (test-addr-2) ('1') unlock: transactions waiting: 0
 
     >>> logging.getLogger('ZEO').setLevel(logging.NOTSET)
     >>> logging.getLogger('ZEO').removeHandler(handler)

@@ -48,6 +48,7 @@ class FakeServer:
         '1': FakeStorage(),
         '2': FakeStorageBase(),
         }
+    lock_managers = storages
 
     def register_connection(*args):
         return None, None
