@@ -41,7 +41,7 @@ tests_require = ['zope.testing', 'manuel', 'random2', 'mock']
 if sys.version_info[:2] < (3, ):
     install_requires.extend(('futures', 'trollius'))
 
-classifiers = """\
+classifiers = """
 Intended Audience :: Developers
 License :: OSI Approved :: Zope Public License
 Programming Language :: Python :: 2
@@ -56,7 +56,7 @@ Topic :: Software Development :: Libraries :: Python Modules
 Operating System :: Microsoft :: Windows
 Operating System :: Unix
 Framework :: ZODB
-"""
+""".strip().split('\n')
 
 def _modname(path, base, name=''):
     if path == base:
@@ -125,7 +125,7 @@ setup(name="ZEO",
       package_dir = {'': 'src'},
       license = "ZPL 2.1",
       platforms = ["any"],
-      classifiers = filter(None, classifiers.split("\n")),
+      classifiers = classifiers,
       test_suite="__main__.alltests", # to support "setup.py test"
       tests_require = tests_require,
       extras_require = dict(test=tests_require),
