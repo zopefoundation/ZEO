@@ -24,8 +24,8 @@ A current client should be able to connect to a old server:
     >>> import ZEO, ZODB.blob, transaction
     >>> db = ZEO.DB(addr, client='client', blob_dir='blobs')
     >>> wait_connected(db.storage)
-    >>> db.storage.protocol_version
-    b'Z4'
+    >>> str(db.storage.protocol_version.decode('ascii'))
+    'Z4'
 
     >>> conn = db.open()
     >>> conn.root().x = 0
@@ -103,9 +103,15 @@ A current client should be able to connect to a old server:
 
 # Note that we'll have to pull some hijinks:
 
-#     >>> import ZEO.asyncio.client
-#     >>> old_protocols = ZEO.asyncio.client.Protocol.protocols
-#     >>> ZEO.asyncio.client.Protocol.protocols = [b'Z4']
+#     >>> db = ZEO.DB(addr, client='client', blob_dir='blobs')
+#     >>> str(db.storage.protocol_version.decode('ascii'))
+#     'Z4'
+#     >>> wait_connected(db.storage)
+#     >>> conn = db.open()
+#     >>> conn.root().x = 0
+#     >>> transaction.commit()
+#     >>> len(db.history(conn.root()._p_oid, 99))
+#     2
 
 #     >>> db = ZEO.DB(addr, client='client', blob_dir='blobs')
 #     >>> db.storage.protocol_version

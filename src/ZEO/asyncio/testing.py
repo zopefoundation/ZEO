@@ -1,7 +1,19 @@
-import asyncio
+from .._compat import PY3
+
+if PY3:
+    import asyncio
+else:
+    import trollius as asyncio
+
+try:
+    ConnectionRefusedError
+except NameError:
+    class ConnectionRefusedError(OSError):
+        pass
+
 import pprint
 
-class Loop:
+class Loop(object):
 
     protocol = transport = None
 
@@ -75,14 +87,14 @@ class Loop:
     def stop(self):
         self.stopped = True
 
-class Handle:
+class Handle(object):
 
     cancelled = False
 
     def cancel(self):
         self.cancelled = True
 
-class Transport:
+class Transport(object):
 
     capacity = 1 << 64
     paused = False
@@ -127,7 +139,7 @@ class Transport:
     def get_extra_info(self, name):
         return self.extra[name]
 
-class AsyncRPC:
+class AsyncRPC(object):
     """Adapt an asyncio API to an RPC to help hysterical tests
     """
     def __init__(self, api):
@@ -136,7 +148,7 @@ class AsyncRPC:
     def __getattr__(self, name):
         return lambda *a, **kw: self.api.call(name, *a, **kw)
 
-class ClientRunner:
+class ClientRunner(object):
 
     def __init__(self, addr, client, cache, storage, read_only, timeout,
                  **kw):
@@ -152,7 +164,7 @@ class ClientRunner:
     def start(self, wait=True):
         pass
 
-    def call(self, method, *args, timeout=None):
+    def call(self, method, *args, **kw):
         return getattr(self, method)(*args)
 
     async = async_iter = call

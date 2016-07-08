@@ -175,7 +175,7 @@ def stop_runner(thread, config, qin, qout, stop_timeout=9, pid=None):
 def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
                      path='Data.fs', protocol=None, blob_dir=None,
                      suicide=True, debug=False,
-                     threaded=False, start_timeout=150, name=None,
+                     threaded=False, start_timeout=33, name=None,
                      ):
     """Start a ZEO server in a separate process.
 
@@ -231,7 +231,15 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
         )
     thread.daemon = True
     thread.start()
-    addr = qout.get(timeout=start_timeout)
+    try:
+        addr = qout.get(timeout=start_timeout)
+    except Exception:
+        whine("SERVER FAILED TO START")
+        if thread.is_alive():
+            whine("Server thread/process is still running")
+        elif not threaded:
+            whine("Exit status", thread.exitcode)
+        raise
 
     def stop(stop_timeout=99):
         stop_runner(thread, tmpfile, qin, qout, stop_timeout)
@@ -423,3 +431,6 @@ def debug_logging(logger='ZEO', stream='stderr', level=logging.DEBUG):
 
     return stop
 
+def whine(*message):
+    print(*message, file=sys.stderr)
+    sys.stderr.flush()

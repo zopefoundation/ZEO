@@ -172,7 +172,7 @@ class GenericTestBase(
         self._storage.registerDB(DummyDB())
 
     def getZEOConfig(self):
-        return forker.ZEOConfig(('', get_port(self)))
+        return forker.ZEOConfig(('127.0.0.1', 0))
 
     def _wrap_client(self, client):
         return client
@@ -475,7 +475,7 @@ class ZRPCConnectionTests(ZEO.tests.ConnectionTests.CommonSetupTearDown):
         handler = InstalledHandler('ZEO.asyncio.client')
         import ZODB.POSException
         self.assertRaises(TypeError, self._storage.history, z64, None)
-        self.assertTrue(" from server: builtins.TypeError" in str(handler))
+        self.assertTrue(re.search(" from server: .*TypeError", str(handler)))
 
         # POSKeyErrors and ConflictErrors aren't logged:
         handler.clear()
@@ -557,10 +557,9 @@ class CommonBlobTests:
         t = transaction.Transaction()
         try:
             self._storage.tpc_begin(t)
-            r1 = self._storage.storeBlob(oid, ZERO, data, tfname, '', t)
-            r2 = self._storage.tpc_vote(t)
-            revid = handle_serials(oid, r1, r2)
-            self._storage.tpc_finish(t)
+            self._storage.storeBlob(oid, ZERO, data, tfname, '', t)
+            self._storage.tpc_vote(t)
+            revid = self._storage.tpc_finish(t)
         except:
             self._storage.tpc_abort(t)
             raise
@@ -598,10 +597,9 @@ class CommonBlobTests:
         t = transaction.Transaction()
         try:
             self._storage.tpc_begin(t)
-            r1 = self._storage.storeBlob(oid, ZERO, data, tfname, '', t)
-            r2 = self._storage.tpc_vote(t)
-            serial = handle_serials(oid, r1, r2)
-            self._storage.tpc_finish(t)
+            self._storage.storeBlob(oid, ZERO, data, tfname, '', t)
+            self._storage.tpc_vote(t)
+            serial = self._storage.tpc_finish(t)
         except:
             self._storage.tpc_abort(t)
             raise
@@ -665,10 +663,9 @@ class BlobAdaptedFileStorageTests(FullGenericTests, CommonBlobTests):
             t = transaction.Transaction()
             try:
                 self._storage.tpc_begin(t)
-                r1 = self._storage.storeBlob(oid, ZERO, data, tfname, '', t)
-                r2 = self._storage.tpc_vote(t)
-                revid = handle_serials(oid, r1, r2)
-                self._storage.tpc_finish(t)
+                self._storage.storeBlob(oid, ZERO, data, tfname, '', t)
+                self._storage.tpc_vote(t)
+                revid = self._storage.tpc_finish(t)
             except:
                 self._storage.tpc_abort(t)
                 raise
@@ -690,15 +687,7 @@ class BlobAdaptedFileStorageTests(FullGenericTests, CommonBlobTests):
             check_data(server_filename)
 
             # If we remove it from the cache and call loadBlob, it should
-            # come back. We can do this in many threads.  We'll instrument
-            # the method that is used to request data from teh server to
-            # verify that it is only called once.
-
-            sendBlob_org = ZEO.ServerStub.StorageServer.sendBlob
-            calls = []
-            def sendBlob(self, oid, serial):
-                calls.append((oid, serial))
-                sendBlob_org(self, oid, serial)
+            # come back. We can do this in many threads.
 
             ZODB.blob.remove_committed(filename)
             returns = []
@@ -1515,7 +1504,7 @@ def can_use_empty_string_for_local_host_on_client():
     """
 
 slow_test_classes = [
-    #BlobAdaptedFileStorageTests, BlobWritableCacheTests,
+    BlobAdaptedFileStorageTests, BlobWritableCacheTests,
     MappingStorageTests, DemoStorageTests,
     FileStorageTests, FileStorageSSLTests,
     FileStorageHexTests, FileStorageClientHexTests,

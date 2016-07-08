@@ -19,7 +19,6 @@ file storage or Berkeley storage.
 TODO:  Need some basic access control-- a declaration of the methods
 exported for invocation by the server.
 """
-import asyncio
 import codecs
 import itertools
 import logging

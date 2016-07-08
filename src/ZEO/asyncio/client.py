@@ -1,6 +1,12 @@
+from .._compat import PY3
+
+if PY3:
+    import asyncio
+else:
+    import trollius as asyncio
+
 from ZEO.Exceptions import ClientDisconnected
 from ZODB.ConflictResolution import ResolvedSerial
-import asyncio
 import concurrent.futures
 import logging
 import random
@@ -251,7 +257,7 @@ class Protocol(base.Protocol):
         self.heartbeat_handle = self.loop.call_later(
             self.heartbeat_interval, self.heartbeat)
 
-class Client:
+class Client(object):
     """asyncio low-level ZEO client interface
     """
 
@@ -589,7 +595,7 @@ class Client:
             else:
                 return protocol.read_only
 
-class ClientRunner:
+class ClientRunner(object):
 
     def set_options(self, addrs, wrapper, cache, storage_key, read_only,
                     timeout=30, disconnect_poll=1,
@@ -608,7 +614,9 @@ class ClientRunner:
         from concurrent.futures import Future
         call_soon_threadsafe = loop.call_soon_threadsafe
 
-        def call(meth, *args, timeout=None):
+        def call(meth, *args, **kw):
+            timeout = kw.pop('timeout', None)
+            assert not kw
             result = Future()
             call_soon_threadsafe(meth, result, *args)
             return self.wait_for_result(result, timeout)
@@ -624,8 +632,8 @@ class ClientRunner:
             else:
                 raise
 
-    def call(self, method, *args, timeout=None):
-        return self.__call(self.call_threadsafe, method, args, timeout=timeout)
+    def call(self, method, *args, **kw):
+        return self.__call(self.call_threadsafe, method, args, **kw)
 
     def call_future(self, method, *args):
         # for tests
@@ -702,8 +710,8 @@ class ClientThread(ClientRunner):
         self.thread = threading.Thread(
             target=self.run,
             name="%s zeo client networking thread" % client.__name__,
-            daemon=True,
             )
+        self.thread.setDaemon(True)
         self.started = threading.Event()
         self.thread.start()
         self.started.wait()
@@ -715,7 +723,6 @@ class ClientThread(ClientRunner):
         loop = None
         try:
             loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
             self.setup_delegation(loop)
             self.started.set()
             loop.run_forever()
@@ -741,13 +748,13 @@ class ClientThread(ClientRunner):
     def close(self):
         if not self.closed:
             self.closed = True
-            super().close()
+            super(ClientThread, self).close()
             self.loop.call_soon_threadsafe(self.loop.stop)
             self.thread.join(9)
             if self.exception:
                 raise self.exception
 
-class Promise:
+class Promise(object):
     """Lightweight future with a partial promise API.
 
     These are lighweight because they call callbacks synchronously

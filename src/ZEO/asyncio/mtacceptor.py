@@ -41,8 +41,13 @@ with:
 
 in ZEO.StorageServer.
 """
+from .._compat import PY3
 
-import asyncio
+if PY3:
+    import asyncio
+else:
+    import trollius as asyncio
+
 import asyncore
 import socket
 import threading

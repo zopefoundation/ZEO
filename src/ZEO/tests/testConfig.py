@@ -20,7 +20,7 @@ from ZODB.config import storageFromString
 
 from .forker import start_zeo_server
 
-class ZEOConfigTest(setupstack.TestCase):
+class ZEOConfigTestBase(setupstack.TestCase):
 
     setUp = setupstack.setUpDirectory
 
@@ -85,6 +85,8 @@ class ZEOConfigTest(setupstack.TestCase):
         self.assertEqual(client._storage, storage)
         self.assertEqual(client.__name__,
                          name if name is not None else str(client._addr))
+
+class ZEOConfigTest(ZEOConfigTestBase):
 
     def test_default_zeo_config(self, **client_settings):
         addr, stop = self.start_server()
