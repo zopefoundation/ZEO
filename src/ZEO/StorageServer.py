@@ -106,6 +106,7 @@ class ZEOStorage:
 
     def notify_connected(self, conn):
         self.connection = conn
+        self.call_soon_threadsafe = conn.call_soon_threadsafe
         self.connected = True
         assert conn.protocol_version is not None
         self.log_label = _addr_label(conn.addr)
@@ -847,7 +848,7 @@ class StorageServer:
         # later transactions since they will have to validate their
         # caches anyway.
         for zs in self.zeo_storages_by_storage_id[storage_id][:]:
-            zs.connection.call_soon_threadsafe(zs.connection.close)
+            zs.call_soon_threadsafe(zs.connection.close)
 
     def invalidate(
         self, zeo_storage, storage_id, tid, invalidated=(), info=None):
@@ -985,8 +986,7 @@ class StorageServer:
             for zs in zeo_storages[:]:
                 try:
                     logger.debug("Closing %s", zs.connection)
-                    zs.connection.call_soon_threadsafe(
-                        zs.connection.close)
+                    zs.call_soon_threadsafe(zs.connection.close)
                 except Exception:
                     logger.exception("closing connection %r", zs)
 
@@ -1024,14 +1024,6 @@ class StorageServer:
         return dict((storage_id, self.server_status(storage_id))
                     for storage_id in self.storages)
 
-
-def _level_for_waiting(waiting):
-    if len(waiting) > 9:
-        return logging.CRITICAL
-    if len(waiting) > 3:
-        return logging.WARNING
-    else:
-        return logging.DEBUG
 
 class StubTimeoutThread:
 
@@ -1093,8 +1085,7 @@ class TimeoutThread(threading.Thread):
                 client.log("Transaction timeout after %s seconds" %
                            self._timeout, logging.CRITICAL)
                 try:
-                    client.connection.call_soon_threadsafe(
-                        client.connection.close)
+                    client.call_soon_threadsafe(client.connection.close)
                 except:
                     client.log("Timeout failure", logging.CRITICAL,
                                exc_info=sys.exc_info())
@@ -1209,16 +1200,13 @@ def never_resolve_conflict(oid, committedSerial, oldSerial, newpickle,
                         data=newpickle)
 
 class LockManager(object):
-    # NOTE: This implementation assumes a single server thread.
-    #       It could be updated to work with a thread-per-client, but
-    #       the waiting-management logic would have to be more complex.
 
     def __init__(self, storage_id, stats, timeout):
         self.storage_id = storage_id
         self.stats = stats
         self.timeout = timeout
         self.locked = None
-        self.waiting = []
+        self.waiting = {} # {ZEOStorage -> (func, delay)}
         self._lock = RLock()
 
     def lock(self, zs, func):
@@ -1234,38 +1222,52 @@ class LockManager(object):
         the lock isn't held pas the call.
         """
         with self._lock:
-            locked = self.locked
-
-            if locked is zs:
-                raise StorageTransactionError("Already voting (locked)")
-
-            if locked is not None and not locked.connected:
-                locked.log("Still locked after disconnected. Unlocking.",
-                           logging.CRITICAL)
-                if locked.transaction:
-                    locked.storage.tpc_abort(locked.transaction)
-
-                self._unlocked(locked)
-                locked = None
-
-            if locked is None:
-                result = func()
+            if self._can_lock(zs):
                 self._locked(zs)
-                return result
+            else:
+                if any(w for w in self.waiting if w is zs):
+                    raise StorageTransactionError("Already voting (waiting)")
 
-            assert locked.locked
+                delay = Delay()
+                self.waiting[zs] = (func, delay)
+                self._log_waiting(
+                    zs, "(%r) queue lock: transactions waiting: %s")
 
-            if any(w for w in self.waiting if w[0] is zs):
-                raise StorageTransactionError("Already voting (waiting)")
+                return delay
 
-            delay = Delay()
-            self.waiting.append((zs, func, delay))
-            zs.log("(%r) queue lock: transactions waiting: %s"
-                         % (self.storage_id, len(self.waiting)),
-                         _level_for_waiting(self.waiting)
-                         )
+        try:
+            result = func()
+        except Exception:
+            self.release(zs)
+            raise
+        else:
+            if not zs.locked:
+                self.release(zs)
+            return result
 
-            return delay
+    def _lock_waiting(self, zs):
+        waiting = None
+        with self._lock:
+            if self.locked is zs:
+                assert zs.locked
+                return
+
+            if self._can_lock(zs):
+                waiting = self.waiting.pop(zs, None)
+                if waiting:
+                    self._locked(zs)
+
+        if waiting:
+            func, delay = waiting
+            try:
+                result = func()
+            except Exception:
+                delay.error(sys.exc_info())
+                self.release(zs)
+            else:
+                delay.reply(result)
+                if not zs.locked:
+                    self.release(zs)
 
     def release(self, zs):
         with self._lock:
@@ -1273,45 +1275,52 @@ class LockManager(object):
             if locked is zs:
                 self._unlocked(zs)
 
-                while self.waiting:
-                    zs, func, delay = self.waiting.pop(0)
-                    try:
-                        result = func()
-                    except Exception:
-                        delay.error(sys.exc_info())
-                    else:
-                        delay.reply(result)
-                        if self._locked(zs):
-                            break
+                for zs in list(self.waiting):
+                    zs.call_soon_threadsafe(self._lock_waiting, zs)
+
             else:
-                waiting = [w for w in self.waiting if w[0] is not zs]
-                if len(waiting) < len(self.waiting):
-                    zs.log(
-                        "(%r) dequeue lock: transactions waiting: %s" % (
-                            self.storage_id, len(waiting)),
-                            _level_for_waiting(waiting)
-                        )
-                    self.waiting = waiting
+                if self.waiting.pop(zs, None):
+                    self._log_waiting(
+                        zs, "(%r) dequeue lock: transactions waiting: %s")
+
+    def _log_waiting(self, zs, message):
+        l = len(self.waiting)
+        zs.log(message % (self.storage_id, l),
+               logging.CRITICAL if l > 9 else (
+                   logging.WARNING if l > 3 else logging.DEBUG)
+               )
+
+    def _can_lock(self, zs):
+        locked = self.locked
+
+        if locked is zs:
+            raise StorageTransactionError("Already voting (locked)")
+
+        if locked is not None:
+            if not locked.connected:
+                locked.log("Still locked after disconnected. Unlocking.",
+                           logging.CRITICAL)
+                if locked.transaction:
+                    locked.storage.tpc_abort(locked.transaction)
+
+                self._unlocked(locked)
+                locked = None
+            else:
+                assert locked.locked
+
+
+        return locked is None
 
     def _locked(self, zs):
-        if zs.locked:
-            self.locked = zs
-            self.stats.lock_time = time.time()
-            zs.log(
-                "(%r) lock: transactions waiting: %s" % (
-                    self.storage_id, len(self.waiting)),
-                _level_for_waiting(self.waiting)
-                )
-            self.timeout.begin(zs)
-            return True
+        self.locked = zs
+        self.stats.lock_time = time.time()
+        self._log_waiting(zs, "(%r) lock: transactions waiting: %s")
+        self.timeout.begin(zs)
+        return True
 
     def _unlocked(self, zs):
         assert self.locked is zs
         self.timeout.end(zs)
         self.locked = self.stats.lock_time = None
         zs.locked = False
-        zs.log(
-            "(%r) unlock: transactions waiting: %s" % (
-                self.storage_id, len(self.waiting)),
-                _level_for_waiting(self.waiting)
-            )
+        self._log_waiting(zs, "(%r) unlock: transactions waiting: %s")

@@ -31,9 +31,15 @@ http://bugs.python.org/issue27392, but it's hard to justify the fix to
 get it accepted, so we won't bother for now.  This currently uses a
 horrible monley patch to work with SSL.
 
-Note that the latest server commit-lock manager assumes a single
-thread. To use this Acceptor, the lock manager would need to be
-updated.
+To use this module, replace::
+
+  from .asyncio.server import Acceptor
+
+with::
+
+  from .asyncio.mtacceptor import Acceptor
+
+in ZEO.StorageServer.
 """
 from .._compat import PY3
 
