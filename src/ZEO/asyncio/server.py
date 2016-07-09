@@ -165,12 +165,14 @@ class Delay(object):
 
     def reply(self, obj):
         self.sent = 'reply'
-        self.protocol.send_reply(self.msgid, obj)
+        if self.protocol:
+            self.protocol.send_reply(self.msgid, obj)
 
     def error(self, exc_info):
         self.sent = 'error'
         logger.error("Error raised in delayed method", exc_info=exc_info)
-        self.protocol.send_error(self.msgid, exc_info[1])
+        if self.protocol:
+            self.protocol.send_error(self.msgid, exc_info[1])
 
     def __repr__(self):
         return "%s[%s, %r, %r, %r]" % (
