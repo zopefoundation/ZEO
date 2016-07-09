@@ -30,6 +30,8 @@ from ZEO._compat import StringIO
 
 logger = logging.getLogger('ZEO.tests.forker')
 
+DEBUG = os.environ.get('ZEO_TEST_SERVER_DEBUG')
+
 class ZEOConfig:
     """Class to generate ZEO configuration file. """
 
@@ -88,7 +90,7 @@ def runner(config, qin, qout, timeout=None,
            debug=False, name=None,
            keep=False, protocol=None):
 
-    if debug:
+    if debug or DEBUG:
         debug_logging()
 
     old_protocol = None
