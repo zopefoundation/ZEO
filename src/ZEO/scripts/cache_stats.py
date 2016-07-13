@@ -14,18 +14,7 @@ from __future__ import print_function
 ##############################################################################
 """Trace file statistics analyzer.
 
-Usage: stats.py [-h] [-i interval] [-q] [-s] [-S] [-v] [-X] tracefile
--h: print histogram of object load frequencies
--i: summarizing interval in minutes (default 15; max 60)
--q: quiet; don't print summaries
--s: print histogram of object sizes
--S: don't print statistics
--v: verbose; print each record
--X: enable heuristic checking for misaligned records: oids > 2**32
-    will be rejected; this requires the tracefile to be seekable
-"""
-
-"""File format:
+File format:
 
 Each record is 26 bytes, plus a variable number of bytes to store an oid,
 with the following layout.  Numbers are big-endian integers.
@@ -58,84 +47,80 @@ i.e. the low bit is always zero.
 """
 import sys
 import time
-import getopt
+import argparse
 import struct
+import gzip
 
 # we assign ctime locally to facilitate test replacement!
 from time import ctime
 import six
 
-def usage(msg):
-    print(msg, file=sys.stderr)
-    print(__doc__, file=sys.stderr)
+def add_interval_argument(parser):
+    def _interval(a):
+        interval = int(60 * float(a))
+        if interval <= 0:
+            interval = 60
+        elif interval > 3600:
+            interval = 3600
+        return interval
+    parser.add_argument("--interval", "-i",
+                        default=15*60, type=_interval,
+                        help="summarizing interval in minutes (default 15; max 60)")
+
+def add_tracefile_argument(parser):
+
+    class GzipFileType(argparse.FileType):
+        def __init__(self):
+            super(GzipFileType, self).__init__(mode='rb')
+
+        def __call__(self, s):
+            f = super(GzipFileType, self).__call__(s)
+            if s.endswith(".gz"):
+                f = gzip.GzipFile(filename=s, fileobj=f)
+            return f
+
+    parser.add_argument("tracefile", type=GzipFileType(),
+                        help="The trace to read; may be gzipped")
 
 def main(args=None):
     if args is None:
         args = sys.argv[1:]
     # Parse options
-    verbose = False
-    quiet = False
-    dostats = True
-    print_size_histogram = False
-    print_histogram = False
-    interval = 15*60 # Every 15 minutes
-    heuristic = False
-    try:
-        opts, args = getopt.getopt(args, "hi:qsSvX")
-    except getopt.error as msg:
-        usage(msg)
-        return 2
-    for o, a in opts:
-        if o == '-h':
-            print_histogram = True
-        elif o == "-i":
-            interval = int(60 * float(a))
-            if interval <= 0:
-                interval = 60
-            elif interval > 3600:
-                interval = 3600
-        elif o == "-q":
-            quiet = True
-            verbose = False
-        elif o == "-s":
-            print_size_histogram = True
-        elif o == "-S":
-            dostats = False
-        elif o == "-v":
-            verbose = True
-        elif o == '-X':
-            heuristic = True
-        else:
-            assert False, (o, opts)
+    parser = argparse.ArgumentParser(description="Trace file statistics analyzer",
+                                     # Our -h, short for --load-histogram
+                                     # conflicts with default for help, so we handle
+                                     # manually.
+                                     add_help=False)
+    verbose_group = parser.add_mutually_exclusive_group()
+    verbose_group.add_argument('--verbose', '-v',
+                               default=False, action='store_true',
+                               help="Be verbose; print each record")
+    verbose_group.add_argument('--quiet', '-q',
+                               default=False, action='store_true',
+                               help="Reduce output; don't print summaries")
+    parser.add_argument("--sizes", '-s',
+                        default=False, action="store_true", dest="print_size_histogram",
+                        help="print histogram of object sizes")
+    parser.add_argument("--no-stats", '-S',
+                        default=True, action="store_false", dest="dostats",
+                        help="don't print statistics")
+    parser.add_argument("--load-histogram", "-h",
+                        default=False, action="store_true", dest="print_histogram",
+                        help="print histogram of object load frequencies")
+    parser.add_argument("--check", "-X",
+                        default=False, action="store_true", dest="heuristic",
+                        help=" enable heuristic checking for misaligned records: oids > 2**32"
+                        " will be rejected; this requires the tracefile to be seekable")
+    add_interval_argument(parser)
+    add_tracefile_argument(parser)
 
-    if len(args) != 1:
-        usage("exactly one file argument required")
-        return 2
-    filename = args[0]
+    if '--help' in args:
+        parser.print_help()
+        sys.exit(2)
 
-    # Open file
-    if filename.endswith(".gz"):
-        # Open gzipped file
-        try:
-            import gzip
-        except ImportError:
-            print("can't read gzipped files (no module gzip)", file=sys.stderr)
-            return 1
-        try:
-            f = gzip.open(filename, "rb")
-        except IOError as msg:
-            print("can't open %s: %s" % (filename, msg), file=sys.stderr)
-            return 1
-    elif filename == '-':
-        # Read from stdin
-        f = sys.stdin
-    else:
-        # Open regular file
-        try:
-            f = open(filename, "rb")
-        except IOError as msg:
-            print("can't open %s: %s" % (filename, msg), file=sys.stderr)
-            return 1
+    options = parser.parse_args(args)
+
+    f = options.tracefile
 
     rt0 = time.time()
     bycode = {}     # map code to count of occurrences
@@ -169,7 +154,7 @@ def main(args=None):
             ts, code, oidlen, start_tid, end_tid = unpack(FMT, r)
             if ts == 0:
                 # Must be a misaligned record caused by a crash.
-                if not quiet:
+                if not options.quiet:
                     print("Skipping 8 bytes at offset", f.tell() - FMT_SIZE)
                     f.seek(f.tell() - FMT_SIZE + 8)
                 continue
@@ -179,14 +164,14 @@ def main(args=None):
             records += 1
             if t0 is None:
                 t0 = ts
-                thisinterval = t0 // interval
+                thisinterval = t0 // options.interval
                 h0 = he = ts
             te = ts
-            if ts // interval != thisinterval:
-                if not quiet:
+            if ts // options.interval != thisinterval:
+                if not options.quiet:
                     dumpbyinterval(byinterval, h0, he)
                 byinterval = {}
-                thisinterval = ts // interval
+                thisinterval = ts // options.interval
                 h0 = ts
             he = ts
             dlen, code = (code & 0x7fffff00) >> 8, code & 0xff
@@ -208,7 +193,7 @@ def main(args=None):
                 elif code & 0x70 == 0x50: # All stores
                     bysizew[dlen] = d = bysizew.get(dlen) or {}
                     d[oid] = d.get(oid, 0) + 1
-            if verbose:
+            if options.verbose:
                 print("%s %02x %s %016x %016x %c%s" % (
                     ctime(ts)[4:-5],
                     code,
@@ -221,12 +206,12 @@ def main(args=None):
                 oids[oid] = oids.get(oid, 0) + 1
                 total_loads += 1
             elif code == 0x00:    # restart
-                if not quiet:
+                if not options.quiet:
                     dumpbyinterval(byinterval, h0, he)
                 byinterval = {}
-                thisinterval = ts // interval
+                thisinterval = ts // options.interval
                 h0 = he = ts
-                if not quiet:
+                if not options.quiet:
                     print(ctime(ts)[4:-5], end=' ')
                     print('='*20, "Restart", '='*20)
     except KeyboardInterrupt:
@@ -235,7 +220,7 @@ def main(args=None):
     end_pos = f.tell()
     f.close()
     rte = time.time()
-    if not quiet:
+    if not options.quiet:
         dumpbyinterval(byinterval, h0, he)
 
     # Error if nothing was read
@@ -244,7 +229,7 @@ def main(args=None):
         return 1
 
     # Print statistics
-    if dostats:
+    if options.dostats:
         print()
         print("Read %s trace records (%s bytes) in %.1f seconds" % (
             addcommas(records), addcommas(end_pos), rte-rt0))
@@ -267,7 +252,7 @@ def main(args=None):
                 explain.get(code) or "*** unknown code ***"))
 
     # Print histogram.
-    if print_histogram:
+    if options.print_histogram:
         print()
         print("Histogram of object load frequency")
         total = len(oids)
@@ -287,7 +272,7 @@ def main(args=None):
                          obj_percent, load_percent, cum))
 
     # Print size histogram.
-    if print_size_histogram:
+    if options.print_size_histogram:
         print()
         print("Histograms of object sizes")
         print()
