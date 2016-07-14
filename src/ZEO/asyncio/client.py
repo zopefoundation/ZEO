@@ -544,6 +544,27 @@ class Client(object):
         else:
             self._when_ready(self.load_before_threadsafe, future, oid, tid)
 
+    def _prefetch(self, oid, tid):
+        @self.protocol.load_before(oid, tid)
+        def load_before(load_future):
+            try:
+                data = load_future.result()
+                if data:
+                    data, start, end = data
+                    self.cache.store(oid, start, end, data)
+            except Exception:
+                logger.exception("prefetch %r %r" % (oid, tid))
+
+    def prefetch(self, future, oids, tid):
+        if self.ready:
+            for oid in oids:
+                if self.cache.loadBefore(oid, tid) is None:
+                    self._prefetch(oid, tid)
+
+            future.set_result(None)
+        else:
+            future.set_exception(ClientDisconnected())
+
     def tpc_finish_threadsafe(self, future, tid, updates, f):
         if self.ready:
             @self.protocol.promise('tpc_finish', tid)
@@ -661,6 +682,9 @@ class ClientRunner(object):
 
     def async_iter(self, it):
         return self.__call(self.client.call_async_iter_threadsafe, it)
+
+    def prefetch(self, oids, tid):
+        return self.__call(self.client.prefetch, oids, tid)
 
     def load_before(self, oid, tid):
         return self.__call(self.client.load_before_threadsafe, oid, tid)

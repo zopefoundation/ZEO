@@ -504,7 +504,14 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         return result[:2]
 
     def loadBefore(self, oid, tid):
+        result = self._cache.loadBefore(oid, tid)
+        if result:
+            return result
+
         return self._server.load_before(oid, tid)
+
+    def prefetch(self, oids, tid):
+        self._server.prefetch(oids, tid)
 
     def new_oid(self):
         """Storage API: return a new object identifier.
