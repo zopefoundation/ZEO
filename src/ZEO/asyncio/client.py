@@ -240,6 +240,17 @@ class Protocol(base.Protocol):
     def promise(self, method, *args):
         return self.call(Promise(), method, args)
 
+    def load_before(self, oid, tid):
+        # Special-case loadBefore, so we collapse outstanding requests
+        message_id = (oid, tid)
+        future = self.futures.get(message_id)
+        if future is None:
+            future = asyncio.Future(loop=self.loop)
+            self.futures[message_id] = future
+            self._write(
+                self.encode(message_id, False, 'loadBefore', (oid, tid)))
+        return future.add_done_callback
+
     # Methods called by the server.
     # WARNING WARNING we can't call methods that call back to us
     # syncronously, as that would lead to DEADLOCK!
@@ -519,14 +530,17 @@ class Client(object):
         if data is not None:
             future.set_result(data)
         elif self.ready:
-            @self.protocol.promise('loadBefore', oid, tid)
-            def load_before(data):
-                future.set_result(data)
-                if data:
-                    data, start, end = data
-                    self.cache.store(oid, start, end, data)
 
-            load_before.catch(future.set_exception)
+            @self.protocol.load_before(oid, tid)
+            def load_before(load_future):
+                try:
+                    data = load_future.result()
+                    future.set_result(data)
+                    if data:
+                        data, start, end = data
+                        self.cache.store(oid, start, end, data)
+                except Exception as exc:
+                    future.set_exception(exc)
         else:
             self._when_ready(self.load_before_threadsafe, future, oid, tid)
 
