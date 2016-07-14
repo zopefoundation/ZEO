@@ -1,6 +1,11 @@
 Changelog
 =========
 
+4.2.2 (unreleased)
+------------------
+
+- Fix ZEO cache tracing on Python 3.
+
 4.2.1 (2016-06-30)
 ------------------
 

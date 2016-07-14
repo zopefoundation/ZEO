@@ -557,7 +557,7 @@ class ClientCache(object):
             if result:
                 return result[0], result[1], None
             else:
-                self._trace(0x24, oid, "", before_tid)
+                self._trace(0x24, oid, b"", before_tid)
                 return result
 
         items = noncurrent_for_oid.items(None, u64(before_tid)-1)
@@ -566,7 +566,7 @@ class ClientCache(object):
             if result:
                 return result[0], result[1], None
             else:
-                self._trace(0x24, oid, "", before_tid)
+                self._trace(0x24, oid, b"", before_tid)
                 return result
 
         tid, ofs = items[-1]
@@ -593,11 +593,11 @@ class ClientCache(object):
             if result:
                 return result[0], result[1], None
             else:
-                self._trace(0x24, oid, "", before_tid)
+                self._trace(0x24, oid, b"", before_tid)
                 return result
 
         self._n_accesses += 1
-        self._trace(0x26, oid, "", saved_tid)
+        self._trace(0x26, oid, b"", saved_tid)
         return data, saved_tid, end_tid
 
     ##
