@@ -770,6 +770,7 @@ class StorageServer:
         self._lock = threading.Lock()
         self._commit_locks = {}
         self._waiting = dict((name, []) for name in storages)
+        self.ssl = ssl # For dev convenience
 
         self.read_only = read_only
         self.database = None
