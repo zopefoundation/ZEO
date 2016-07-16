@@ -345,7 +345,10 @@ server_config = """
     </zeo>
     """.format(server_cert, server_key, client_cert)
 
-def client_ssl():
+def client_ssl(cafile=server_key,
+               client_cert=client_cert,
+               client_key=client_key,
+               ):
     context = ssl.create_default_context(
         ssl.Purpose.CLIENT_AUTH, cafile=server_cert)
 
@@ -353,3 +356,7 @@ def client_ssl():
     context.verify_mode = ssl.CERT_REQUIRED
     context.check_hostname = False
     return context
+
+# Here's a command to create a cert/key pair:
+# openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem \
+#             -days 999999 -nodes -batch
