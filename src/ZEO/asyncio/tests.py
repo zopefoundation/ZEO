@@ -12,7 +12,6 @@ from ZODB.POSException import ReadOnlyError
 
 import collections
 import logging
-import pdb
 import struct
 import unittest
 
