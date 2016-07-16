@@ -8,6 +8,7 @@ else:
 from ZEO.Exceptions import ClientDisconnected
 from ZODB.ConflictResolution import ResolvedSerial
 import concurrent.futures
+import functools
 import logging
 import random
 import threading
@@ -26,6 +27,37 @@ logger = logging.getLogger(__name__)
 Fallback = object()
 
 local_random = random.Random() # use separate generator to facilitate tests
+
+def future_generator(func):
+    """Decorates a generator that generates futures
+    """
+
+    @functools.wraps(func)
+    def call_generator(*args, **kw):
+        gen = func(*args, **kw)
+        try:
+            f = next(gen)
+        except StopIteration:
+            gen.close()
+        else:
+            def store(gen, future):
+                @future.add_done_callback
+                def _(future):
+                    try:
+                        try:
+                            result = future.result()
+                        except Exception as exc:
+                            f = gen.throw(exc)
+                        else:
+                            f = gen.send(result)
+                    except StopIteration:
+                        gen.close()
+                    else:
+                        store(gen, f)
+
+            store(gen, f)
+
+    return call_generator
 
 class Protocol(base.Protocol):
     """asyncio low-level ZEO client interface
@@ -249,7 +281,7 @@ class Protocol(base.Protocol):
             self.futures[message_id] = future
             self._write(
                 self.encode(message_id, False, 'loadBefore', (oid, tid)))
-        return future.add_done_callback
+        return future
 
     # Methods called by the server.
     # WARNING WARNING we can't call methods that call back to us
@@ -525,35 +557,33 @@ class Client(object):
 
     # Special methods because they update the cache.
 
+    @future_generator
     def load_before_threadsafe(self, future, oid, tid):
         data = self.cache.loadBefore(oid, tid)
         if data is not None:
             future.set_result(data)
         elif self.ready:
-
-            @self.protocol.load_before(oid, tid)
-            def load_before(load_future):
-                try:
-                    data = load_future.result()
-                    future.set_result(data)
-                    if data:
-                        data, start, end = data
-                        self.cache.store(oid, start, end, data)
-                except Exception as exc:
-                    future.set_exception(exc)
-        else:
-            self._when_ready(self.load_before_threadsafe, future, oid, tid)
-
-    def _prefetch(self, oid, tid):
-        @self.protocol.load_before(oid, tid)
-        def load_before(load_future):
             try:
-                data = load_future.result()
+                data = yield self.protocol.load_before(oid, tid)
+            except Exception as exc:
+                future.set_exception(exc)
+            else:
+                future.set_result(data)
                 if data:
                     data, start, end = data
                     self.cache.store(oid, start, end, data)
-            except Exception:
-                logger.exception("prefetch %r %r" % (oid, tid))
+        else:
+            self._when_ready(self.load_before_threadsafe, future, oid, tid)
+
+    @future_generator
+    def _prefetch(self, oid, tid):
+        try:
+            data = yield self.protocol.load_before(oid, tid)
+            if data:
+                data, start, end = data
+                self.cache.store(oid, start, end, data)
+        except Exception:
+            logger.exception("prefetch %r %r" % (oid, tid))
 
     def prefetch(self, future, oids, tid):
         if self.ready:
