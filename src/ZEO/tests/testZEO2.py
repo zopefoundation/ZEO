@@ -516,7 +516,7 @@ ZEOStorage as closed and see if trying to get a lock cleans it up:
 def test_prefetch(self):
     """The client storage prefetch method pre-fetches from the server
 
-    >>> count = 99
+    >>> count = 999
 
     >>> import ZEO
     >>> addr, stop = ZEO.server()
