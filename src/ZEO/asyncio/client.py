@@ -159,6 +159,7 @@ class Protocol(base.Protocol):
             self.closed = True
             self.client.disconnected(self)
 
+    @future_generator
     def finish_connect(self, protocol_version):
 
         # We use a promise model rather than coroutines here because
@@ -182,56 +183,29 @@ class Protocol(base.Protocol):
             self.client.register_failed(
                 self, ZEO.Exceptions.ProtocolError(protocol_version))
             return
+
         self._write(self.protocol_version)
 
-        register = self.promise(
-            'register', self.storage_key,
-            self.read_only if self.read_only is not Fallback else False,
-            )
-        if self.read_only is not Fallback:
-            # Get lastTransaction in flight right away to make
-            # successful connection quicker, but only if we're not
-            # doing read-only fallback.  If we might need to retry, we
-            # can't send lastTransaction because if the registration
-            # fails, it will be seen as an invalid message and the
-            # connection will close. :( It would be a lot better of
-            # registere returned the last transaction (and info while
-            # it's at it).
-            lastTransaction = self.promise('lastTransaction')
+        try:
+            try:
+                server_tid = yield self.fut(
+                    'register', self.storage_key,
+                    self.read_only if self.read_only is not Fallback else False,
+                    )
+            except ZODB.POSException.ReadOnlyError:
+                if self.read_only is Fallback:
+                    self.read_only = True
+                    server_tid = yield self.fut(
+                        'register', self.storage_key, True)
+                else:
+                    raise
+            else:
+                if self.read_only is Fallback:
+                    self.read_only = False
+        except Exception as exc:
+            self.client.register_failed(self, exc)
         else:
-            lastTransaction = None # to make python happy
-
-        @register
-        def registered(_):
-            if self.read_only is Fallback:
-                self.read_only = False
-                r_lastTransaction = self.promise('lastTransaction')
-            else:
-                r_lastTransaction = lastTransaction
-            self.client.registered(self, r_lastTransaction)
-
-        @register.catch
-        def register_failed(exc):
-            if (isinstance(exc, ZODB.POSException.ReadOnlyError) and
-                self.read_only is Fallback):
-                # We tried a write connection, degrade to a read-only one
-                self.read_only = True
-                logger.info("%s write connection failed. Trying read-only",
-                            self)
-                register = self.promise('register', self.storage_key, True)
-                # get lastTransaction in flight.
-                lastTransaction = self.promise('lastTransaction')
-
-                @register
-                def registered(_):
-                    self.client.registered(self, lastTransaction)
-
-                @register.catch
-                def register_failed(exc):
-                    self.client.register_failed(self, exc)
-
-            else:
-                self.client.register_failed(self, exc)
+            self.client.registered(self, server_tid)
 
     exception_type_type = type(Exception)
     def message_received(self, data):
@@ -271,6 +245,9 @@ class Protocol(base.Protocol):
 
     def promise(self, method, *args):
         return self.call(Promise(), method, args)
+
+    def fut(self, method, *args):
+        return self.call(Fut(), method, args)
 
     def load_before(self, oid, tid):
         # Special-case loadBefore, so we collapse outstanding requests
@@ -405,18 +382,18 @@ class Client(object):
                 for addr in self.addrs
                 ]
 
-    def registered(self, protocol, last_transaction_promise):
+    def registered(self, protocol, server_tid):
         if self.protocol is None:
             self.protocol = protocol
             if not (self.read_only is Fallback and protocol.read_only):
                 # We're happy with this protocol. Tell the others to
                 # stop trying.
                 self._clear_protocols(protocol)
-            self.verify(last_transaction_promise)
+            self.verify(server_tid)
         elif (self.read_only is Fallback and not protocol.read_only and
               self.protocol.read_only):
             self.upgrade(protocol)
-            self.verify(last_transaction_promise)
+            self.verify(server_tid)
         else:
             protocol.close() # too late, we went home with another
 
@@ -434,11 +411,14 @@ class Client(object):
                 self.try_connecting)
 
     verify_result = None # for tests
-    def verify(self, last_transaction_promise):
-        protocol = self.protocol
 
-        @last_transaction_promise
-        def finish_verify(server_tid):
+    @future_generator
+    def verify(self, server_tid):
+        protocol = self.protocol
+        if server_tid is None:
+            server_tid = yield protocol.fut('lastTransaction')
+
+        try:
             cache = self.cache
             if cache:
                 cache_tid = cache.getLastTid()
@@ -447,7 +427,6 @@ class Client(object):
                     logger.error("Non-empty cache w/o tid -- clearing")
                     cache.clear()
                     self.client.invalidateCache()
-                    self.finished_verify(server_tid)
                 elif cache_tid > server_tid:
                     self.verify_result = "Cache newer than server"
                     logger.critical(
@@ -456,61 +435,54 @@ class Client(object):
                                          server_tid, cache_tid, protocol)
                 elif cache_tid == server_tid:
                     self.verify_result = "Cache up to date"
-                    self.finished_verify(server_tid)
                 else:
-                    @protocol.promise('getInvalidations', cache_tid)
-                    def verify_invalidations(vdata):
-                        if vdata:
-                            self.verify_result = "quick verification"
-                            tid, oids = vdata
-                            for oid in oids:
-                                cache.invalidate(oid, None)
-                            self.client.invalidateTransaction(tid, oids)
-                            return tid
-                        else:
-                            # cache is too old
-                            self.verify_result = "cache too old, clearing"
-                            try:
-                                ZODB.event.notify(
-                                    ZEO.interfaces.StaleCache(self.client))
-                            except Exception:
-                                logger.exception("sending StaleCache event")
-                            logger.critical(
-                                "%s dropping stale cache",
-                                getattr(self.client, '__name__', ''),
-                                )
-                            self.cache.clear()
-                            self.client.invalidateCache()
-                            return server_tid
-
-                    verify_invalidations(
-                        self.finished_verify,
-                        self.connected.set_exception,
-                        )
+                    vdata = yield protocol.fut('getInvalidations', cache_tid)
+                    if vdata:
+                        self.verify_result = "quick verification"
+                        server_tid, oids = vdata
+                        for oid in oids:
+                            cache.invalidate(oid, None)
+                        self.client.invalidateTransaction(server_tid, oids)
+                    else:
+                        # cache is too old
+                        self.verify_result = "cache too old, clearing"
+                        try:
+                            ZODB.event.notify(
+                                ZEO.interfaces.StaleCache(self.client))
+                        except Exception:
+                            logger.exception("sending StaleCache event")
+                        logger.critical(
+                            "%s dropping stale cache",
+                            getattr(self.client, '__name__', ''),
+                            )
+                        self.cache.clear()
+                        self.client.invalidateCache()
             else:
                 self.verify_result = "empty cache"
-                self.finished_verify(server_tid)
 
-        @finish_verify.catch
-        def verify_failed(exc):
+        except Exception as exc:
             del self.protocol
             self.register_failed(protocol, exc)
+        else:
+            # The cache is validated and the last tid we got from the server.
+            # Set ready so we apply any invalidations that follow.
+            # We've been ignoring them up to this point.
+            self.cache.setLastTid(server_tid)
+            self.ready = True
 
-    def finished_verify(self, server_tid):
-        # The cache is validated and the last tid we got from the server.
-        # Set ready so we apply any invalidations that follow.
-        # We've been ignoring them up to this point.
-        self.cache.setLastTid(server_tid)
-        self.ready = True
+            try:
+                info = yield protocol.fut('get_info')
+            except Exception as exc:
+                # This is weird. We were connected and verified our cache, but
+                # Now we errored getting info.
 
-        @self.protocol.promise('get_info')
-        def got_info(info):
-            self.client.notify_connected(self, info)
-            self.connected.set_result(None)
+                # XXX Need a test fpr this. The lone before is what we
+                # had, but it's wrong.
+                self.register_failed(self, exc)
 
-        @got_info.catch
-        def failed_info(exc):
-            self.register_failed(self, exc)
+            else:
+                self.client.notify_connected(self, info)
+                self.connected.set_result(None)
 
     def get_peername(self):
         return self.protocol.get_peername()
@@ -821,6 +793,28 @@ class ClientThread(ClientRunner):
             self.thread.join(9)
             if self.exception:
                 raise self.exception
+
+class Fut(object):
+    """Lightweight future that calls it's callback immediately rather than soon
+    """
+
+    def add_done_callback(self, cb):
+        self.cb = cb
+
+    exc = None
+    def set_exception(self, exc):
+        self.exc = exc
+        self.cb(self)
+
+    def set_result(self, result):
+        self._result = result
+        self.cb(self)
+
+    def result(self):
+        if self.exc:
+            raise self.exc
+        else:
+            return self._result
 
 class Promise(object):
     """Lightweight future with a partial promise API.

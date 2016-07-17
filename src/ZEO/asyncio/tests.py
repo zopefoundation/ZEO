@@ -72,6 +72,10 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
 
     maxDiff = None
 
+    def tearDown(self):
+        self.client.close()
+        super(ClientTests, self)
+
     def start(self,
               addrs=(('127.0.0.1', 8200), ), loop_addrs=None,
               read_only=False,
@@ -96,12 +100,9 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         if finish_start:
             protocol.data_received(sized(b'Z3101'))
             self.assertEqual(self.pop(2, False), b'Z3101')
-            self.assertEqual(self.pop(),
-                             [(1, False, 'register', ('TEST', False)),
-                              (2, False, 'lastTransaction', ()),
-                              ])
             self.respond(1, None)
             self.respond(2, 'a'*8)
+            self.pop(4)
             self.assertEqual(self.pop(), (3, False, 'get_info', ()))
             self.respond(3, dict(length=42))
 
@@ -135,12 +136,9 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         # The client sends back a handshake, and registers the
         # storage, and requests the last transaction.
         self.assertEqual(self.pop(2, False), b'Z5')
-        self.assertEqual(self.pop(),
-                         [(1, False, 'register', ('TEST', False)),
-                          (2, False, 'lastTransaction', ()),
-                          ])
+        self.assertEqual(self.pop(), (1, False, 'register', ('TEST', False)))
 
-        # Actually, the client isn't connected until it initializes it's cache:
+        # The client isn't connected until it initializes it's cache:
         self.assertFalse(client.connected.done() or transport.data)
 
         # If we try to make calls while the client is *initially*
@@ -163,9 +161,13 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         # The wrapper object (ClientStorage) hasn't been notified:
         self.assertFalse(wrapper.notify_connected.called)
 
-        # Let's respond to those first 2 calls:
-
+        # Let's respond to the register call:
         self.respond(1, None)
+
+        # The client requests the last transaction:
+        self.assertEqual(self.pop(), (2, False, 'lastTransaction', ()))
+
+        # We respond
         self.respond(2, 'a'*8)
 
         # After verification, the client requests info:
@@ -298,15 +300,14 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         # protocol:
         protocol.data_received(sized(b'Z310'))
         self.assertEqual(self.unsized(transport.pop(2)), b'Z310')
-        self.assertEqual(self.pop(),
-                         [(1, False, 'register', ('TEST', False)),
-                          (2, False, 'lastTransaction', ()),
-                          ])
+        self.assertEqual(self.pop(), (1, False, 'register', ('TEST', False)))
         self.assertFalse(wrapper.notify_connected.called)
-        self.respond(1, None)
-        self.respond(2, b'e'*8)
-        self.assertEqual(self.pop(), (3, False, 'get_info', ()))
-        self.respond(3, dict(length=42))
+
+        # If the register response is a tid, then the client won't
+        # request lastTransaction
+        self.respond(1, b'e'*8)
+        self.assertEqual(self.pop(), (2, False, 'get_info', ()))
+        self.respond(2, dict(length=42))
 
         # Because the server tid matches the cache tid, we're done connecting
         wrapper.notify_connected.assert_called_with(client, {'length': 42})
@@ -335,12 +336,9 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertFalse(client.connected.done() or transport.data)
         protocol.data_received(sized(b'Z3101'))
         self.assertEqual(self.unsized(transport.pop(2)), b'Z3101')
-        self.assertEqual(self.pop(),
-                         [(1, False, 'register', ('TEST', False)),
-                          (2, False, 'lastTransaction', ()),
-                          ])
         self.respond(1, None)
         self.respond(2, b'e'*8)
+        self.pop(4)
 
         # We have to verify the cache, so we're not done connecting:
         self.assertFalse(client.connected.done())
@@ -373,12 +371,9 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertFalse(client.connected.done() or transport.data)
         protocol.data_received(sized(b'Z3101'))
         self.assertEqual(self.unsized(transport.pop(2)), b'Z3101')
-        self.assertEqual(self.pop(),
-                         [(1, False, 'register', ('TEST', False)),
-                          (2, False, 'lastTransaction', ()),
-                          ])
         self.respond(1, None)
         self.respond(2, b'e'*8)
+        self.pop(4)
 
         # We have to verify the cache, so we're not done connecting:
         self.assertFalse(client.connected.done())
@@ -445,12 +440,9 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         cache.setLastTid('b'*8)
         protocol.data_received(sized(b'Z3101'))
         self.assertEqual(self.unsized(transport.pop(2)), b'Z3101')
-        self.assertEqual(self.pop(),
-                         [(1, False, 'register', ('TEST', False)),
-                          (2, False, 'lastTransaction', ()),
-                          ])
         self.respond(1, None)
         self.respond(2, 'a'*8)
+        self.pop()
         self.assertFalse(client.connected.done() or transport.data)
         delay, func, args, _ = loop.later.pop(1) # first in later is heartbeat
         self.assert_(8 < delay < 10)
@@ -462,12 +454,9 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         transport = loop.transport
         protocol.data_received(sized(b'Z3101'))
         self.assertEqual(self.unsized(transport.pop(2)), b'Z3101')
-        self.assertEqual(self.pop(),
-                         [(1, False, 'register', ('TEST', False)),
-                          (2, False, 'lastTransaction', ()),
-                          ])
         self.respond(1, None)
         self.respond(2, 'b'*8)
+        self.pop(4)
         self.assertEqual(self.pop(), (3, False, 'get_info', ()))
         self.respond(3, dict(length=42))
         self.assert_(client.connected.done() and not transport.data)
@@ -493,12 +482,10 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertTrue(self.is_read_only())
 
         # The client tries for a read-only connection:
-        self.assertEqual(self.pop(),
-                         [(2, False, 'register', ('TEST', True)),
-                          (3, False, 'lastTransaction', ()),
-                          ])
+        self.assertEqual(self.pop(), (2, False, 'register', ('TEST', True)))
         # We respond with successfully:
         self.respond(2, None)
+        self.pop(2)
         self.respond(3, 'b'*8)
         self.assertTrue(self.is_read_only())
 
@@ -525,12 +512,12 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
 
         # We respond and the writable connection succeeds:
         self.respond(1, None)
-        self.assertFalse(self.is_read_only())
 
         # at this point, a lastTransaction request is emitted:
 
         self.assertEqual(self.parse(loop.transport.pop()),
                          (2, False, 'lastTransaction', ()))
+        self.assertFalse(self.is_read_only())
 
         # Now, the original protocol is closed, and the client is
         # no-longer ready:
@@ -554,11 +541,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         wrapper, cache, loop, client, protocol, transport = self.start()
         protocol.data_received(sized(b'Z3101'))
         self.assertEqual(self.unsized(transport.pop(2)), b'Z3101')
-        self.assertEqual(self.pop(),
-                         [(1, False, 'register', ('TEST', False)),
-                          (2, False, 'lastTransaction', ()),
-                          ])
         self.respond(1, None)
+        self.pop(4)
         self.send('invalidateTransaction', b'b'*8, [b'1'*8], called=False)
         self.respond(2, b'a'*8)
         self.send('invalidateTransaction', b'c'*8, [b'1'*8], no_output=False)
@@ -575,11 +559,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
 
         protocol.data_received(sized(b'Z3101'))
         self.assertEqual(self.unsized(transport.pop(2)), b'Z3101')
-        self.assertEqual(self.pop(),
-                         [(1, False, 'register', ('TEST', False)),
-                          (2, False, 'lastTransaction', ()),
-                          ])
         self.respond(1, None)
+        self.pop(4)
         self.send('invalidateTransaction', b'd'*8, [b'1'*8], called=False)
         self.respond(2, b'c'*8)
         self.send('invalidateTransaction', b'e'*8, [b'1'*8], no_output=False)
