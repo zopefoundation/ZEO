@@ -143,7 +143,6 @@ class ZEOStorage:
         # XXX deprecated: but ZODB tests use getTid. They shouldn't
         self.getTid = storage.getTid
 
-        self.load = storage.load
         self.loadSerial = storage.loadSerial
         record_iternext = getattr(storage, 'record_iternext', None)
         if record_iternext is not None:
@@ -241,10 +240,6 @@ class ZEOStorage:
         return {'length': len(self.storage),
                 'size': self.storage.getSize(),
                 }
-
-    def loadEx(self, oid):
-        self.stats.loads += 1
-        return self.storage.load(oid, '')
 
     def loadBefore(self, oid, tid):
         self.stats.loads += 1
