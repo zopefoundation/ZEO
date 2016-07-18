@@ -140,7 +140,9 @@ class ZEOStorage:
         if not info['supportsUndo']:
             self.undoLog = self.undoInfo = lambda *a,**k: ()
 
+        # XXX deprecated: but ZODB tests use getTid. They shouldn't
         self.getTid = storage.getTid
+
         self.load = storage.load
         self.loadSerial = storage.loadSerial
         record_iternext = getattr(storage, 'record_iternext', None)
