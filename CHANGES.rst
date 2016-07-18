@@ -1,6 +1,10 @@
 Changelog
 =========
 
+- Fixed: SSL clients of servers with signed certs didn't load default
+  certs and were unable to connect.
+
+
 5.0.0a0 (2016-07-08)
 --------------------
 
