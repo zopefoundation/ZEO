@@ -84,7 +84,7 @@ class CommonSetupTearDown(StorageTestBase):
         self.file = 'storage_conf'
         self._servers = []
         self.caches = []
-        self.addr = [('localhost', 0)]
+        self.addr = [('127.0.0.1', 0)]
         self.startServer()
 
     def tearDown(self):
@@ -127,7 +127,7 @@ class CommonSetupTearDown(StorageTestBase):
         self.addr.append(self._getAddr())
 
     def _getAddr(self):
-        return 'localhost', forker.get_port(self)
+        return '127.0.0.1', forker.get_port(self)
 
     def getConfig(self, path, create, read_only):
         raise NotImplementedError
@@ -966,7 +966,7 @@ class TimeoutTests(CommonSetupTearDown):
             self.assertRaises(ClientDisconnected, storage.tpc_finish, txn)
 
         # Make sure it's logged as CRITICAL
-        for line in open("server-0.log"):
+        for line in open("server.log"):
             if (('Transaction timeout after' in line) and
                 ('CRITICAL ZEO.StorageServer' in line)
                 ):
