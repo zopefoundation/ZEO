@@ -169,6 +169,7 @@ So, we arrange to get an error in vote:
     >>> zs = ZEO.tests.servertesting.client(server, 1)
     >>> zs.tpc_begin('0', '', '', {})
     >>> zs.storea(ZODB.utils.p64(99), ZODB.utils.z64, 'x', '0')
+
     >>> zs.vote('0')
     Traceback (most recent call last):
     ...
@@ -176,7 +177,7 @@ So, we arrange to get an error in vote:
 
 When we do, the storage server's transaction lock shouldn't be held:
 
-    >>> '1' in server._commit_locks
+    >>> zs.lock_manager.locked is not None
     False
 
 Of course, if vote suceeds, the lock will be held:
@@ -186,7 +187,7 @@ Of course, if vote suceeds, the lock will be held:
     >>> zs.storea(ZODB.utils.p64(99), ZODB.utils.z64, 'x', '1')
     >>> _ = zs.vote('1') # doctest: +ELLIPSIS
 
-    >>> '1' in server._commit_locks
+    >>> zs.lock_manager.locked is not None
     True
 
     >>> zs.tpc_abort('1')
@@ -361,13 +362,13 @@ release the lock and one of the waiting clients will get the lock.
 
     >>> zs2.notify_disconnected() # doctest: +ELLIPSIS
     ZEO.StorageServer INFO
-    (test-addr-2) disconnected during locked transaction
+    (test-addr-...) disconnected during locked transaction
     ZEO.StorageServer CRITICAL
-    (test-addr-2) ('1') unlock: transactions waiting: 10
+    (test-addr-...) ('1') unlock: transactions waiting: 10
     ZEO.StorageServer WARNING
-    (test-addr-1) ('1') lock: transactions waiting: 9
+    (test-addr-...) ('1') lock: transactions waiting: 9
     ZEO.StorageServer BLATHER
-    (test-addr-1) Preparing to commit transaction: 1 objects, ... bytes
+    (test-addr-...) Preparing to commit transaction: 1 objects, ... bytes
 
 (In practice, waiting clients won't necessarily get the lock in order.)
 
@@ -392,45 +393,19 @@ statistics using the server_status method:
 If clients disconnect while waiting, they will be dequeued:
 
     >>> for client in clients:
-    ...     client.notify_disconnected()
+    ...     client.notify_disconnected() # doctest: +ELLIPSIS
     ZEO.StorageServer INFO
     (test-addr-10) disconnected during unlocked transaction
     ZEO.StorageServer WARNING
     (test-addr-10) ('1') dequeue lock: transactions waiting: 8
-    ZEO.StorageServer INFO
-    (test-addr-11) disconnected during unlocked transaction
-    ZEO.StorageServer WARNING
-    (test-addr-11) ('1') dequeue lock: transactions waiting: 7
-    ZEO.StorageServer INFO
-    (test-addr-12) disconnected during unlocked transaction
-    ZEO.StorageServer WARNING
-    (test-addr-12) ('1') dequeue lock: transactions waiting: 6
-    ZEO.StorageServer INFO
-    (test-addr-13) disconnected during unlocked transaction
-    ZEO.StorageServer WARNING
-    (test-addr-13) ('1') dequeue lock: transactions waiting: 5
-    ZEO.StorageServer INFO
-    (test-addr-14) disconnected during unlocked transaction
-    ZEO.StorageServer WARNING
-    (test-addr-14) ('1') dequeue lock: transactions waiting: 4
-    ZEO.StorageServer INFO
-    (test-addr-15) disconnected during unlocked transaction
-    ZEO.StorageServer DEBUG
-    (test-addr-15) ('1') dequeue lock: transactions waiting: 3
-    ZEO.StorageServer INFO
-    (test-addr-16) disconnected during unlocked transaction
-    ZEO.StorageServer DEBUG
-    (test-addr-16) ('1') dequeue lock: transactions waiting: 2
-    ZEO.StorageServer INFO
-    (test-addr-17) disconnected during unlocked transaction
-    ZEO.StorageServer DEBUG
-    (test-addr-17) ('1') dequeue lock: transactions waiting: 1
-    ZEO.StorageServer INFO
-    (test-addr-18) disconnected during unlocked transaction
-    ZEO.StorageServer DEBUG
-    (test-addr-18) ('1') dequeue lock: transactions waiting: 0
+    ...
+
+    >>> zs1.server_status()['waiting']
+    0
 
     >>> zs1.tpc_abort(tid1)
+    ZEO.StorageServer DEBUG
+    (test-addr-1) ('1') unlock: transactions waiting: 0
 
     >>> logging.getLogger('ZEO').setLevel(logging.NOTSET)
     >>> logging.getLogger('ZEO').removeHandler(handler)
@@ -494,6 +469,8 @@ ZEOStorage as closed and see if trying to get a lock cleans it up:
     >>> zs1.connection.connection_lost(None)
     ZEO.StorageServer INFO
     (test-addr-1) disconnected during locked transaction
+    ZEO.StorageServer DEBUG
+    (test-addr-1) ('1') unlock: transactions waiting: 0
 
     >>> zs2 = ZEO.tests.servertesting.client(server, '2')
     ZEO.asyncio.base INFO
@@ -508,6 +485,8 @@ ZEOStorage as closed and see if trying to get a lock cleans it up:
     (test-addr-2) Preparing to commit transaction: 1 objects, ... bytes
 
     >>> zs2.tpc_abort(tid2)
+    ZEO.StorageServer DEBUG
+    (test-addr-2) ('1') unlock: transactions waiting: 0
 
     >>> logging.getLogger('ZEO').setLevel(logging.NOTSET)
     >>> logging.getLogger('ZEO').removeHandler(handler)

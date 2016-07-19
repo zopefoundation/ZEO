@@ -35,7 +35,7 @@ To use this module, replace::
 
   from .asyncio.server import Acceptor
 
-with:
+with::
 
   from .asyncio.mtacceptor import Acceptor
 

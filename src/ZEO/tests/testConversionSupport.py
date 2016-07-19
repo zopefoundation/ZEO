@@ -48,6 +48,7 @@ class FakeServer:
         '1': FakeStorage(),
         '2': FakeStorageBase(),
         }
+    lock_managers = storages
 
     def register_connection(*args):
         return None, None
@@ -57,6 +58,8 @@ class FakeServer:
 class FakeConnection:
     protocol_version = b'Z4'
     addr = 'test'
+
+    call_soon_threadsafe = lambda f, *a: f(*a)
 
 def test_server_record_iternext():
     """
