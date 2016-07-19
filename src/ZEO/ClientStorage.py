@@ -490,7 +490,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         return self._call('record_iternext', next)
 
     def getTid(self, oid):
-        # XXX deprecated: used by storage server for full cache verification.
+        # XXX deprecated: but ZODB tests use this. They shouldn't
         return self._call('getTid', oid)
 
     def loadSerial(self, oid, serial):
