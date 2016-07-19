@@ -110,6 +110,7 @@ def runner(config, qin, qout, timeout=None,
         options = ZEO.runzeo.ZEOOptions()
         options.realize(['-C', config])
         server = ZEO.runzeo.ZEOServer(options)
+        globals()[(name if name else 'last') + '_server'] = server
         server.open_storages()
         server.clear_socket()
         server.create_server()

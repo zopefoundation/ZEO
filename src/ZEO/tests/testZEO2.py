@@ -492,6 +492,50 @@ ZEOStorage as closed and see if trying to get a lock cleans it up:
     >>> logging.getLogger('ZEO').removeHandler(handler)
     """
 
+def test_prefetch(self):
+    """The client storage prefetch method pre-fetches from the server
+
+    >>> count = 999
+
+    >>> import ZEO
+    >>> addr, stop = ZEO.server()
+    >>> conn = ZEO.connection(addr)
+    >>> root = conn.root()
+    >>> cls = root.__class__
+    >>> for i in range(count):
+    ...     root[i] = cls()
+    >>> conn.transaction_manager.commit()
+    >>> oids = [root[i]._p_oid for i in range(count)]
+    >>> conn.close()
+    >>> conn = ZEO.connection(addr)
+    >>> storage = conn.db().storage
+    >>> len(storage._cache)
+    1
+    >>> storage.prefetch(oids, conn._storage._start)
+
+    The prefetch returns before the cache is filled:
+
+    >>> len(storage._cache) < count
+    True
+
+    But it is filled eventually:
+
+    >>> from zope.testing.wait import wait
+    >>> wait(lambda : len(storage._cache) > count)
+
+    >>> loads = storage.server_status()['loads']
+
+    Now if we reload the data, it will be satisfied from the cache:
+
+    >>> for oid in oids:
+    ...     _ = conn._storage.load(oid)
+
+    >>> storage.server_status()['loads'] == loads
+    True
+
+    >>> conn.close()
+    >>> stop()
+    """
 
 def test_suite():
     return unittest.TestSuite((

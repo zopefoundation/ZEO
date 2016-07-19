@@ -90,14 +90,6 @@ class IServeable(zope.interface.Interface):
     """Interface provided by storages that can be served by ZEO
     """
 
-    def getTid(oid):
-        """The last transaction to change an object
-
-        Return the transaction id of the last transaction that committed a
-        change to an object with the given object id.
-
-        """
-
     def tpc_transaction():
         """The current transaction being committed.
 

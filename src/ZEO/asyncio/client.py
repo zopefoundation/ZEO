@@ -8,6 +8,7 @@ else:
 from ZEO.Exceptions import ClientDisconnected
 from ZODB.ConflictResolution import ResolvedSerial
 import concurrent.futures
+import functools
 import logging
 import random
 import threading
@@ -26,6 +27,37 @@ logger = logging.getLogger(__name__)
 Fallback = object()
 
 local_random = random.Random() # use separate generator to facilitate tests
+
+def future_generator(func):
+    """Decorates a generator that generates futures
+    """
+
+    @functools.wraps(func)
+    def call_generator(*args, **kw):
+        gen = func(*args, **kw)
+        try:
+            f = next(gen)
+        except StopIteration:
+            gen.close()
+        else:
+            def store(gen, future):
+                @future.add_done_callback
+                def _(future):
+                    try:
+                        try:
+                            result = future.result()
+                        except Exception as exc:
+                            f = gen.throw(exc)
+                        else:
+                            f = gen.send(result)
+                    except StopIteration:
+                        gen.close()
+                    else:
+                        store(gen, f)
+
+            store(gen, f)
+
+    return call_generator
 
 class Protocol(base.Protocol):
     """asyncio low-level ZEO client interface
@@ -127,15 +159,9 @@ class Protocol(base.Protocol):
             self.closed = True
             self.client.disconnected(self)
 
+    @future_generator
     def finish_connect(self, protocol_version):
-
-        # We use a promise model rather than coroutines here because
-        # for the most part, this class is reactive and coroutines
-        # aren't a good model of it's activities.  During
-        # initialization, however, we use promises to provide an
-        # imperative flow.
-
-        # The promise(/future) implementation we use differs from
+        # The future implementation we use differs from
         # asyncio.Future in that callbacks are called immediately,
         # rather than using the loops call_soon.  We want to avoid a
         # race between invalidations and cache initialization. In
@@ -150,56 +176,29 @@ class Protocol(base.Protocol):
             self.client.register_failed(
                 self, ZEO.Exceptions.ProtocolError(protocol_version))
             return
+
         self._write(self.protocol_version)
 
-        register = self.promise(
-            'register', self.storage_key,
-            self.read_only if self.read_only is not Fallback else False,
-            )
-        if self.read_only is not Fallback:
-            # Get lastTransaction in flight right away to make
-            # successful connection quicker, but only if we're not
-            # doing read-only fallback.  If we might need to retry, we
-            # can't send lastTransaction because if the registration
-            # fails, it will be seen as an invalid message and the
-            # connection will close. :( It would be a lot better of
-            # registere returned the last transaction (and info while
-            # it's at it).
-            lastTransaction = self.promise('lastTransaction')
+        try:
+            try:
+                server_tid = yield self.fut(
+                    'register', self.storage_key,
+                    self.read_only if self.read_only is not Fallback else False,
+                    )
+            except ZODB.POSException.ReadOnlyError:
+                if self.read_only is Fallback:
+                    self.read_only = True
+                    server_tid = yield self.fut(
+                        'register', self.storage_key, True)
+                else:
+                    raise
+            else:
+                if self.read_only is Fallback:
+                    self.read_only = False
+        except Exception as exc:
+            self.client.register_failed(self, exc)
         else:
-            lastTransaction = None # to make python happy
-
-        @register
-        def registered(_):
-            if self.read_only is Fallback:
-                self.read_only = False
-                r_lastTransaction = self.promise('lastTransaction')
-            else:
-                r_lastTransaction = lastTransaction
-            self.client.registered(self, r_lastTransaction)
-
-        @register.catch
-        def register_failed(exc):
-            if (isinstance(exc, ZODB.POSException.ReadOnlyError) and
-                self.read_only is Fallback):
-                # We tried a write connection, degrade to a read-only one
-                self.read_only = True
-                logger.info("%s write connection failed. Trying read-only",
-                            self)
-                register = self.promise('register', self.storage_key, True)
-                # get lastTransaction in flight.
-                lastTransaction = self.promise('lastTransaction')
-
-                @register
-                def registered(_):
-                    self.client.registered(self, lastTransaction)
-
-                @register.catch
-                def register_failed(exc):
-                    self.client.register_failed(self, exc)
-
-            else:
-                self.client.register_failed(self, exc)
+            self.client.registered(self, server_tid)
 
     exception_type_type = type(Exception)
     def message_received(self, data):
@@ -237,8 +236,19 @@ class Protocol(base.Protocol):
         self._write(self.encode(self.message_id, False, method, args))
         return future
 
-    def promise(self, method, *args):
-        return self.call(Promise(), method, args)
+    def fut(self, method, *args):
+        return self.call(Fut(), method, args)
+
+    def load_before(self, oid, tid):
+        # Special-case loadBefore, so we collapse outstanding requests
+        message_id = (oid, tid)
+        future = self.futures.get(message_id)
+        if future is None:
+            future = asyncio.Future(loop=self.loop)
+            self.futures[message_id] = future
+            self._write(
+                self.encode(message_id, False, 'loadBefore', (oid, tid)))
+        return future
 
     # Methods called by the server.
     # WARNING WARNING we can't call methods that call back to us
@@ -362,18 +372,18 @@ class Client(object):
                 for addr in self.addrs
                 ]
 
-    def registered(self, protocol, last_transaction_promise):
+    def registered(self, protocol, server_tid):
         if self.protocol is None:
             self.protocol = protocol
             if not (self.read_only is Fallback and protocol.read_only):
                 # We're happy with this protocol. Tell the others to
                 # stop trying.
                 self._clear_protocols(protocol)
-            self.verify(last_transaction_promise)
+            self.verify(server_tid)
         elif (self.read_only is Fallback and not protocol.read_only and
               self.protocol.read_only):
             self.upgrade(protocol)
-            self.verify(last_transaction_promise)
+            self.verify(server_tid)
         else:
             protocol.close() # too late, we went home with another
 
@@ -391,11 +401,14 @@ class Client(object):
                 self.try_connecting)
 
     verify_result = None # for tests
-    def verify(self, last_transaction_promise):
-        protocol = self.protocol
 
-        @last_transaction_promise
-        def finish_verify(server_tid):
+    @future_generator
+    def verify(self, server_tid):
+        protocol = self.protocol
+        if server_tid is None:
+            server_tid = yield protocol.fut('lastTransaction')
+
+        try:
             cache = self.cache
             if cache:
                 cache_tid = cache.getLastTid()
@@ -404,7 +417,6 @@ class Client(object):
                     logger.error("Non-empty cache w/o tid -- clearing")
                     cache.clear()
                     self.client.invalidateCache()
-                    self.finished_verify(server_tid)
                 elif cache_tid > server_tid:
                     self.verify_result = "Cache newer than server"
                     logger.critical(
@@ -413,61 +425,54 @@ class Client(object):
                                          server_tid, cache_tid, protocol)
                 elif cache_tid == server_tid:
                     self.verify_result = "Cache up to date"
-                    self.finished_verify(server_tid)
                 else:
-                    @protocol.promise('getInvalidations', cache_tid)
-                    def verify_invalidations(vdata):
-                        if vdata:
-                            self.verify_result = "quick verification"
-                            tid, oids = vdata
-                            for oid in oids:
-                                cache.invalidate(oid, None)
-                            self.client.invalidateTransaction(tid, oids)
-                            return tid
-                        else:
-                            # cache is too old
-                            self.verify_result = "cache too old, clearing"
-                            try:
-                                ZODB.event.notify(
-                                    ZEO.interfaces.StaleCache(self.client))
-                            except Exception:
-                                logger.exception("sending StaleCache event")
-                            logger.critical(
-                                "%s dropping stale cache",
-                                getattr(self.client, '__name__', ''),
-                                )
-                            self.cache.clear()
-                            self.client.invalidateCache()
-                            return server_tid
-
-                    verify_invalidations(
-                        self.finished_verify,
-                        self.connected.set_exception,
-                        )
+                    vdata = yield protocol.fut('getInvalidations', cache_tid)
+                    if vdata:
+                        self.verify_result = "quick verification"
+                        server_tid, oids = vdata
+                        for oid in oids:
+                            cache.invalidate(oid, None)
+                        self.client.invalidateTransaction(server_tid, oids)
+                    else:
+                        # cache is too old
+                        self.verify_result = "cache too old, clearing"
+                        try:
+                            ZODB.event.notify(
+                                ZEO.interfaces.StaleCache(self.client))
+                        except Exception:
+                            logger.exception("sending StaleCache event")
+                        logger.critical(
+                            "%s dropping stale cache",
+                            getattr(self.client, '__name__', ''),
+                            )
+                        self.cache.clear()
+                        self.client.invalidateCache()
             else:
                 self.verify_result = "empty cache"
-                self.finished_verify(server_tid)
 
-        @finish_verify.catch
-        def verify_failed(exc):
+        except Exception as exc:
             del self.protocol
             self.register_failed(protocol, exc)
+        else:
+            # The cache is validated and the last tid we got from the server.
+            # Set ready so we apply any invalidations that follow.
+            # We've been ignoring them up to this point.
+            self.cache.setLastTid(server_tid)
+            self.ready = True
 
-    def finished_verify(self, server_tid):
-        # The cache is validated and the last tid we got from the server.
-        # Set ready so we apply any invalidations that follow.
-        # We've been ignoring them up to this point.
-        self.cache.setLastTid(server_tid)
-        self.ready = True
+            try:
+                info = yield protocol.fut('get_info')
+            except Exception as exc:
+                # This is weird. We were connected and verified our cache, but
+                # Now we errored getting info.
 
-        @self.protocol.promise('get_info')
-        def got_info(info):
-            self.client.notify_connected(self, info)
-            self.connected.set_result(None)
+                # XXX Need a test fpr this. The lone before is what we
+                # had, but it's wrong.
+                self.register_failed(self, exc)
 
-        @got_info.catch
-        def failed_info(exc):
-            self.register_failed(self, exc)
+            else:
+                self.client.notify_connected(self, info)
+                self.connected.set_result(None)
 
     def get_peername(self):
         return self.protocol.get_peername()
@@ -514,46 +519,66 @@ class Client(object):
 
     # Special methods because they update the cache.
 
+    @future_generator
     def load_before_threadsafe(self, future, oid, tid):
         data = self.cache.loadBefore(oid, tid)
         if data is not None:
             future.set_result(data)
         elif self.ready:
-            @self.protocol.promise('loadBefore', oid, tid)
-            def load_before(data):
+            try:
+                data = yield self.protocol.load_before(oid, tid)
+            except Exception as exc:
+                future.set_exception(exc)
+            else:
                 future.set_result(data)
                 if data:
                     data, start, end = data
                     self.cache.store(oid, start, end, data)
-
-            load_before.catch(future.set_exception)
         else:
             self._when_ready(self.load_before_threadsafe, future, oid, tid)
 
+    @future_generator
+    def _prefetch(self, oid, tid):
+        try:
+            data = yield self.protocol.load_before(oid, tid)
+            if data:
+                data, start, end = data
+                self.cache.store(oid, start, end, data)
+        except Exception:
+            logger.exception("prefetch %r %r" % (oid, tid))
+
+    def prefetch(self, future, oids, tid):
+        if self.ready:
+            for oid in oids:
+                if self.cache.loadBefore(oid, tid) is None:
+                    self._prefetch(oid, tid)
+
+            future.set_result(None)
+        else:
+            future.set_exception(ClientDisconnected())
+
+    @future_generator
     def tpc_finish_threadsafe(self, future, tid, updates, f):
         if self.ready:
-            @self.protocol.promise('tpc_finish', tid)
-            def committed(tid):
-                try:
-                    cache = self.cache
-                    for oid, data, resolved in updates:
-                        cache.invalidate(oid, tid)
-                        if data and not resolved:
-                            cache.store(oid, tid, None, data)
-                    cache.setLastTid(tid)
-                except Exception as exc:
-                    future.set_exception(exc)
+            try:
+                tid = yield self.protocol.fut('tpc_finish', tid)
+                cache = self.cache
+                for oid, data, resolved in updates:
+                    cache.invalidate(oid, tid)
+                    if data and not resolved:
+                        cache.store(oid, tid, None, data)
+                cache.setLastTid(tid)
+            except Exception as exc:
+                future.set_exception(exc)
 
-                    # At this point, our cache is in an inconsistent
-                    # state.  We need to reconnect in hopes of
-                    # recovering to a consistent state.
-                    self.protocol.close()
-                    self.disconnected(self.protocol)
-                else:
-                    f(tid)
-                    future.set_result(tid)
-
-            committed.catch(future.set_exception)
+                # At this point, our cache is in an inconsistent
+                # state.  We need to reconnect in hopes of
+                # recovering to a consistent state.
+                self.protocol.close()
+                self.disconnected(self.protocol)
+            else:
+                f(tid)
+                future.set_result(tid)
         else:
             future.set_exception(ClientDisconnected())
 
@@ -647,6 +672,9 @@ class ClientRunner(object):
 
     def async_iter(self, it):
         return self.__call(self.client.call_async_iter_threadsafe, it)
+
+    def prefetch(self, oids, tid):
+        return self.__call(self.client.prefetch, oids, tid)
 
     def load_before(self, oid, tid):
         return self.__call(self.client.load_before_threadsafe, oid, tid)
@@ -754,95 +782,24 @@ class ClientThread(ClientRunner):
             if self.exception:
                 raise self.exception
 
-class Promise(object):
-    """Lightweight future with a partial promise API.
-
-    These are lighweight because they call callbacks synchronously
-    rather than through an event loop, and because they ony support
-    single callbacks.
+class Fut(object):
+    """Lightweight future that calls it's callback immediately rather than soon
     """
 
-    # Note that we can know that they are completed after callbacks
-    # are set up because they're used to make network requests.
-    # Requests are made by writing to a transport.  Because we're used
-    # in a single-threaded protocol, we can't get a response and be
-    # completed if the callbacks are set in the same code that
-    # created the promise, which they are.
+    def add_done_callback(self, cb):
+        self.cb = cb
 
-    next = success_callback = error_callback = cancelled = None
-
-    def __call__(self, success_callback = None, error_callback = None):
-        """Set the promises success and error handlers and beget a new promise
-
-        The promise returned provides for promise chaining, providing
-        a sane imperative flow.  Let's call this the "next" promise.
-        Any results or exceptions generated by the promise or it's
-        callbacks are passed on to the next promise.
-
-        When the promise completes successfully, if a success callback
-        isn't set, then the next promise is completed with the
-        successfull result.  If a success callback is provided, it's
-        called. If the call succeeds, and the result is a promise,
-        them the result is called with the next promise's set_result
-        and set_exception methods, chaining the result and next
-        promise. If the result isn't a promise, then the next promise
-        is completed with it by calling set_result. If the success
-        callback fails, then it's exception is passed to
-        next.set_exception.
-
-        If the promise completes with an error and the error callback
-        isn't set, then the exception is passed to the next promises
-        set_exception.  If an error handler is provided, it's called
-        and if it doesn't error, then the original exception is passed
-        to the next promise's set_exception. If there error handler
-        errors, then that exception is passed to the next promise's
-        set_exception.
-        """
-        self.next = self.__class__()
-        self.success_callback = success_callback
-        self.error_callback = error_callback
-        return self.next
-
-    def cancel(self):
-        self.set_exception(concurrent.futures.CancelledError)
-
-    def catch(self, error_callback):
-        self.error_callback = error_callback
-
+    exc = None
     def set_exception(self, exc):
-        self._notify(None, exc)
+        self.exc = exc
+        self.cb(self)
 
     def set_result(self, result):
-        self._notify(result, None)
+        self._result = result
+        self.cb(self)
 
-    def _notify(self, result, exc):
-        next = self.next
-        if exc is not None:
-            if self.error_callback is not None:
-                try:
-                    result = self.error_callback(exc)
-                except Exception:
-                    logger.exception("Exception handling error %s", exc)
-                    if next is not None:
-                        next.set_exception(exc)
-                else:
-                    if next is not None:
-                        next.set_result(result)
-            elif next is not None:
-                next.set_exception(exc)
+    def result(self):
+        if self.exc:
+            raise self.exc
         else:
-            if self.success_callback is not None:
-                try:
-                    result = self.success_callback(result)
-                except Exception as exc:
-                    logger.exception("Exception in success callback")
-                    if next is not None:
-                        next.set_exception(exc)
-                else:
-                    if next is not None:
-                        if isinstance(result, Promise):
-                            result(next.set_result, next.set_exception)
-                        else:
-                            next.set_result(result)
-            elif next is not None:
-                next.set_result(result)
+            return self._result

@@ -490,7 +490,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         return self._call('record_iternext', next)
 
     def getTid(self, oid):
-        # XXX deprecated: used by storage server for full cache verification.
+        # XXX deprecated: but ZODB tests use this. They shouldn't
         return self._call('getTid', oid)
 
     def loadSerial(self, oid, serial):
@@ -504,7 +504,14 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         return result[:2]
 
     def loadBefore(self, oid, tid):
+        result = self._cache.loadBefore(oid, tid)
+        if result:
+            return result
+
         return self._server.load_before(oid, tid)
+
+    def prefetch(self, oids, tid):
+        self._server.prefetch(oids, tid)
 
     def new_oid(self):
         """Storage API: return a new object identifier.

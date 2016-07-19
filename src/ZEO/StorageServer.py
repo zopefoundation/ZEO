@@ -76,10 +76,6 @@ registered_methods = set(( 'get_info', 'lastTransaction',
 class ZEOStorage:
     """Proxy to underlying storage for a single remote client."""
 
-    # A list of extension methods.  A subclass with extra methods
-    # should override.
-    extensions = []
-
     connected = connection = stats = storage = storage_id = transaction = None
     blob_tempfile = None
     log_label = 'unconnected'
@@ -91,10 +87,6 @@ class ZEOStorage:
         self.client_conflict_resolution = server.client_conflict_resolution
         # timeout and stats will be initialized in register()
         self.read_only = read_only
-        # The authentication protocol may define extra methods.
-        self._extensions = {}
-        for func in self.extensions:
-            self._extensions[func.__name__] = None
         self._iterators = {}
         self._iterator_ids = itertools.count()
         # Stores the last item that was handed out for a
@@ -149,23 +141,13 @@ class ZEOStorage:
         if not info['supportsUndo']:
             self.undoLog = self.undoInfo = lambda *a,**k: ()
 
+        # XXX deprecated: but ZODB tests use getTid. They shouldn't
         self.getTid = storage.getTid
-        self.load = storage.load
+
         self.loadSerial = storage.loadSerial
         record_iternext = getattr(storage, 'record_iternext', None)
         if record_iternext is not None:
             self.record_iternext = record_iternext
-
-        try:
-            fn = storage.getExtensionMethods
-        except AttributeError:
-            pass # no extension methods
-        else:
-            d = fn()
-            self._extensions.update(d)
-            for name in d:
-                assert not hasattr(self, name)
-                setattr(self, name, getattr(storage, name))
         self.lastTransaction = storage.lastTransaction
 
         try:
@@ -252,7 +234,6 @@ class ZEOStorage:
                 'size': storage.getSize(),
                 'name': storage.getName(),
                 'supportsUndo': supportsUndo,
-                'extensionMethods': self.getExtensionMethods(),
                 'supports_record_iternext': hasattr(self, 'record_iternext'),
                 'interfaces': tuple(interfaces),
                 }
@@ -261,13 +242,6 @@ class ZEOStorage:
         return {'length': len(self.storage),
                 'size': self.storage.getSize(),
                 }
-
-    def getExtensionMethods(self):
-        return self._extensions
-
-    def loadEx(self, oid):
-        self.stats.loads += 1
-        return self.storage.load(oid, '')
 
     def loadBefore(self, oid, tid):
         self.stats.loads += 1
@@ -737,6 +711,7 @@ class StorageServer:
 
 
         self._lock = Lock()
+        self.ssl = ssl # For dev convenience
 
         self.read_only = read_only
         self.database = None
