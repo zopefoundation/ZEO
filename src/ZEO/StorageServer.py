@@ -49,7 +49,10 @@ from ZODB.POSException import TransactionError, ReadOnlyError, ConflictError
 from ZODB.serialize import referencesf
 from ZODB.utils import oid_repr, p64, u64, z64, Lock, RLock
 
-from .asyncio.server import Acceptor
+if os.environ.get("ZEO_MTACCEPTOR"): # mainly for tests
+    from .asyncio.mtacceptor import Acceptor
+else:
+    from .asyncio.server import Acceptor
 
 logger = logging.getLogger('ZEO.StorageServer')
 
@@ -655,6 +658,7 @@ class StorageServer:
                  transaction_timeout=None,
                  ssl=None,
                  client_conflict_resolution=False,
+                 Acceptor=Acceptor,
                  ):
         """StorageServer constructor.
 

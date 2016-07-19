@@ -51,6 +51,7 @@ else:
 import asyncore
 import socket
 import threading
+import time
 
 from .server import ServerProtocol
 
@@ -130,7 +131,7 @@ class Acceptor(asyncore.dispatcher):
                 break
 
         if isinstance(addr, tuple) and addr[1] == 0:
-            self.addr = addr = self.socket.getsockname()
+            self.addr = addr = self.socket.getsockname()[:2]
 
         logger.info("listening on %s", str(addr))
         self.listen(5)
@@ -177,20 +178,24 @@ class Acceptor(asyncore.dispatcher):
                 if self.ssl_context is None:
                     cr = loop.create_connection((lambda : protocol), sock=sock)
                 else:
-                    #######################################################
-                    # XXX See http://bugs.python.org/issue27392 :(
-                    _make_ssl_transport = loop._make_ssl_transport
-                    def make_ssl_transport(*a, **kw):
-                        kw['server_side'] = True
-                        return _make_ssl_transport(*a, **kw)
-                    loop._make_ssl_transport = make_ssl_transport
-                    #
-                    #######################################################
-                    cr = loop.create_connection(
-                        (lambda : protocol), sock=sock,
-                        ssl=self.ssl_context,
-                        server_hostname='fu' # http://bugs.python.org/issue27391
-                        )
+                    if hasattr(loop, 'connect_accepted_socket'):
+                        loop.connect_accepted_socket(
+                            (lambda : protocol), sock, ssl=self.ssl_context)
+                    else:
+                        #######################################################
+                        # XXX See http://bugs.python.org/issue27392 :(
+                        _make_ssl_transport = loop._make_ssl_transport
+                        def make_ssl_transport(*a, **kw):
+                            kw['server_side'] = True
+                            return _make_ssl_transport(*a, **kw)
+                        loop._make_ssl_transport = make_ssl_transport
+                        #
+                        #######################################################
+                        cr = loop.create_connection(
+                            (lambda : protocol), sock=sock,
+                            ssl=self.ssl_context,
+                            server_hostname=''
+                            )
 
                 asyncio.async(cr, loop=loop)
                 loop.run_forever()
