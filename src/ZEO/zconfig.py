@@ -11,11 +11,15 @@ def ssl_config(section, server):
     if auth:
         if os.path.isdir(auth):
             capath=auth
-        else:
+        elif auth != 'DYNAMIC':
             cafile=auth
 
     context = ssl.create_default_context(
         ssl.Purpose.CLIENT_AUTH, cafile=cafile, capath=capath)
+
+    if not auth:
+        assert not server
+        context.load_default_certs()
 
     if section.certificate:
         password = section.password_function

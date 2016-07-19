@@ -195,6 +195,8 @@ class SSLConfigTestMockiavellian(ZEOConfigTestBase):
             factory, context, (client_cert, client_key, None),
             check_hostname=True)
 
+        context.load_default_certs.assert_called_with()
+
     @mock.patch('ssl.create_default_context')
     @mock.patch('ZEO.ClientStorage.ClientStorage')
     def test_ssl_mockiavellian_client_auth_dir(
@@ -210,6 +212,7 @@ class SSLConfigTestMockiavellian(ZEOConfigTestBase):
             capath=here,
             check_hostname=True,
             )
+        context.load_default_certs.assert_not_called()
 
     @mock.patch('ssl.create_default_context')
     @mock.patch('ZEO.ClientStorage.ClientStorage')
@@ -226,6 +229,7 @@ class SSLConfigTestMockiavellian(ZEOConfigTestBase):
             cafile=server_cert,
             check_hostname=True,
             )
+        context.load_default_certs.assert_not_called()
 
     @mock.patch('ssl.create_default_context')
     @mock.patch('ZEO.ClientStorage.ClientStorage')
