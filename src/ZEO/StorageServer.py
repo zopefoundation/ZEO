@@ -1284,9 +1284,11 @@ class LockManager(object):
 
                 self._unlocked(locked)
                 locked = None
-            else:
-                assert locked.locked
 
+            # Note that locked.locked may not be true here, because
+            # .lock may be set in the lock callback, but may not have
+            # been set yet.  This aspect of the API may need more
+            # thought. :/
 
         return locked is None
 
