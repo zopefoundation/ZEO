@@ -19,6 +19,6 @@ install:
     - python bootstrap.py
     - bin/buildout
 script:
-    - bin/test -v1j99 -t can_use_empty_string_for_local_host_on_client
+    - bin/test -v1j99
 notifications:
     email: false
