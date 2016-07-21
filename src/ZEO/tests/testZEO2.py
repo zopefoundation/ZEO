@@ -395,7 +395,7 @@ If clients disconnect while waiting, they will be dequeued:
     >>> for client in clients:
     ...     client.notify_disconnected() # doctest: +ELLIPSIS
     ZEO.StorageServer INFO
-    (test-addr-10) disconnected during ...locked transaction
+    (test-addr-10) disconnected during...locked transaction
     ZEO.StorageServer WARNING
     (test-addr-10) ('1') dequeue lock: transactions waiting: ...
 
