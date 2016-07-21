@@ -1,9 +1,21 @@
 Changelog
 =========
 
+
+5.0.0a1 (2016-07-21)
+--------------------
+
+- Added a ClientStorage prefetch method to prefetch oids.
+
+  When oids are prefetched, requests are made at once, but the caller
+  doesn't block waiting for the results.  Rather, then the caller
+  later tries to fetch data for one of the object ids, it's either
+  delivered right away from the ZEO cache, if the prefetch for the
+  object id has completed, or the caller blocks until the inflight
+  prefetch completes. (No new request is made.)
+
 - Fixed: SSL clients of servers with signed certs didn't load default
   certs and were unable to connect.
-
 
 5.0.0a0 (2016-07-08)
 --------------------
@@ -17,7 +29,7 @@ New features:
 
 - Optional client-side conflict resolution.
 
-- Lots of modtly internal clean ups.
+- Lots of mostly internal clean ups.
 
 Dropped features:
 
