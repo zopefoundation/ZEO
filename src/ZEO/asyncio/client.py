@@ -121,7 +121,7 @@ class Protocol(base.Protocol):
         if isinstance(self.addr, tuple):
             host, port = self.addr
             cr = self.loop.create_connection(
-                self.protocol_factory, host or 'localhost', port,
+                self.protocol_factory, host or '127.0.0.1', port,
                 ssl=self.ssl, server_hostname=self.ssl_server_hostname)
         else:
             cr = self.loop.create_unix_connection(
