@@ -17,8 +17,8 @@ from setuptools import setup, find_packages
 import os
 import sys
 
-if sys.version_info < (2, 7):
-    print("This version of ZEO requires Python 2.7 or higher")
+if sys.version_info < (2, 7, 9):
+    print("This version of ZEO requires Python 2.7.9 or higher")
     sys.exit(0)
 
 if (3, 0) < sys.version_info < (3, 4):
