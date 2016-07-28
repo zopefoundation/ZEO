@@ -538,7 +538,6 @@ class CommonBlobTests:
     def checkStoreBlob(self):
         import transaction
         from ZODB.blob import Blob
-        from ZODB.tests.StorageTestBase import handle_serials
         from ZODB.tests.StorageTestBase import ZERO
         from ZODB.tests.StorageTestBase import zodb_pickle
 
@@ -579,8 +578,7 @@ class CommonBlobTests:
 
     def checkLoadBlob(self):
         from ZODB.blob import Blob
-        from ZODB.tests.StorageTestBase import zodb_pickle, ZERO, \
-             handle_serials
+        from ZODB.tests.StorageTestBase import zodb_pickle, ZERO
         import transaction
 
         somedata = b'a' * 10
@@ -629,7 +627,6 @@ class BlobAdaptedFileStorageTests(FullGenericTests, CommonBlobTests):
     def checkStoreAndLoadBlob(self):
         import transaction
         from ZODB.blob import Blob
-        from ZODB.tests.StorageTestBase import handle_serials
         from ZODB.tests.StorageTestBase import ZERO
         from ZODB.tests.StorageTestBase import zodb_pickle
 

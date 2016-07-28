@@ -6,7 +6,6 @@ else:
     import trollius as asyncio
 
 from ZEO.Exceptions import ClientDisconnected
-from ZODB.ConflictResolution import ResolvedSerial
 import concurrent.futures
 import functools
 import logging

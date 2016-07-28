@@ -25,8 +25,6 @@ import os
 import tempfile
 import ZODB.blob
 
-from ZODB.ConflictResolution import ResolvedSerial
-
 from ZEO._compat import Pickler, Unpickler
 
 class TransactionBuffer:
@@ -66,11 +64,8 @@ class TransactionBuffer:
         self.store(oid, data)
         self.client_resolved[oid] = self.count - 1
 
-    def serial(self, oid, serial):
-        if isinstance(serial, Exception):
-            self.exception = serial # This transaction will never be committed
-        elif serial == ResolvedSerial:
-            self.server_resolved.add(oid)
+    def server_resolve(self, oid):
+        self.server_resolved.add(oid)
 
     def storeBlob(self, oid, blobfilename):
         self.blobs.append((oid, blobfilename))

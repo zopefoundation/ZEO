@@ -14,7 +14,6 @@
 import random
 import unittest
 
-from ZODB.ConflictResolution import ResolvedSerial
 from ZEO.TransactionBuffer import TransactionBuffer
 
 def random_string(size):
@@ -26,10 +25,11 @@ def new_store_data():
     """Return arbitrary data to use as argument to store() method."""
     return random_string(8), random_string(random.randrange(1000))
 
-def store(tbuf, serial=None):
+def store(tbuf, resolved=False):
     data = new_store_data()
     tbuf.store(*data)
-    tbuf.serial(data[0], serial)
+    if resolved:
+        tbuf.server_resolve(data[0])
     return data
 
 class TransBufTests(unittest.TestCase):
@@ -46,7 +46,7 @@ class TransBufTests(unittest.TestCase):
         data = []
         for i in range(10):
             data.append((store(tbuf), False))
-            data.append((store(tbuf, ResolvedSerial), True))
+            data.append((store(tbuf, True), True))
 
         for i, (oid, d, resolved) in enumerate(tbuf):
             self.assertEqual((oid, d), data[i][0])

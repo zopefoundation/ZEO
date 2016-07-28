@@ -54,8 +54,6 @@ logger = logging.getLogger(__name__)
 # max signed 64-bit value ~ infinity :) Signed cuz LBTree and TimeStamp
 m64 = b'\x7f\xff\xff\xff\xff\xff\xff\xff'
 
-from ZODB.ConflictResolution import ResolvedSerial
-
 def tid2time(tid):
     return str(TimeStamp(tid))
 
@@ -748,7 +746,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                         self._async('storea', oid, committed, data, id(txn))
                         tbuf.resolve(oid, data)
                     else:
-                        tbuf.serial(oid, ResolvedSerial)
+                        tbuf.server_resolve(oid)
 
                 vote_attempts += 1
 

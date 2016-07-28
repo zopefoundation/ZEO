@@ -28,8 +28,7 @@ from ZODB.DB import DB
 from ZODB.POSException import ReadOnlyError, ConflictError
 from ZODB.tests.StorageTestBase import StorageTestBase
 from ZODB.tests.MinPO import MinPO
-from ZODB.tests.StorageTestBase \
-     import zodb_pickle, zodb_unpickle, handle_all_serials, handle_serials
+from ZODB.tests.StorageTestBase import zodb_pickle, zodb_unpickle
 import ZODB.tests.util
 
 import transaction
@@ -1065,14 +1064,12 @@ class MSTThread(threading.Thread):
                     data = MinPO("%s.%s.t%d.o%d" % (tname, c.__name, i, j))
                     #print(data.value)
                     data = zodb_pickle(data)
-                    s = c.store(oid, ZERO, data, '', t)
-                    c.__serials.update(handle_all_serials(oid, s))
+                    c.store(oid, ZERO, data, '', t)
 
             # Vote on all servers and handle serials
             for c in clients:
                 #print("%s.%s.%s vote" % (tname, c.__name, i))
-                s = c.tpc_vote(t)
-                c.__serials.update(handle_all_serials(None, s))
+                c.tpc_vote(t)
 
             # Finish on all servers
             for c in clients:

@@ -42,7 +42,6 @@ from ZEO._compat import Pickler, Unpickler, PY3, BytesIO
 from ZEO.Exceptions import AuthError
 from ZEO.monitor import StorageStats
 from ZEO.asyncio.server import Delay, MTDelay, Result
-from ZODB.ConflictResolution import ResolvedSerial
 from ZODB.loglevels import BLATHER
 from ZODB.POSException import StorageError, StorageTransactionError
 from ZODB.POSException import TransactionError, ReadOnlyError, ConflictError
