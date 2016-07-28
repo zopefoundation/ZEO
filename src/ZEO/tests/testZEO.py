@@ -714,7 +714,7 @@ class FauxConn:
         if method == 'serialnos':
             self.serials.extend(args[0])
 
-    call_soon_threadsafe = async
+    call_soon_threadsafe = async_threadsafe = async
 
 class StorageServerWrapper:
 

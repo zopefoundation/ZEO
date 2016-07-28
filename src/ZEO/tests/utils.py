@@ -28,6 +28,8 @@ class ServerProtocol:
     def async(self, *args):
         self.calls.append(args)
 
+    async_threadsafe = async
+
 class StorageServer:
     """Create a client interface to a StorageServer.
 

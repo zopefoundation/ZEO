@@ -60,6 +60,7 @@ class FakeConnection:
     addr = 'test'
 
     call_soon_threadsafe = lambda f, *a: f(*a)
+    async = async_threadsafe = None
 
 def test_server_record_iternext():
     """

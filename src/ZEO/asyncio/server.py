@@ -139,6 +139,9 @@ class ServerProtocol(base.Protocol):
     def async(self, method, *args):
         self.call_async(method, args)
 
+    def async_threadsafe(self, method, *args):
+        self.call_soon_threadsafe(self.call_async, method, args)
+
 best_protocol_version = os.environ.get(
     'ZEO_SERVER_PROTOCOL',
     ServerProtocol.protocols[-1].decode('utf-8')).encode('utf-8')
