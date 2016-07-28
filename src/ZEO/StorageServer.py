@@ -274,8 +274,7 @@ class ZEOStorage:
         self.storage.pack(time, referencesf)
         self.log("pack(time=%s) complete" % repr(time))
         # Broadcast new size statistics
-        self.server.invalidate(0, self.storage_id, None,
-                               (), self.get_size_info())
+        self.server.invalidate(None, self.storage_id, info=self.get_size_info())
 
     def new_oids(self, n=100):
         """Return a sequence of n new oids, where n defaults to 100"""
@@ -345,8 +344,7 @@ class ZEOStorage:
         return Result(tid, self._clear_transaction)
 
     def _invalidate(self, tid):
-        if self.invalidated:
-            self.server.invalidate(self, self.storage_id, tid, self.invalidated)
+        self.server.invalidate(self, self.storage_id, tid, self.invalidated)
 
     def tpc_abort(self, tid):
         if not self._check_tid(tid):
@@ -829,7 +827,7 @@ class StorageServer:
             zs.call_soon_threadsafe(zs.connection.close)
 
     def invalidate(
-        self, zeo_storage, storage_id, tid, invalidated=(), info=None):
+        self, zeo_storage, storage_id, tid=None, invalidated=None, info=None):
         """Internal: broadcast info and invalidations to clients.
 
         This is called from several ZEOStorage methods.
@@ -875,17 +873,20 @@ class StorageServer:
         #    to cactch and ignore Disconnected errors.
 
 
-        if invalidated:
+        if invalidated is not None:
+            assert tid is not None
             invq = self.invq[storage_id]
             if len(invq) >= self.invq_bound:
                 invq.pop()
             invq.insert(0, (tid, invalidated))
             # serialize invalidation message, so we don't have to to
             # it over and over
+        else:
+            assert info is not None
 
         for zs in self.zeo_storages_by_storage_id[storage_id]:
             connection = zs.connection
-            if invalidated and zs is not zeo_storage:
+            if invalidated is not None and zs is not zeo_storage:
                 connection.call_soon_threadsafe(
                     connection.async, 'invalidateTransaction', tid, invalidated)
             elif info is not None:
