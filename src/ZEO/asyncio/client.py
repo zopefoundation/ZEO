@@ -73,7 +73,8 @@ class Protocol(base.Protocol):
 
     def __init__(self, loop,
                  addr, client, storage_key, read_only, connect_poll=1,
-                 heartbeat_interval=60, ssl=None, ssl_server_hostname=None):
+                 heartbeat_interval=60, ssl=None, ssl_server_hostname=None,
+                 credentials=None):
         """Create a client interface
 
         addr is either a host,port tuple or a string file name.
@@ -93,6 +94,7 @@ class Protocol(base.Protocol):
         self.futures = {} # { message_id -> future }
         self.ssl = ssl
         self.ssl_server_hostname = ssl_server_hostname
+        self.credentials = credentials
 
         self.connect()
 
@@ -178,17 +180,19 @@ class Protocol(base.Protocol):
 
         self._write(self.protocol_version)
 
+        credentials = (self.credentials,) if self.credentials else ()
+
         try:
             try:
                 server_tid = yield self.fut(
                     'register', self.storage_key,
                     self.read_only if self.read_only is not Fallback else False,
-                    )
+                    *credentials)
             except ZODB.POSException.ReadOnlyError:
                 if self.read_only is Fallback:
                     self.read_only = True
                     server_tid = yield self.fut(
-                        'register', self.storage_key, True)
+                        'register', self.storage_key, True, *credentials)
                 else:
                     raise
             else:
@@ -284,7 +288,7 @@ class Client(object):
     def __init__(self, loop,
                  addrs, client, cache, storage_key, read_only, connect_poll,
                  register_failed_poll=9,
-                 ssl=None, ssl_server_hostname=None):
+                 ssl=None, ssl_server_hostname=None, credentials=None):
         """Create a client interface
 
         addr is either a host,port tuple or a string file name.
@@ -302,6 +306,7 @@ class Client(object):
         self.client = client
         self.ssl = ssl
         self.ssl_server_hostname = ssl_server_hostname
+        self.credentials = credentials
         for name in Protocol.client_delegated:
             setattr(self, name, getattr(client, name))
         self.cache = cache
@@ -367,6 +372,7 @@ class Client(object):
                          self.storage_key, self.read_only, self.connect_poll,
                          ssl=self.ssl,
                          ssl_server_hostname=self.ssl_server_hostname,
+                         credentials=self.credentials,
                          )
                 for addr in self.addrs
                 ]
@@ -730,10 +736,12 @@ class ClientThread(ClientRunner):
 
     def __init__(self, addrs, client, cache,
                  storage_key='1', read_only=False, timeout=30,
-                 disconnect_poll=1, ssl=None, ssl_server_hostname=None):
+                 disconnect_poll=1, ssl=None, ssl_server_hostname=None,
+                 credentials=None):
         self.set_options(addrs, client, cache, storage_key, read_only,
                          timeout, disconnect_poll,
-                         ssl=ssl, ssl_server_hostname=ssl_server_hostname)
+                         ssl=ssl, ssl_server_hostname=ssl_server_hostname,
+                         credentials=credentials)
         self.thread = threading.Thread(
             target=self.run,
             name="%s zeo client networking thread" % client.__name__,
