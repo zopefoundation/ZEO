@@ -99,6 +99,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                  wait=True,
                  drop_cache_rather_verify=True,
                  username=None, password=None, realm=None,
+                 credentials=None,
                  # For tests:
                  _client_factory=ZEO.asyncio.client.ClientThread,
                  ):
@@ -261,6 +262,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             ZEO.asyncio.client.Fallback if read_only_fallback else read_only,
             wait_timeout or 30,
             ssl = ssl, ssl_server_hostname=ssl_server_hostname,
+            credentials=credentials,
             )
         self._call = self._server.call
         self._async = self._server.async

@@ -1,6 +1,20 @@
 Changelog
 =========
 
+- Added the ability to pass credentials when creating client storages.
+
+  This is experimental in that passing credentials will cause
+  connections to an ordinary ZEO server to fail, but it facilitates
+  experimentation with custom ZEO servers. Doing this with custom ZEO
+  clients would have been awkward due to the many levels of
+  composition involved.
+
+  In the future, we expect to support server security plugins that
+  consume credentials for authentication (typically over SSL).
+
+  Note that credentials are opaque to ZEO. They can be any object with
+  a true value.  The client mearly passes them to the server, which
+  will someday pass them to a plugin.
 
 5.0.0a1 (2016-07-21)
 --------------------
