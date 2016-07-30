@@ -1,6 +1,9 @@
 Changelog
 =========
 
+5.0.0a2 (2016-07-30)
+--------------------
+
 - Added the ability to pass credentials when creating client storages.
 
   This is experimental in that passing credentials will cause
