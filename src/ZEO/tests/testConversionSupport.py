@@ -52,13 +52,13 @@ class FakeServer:
 
 def test_server_record_iternext():
     """
-    
+
 On the server, record_iternext calls are simply delegated to the
 underlying storage.
 
-    >>> import ZEO.StorageServer
+    >>> from .. import StorageServer
 
-    >>> zeo = ZEO.StorageServer.ZEOStorage(FakeServer(), False)
+    >>> zeo = StorageServer.ZEOStorage(FakeServer(), False)
     >>> zeo.register('1', False)
 
     >>> next = None
@@ -71,13 +71,13 @@ underlying storage.
     2
     3
     4
-    
+
 The storage info also reflects the fact that record_iternext is supported.
 
     >>> zeo.get_info()['supports_record_iternext']
     True
 
-    >>> zeo = ZEO.StorageServer.ZEOStorage(FakeServer(), False)
+    >>> zeo = StorageServer.ZEOStorage(FakeServer(), False)
     >>> zeo.register('2', False)
 
     >>> zeo.get_info()['supports_record_iternext']
@@ -96,8 +96,7 @@ stuff.  I'd rather do a lame test than a really lame test, so here goes.
 
 First, fake out the connection manager so we can make a connection:
 
-    >>> import ZEO.ClientStorage
-    >>> from ZEO.ClientStorage import ClientStorage
+    >>> from .. import ClientStorage
     >>> oldConnectionManagerClass = ClientStorage.ConnectionManagerClass
     >>> class FauxConnectionManagerClass:
     ...     def __init__(*a, **k):
@@ -138,8 +137,8 @@ stuff.  I'd rather do a lame test than a really lame test, so here goes.
     ...         return getattr(self.storage, meth)(*args)
     ...     peer_protocol_version = 1
 
-    >>> import ZEO.ServerStub
-    >>> stub = ZEO.ServerStub.StorageServer(FauxRPC())
+    >>> from .. import ServerStub
+    >>> stub = ServerStub.StorageServer(FauxRPC())
     >>> next = None
     >>> while 1:
     ...     oid, serial, data, next = stub.record_iternext(next)
@@ -152,7 +151,7 @@ stuff.  I'd rather do a lame test than a really lame test, so here goes.
     4
 
 """
-    
+
 def history_to_version_compatible_storage():
     """
     Some storages work under ZODB <= 3.8 and ZODB >= 3.9.
@@ -163,11 +162,11 @@ def history_to_version_compatible_storage():
     ...     return oid,version,size
 
     A ZEOStorage such as the following should support this type of storage:
-    
+
     >>> class OurFakeServer(FakeServer):
     ...   storages = {'1':VersionCompatibleStorage()}
-    >>> import ZEO.StorageServer
-    >>> zeo = ZEO.StorageServer.ZEOStorage(OurFakeServer(), False)
+    >>> from .. import StorageServer
+    >>> zeo = StorageServer.ZEOStorage(OurFakeServer(), False)
     >>> zeo.register('1', False)
 
     The ZEOStorage should sort out the following call such that the storage gets
@@ -179,9 +178,9 @@ def history_to_version_compatible_storage():
     The same problem occurs when a Z308 client connects to a Z309 server,
     but different code is executed:
 
-    >>> from ZEO.StorageServer import ZEOStorage308Adapter
+    >>> from ..StorageServer import ZEOStorage308Adapter
     >>> zeo = ZEOStorage308Adapter(VersionCompatibleStorage())
-    
+
     The history method should still return the parameters it was called with:
 
     >>> zeo.history('oid','',99)
@@ -193,4 +192,3 @@ def test_suite():
 
 if __name__ == '__main__':
     unittest.main(defaultTest='test_suite')
-

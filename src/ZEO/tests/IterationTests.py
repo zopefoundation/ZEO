@@ -174,8 +174,9 @@ Start a server:
 
 Open a client storage to it and commit a some transactions:
 
-    >>> import ZEO, ZODB, transaction
-    >>> client = ZEO.client(addr)
+    >>> import ZODB, transaction
+    >>> from .. import client
+    >>> client = client(addr)
     >>> db = ZODB.DB(client)
     >>> conn = db.open()
     >>> for i in range(10):

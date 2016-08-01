@@ -21,7 +21,7 @@ import transaction
 from BTrees.check import check, display
 from BTrees.OOBTree import OOBTree
 
-from ZEO.tests.TestThread import TestThread
+from .TestThread import TestThread
 
 from ZODB.DB import DB
 from ZODB.POSException import ReadConflictError, ConflictError

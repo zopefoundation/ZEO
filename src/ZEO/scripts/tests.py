@@ -23,7 +23,7 @@ def test_suite():
                 (re.compile('usage: Usage: '), 'Usage: '), # Py 2.4
                 (re.compile('options:'), 'Options:'), # Py 2.4
                 ]),
-            globs={'print_function': print_function},
+            globs=dict(print_function=print_function, __name__=__name__),
             ),
         ))
 

@@ -14,16 +14,11 @@
 """ZEO -- Zope Enterprise Objects.
 
 See the file README.txt in this directory for an overview.
-
-ZEO is now part of ZODB; ZODB's home on the web is
-
-    http://wiki.zope.org/ZODB
-
 """
 
 def client(*args, **kw):
-    import ZEO.ClientStorage
-    return ZEO.ClientStorage.ClientStorage(*args, **kw)
+    from .ClientStorage import ClientStorage
+    return ClientStorage(*args, **kw)
 
 def DB(*args, **kw):
     import ZODB
@@ -71,17 +66,18 @@ def server(path=None, blob_dir=None, storage_conf=None, zeo_conf=None,
        randomly.
 
     """
-    import os, ZEO.tests.forker
+    import os
+    from .tests import forker
     if storage_conf is None and path is None:
         storage_conf = '<mappingstorage>\n</mappingstorage>'
     if port is None and zeo_conf is None:
-        port = ZEO.tests.forker.get_port()
+        port = forker.get_port()
 
-    addr, admin, pid, config = ZEO.tests.forker.start_zeo_server(
+    addr, admin, pid, config = forker.start_zeo_server(
         storage_conf, zeo_conf, port, keep=True, path=path,
         blob_dir=blob_dir, suicide=False)
     os.remove(config)
     def stop_server():
-        ZEO.tests.forker.shutdown_zeo_server(admin)
+        forker.shutdown_zeo_server(admin)
         os.waitpid(pid, 0)
     return addr, stop_server

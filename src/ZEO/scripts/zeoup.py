@@ -43,7 +43,7 @@ import transaction
 import ZODB
 from ZODB.POSException import ConflictError
 from ZODB.tests.MinPO import MinPO
-from ZEO.ClientStorage import ClientStorage
+from ..ClientStorage import ClientStorage
 
 ZEO_VERSION = 2
 

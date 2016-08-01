@@ -23,8 +23,8 @@ import socket
 import sys
 import threading
 import time
-import ZEO.runzeo
-import ZEO.zrpc.connection
+from .. import runzeo
+from ..zrpc import connection as zrpc_connection
 
 def cleanup(storage):
     # FileStorage and the Berkeley storages have this method, which deletes
@@ -35,7 +35,7 @@ def cleanup(storage):
     except AttributeError:
         pass
 
-logger = logging.getLogger('ZEO.tests.zeoserver')
+logger = logging.getLogger(__name__)
 
 def log(label, msg, *args):
     message = "(%s) %s" % (label, msg)
@@ -137,7 +137,7 @@ class Suicide(threading.Thread):
             time.sleep(5)
             os.kill(pid, signal.SIGKILL)
         else:
-            from ZEO.tests.forker import shutdown_zeo_server
+            from .forker import shutdown_zeo_server
             # Nott:  If the -k option was given to zeoserver, then the
             # process will go away but the temp files won't get
             # cleaned up.
@@ -161,21 +161,21 @@ def main():
         if opt == '-k':
             keep = 1
         if opt == '-d':
-            ZEO.zrpc.connection.debug_zrpc = True
+            zrpc_connection.debug_zrpc = True
         elif opt == '-C':
             configfile = arg
         elif opt == '-S':
             suicide = False
         elif opt == '-v':
-            ZEO.zrpc.connection.Connection.current_protocol = arg.encode(
+            zrpc_connection.Connection.current_protocol = arg.encode(
                 'ascii')
 
-    zo = ZEO.runzeo.ZEOOptions()
+    zo = runzeo.ZEOOptions()
     zo.realize(["-C", configfile])
     addr = zo.address
 
     if zo.auth_protocol == "plaintext":
-        __import__('ZEO.tests.auth_plaintext')
+        from . import auth_plaintext
 
     if isinstance(addr, tuple):
         test_addr = addr[0], addr[1]+1
@@ -186,7 +186,7 @@ def main():
     if zo.monitor_address:
         mon_addr = zo.monitor_address
     storages = dict((s.name or '1', s.open()) for s in zo.storages)
-    server = ZEO.runzeo.create_server(storages, zo)
+    server = runzeo.create_server(storages, zo)
 
     try:
         log(label, 'creating the test server, keep: %s', keep)

@@ -21,8 +21,9 @@ Let's start a Z308 server
 
 A current client should be able to connect to a old server:
 
-    >>> import ZEO, ZODB.blob, transaction
-    >>> db = ZEO.DB(addr, client='client', blob_dir='blobs')
+    >>> from .. import DB
+    >>> import ZODB.blob, transaction
+    >>> db = DB(addr, client='client', blob_dir='blobs')
     >>> wait_connected(db.storage)
     >>> db.storage._connection.peer_protocol_version
     b'Z308'
@@ -38,7 +39,7 @@ A current client should be able to connect to a old server:
     ...     r = f.write(b'blob data 1')
     >>> transaction.commit()
 
-    >>> db2 = ZEO.DB(addr, blob_dir='server-blobs', shared_blob_dir=True)
+    >>> db2 = DB(addr, blob_dir='server-blobs', shared_blob_dir=True)
     >>> wait_connected(db2.storage)
     >>> conn2 = db2.open()
     >>> for i in range(5):
@@ -60,7 +61,7 @@ A current client should be able to connect to a old server:
     ...     conn2.root().x += 1
     ...     transaction.commit()
 
-    >>> db = ZEO.DB(addr, client='client', blob_dir='blobs')
+    >>> db = DB(addr, client='client', blob_dir='blobs')
     >>> wait_connected(db.storage)
     >>> conn = db.open()
     >>> conn.root().x
@@ -72,7 +73,7 @@ A current client should be able to connect to a old server:
     ...     conn2.root().x += 1
     ...     transaction.commit()
 
-    >>> db = ZEO.DB(addr, client='client', blob_dir='blobs')
+    >>> db = DB(addr, client='client', blob_dir='blobs')
     >>> wait_connected(db.storage)
     >>> conn = db.open()
     >>> conn.root().x
@@ -107,11 +108,11 @@ And the other way around:
 
 Note that we'll have to pull some hijinks:
 
-    >>> import ZEO.zrpc.connection
-    >>> old_current_protocol = ZEO.zrpc.connection.Connection.current_protocol
-    >>> ZEO.zrpc.connection.Connection.current_protocol = b'Z308'
+    >>> from ..zrpc import connection as zrpc_connection
+    >>> old_current_protocol = zrpc_connection.Connection.current_protocol
+    >>> zrpc_connection.Connection.current_protocol = b'Z308'
 
-    >>> db = ZEO.DB(addr, client='client', blob_dir='blobs')
+    >>> db = DB(addr, client='client', blob_dir='blobs')
     >>> db.storage._connection.peer_protocol_version
     b'Z308'
     >>> wait_connected(db.storage)
@@ -126,7 +127,7 @@ Note that we'll have to pull some hijinks:
     ...    r = f.write(b'blob data 1')
     >>> transaction.commit()
 
-    >>> db2 = ZEO.DB(addr, blob_dir='server-blobs', shared_blob_dir=True)
+    >>> db2 = DB(addr, blob_dir='server-blobs', shared_blob_dir=True)
     >>> wait_connected(db2.storage)
     >>> conn2 = db2.open()
     >>> for i in range(5):
@@ -149,7 +150,7 @@ Note that we'll have to pull some hijinks:
     ...     conn2.root().x += 1
     ...     transaction.commit()
 
-    >>> db = ZEO.DB(addr, client='client', blob_dir='blobs')
+    >>> db = DB(addr, client='client', blob_dir='blobs')
     >>> wait_connected(db.storage)
     >>> conn = db.open()
     >>> conn.root().x
@@ -161,7 +162,7 @@ Note that we'll have to pull some hijinks:
     ...     conn2.root().x += 1
     ...     transaction.commit()
 
-    >>> db = ZEO.DB(addr, client='client', blob_dir='blobs')
+    >>> db = DB(addr, client='client', blob_dir='blobs')
     >>> wait_connected(db.storage)
     >>> conn = db.open()
     >>> conn.root().x
@@ -193,4 +194,4 @@ Make some old protocol calls:
 
 Undo the hijinks:
 
-    >>> ZEO.zrpc.connection.Connection.current_protocol = old_current_protocol
+    >>> zrpc_connection.Connection.current_protocol = old_current_protocol

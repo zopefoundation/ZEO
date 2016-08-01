@@ -19,11 +19,11 @@ This mechanism offers *no network security at all*; the only security
 is provided by not storing plaintext passwords on disk.
 """
 
-from ZEO.hash import sha1
+from ..hash import sha1
 
-from ZEO.StorageServer import ZEOStorage
-from ZEO.auth import register_module
-from ZEO.auth.base import Client, Database
+from ..StorageServer import ZEOStorage
+from ..auth import register_module
+from ..auth.base import Client, Database
 
 def session_key(username, realm, password):
     key = "%s:%s:%s" % (username, realm, password)

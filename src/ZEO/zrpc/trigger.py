@@ -21,7 +21,7 @@ import socket
 import errno
 
 from ZODB.utils import positive_id
-from ZEO._compat import thread, get_ident
+from .._compat import thread, get_ident
 
 # Original comments follow; they're hard to follow in the context of
 # ZEO's use of triggers.  TODO:  rewrite from a ZEO perspective.

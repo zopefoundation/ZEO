@@ -20,7 +20,7 @@ import unittest
 
 import ZODB.config
 
-from ZEO.runzeo import ZEOOptions
+from ..runzeo import ZEOOptions
 from zdaemon.tests.testzdoptions import TestZDOptions
 
 # When a hostname isn't specified in a socket binding address, ZConfig

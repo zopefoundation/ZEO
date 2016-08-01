@@ -20,9 +20,10 @@ from persistent.TimeStamp import TimeStamp
 import transaction
 from ZODB.tests.StorageTestBase import zodb_pickle, MinPO
 
-import ZEO.ClientStorage
-from ZEO.Exceptions import ClientDisconnected
-from ZEO.tests.TestThread import TestThread
+from ..ClientStorage import ClientStorage
+from ..Exceptions import ClientDisconnected
+
+from .TestThread import TestThread
 
 ZERO = b'\0'*8
 
@@ -133,7 +134,7 @@ class CommitLockTests:
         # list is a socket domain (AF_INET, AF_UNIX, etc.) and an
         # address.
         addr = self._storage._addr
-        new = ZEO.ClientStorage.ClientStorage(addr, wait=1)
+        new = ClientStorage(addr, wait=1)
         new.registerDB(DummyDB())
         return new
 

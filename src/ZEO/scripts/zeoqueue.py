@@ -30,7 +30,7 @@ import sys
 import time
 import errno
 import getopt
-from ZEO._compat import load, dump
+from .._compat import load, dump
 
 COMMASPACE = ', '
 STATEFILE = 'zeoqueue.pck'

@@ -29,18 +29,18 @@ from __future__ import print_function
 
 # Here, we'll try to provide some testing infrastructure to isolate
 # servers from the network.
-
-import ZEO.StorageServer
-import ZEO.zrpc.connection
-import ZEO.zrpc.error
 import ZODB.MappingStorage
 
-class StorageServer(ZEO.StorageServer.StorageServer):
+from .. import StorageServer
+from ..zrpc import connection as zrpc_connection
+from ..zrpc.error import DisconnectedError
+
+class StorageServer(StorageServer.StorageServer):
 
     def __init__(self, addr='test_addr', storages=None, **kw):
         if storages is None:
             storages = {'1': ZODB.MappingStorage.MappingStorage()}
-        ZEO.StorageServer.StorageServer.__init__(self, addr, storages, **kw)
+        StorageServer.StorageServer.__init__(self, addr, storages, **kw)
 
 
     class DispatcherClass:
@@ -50,7 +50,7 @@ class StorageServer(ZEO.StorageServer.StorageServer):
 
 class Connection:
 
-    peer_protocol_version = ZEO.zrpc.connection.Connection.current_protocol
+    peer_protocol_version = zrpc_connection.Connection.current_protocol
     connected = True
 
     def __init__(self, name='connection', addr=''):
@@ -64,7 +64,7 @@ class Connection:
 
     def poll(self):
         if not self.connected:
-            raise ZEO.zrpc.error.DisconnectedError()
+            raise DisconnectedError()
 
     def callAsync(self, meth, *args):
         print(self.name, 'callAsync', meth, repr(args))
@@ -79,7 +79,7 @@ class Connection:
         pass
 
 def client(server, name='client', addr=''):
-    zs = ZEO.StorageServer.ZEOStorage(server)
+    zs = StorageServer.ZEOStorage(server)
     zs.notifyConnected(Connection(name, addr))
     zs.register('1', 0)
     return zs

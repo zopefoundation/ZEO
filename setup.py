@@ -11,7 +11,7 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-
+name = 'ZEO4'
 version = '4.2.1'
 
 from setuptools import setup, find_packages
@@ -72,7 +72,6 @@ def alltests():
     import logging
     import pkg_resources
     import unittest
-    import ZEO.ClientStorage
 
     class NullHandler(logging.Handler):
         level = 50
@@ -84,7 +83,7 @@ def alltests():
 
     suite = unittest.TestSuite()
     base = pkg_resources.working_set.find(
-        pkg_resources.Requirement.parse('ZEO')).location
+        pkg_resources.Requirement.parse(name)).location
     for dirpath, dirnames, filenames in os.walk(base):
         if os.path.basename(dirpath) == 'tests':
             for filename in filenames:
@@ -103,7 +102,7 @@ long_description = (
     + '\n' +
     open('CHANGES.rst').read()
     )
-setup(name="ZEO",
+setup(name=name,
       version=version,
       description = long_description.split('\n', 2)[1],
       long_description = long_description,
@@ -131,11 +130,11 @@ setup(name="ZEO",
       zip_safe = False,
       entry_points = """
       [console_scripts]
-      zeopack = ZEO.scripts.zeopack:main
-      runzeo = ZEO.runzeo:main
-      zeopasswd = ZEO.zeopasswd:main
-      zeoctl = ZEO.zeoctl:main
-      zeo-nagios = ZEO.nagios:main
-      """,
+      zeopack = {name}.scripts.zeopack:main
+      runzeo = {name}.runzeo:main
+      zeopasswd = {name}.zeopasswd:main
+      zeoctl = {name}.zeoctl:main
+      zeo-nagios = {name}.nagios:main
+      """.format(name=name),
       include_package_data = True,
       )

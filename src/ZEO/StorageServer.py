@@ -30,7 +30,13 @@ import threading
 import time
 import transaction
 import warnings
-import ZEO.zrpc.error
+from .zrpc.error import DisconnectedError
+from ZODB.ConflictResolution import ResolvedSerial
+from ZODB.loglevels import BLATHER
+from ZODB.POSException import StorageError, StorageTransactionError
+from ZODB.POSException import TransactionError, ReadOnlyError, ConflictError
+from ZODB.serialize import referencesf
+from ZODB.utils import oid_repr, p64, u64, z64
 import ZODB.blob
 import ZODB.event
 import ZODB.serialize
@@ -38,19 +44,13 @@ import ZODB.TimeStamp
 import zope.interface
 import six
 
-from ZEO._compat import Pickler, Unpickler, PY3, BytesIO
-from ZEO.Exceptions import AuthError
-from ZEO.monitor import StorageStats, StatsServer
-from ZEO.zrpc.connection import ManagedServerConnection, Delay, MTDelay, Result
-from ZEO.zrpc.server import Dispatcher
-from ZODB.ConflictResolution import ResolvedSerial
-from ZODB.loglevels import BLATHER
-from ZODB.POSException import StorageError, StorageTransactionError
-from ZODB.POSException import TransactionError, ReadOnlyError, ConflictError
-from ZODB.serialize import referencesf
-from ZODB.utils import oid_repr, p64, u64, z64
+from ._compat import Pickler, Unpickler, PY3, BytesIO
+from .Exceptions import AuthError
+from .monitor import StorageStats, StatsServer
+from .zrpc.connection import ManagedServerConnection, Delay, MTDelay, Result
+from .zrpc.server import Dispatcher
 
-logger = logging.getLogger('ZEO.StorageServer')
+logger = logging.getLogger(__file__)
 
 def log(message, level=logging.INFO, label='', exc_info=False):
     """Internal helper to log a message."""
@@ -790,7 +790,7 @@ class StorageServer:
 
     # Classes we instantiate.  A subclass might override.
 
-    DispatcherClass = ZEO.zrpc.server.Dispatcher
+    DispatcherClass = Dispatcher
     ZEOStorageClass = ZEOStorage
     ManagedServerConnectionClass = ManagedServerConnection
 
@@ -947,7 +947,7 @@ class StorageServer:
 
     def _setup_auth(self, protocol):
         # Can't be done in global scope, because of cyclic references
-        from ZEO.auth import get_module
+        from .auth import get_module
 
         name = self.__class__.__name__
 
@@ -1049,7 +1049,7 @@ class StorageServer:
             try:
                 p.connection.should_close()
                 p.connection.trigger.pull_trigger()
-            except ZEO.zrpc.error.DisconnectedError:
+            except DisconnectedError:
                 pass
 
 
@@ -1111,7 +1111,7 @@ class StorageServer:
                     p.client.invalidateTransaction(tid, invalidated)
                 elif info is not None:
                     p.client.info(info)
-            except ZEO.zrpc.error.DisconnectedError:
+            except DisconnectedError:
                 pass
 
     def get_invalidations(self, storage_id, tid):

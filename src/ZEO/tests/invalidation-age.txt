@@ -50,8 +50,9 @@ invalidation-queue-size of 5:
 Now, we'll open a client with a persistent cache, set up some data,
 and  then close client:
 
-    >>> import ZEO, transaction
-    >>> db = ZEO.DB(addr, client='test')
+    >>> from .. import DB
+    >>> import transaction
+    >>> db = DB(addr, client='test')
     >>> conn = db.open()
     >>> for i in range(9):
     ...     conn.root()[i] = conn.root().__class__()
@@ -61,7 +62,7 @@ and  then close client:
 
 We'll open another client, and commit some transactions:
 
-    >>> db = ZEO.DB(addr)
+    >>> db = DB(addr)
     >>> conn = db.open()
     >>> import transaction
     >>> for i in range(2):
@@ -78,7 +79,7 @@ turn on logging so we can see this:
     >>> handler = logging.StreamHandler(sys.stdout)
     >>> logging.getLogger().addHandler(handler)
 
-    >>> db = ZEO.DB(addr, client='test') # doctest: +ELLIPSIS
+    >>> db = DB(addr, client='test') # doctest: +ELLIPSIS
     ('localhost', ...
     ('localhost', ...) Recovering 2 invalidations
 
@@ -91,7 +92,7 @@ Now, if we disconnect and commit more than 5 transactions, we'll see
 that verification is necessary:
 
     >>> db.close()
-    >>> db = ZEO.DB(addr)
+    >>> db = DB(addr)
     >>> conn = db.open()
     >>> import transaction
     >>> for i in range(9):
@@ -100,7 +101,7 @@ that verification is necessary:
     >>> db.close()
 
     >>> logging.getLogger().addHandler(handler)
-    >>> db = ZEO.DB(addr, client='test') # doctest: +ELLIPSIS
+    >>> db = DB(addr, client='test') # doctest: +ELLIPSIS
     ('localhost', ...
     ('localhost', ...) Verifying cache
     ('localhost', ...) endVerify finishing
@@ -119,7 +120,7 @@ do quick verification:
     >>> stop_server(admin)
     >>> addr, admin = start_server(zeo_conf=dict(invalidation_queue_size=5,
     ...                                          invalidation_age=100))
-    >>> db = ZEO.DB(addr)
+    >>> db = DB(addr)
     >>> conn = db.open()
     >>> import transaction
     >>> for i in range(9):
@@ -129,7 +130,7 @@ do quick verification:
 
 
     >>> logging.getLogger().addHandler(handler)
-    >>> db = ZEO.DB(addr, client='test') # doctest: +ELLIPSIS
+    >>> db = DB(addr, client='test') # doctest: +ELLIPSIS
     ('localhost', ...
     ('localhost', ...) Recovering 9 invalidations
 

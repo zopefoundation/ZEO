@@ -56,7 +56,7 @@ import persistent
 import transaction
 import ZODB
 from ZODB.POSException import ConflictError
-from ZEO.tests import forker
+from . import forker
 
 class P(persistent.Persistent):
     pass

@@ -18,9 +18,9 @@ import tempfile
 import time
 import unittest
 
-from ZEO import zeopasswd
-from ZEO.Exceptions import ClientDisconnected
-from ZEO.tests.ConnectionTests import CommonSetupTearDown
+from .. import zeopasswd
+from ..Exceptions import ClientDisconnected
+from .ConnectionTests import CommonSetupTearDown
 
 class _AuthTest(CommonSetupTearDown):
     __super_getServerConfig = CommonSetupTearDown.getServerConfig
@@ -46,7 +46,7 @@ class _AuthTest(CommonSetupTearDown):
     def _checkZEOpasswd(self):
         args = ["-f", self.pwfile, "-p", self.protocol]
         if self.protocol == "plaintext":
-            from ZEO.auth.base import Database
+            from ..auth.base import Database
             zeopasswd.main(args + ["-d", "foo"], Database)
             zeopasswd.main(args + ["foo", "bar"], Database)
         else:
@@ -112,17 +112,17 @@ class _AuthTest(CommonSetupTearDown):
 
 
 class PlainTextAuth(_AuthTest):
-    import ZEO.tests.auth_plaintext
+    from . import auth_plaintext
     protocol = "plaintext"
     database = "authdb.sha"
-    dbclass = ZEO.tests.auth_plaintext.Database
+    dbclass = auth_plaintext.Database
     realm = "Plaintext Realm"
 
 class DigestAuth(_AuthTest):
-    import ZEO.auth.auth_digest
+    from ..auth import auth_digest
     protocol = "digest"
     database = "authdb.digest"
-    dbclass = ZEO.auth.auth_digest.DigestDatabase
+    dbclass = auth_digest.DigestDatabase
     realm = "Digest Realm"
 
 test_classes = [PlainTextAuth, DigestAuth]

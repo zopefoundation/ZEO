@@ -21,7 +21,7 @@ import time
 from ZODB.Transaction import Transaction
 from ZODB.tests.MinPO import MinPO
 from ZODB.tests.StorageTestBase import zodb_pickle
-from ZEO.ClientStorage import ClientStorage
+from ...ClientStorage import ClientStorage
 
 ZERO = '\0'*8
 

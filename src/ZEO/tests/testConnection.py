@@ -19,7 +19,7 @@ platform-dependent scaffolding.
 
 from __future__ import with_statement, print_function
 
-from ZEO.tests import ConnectionTests, InvalidationTests
+from . import ConnectionTests, InvalidationTests
 from zope.testing import setupstack
 import os
 if os.environ.get('USE_ZOPE_TESTING_DOCTEST'):
@@ -27,10 +27,11 @@ if os.environ.get('USE_ZOPE_TESTING_DOCTEST'):
 else:
     import doctest
 import unittest
-import ZEO.tests.forker
-import ZEO.tests.testMonitor
-import ZEO.zrpc.connection
-import ZODB.tests.util
+from . import forker
+from . import testMonitor
+from ..zrpc import connection as zrpc_connection
+from ZODB.tests import util
+from .. import __name__ as ZEO__name__
 
 class FileStorageConfig:
     def getConfig(self, path, create, read_only):
@@ -90,7 +91,7 @@ class MappingStorageTimeoutTests(
     ):
     pass
 
-class MonitorTests(ZEO.tests.testMonitor.MonitorTests):
+class MonitorTests(testMonitor.MonitorTests):
 
     def check_connection_management(self):
         # Open and close a few connections, making sure that
@@ -105,7 +106,7 @@ class MonitorTests(ZEO.tests.testMonitor.MonitorTests):
         s3.close()
         s2.close()
 
-        ZEO.tests.forker.wait_until(
+        forker.wait_until(
             "Number of clients shown in monitor drops to 0",
             lambda :
             self.parse(self.get_monitor_output())[1].clients == 0
@@ -115,15 +116,15 @@ class MonitorTests(ZEO.tests.testMonitor.MonitorTests):
         # Check that connection management works even when using an
         # older protcool that requires a connection adapter.
         test_protocol = b"Z303"
-        current_protocol = ZEO.zrpc.connection.Connection.current_protocol
-        ZEO.zrpc.connection.Connection.current_protocol = test_protocol
-        ZEO.zrpc.connection.Connection.servers_we_can_talk_to.append(
+        current_protocol = zrpc_connection.Connection.current_protocol
+        zrpc_connection.Connection.current_protocol = test_protocol
+        zrpc_connection.Connection.servers_we_can_talk_to.append(
             test_protocol)
         try:
             self.check_connection_management()
         finally:
-            ZEO.zrpc.connection.Connection.current_protocol = current_protocol
-            ZEO.zrpc.connection.Connection.servers_we_can_talk_to.pop()
+            zrpc_connection.Connection.current_protocol = current_protocol
+            zrpc_connection.Connection.servers_we_can_talk_to.pop()
 
 
 test_classes = [FileStorageConnectionTests,
@@ -155,7 +156,8 @@ This tests tries to provoke this bug by:
   it's cache at the same time,
 
     >>> import ZODB.tests.MinPO, transaction
-    >>> db = ZEO.DB(addr, client='x')
+    >>> from .. import DB
+    >>> db = DB(addr, client='x')
     >>> conn = db.open()
     >>> nobs = 1000
     >>> for i in range(nobs):
@@ -164,7 +166,7 @@ This tests tries to provoke this bug by:
 
     >>> import zope.testing.loggingsupport, logging
     >>> handler = zope.testing.loggingsupport.InstalledHandler(
-    ...    'ZEO', level=logging.INFO)
+    ...    ZEO__name__, level=logging.INFO)
 
     # >>> logging.getLogger('ZEO').debug(
     # ...     'Initial tid %r' % conn.root()._p_serial)
@@ -178,7 +180,7 @@ This tests tries to provoke this bug by:
 
     >>> import random, threading, time
     >>> stop = False
-    >>> db2 = ZEO.DB(addr)
+    >>> db2 = DB(addr)
     >>> tm = transaction.TransactionManager()
     >>> conn2 = db2.open(transaction_manager=tm)
     >>> random = random.Random(0)
@@ -206,7 +208,7 @@ This tests tries to provoke this bug by:
     >>> try:
     ...     for c in range(10):
     ...        time.sleep(.1)
-    ...        db = ZODB.DB(ZEO.ClientStorage.ClientStorage(addr, client='x'))
+    ...        db = DB(addr, client='x')
     ...        with lock:
     ...            #logging.getLogger('ZEO').debug('Locked %s' % c)
     ...            @wait_until("connected and we have caught up", timeout=199)
@@ -261,7 +263,7 @@ def test_suite():
         sub = unittest.makeSuite(klass, 'check')
         suite.addTest(sub)
     suite.addTest(doctest.DocTestSuite(
-        setUp=ZEO.tests.forker.setUp, tearDown=setupstack.tearDown,
+        setUp=forker.setUp, tearDown=setupstack.tearDown,
         ))
-    suite.layer = ZODB.tests.util.MininalTestLayer('ZEO Connection Tests')
+    suite.layer = util.MininalTestLayer('ZEO Connection Tests')
     return suite

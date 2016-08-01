@@ -29,10 +29,10 @@ class ZEOConfigTest(ConfigTestBase):
         # simple "random", likely to not-exist port number and add
         # an elaborate comment explaining this instead.  Go ahead,
         # grep for 9.
-        from ZEO.ClientStorage import ClientDisconnected
+        from ..ClientStorage import ClientDisconnected
         import ZConfig
         from ZODB.config import getDbSchema
-        from ZEO._compat import StringIO
+        from .._compat import StringIO
         cfg = """
         <zodb>
           <zeoclient>

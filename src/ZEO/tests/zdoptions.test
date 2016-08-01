@@ -9,7 +9,8 @@ Storage Names
 
 It is an error not to specify any storages:
 
-    >>> import sys, ZEO.runzeo
+    >>> from .. import runzeo
+    >>> import sys
     >>> try:
     ...    from StringIO import StringIO
     ... except ImportError:
@@ -24,7 +25,7 @@ It is an error not to specify any storages:
     ... """)
 
     >>> sys.stderr = StringIO()
-    >>> options = ZEO.runzeo.ZEOOptions()
+    >>> options = runzeo.ZEOOptions()
     >>> options.realize('-C config'.split())
     Traceback (most recent call last):
     ...
@@ -46,7 +47,7 @@ But we can specify a storage without a name:
     ... <mappingstorage>
     ... </mappingstorage>
     ... """)
-    >>> options = ZEO.runzeo.ZEOOptions()
+    >>> options = runzeo.ZEOOptions()
     >>> options.realize('-C config'.split())
     >>> [storage.name for storage in options.storages]
     ['1']
@@ -64,7 +65,7 @@ We can't have multiple unnamed storages:
     ... <mappingstorage>
     ... </mappingstorage>
     ... """)
-    >>> options = ZEO.runzeo.ZEOOptions()
+    >>> options = runzeo.ZEOOptions()
     >>> options.realize('-C config'.split())
     Traceback (most recent call last):
     ...
@@ -87,7 +88,7 @@ Or an unnamed storage and one named '1':
     ... <mappingstorage 1>
     ... </mappingstorage>
     ... """)
-    >>> options = ZEO.runzeo.ZEOOptions()
+    >>> options = runzeo.ZEOOptions()
     >>> options.realize('-C config'.split())
     Traceback (most recent call last):
     ...
@@ -109,7 +110,7 @@ But we can have multiple storages:
     ... <mappingstorage y>
     ... </mappingstorage>
     ... """)
-    >>> options = ZEO.runzeo.ZEOOptions()
+    >>> options = runzeo.ZEOOptions()
     >>> options.realize('-C config'.split())
     >>> [storage.name for storage in options.storages]
     ['x', 'y']
@@ -127,7 +128,7 @@ As long as the names are unique:
     ... <mappingstorage 1>
     ... </mappingstorage>
     ... """)
-    >>> options = ZEO.runzeo.ZEOOptions()
+    >>> options = runzeo.ZEOOptions()
     >>> options.realize('-C config'.split())
     Traceback (most recent call last):
     ...

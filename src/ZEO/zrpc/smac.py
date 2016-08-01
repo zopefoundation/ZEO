@@ -36,9 +36,9 @@ import socket
 import struct
 import threading
 
-from ZEO.zrpc.log import log
-from ZEO.zrpc.error import DisconnectedError
-import ZEO.hash
+from .log import log
+from .error import DisconnectedError
+from .. import hash as ZEO_hash
 
 
 # Use the dictionary to make sure we get the minimum number of errno
@@ -144,8 +144,8 @@ class SizedMessageAsyncConnection(asyncore.dispatcher):
         # and thus iterator, because it contains a yield statement.
 
         def hack():
-            self.__hmac_send = hmac.HMAC(sesskey, digestmod=ZEO.hash)
-            self.__hmac_recv = hmac.HMAC(sesskey, digestmod=ZEO.hash)
+            self.__hmac_send = hmac.HMAC(sesskey, digestmod=ZEO_hash)
+            self.__hmac_recv = hmac.HMAC(sesskey, digestmod=ZEO_hash)
             if False:
                 yield b''
 

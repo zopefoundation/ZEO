@@ -32,8 +32,9 @@ import time
 import weakref
 from binascii import hexlify
 
+from ZODB import POSException
+from ZODB import utils
 import zc.lockfile
-import ZEO.interfaces
 import ZODB
 import ZODB.BaseStorage
 import ZODB.interfaces
@@ -41,15 +42,15 @@ import ZODB.event
 import zope.interface
 import six
 from persistent.TimeStamp import TimeStamp
-from ZEO._compat import Pickler, Unpickler, get_ident, PY3
-from ZEO.auth import get_module
-from ZEO.cache import ClientCache
-from ZEO.Exceptions import ClientStorageError, ClientDisconnected, AuthError
-from ZEO import ServerStub
-from ZEO.TransactionBuffer import TransactionBuffer
-from ZEO.zrpc.client import ConnectionManager
-from ZODB import POSException
-from ZODB import utils
+
+from . import interfaces
+from . import ServerStub
+from ._compat import Pickler, Unpickler, get_ident, PY3
+from .auth import get_module
+from .cache import ClientCache
+from .Exceptions import ClientStorageError, ClientDisconnected, AuthError
+from .TransactionBuffer import TransactionBuffer
+from .zrpc.client import ConnectionManager
 
 logger = logging.getLogger(__name__)
 
@@ -1366,7 +1367,7 @@ class ClientStorage(object):
             self._cache.setLastTid(server_tid)
 
 
-        ZODB.event.notify(ZEO.interfaces.StaleCache(self))
+        ZODB.event.notify(interfaces.StaleCache(self))
 
         # From this point on, we do not have complete information about
         # the missed transactions.  The reason is that cache

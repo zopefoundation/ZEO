@@ -14,11 +14,12 @@ ZODB.notify.
 
 Now, let's start a server and verify that we get a serving event:
 
-    >>> import ZEO.StorageServer, ZODB.MappingStorage
-    >>> server = ZEO.StorageServer.StorageServer(
+    >>> from .. import StorageServer
+    >>> import ZODB.MappingStorage
+    >>> server = StorageServer.StorageServer(
     ...     ('127.0.0.1', 0), {'1': ZODB.MappingStorage.MappingStorage()})
 
-    >>> isinstance(last_event, ZEO.StorageServer.Serving)
+    >>> isinstance(last_event, StorageServer.Serving)
     True
     >>> last_event.server is server
     True
@@ -37,14 +38,15 @@ Let's run the server in a thread, to make sure we can connect.
 
     >>> server.start_thread()
 
-    >>> client = ZEO.client(last_event.address)
+    >>> from .. import client
+    >>> client = client(last_event.address)
     >>> client.is_connected()
     True
 
 If we close the server, we'll get a closed event:
 
     >>> server.close()
-    >>> isinstance(last_event, ZEO.StorageServer.Closed)
+    >>> isinstance(last_event, StorageServer.Closed)
     True
     >>> last_event.server is server
     True
@@ -56,10 +58,10 @@ If we pass an empty string as the host part of the server address, we
 can't really assign a single address, so the server addr attribute is
 left alone:
 
-    >>> server = ZEO.StorageServer.StorageServer(
+    >>> server = StorageServer.StorageServer(
     ...     ('', 0), {'1': ZODB.MappingStorage.MappingStorage()})
 
-    >>> isinstance(last_event, ZEO.StorageServer.Serving)
+    >>> isinstance(last_event, StorageServer.Serving)
     True
     >>> last_event.server is server
     True
@@ -81,7 +83,7 @@ server configuration via a ZConfig configuration file.  To spell a
 dynamic port using ZConfig, you'd use a hostname by itself. In this
 case, ZConfig passes None as the port.
 
-    >>> import ZEO.runzeo
+    >>> from .. import runzeo
     >>> with open('conf', 'w') as f:
     ...    _ = f.write("""
     ... <zeo>
@@ -90,12 +92,12 @@ case, ZConfig passes None as the port.
     ... <mappingstorage>
     ... </mappingstorage>
     ... """)
-    >>> options = ZEO.runzeo.ZEOOptions()
+    >>> options = runzeo.ZEOOptions()
     >>> options.realize('-C conf'.split())
     >>> options.address
     ('127.0.0.1', None)
 
-    >>> rs = ZEO.runzeo.ZEOServer(options)
+    >>> rs = runzeo.ZEOServer(options)
     >>> rs.check_socket()
     >>> options.address
     ('127.0.0.1', 0)

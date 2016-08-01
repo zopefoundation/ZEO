@@ -23,12 +23,12 @@ import struct
 import sys
 import tempfile
 import unittest
-import ZEO.cache
+from ..cache import ClientCache
+from .. import cache as ZEO_cache
 import ZODB.tests.util
 import zope.testing.setupstack
 import zope.testing.renormalizing
 
-import ZEO.cache
 from ZODB.utils import p64, u64, z64
 
 n1 = p64(1)
@@ -72,7 +72,7 @@ class CacheTests(ZODB.tests.util.TestCase):
         # testSerialization reads the entire file into a string, it's not
         # good to leave it that big.
         ZODB.tests.util.TestCase.setUp(self)
-        self.cache = ZEO.cache.ClientCache(size=1024**2)
+        self.cache = ClientCache(size=1024**2)
 
     def tearDown(self):
         self.cache.close()
@@ -133,7 +133,7 @@ class CacheTests(ZODB.tests.util.TestCase):
 
     def testEviction(self):
         # Manually override the current maxsize
-        cache = ZEO.cache.ClientCache(None, 3395)
+        cache = ClientCache(None, 3395)
 
         # Trivial test of eviction code.  Doesn't test non-current
         # eviction.
@@ -163,7 +163,7 @@ class CacheTests(ZODB.tests.util.TestCase):
             src = self.cache.f
             src.seek(0)
             dst.write(src.read(self.cache.maxsize))
-        copy = ZEO.cache.ClientCache(path)
+        copy = ClientCache(path)
 
         # Verify that internals of both objects are the same.
         # Could also test that external API produces the same results.
@@ -178,7 +178,7 @@ class CacheTests(ZODB.tests.util.TestCase):
     def testCurrentObjectLargerThanCache(self):
         if self.cache.path:
             os.remove(self.cache.path)
-        self.cache = ZEO.cache.ClientCache(size=50)
+        self.cache = ClientCache(size=50)
 
         # We store an object that is a bit larger than the cache can handle.
         self.cache.store(n1, n2, None, "x"*64)
@@ -193,7 +193,7 @@ class CacheTests(ZODB.tests.util.TestCase):
     def testOldObjectLargerThanCache(self):
         if self.cache.path:
             os.remove(self.cache.path)
-        cache = ZEO.cache.ClientCache(size=50)
+        cache = ClientCache(size=50)
 
         # We store an object that is a bit larger than the cache can handle.
         cache.store(n1, n2, n3, "x"*64)
@@ -204,30 +204,30 @@ class CacheTests(ZODB.tests.util.TestCase):
         self.assert_(1 not in cache.noncurrent)
 
     def testVeryLargeCaches(self):
-        cache = ZEO.cache.ClientCache('cache', size=(1<<32)+(1<<20))
+        cache = ClientCache('cache', size=(1<<32)+(1<<20))
         cache.store(n1, n2, None, b"x")
         cache.close()
-        cache = ZEO.cache.ClientCache('cache', size=(1<<33)+(1<<20))
+        cache = ClientCache('cache', size=(1<<33)+(1<<20))
         self.assertEquals(cache.load(n1), (b'x', n2))
         cache.close()
 
     def testConversionOfLargeFreeBlocks(self):
         with open('cache', 'wb') as f:
-            f.write(ZEO.cache.magic+
+            f.write(ZEO_cache.magic +
                     b'\0'*8 +
                     b'f'+struct.pack(">I", (1<<32)-12)
                     )
             f.seek((1<<32)-1)
             f.write(b'x')
-        cache = ZEO.cache.ClientCache('cache', size=1<<32)
+        cache = ClientCache('cache', size=1<<32)
         cache.close()
-        cache = ZEO.cache.ClientCache('cache', size=1<<32)
+        cache = ClientCache('cache', size=1<<32)
         cache.close()
         with open('cache', 'rb') as f:
             f.seek(12)
             self.assertEquals(f.read(1), b'f')
             self.assertEquals(struct.unpack(">I", f.read(4))[0],
-                            ZEO.cache.max_block_size)
+                            ZEO_cache.max_block_size)
 
     if not sys.platform.startswith('linux'):
         # On platforms without sparse files, these tests are just way
@@ -253,26 +253,26 @@ class CacheTests(ZODB.tests.util.TestCase):
     def testChangingCacheSize(self):
         # start with a small cache
         data = b'x'
-        recsize = ZEO.cache.allocated_record_overhead+len(data)
+        recsize = ZEO_cache.allocated_record_overhead+len(data)
 
         for extra in (2, recsize-2):
 
-            cache = ZEO.cache.ClientCache(
-                'cache', size=ZEO.cache.ZEC_HEADER_SIZE+100*recsize+extra)
+            cache = ClientCache(
+                'cache', size=ZEO_cache.ZEC_HEADER_SIZE+100*recsize+extra)
             for i in range(100):
                 cache.store(p64(i), n1, None, data)
             self.assertEquals(len(cache), 100)
             self.assertEquals(os.path.getsize(
-                'cache'), ZEO.cache.ZEC_HEADER_SIZE+100*recsize+extra)
+                'cache'), ZEO_cache.ZEC_HEADER_SIZE+100*recsize+extra)
 
             # Now make it smaller
             cache.close()
             small = 50
-            cache = ZEO.cache.ClientCache(
-                'cache', size=ZEO.cache.ZEC_HEADER_SIZE+small*recsize+extra)
+            cache = ClientCache(
+                'cache', size=ZEO_cache.ZEC_HEADER_SIZE+small*recsize+extra)
             self.assertEquals(len(cache), small)
             self.assertEquals(os.path.getsize(
-                'cache'), ZEO.cache.ZEC_HEADER_SIZE+small*recsize+extra)
+                'cache'), ZEO_cache.ZEC_HEADER_SIZE+small*recsize+extra)
             self.assertEquals(set(u64(oid) for (oid, tid) in cache.contents()),
                               set(range(small)))
             for i in range(100, 110):
@@ -290,8 +290,8 @@ class CacheTests(ZODB.tests.util.TestCase):
 
             # Make sure we can reopen with same size
             cache.close()
-            cache = ZEO.cache.ClientCache(
-                'cache', size=ZEO.cache.ZEC_HEADER_SIZE+small*recsize+extra)
+            cache = ClientCache(
+                'cache', size=ZEO_cache.ZEC_HEADER_SIZE+small*recsize+extra)
             self.assertEquals(len(cache), expected_len)
             self.assertEquals(set(u64(oid) for (oid, tid) in cache.contents()),
                               expected_oids)
@@ -299,11 +299,11 @@ class CacheTests(ZODB.tests.util.TestCase):
             # Now make it bigger
             cache.close()
             large = 150
-            cache = ZEO.cache.ClientCache(
-                'cache', size=ZEO.cache.ZEC_HEADER_SIZE+large*recsize+extra)
+            cache = ClientCache(
+                'cache', size=ZEO_cache.ZEC_HEADER_SIZE+large*recsize+extra)
             self.assertEquals(len(cache), expected_len)
             self.assertEquals(os.path.getsize(
-                'cache'), ZEO.cache.ZEC_HEADER_SIZE+large*recsize+extra)
+                'cache'), ZEO_cache.ZEC_HEADER_SIZE+large*recsize+extra)
             self.assertEquals(set(u64(oid) for (oid, tid) in cache.contents()),
                               expected_oids)
 
@@ -322,8 +322,8 @@ class CacheTests(ZODB.tests.util.TestCase):
 
             # Make sure we can reopen with same size
             cache.close()
-            cache = ZEO.cache.ClientCache(
-                'cache', size=ZEO.cache.ZEC_HEADER_SIZE+large*recsize+extra)
+            cache = ClientCache(
+                'cache', size=ZEO_cache.ZEC_HEADER_SIZE+large*recsize+extra)
             self.assertEquals(len(cache), expected_len)
             self.assertEquals(set(u64(oid) for (oid, tid) in cache.contents()),
                               expected_oids)
@@ -374,9 +374,8 @@ writes records to a cache file repeatedly.
 ...     time.sleep(random.random()/10)
 ...     os._exit(0)
 ...
-... import ZEO.cache
 ... from ZODB.utils import p64
-... cache = ZEO.cache.ClientCache('cache')
+... cache = ClientCache('cache')
 ... oid = 0
 ... t = 0
 ... thread.start_new_thread(suicide, ())
@@ -391,7 +390,7 @@ writes records to a cache file repeatedly.
 >>> for i in range(10):
 ...     _ = os.spawnl(os.P_WAIT, sys.executable, sys.executable, 't')
 ...     if os.path.exists('cache'):
-...         cache = ZEO.cache.ClientCache('cache')
+...         cache = ClientCache('cache')
 ...         cache.close()
 ...         os.remove('cache')
 ...         os.remove('cache.lock')
@@ -405,12 +404,11 @@ def full_cache_is_valid():
 If we fill up the cache without any free space, the cache can
 still be used.
 
->>> import ZEO.cache
->>> cache = ZEO.cache.ClientCache('cache', 1000)
->>> data = b'X' * (1000 - ZEO.cache.ZEC_HEADER_SIZE - 41)
+>>> cache = ClientCache('cache', 1000)
+>>> data = b'X' * (1000 - ZEO_cache.ZEC_HEADER_SIZE - 41)
 >>> cache.store(p64(1), p64(1), None, data)
 >>> cache.close()
->>> cache = ZEO.cache.ClientCache('cache', 1000)
+>>> cache = ClientCache('cache', 1000)
 >>> cache.store(p64(2), p64(2), None, b'XXX')
 
 >>> cache.close()
@@ -418,9 +416,8 @@ still be used.
 
 def cannot_open_same_cache_file_twice():
     r"""
->>> import ZEO.cache
->>> cache = ZEO.cache.ClientCache('cache', 1000)
->>> cache2 = ZEO.cache.ClientCache('cache', 1000) \
+>>> cache = ClientCache('cache', 1000)
+>>> cache2 = ClientCache('cache', 1000) \
 ...     # doctest: +IGNORE_EXCEPTION_DETAIL
 Traceback (most recent call last):
 ...
@@ -432,8 +429,8 @@ LockError: Couldn't lock 'cache.lock'
 def thread_safe():
     r"""
 
->>> import ZEO.cache, ZODB.utils
->>> cache = ZEO.cache.ClientCache('cache', 1000000)
+>>> import ZODB.utils
+>>> cache = ClientCache('cache', 1000000)
 
 >>> for i in range(100):
 ...     cache.store(ZODB.utils.p64(i), ZODB.utils.p64(1), None, b'0')
@@ -490,12 +487,12 @@ unusable.  I can't see why this would occur, but added a logging
 exception handler so, in the future, we'll still see cases in the
 log, but will ignore the error and keep going.
 
->>> import ZEO.cache, ZODB.utils, logging, sys
->>> logger = logging.getLogger('ZEO.cache')
+>>> import ZODB.utils, logging, sys
+>>> logger = logging.getLogger(ZEO_cache.__name__)
 >>> logger.setLevel(logging.ERROR)
 >>> handler = logging.StreamHandler(sys.stdout)
 >>> logger.addHandler(handler)
->>> cache = ZEO.cache.ClientCache('cache', 1000)
+>>> cache = ClientCache('cache', 1000)
 >>> cache.store(ZODB.utils.p64(1), ZODB.utils.p64(1), None, b'0')
 >>> cache.invalidate(ZODB.utils.p64(1), ZODB.utils.p64(2))
 >>> cache._del_noncurrent(ZODB.utils.p64(1), ZODB.utils.p64(2))
@@ -545,7 +542,7 @@ Check to make sure the cache analysis scripts work.
     ...     random.seed(42)
     ...     global now
     ...     now = 1278864701.5
-    ...     cache = ZEO.cache.ClientCache(name, size*(1<<20))
+    ...     cache = ClientCache(name, size*(1<<20))
     ...     for action, oid, serial, data in history:
     ...         now += 1
     ...         if action == b's':
@@ -559,17 +556,17 @@ Check to make sure the cache analysis scripts work.
 
     >>> cache_run('cache', 2)
 
-    >>> import ZEO.scripts.cache_stats, ZEO.scripts.cache_simul
+    >>> from ..scripts import cache_stats, cache_simul
 
     >>> def ctime(t):
     ...     return time.asctime(time.gmtime(t-3600*4))
-    >>> ZEO.scripts.cache_stats.ctime = ctime
-    >>> ZEO.scripts.cache_simul.ctime = ctime
+    >>> cache_stats.ctime = ctime
+    >>> cache_simul.ctime = ctime
 
     ############################################################
     Stats
 
-    >>> ZEO.scripts.cache_stats.main(['cache.trace'])
+    >>> cache_stats.main(['cache.trace'])
                        loads    hits  inv(h)  writes hitrate
     Jul 11 12:11-11       0       0       0       0     n/a
     Jul 11 12:11:41 ==================== Restart ====================
@@ -604,7 +601,7 @@ Check to make sure the cache analysis scripts work.
             3,125  22  load (hit)
             7,875  52  store (current, non-version)
 
-    >>> ZEO.scripts.cache_stats.main('-q cache.trace'.split())
+    >>> cache_stats.main('-q cache.trace'.split())
                        loads    hits  inv(h)  writes hitrate
     <BLANKLINE>
     Read 18,876 trace records (641,776 bytes) in 0.0 seconds
@@ -623,7 +620,7 @@ Check to make sure the cache analysis scripts work.
             3,125  22  load (hit)
             7,875  52  store (current, non-version)
 
-    >>> ZEO.scripts.cache_stats.main('-v cache.trace'.split())
+    >>> cache_stats.main('-v cache.trace'.split())
     ... # doctest: +ELLIPSIS
                        loads    hits  inv(h)  writes hitrate
     Jul 11 12:11:41 00 '' 0000000000000000 0000000000000000 -
@@ -665,7 +662,7 @@ Check to make sure the cache analysis scripts work.
             3,125  22  load (hit)
             7,875  52  store (current, non-version)
 
-    >>> ZEO.scripts.cache_stats.main('-h cache.trace'.split())
+    >>> cache_stats.main('-h cache.trace'.split())
                        loads    hits  inv(h)  writes hitrate
     Jul 11 12:11-11       0       0       0       0     n/a
     Jul 11 12:11:41 ==================== Restart ====================
@@ -714,7 +711,7 @@ Check to make sure the cache analysis scripts work.
         8       7   0.2%   0.6%  99.9%
         9       1   0.0%   0.1% 100.0%
 
-    >>> ZEO.scripts.cache_stats.main('-s cache.trace'.split())
+    >>> cache_stats.main('-s cache.trace'.split())
     ... # doctest: +ELLIPSIS
                        loads    hits  inv(h)  writes hitrate
     Jul 11 12:11-11       0       0       0       0     n/a
@@ -770,7 +767,7 @@ Check to make sure the cache analysis scripts work.
          1,999      2      4
          2,000      1      1
 
-    >>> ZEO.scripts.cache_stats.main('-S cache.trace'.split())
+    >>> cache_stats.main('-S cache.trace'.split())
                        loads    hits  inv(h)  writes hitrate
     Jul 11 12:11-11       0       0       0       0     n/a
     Jul 11 12:11:41 ==================== Restart ====================
@@ -789,7 +786,7 @@ Check to make sure the cache analysis scripts work.
     Jul 11 15:00-14     818     291      30     609   35.6%
     Jul 11 15:15-15       2       1       0       1   50.0%
 
-    >>> ZEO.scripts.cache_stats.main('-X cache.trace'.split())
+    >>> cache_stats.main('-X cache.trace'.split())
                        loads    hits  inv(h)  writes hitrate
     Jul 11 12:11-11       0       0       0       0     n/a
     Jul 11 12:11:41 ==================== Restart ====================
@@ -824,7 +821,7 @@ Check to make sure the cache analysis scripts work.
             3,125  22  load (hit)
             7,875  52  store (current, non-version)
 
-    >>> ZEO.scripts.cache_stats.main('-i 5 cache.trace'.split())
+    >>> cache_stats.main('-i 5 cache.trace'.split())
                        loads    hits  inv(h)  writes hitrate
     Jul 11 12:11-11       0       0       0       0     n/a
     Jul 11 12:11:41 ==================== Restart ====================
@@ -883,7 +880,7 @@ Check to make sure the cache analysis scripts work.
             3,125  22  load (hit)
             7,875  52  store (current, non-version)
 
-    >>> ZEO.scripts.cache_simul.main('-s 2 -i 5 cache.trace'.split())
+    >>> cache_simul.main('-s 2 -i 5 cache.trace'.split())
     CircularCacheSimulation, cache size 2,097,152 bytes
       START TIME   DUR.   LOADS    HITS INVALS WRITES HITRATE  EVICTS   INUSE
     Jul 11 12:11   3:17     180       1      2    197    0.6%       0    10.7
@@ -929,7 +926,7 @@ Check to make sure the cache analysis scripts work.
 
     >>> cache_run('cache4', 4)
 
-    >>> ZEO.scripts.cache_stats.main('cache4.trace'.split())
+    >>> cache_stats.main('cache4.trace'.split())
                        loads    hits  inv(h)  writes hitrate
     Jul 11 12:11-11       0       0       0       0     n/a
     Jul 11 12:11:41 ==================== Restart ====================
@@ -964,7 +961,7 @@ Check to make sure the cache analysis scripts work.
             5,083  22  load (hit)
             5,917  52  store (current, non-version)
 
-    >>> ZEO.scripts.cache_simul.main('-s 4 cache.trace'.split())
+    >>> cache_simul.main('-s 4 cache.trace'.split())
     CircularCacheSimulation, cache size 4,194,304 bytes
       START TIME   DUR.   LOADS    HITS INVALS WRITES HITRATE  EVICTS   INUSE
     Jul 11 12:11   3:17     180       1      2    197    0.6%       0     5.4
@@ -986,7 +983,7 @@ Check to make sure the cache analysis scripts work.
 
     >>> cache_run('cache1', 1)
 
-    >>> ZEO.scripts.cache_stats.main('cache1.trace'.split())
+    >>> cache_stats.main('cache1.trace'.split())
                        loads    hits  inv(h)  writes hitrate
     Jul 11 12:11-11       0       0       0       0     n/a
     Jul 11 12:11:41 ==================== Restart ====================
@@ -1021,7 +1018,7 @@ Check to make sure the cache analysis scripts work.
             1,715  22  load (hit)
             9,285  52  store (current, non-version)
 
-    >>> ZEO.scripts.cache_simul.main('-s 1 cache.trace'.split())
+    >>> cache_simul.main('-s 1 cache.trace'.split())
     CircularCacheSimulation, cache size 1,048,576 bytes
       START TIME   DUR.   LOADS    HITS INVALS WRITES HITRATE  EVICTS   INUSE
     Jul 11 12:11   3:17     180       1      2    197    0.6%       0    21.5
@@ -1045,8 +1042,8 @@ Cleanup:
 
     >>> del os.environ["ZEO_CACHE_TRACE"]
     >>> time.time = timetime
-    >>> ZEO.scripts.cache_stats.ctime = time.ctime
-    >>> ZEO.scripts.cache_simul.ctime = time.ctime
+    >>> cache_stats.ctime = time.ctime
+    >>> cache_simul.ctime = time.ctime
 
 """
 
@@ -1056,7 +1053,7 @@ def cache_simul_properly_handles_load_miss_after_eviction_and_inval():
 Set up evicted and then invalidated oid
 
     >>> os.environ["ZEO_CACHE_TRACE"] = 'yes'
-    >>> cache = ZEO.cache.ClientCache('cache', 1<<21)
+    >>> cache = ClientCache('cache', 1<<21)
     >>> cache.store(p64(1), p64(1), None, b'x')
     >>> for i in range(10):
     ...     cache.store(p64(2+i), p64(1), None, b'x'*(1<<19)) # Evict 1
@@ -1067,8 +1064,8 @@ Set up evicted and then invalidated oid
 
 Now try to do simulation:
 
-    >>> import ZEO.scripts.cache_simul
-    >>> ZEO.scripts.cache_simul.main('-s 1 cache.trace'.split())
+    >>> from ..scripts import cache_simul
+    >>> cache_simul.main('-s 1 cache.trace'.split())
     ... # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     CircularCacheSimulation, cache size 1,048,576 bytes
       START TIME   DUR.   LOADS    HITS INVALS WRITES HITRATE  EVICTS   INUSE
@@ -1082,7 +1079,7 @@ Now try to do simulation:
 
 def invalidations_with_current_tid_dont_wreck_cache():
     """
-    >>> cache = ZEO.cache.ClientCache('cache', 1000)
+    >>> cache = ClientCache('cache', 1000)
     >>> cache.store(p64(1), p64(1), None, b'data')
     >>> import logging, sys
     >>> handler = logging.StreamHandler(sys.stdout)
@@ -1092,7 +1089,7 @@ def invalidations_with_current_tid_dont_wreck_cache():
     >>> cache.invalidate(p64(1), p64(1))
     Ignoring invalidation with same tid as current
     >>> cache.close()
-    >>> cache = ZEO.cache.ClientCache('cache', 1000)
+    >>> cache = ClientCache('cache', 1000)
     >>> cache.close()
     >>> logging.getLogger().removeHandler(handler)
     >>> logging.getLogger().setLevel(old_level)
@@ -1110,7 +1107,7 @@ An attempt to open a bad cache file will cause it to be dropped and recreated.
     >>> old_level = logging.getLogger().getEffectiveLevel()
     >>> logging.getLogger().setLevel(logging.WARNING)
 
-    >>> cache = ZEO.cache.ClientCache('cache', 1000) # doctest: +ELLIPSIS
+    >>> cache = ClientCache('cache', 1000) # doctest: +ELLIPSIS
     Moving bad cache file to 'cache.bad'.
     Traceback (most recent call last):
     ...
@@ -1125,7 +1122,7 @@ An attempt to open a bad cache file will cause it to be dropped and recreated.
 
     >>> with open('cache', 'w') as f:
     ...     _ = f.write('x'*200)
-    >>> cache = ZEO.cache.ClientCache('cache', 1000) # doctest: +ELLIPSIS
+    >>> cache = ClientCache('cache', 1000) # doctest: +ELLIPSIS
     Removing bad cache file: 'cache' (prev bad exists).
     Traceback (most recent call last):
     ...

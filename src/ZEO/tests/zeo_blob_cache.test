@@ -21,8 +21,8 @@ Let's start by setting up some data:
 
 We'll also create a client.
 
-    >>> import ZEO
-    >>> db = ZEO.DB(addr, blob_dir='blobs', blob_cache_size=3000)
+    >>> from .. import DB
+    >>> db = DB(addr, blob_dir='blobs', blob_cache_size=3000)
 
 Here, we passed a blob_cache_size parameter, which specifies a target
 blob cache size.  This is not a hard limit, but rather a target.  It
@@ -42,9 +42,9 @@ We want to check for name collections in the blob cache dir. We'll try
 to provoke name collections by reducing the number of cache directory
 subdirectories.
 
-    >>> import ZEO.ClientStorage
-    >>> orig_blob_cache_layout_size = ZEO.ClientStorage.BlobCacheLayout.size
-    >>> ZEO.ClientStorage.BlobCacheLayout.size = 11
+    >>> from .. import ClientStorage
+    >>> orig_blob_cache_layout_size = ClientStorage.BlobCacheLayout.size
+    >>> ClientStorage.BlobCacheLayout.size = 11
 
 Now, let's write some data:
 
@@ -78,7 +78,7 @@ directory.
     >>> def onfail():
     ...     return cache_size('blobs')
 
-    >>> from ZEO.tests.forker import wait_until
+    >>> from .forker import wait_until
     >>> wait_until("size is reduced", check, 99, onfail)
 
 If we read all of the blobs, data will be downloaded again, as
@@ -113,7 +113,7 @@ provoke problems:
 
     >>> import threading, random
     >>> def run():
-    ...     db = ZEO.DB(addr, blob_dir='blobs', blob_cache_size=4000)
+    ...     db = DB(addr, blob_dir='blobs', blob_cache_size=4000)
     ...     conn = db.open()
     ...     for i in range(300):
     ...         time.sleep(0)
@@ -148,4 +148,4 @@ provoke problems:
     ...        thread.join(33)
 
     >>> db.close()
-    >>> ZEO.ClientStorage.BlobCacheLayout.size = orig_blob_cache_layout_size
+    >>> ClientStorage.BlobCacheLayout.size = orig_blob_cache_layout_size

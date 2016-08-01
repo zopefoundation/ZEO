@@ -20,8 +20,9 @@ import re
 import sys
 import transaction
 import unittest
-import ZEO.StorageServer
-import ZEO.tests.servertesting
+from .. import __name__ as ZEO__name__
+from .. import StorageServer
+from . import servertesting
 import ZODB.blob
 import ZODB.FileStorage
 import ZODB.tests.util
@@ -56,12 +57,12 @@ out-of-date data.
 
 Create the server:
 
-    >>> server = ZEO.tests.servertesting.StorageServer('x', {'1': fs})
+    >>> server = servertesting.StorageServer('x', {'1': fs})
 
 And an initial client.
 
-    >>> zs1 = ZEO.StorageServer.ZEOStorage(server)
-    >>> conn1 = ZEO.tests.servertesting.Connection(1)
+    >>> zs1 = StorageServer.ZEOStorage(server)
+    >>> conn1 = servertesting.Connection(1)
     >>> zs1.notifyConnected(conn1)
     >>> zs1.register('1', 0)
     >>> zs1.tpc_begin('0', '', '', {})
@@ -72,8 +73,8 @@ And an initial client.
 In a second client, we'll try to commit using the old serial. This
 will conflict. It will be blocked at the vote call.
 
-    >>> zs2 = ZEO.StorageServer.ZEOStorage(server)
-    >>> conn2 = ZEO.tests.servertesting.Connection(2)
+    >>> zs2 = StorageServer.ZEOStorage(server)
+    >>> conn2 = servertesting.Connection(2)
     >>> zs2.notifyConnected(conn2)
     >>> zs2.register('1', 0)
     >>> zs2.tpc_begin('1', '', '', {})
@@ -87,7 +88,7 @@ will conflict. It will be blocked at the vote call.
     ...         print('reply', id, reply)
     >>> delay.set_sender(1, Sender())
 
-    >>> logger = logging.getLogger('ZEO')
+    >>> logger = logging.getLogger(ZEO__name__)
     >>> handler = logging.StreamHandler(sys.stdout)
     >>> logger.setLevel(logging.INFO)
     >>> logger.addHandler(handler)
@@ -118,12 +119,12 @@ It's critical that if there is an error in vote that the
 storage isn't left in tpc.
 
     >>> fs = ZODB.FileStorage.FileStorage('t.fs', blob_dir='t.blobs')
-    >>> server = ZEO.tests.servertesting.StorageServer('x', {'1': fs})
+    >>> server = servertesting.StorageServer('x', {'1': fs})
 
 And an initial client.
 
-    >>> zs1 = ZEO.StorageServer.ZEOStorage(server)
-    >>> conn1 = ZEO.tests.servertesting.Connection(1)
+    >>> zs1 = StorageServer.ZEOStorage(server)
+    >>> conn1 = servertesting.Connection(1)
     >>> zs1.notifyConnected(conn1)
     >>> zs1.register('1', 0)
     >>> zs1.tpc_begin('0', '', '', {})
@@ -144,8 +145,8 @@ We're not in a transaction:
 
 We can start another client and get the storage lock.
 
-    >>> zs1 = ZEO.StorageServer.ZEOStorage(server)
-    >>> conn1 = ZEO.tests.servertesting.Connection(1)
+    >>> zs1 = StorageServer.ZEOStorage(server)
+    >>> conn1 = servertesting.Connection(1)
     >>> zs1.notifyConnected(conn1)
     >>> zs1.register('1', 0)
     >>> zs1.tpc_begin('1', '', '', {})
@@ -171,10 +172,10 @@ So, we arrange to get an error in vote:
     ...             raise ValueError
     ...         return ZODB.MappingStorage.MappingStorage.tpc_vote(*args)
 
-    >>> server = ZEO.tests.servertesting.StorageServer(
+    >>> server = servertesting.StorageServer(
     ...      'x', {'1': MappingStorage()})
-    >>> zs = ZEO.StorageServer.ZEOStorage(server)
-    >>> conn = ZEO.tests.servertesting.Connection(1)
+    >>> zs = StorageServer.ZEOStorage(server)
+    >>> conn = servertesting.Connection(1)
     >>> zs.notifyConnected(conn)
     >>> zs.register('1', 0)
     >>> zs.tpc_begin('0', '', '', {})
@@ -216,13 +217,13 @@ def some_basic_locking_tests():
     ...     zs.storea(ZODB.utils.p64(99), ZODB.utils.z64, 'x', tid)
     ...     return tid
 
-    >>> server = ZEO.tests.servertesting.StorageServer()
+    >>> server = servertesting.StorageServer()
 
     >>> handler = logging.StreamHandler(sys.stdout)
     >>> handler.setFormatter(logging.Formatter(
     ...     '%(name)s %(levelname)s\n%(message)s'))
-    >>> logging.getLogger('ZEO').addHandler(handler)
-    >>> logging.getLogger('ZEO').setLevel(logging.DEBUG)
+    >>> logging.getLogger(ZEO__name__).addHandler(handler)
+    >>> logging.getLogger(ZEO__name__).setLevel(logging.DEBUG)
 
 Work around the fact that ZODB registers level names backwards, which
 quit working in Python 3.4:
@@ -233,22 +234,22 @@ quit working in Python 3.4:
 
 We start a transaction and vote, this leads to getting the lock.
 
-    >>> zs1 = ZEO.tests.servertesting.client(server, '1')
+    >>> zs1 = servertesting.client(server, '1')
     >>> tid1 = start_trans(zs1)
     >>> zs1.vote(tid1) # doctest: +ELLIPSIS
-    ZEO.StorageServer DEBUG
+    Z...StorageServer DEBUG
     (test-addr-1) ('1') lock: transactions waiting: 0
-    ZEO.StorageServer BLATHER
+    Z...StorageServer BLATHER
     (test-addr-1) Preparing to commit transaction: 1 objects, ... bytes
     1 callAsync serialnos ...
 
 If another client tried to vote, it's lock request will be queued and
 a delay will be returned:
 
-    >>> zs2 = ZEO.tests.servertesting.client(server, '2')
+    >>> zs2 = servertesting.client(server, '2')
     >>> tid2 = start_trans(zs2)
     >>> delay = zs2.vote(tid2)
-    ZEO.StorageServer DEBUG
+    Z...StorageServer DEBUG
     (test-addr-2) ('1') queue lock: transactions waiting: 1
 
     >>> delay.set_sender(0, zs2.connection)
@@ -256,11 +257,11 @@ a delay will be returned:
 When we end the first transaction, the queued vote gets the lock.
 
     >>> zs1.tpc_abort(tid1) # doctest: +ELLIPSIS
-    ZEO.StorageServer DEBUG
+    Z...StorageServer DEBUG
     (test-addr-1) ('1') unlock: transactions waiting: 1
-    ZEO.StorageServer DEBUG
+    Z...StorageServer DEBUG
     (test-addr-2) ('1') lock: transactions waiting: 0
-    ZEO.StorageServer BLATHER
+    Z...StorageServer BLATHER
     (test-addr-2) Preparing to commit transaction: 1 objects, ... bytes
     2 callAsync serialnos ...
 
@@ -268,13 +269,13 @@ Let's try again with the first client. The vote will be queued:
 
     >>> tid1 = start_trans(zs1)
     >>> delay = zs1.vote(tid1)
-    ZEO.StorageServer DEBUG
+    Z...StorageServer DEBUG
     (test-addr-1) ('1') queue lock: transactions waiting: 1
 
 If the queued transaction is aborted, it will be dequeued:
 
     >>> zs1.tpc_abort(tid1) # doctest: +ELLIPSIS
-    ZEO.StorageServer DEBUG
+    Z...StorageServer DEBUG
     (test-addr-1) ('1') dequeue lock: transactions waiting: 0
 
 BTW, voting multiple times will error:
@@ -286,7 +287,7 @@ BTW, voting multiple times will error:
 
     >>> tid1 = start_trans(zs1)
     >>> delay = zs1.vote(tid1)
-    ZEO.StorageServer DEBUG
+    Z...StorageServer DEBUG
     (test-addr-1) ('1') queue lock: transactions waiting: 1
 
     >>> delay.set_sender(0, zs1.connection)
@@ -302,40 +303,40 @@ increased, so does the logging level:
 
     >>> clients = []
     >>> for i in range(9):
-    ...     client = ZEO.tests.servertesting.client(server, str(i+10))
+    ...     client = servertesting.client(server, str(i+10))
     ...     tid = start_trans(client)
     ...     delay = client.vote(tid)
     ...     clients.append(client)
-    ZEO.StorageServer DEBUG
+    Z...StorageServer DEBUG
     (test-addr-10) ('1') queue lock: transactions waiting: 2
-    ZEO.StorageServer DEBUG
+    Z...StorageServer DEBUG
     (test-addr-11) ('1') queue lock: transactions waiting: 3
-    ZEO.StorageServer WARNING
+    Z...StorageServer WARNING
     (test-addr-12) ('1') queue lock: transactions waiting: 4
-    ZEO.StorageServer WARNING
+    Z...StorageServer WARNING
     (test-addr-13) ('1') queue lock: transactions waiting: 5
-    ZEO.StorageServer WARNING
+    Z...StorageServer WARNING
     (test-addr-14) ('1') queue lock: transactions waiting: 6
-    ZEO.StorageServer WARNING
+    Z...StorageServer WARNING
     (test-addr-15) ('1') queue lock: transactions waiting: 7
-    ZEO.StorageServer WARNING
+    Z...StorageServer WARNING
     (test-addr-16) ('1') queue lock: transactions waiting: 8
-    ZEO.StorageServer WARNING
+    Z...StorageServer WARNING
     (test-addr-17) ('1') queue lock: transactions waiting: 9
-    ZEO.StorageServer CRITICAL
+    Z...StorageServer CRITICAL
     (test-addr-18) ('1') queue lock: transactions waiting: 10
 
 If a client with the transaction lock disconnects, it will abort and
 release the lock and one of the waiting clients will get the lock.
 
     >>> zs2.notifyDisconnected() # doctest: +ELLIPSIS
-    ZEO.StorageServer INFO
+    Z...StorageServer INFO
     (test-addr-2) disconnected during locked transaction
-    ZEO.StorageServer CRITICAL
+    Z...StorageServer CRITICAL
     (test-addr-2) ('1') unlock: transactions waiting: 10
-    ZEO.StorageServer WARNING
+    Z...StorageServer WARNING
     (test-addr-1) ('1') lock: transactions waiting: 9
-    ZEO.StorageServer BLATHER
+    Z...StorageServer BLATHER
     (test-addr-1) Preparing to commit transaction: 1 objects, ... bytes
     1 callAsync serialnos ...
 
@@ -367,47 +368,47 @@ If clients disconnect while waiting, they will be dequeued:
 
     >>> for client in clients:
     ...     client.notifyDisconnected()
-    ZEO.StorageServer INFO
+    Z...StorageServer INFO
     (test-addr-10) disconnected during unlocked transaction
-    ZEO.StorageServer WARNING
+    Z...StorageServer WARNING
     (test-addr-10) ('1') dequeue lock: transactions waiting: 8
-    ZEO.StorageServer INFO
+    Z...StorageServer INFO
     (test-addr-11) disconnected during unlocked transaction
-    ZEO.StorageServer WARNING
+    Z...StorageServer WARNING
     (test-addr-11) ('1') dequeue lock: transactions waiting: 7
-    ZEO.StorageServer INFO
+    Z...StorageServer INFO
     (test-addr-12) disconnected during unlocked transaction
-    ZEO.StorageServer WARNING
+    Z...StorageServer WARNING
     (test-addr-12) ('1') dequeue lock: transactions waiting: 6
-    ZEO.StorageServer INFO
+    Z...StorageServer INFO
     (test-addr-13) disconnected during unlocked transaction
-    ZEO.StorageServer WARNING
+    Z...StorageServer WARNING
     (test-addr-13) ('1') dequeue lock: transactions waiting: 5
-    ZEO.StorageServer INFO
+    Z...StorageServer INFO
     (test-addr-14) disconnected during unlocked transaction
-    ZEO.StorageServer WARNING
+    Z...StorageServer WARNING
     (test-addr-14) ('1') dequeue lock: transactions waiting: 4
-    ZEO.StorageServer INFO
+    Z...StorageServer INFO
     (test-addr-15) disconnected during unlocked transaction
-    ZEO.StorageServer DEBUG
+    Z...StorageServer DEBUG
     (test-addr-15) ('1') dequeue lock: transactions waiting: 3
-    ZEO.StorageServer INFO
+    Z...StorageServer INFO
     (test-addr-16) disconnected during unlocked transaction
-    ZEO.StorageServer DEBUG
+    Z...StorageServer DEBUG
     (test-addr-16) ('1') dequeue lock: transactions waiting: 2
-    ZEO.StorageServer INFO
+    Z...StorageServer INFO
     (test-addr-17) disconnected during unlocked transaction
-    ZEO.StorageServer DEBUG
+    Z...StorageServer DEBUG
     (test-addr-17) ('1') dequeue lock: transactions waiting: 1
-    ZEO.StorageServer INFO
+    Z...StorageServer INFO
     (test-addr-18) disconnected during unlocked transaction
-    ZEO.StorageServer DEBUG
+    Z...StorageServer DEBUG
     (test-addr-18) ('1') dequeue lock: transactions waiting: 0
 
     >>> zs1.tpc_abort(tid1)
 
-    >>> logging.getLogger('ZEO').setLevel(logging.NOTSET)
-    >>> logging.getLogger('ZEO').removeHandler(handler)
+    >>> logging.getLogger(ZEO__name__).setLevel(logging.NOTSET)
+    >>> logging.getLogger(ZEO__name__).removeHandler(handler)
     """
 
 def lock_sanity_check():
@@ -435,13 +436,13 @@ Helper to manage transactions:
 
 Set up server and logging:
 
-    >>> server = ZEO.tests.servertesting.StorageServer()
+    >>> server = servertesting.StorageServer()
 
     >>> handler = logging.StreamHandler(sys.stdout)
     >>> handler.setFormatter(logging.Formatter(
     ...     '%(name)s %(levelname)s\n%(message)s'))
-    >>> logging.getLogger('ZEO').addHandler(handler)
-    >>> logging.getLogger('ZEO').setLevel(logging.DEBUG)
+    >>> logging.getLogger(ZEO__name__).addHandler(handler)
+    >>> logging.getLogger(ZEO__name__).setLevel(logging.DEBUG)
 
 Work around the fact that ZODB registers level names backwards, which
 quit working in Python 3.4:
@@ -453,33 +454,33 @@ quit working in Python 3.4:
 Now, we'll start a transaction, get the lock and then mark the
 ZEOStorage as closed and see if trying to get a lock cleans it up:
 
-    >>> zs1 = ZEO.tests.servertesting.client(server, '1')
+    >>> zs1 = servertesting.client(server, '1')
     >>> tid1 = start_trans(zs1)
     >>> zs1.vote(tid1) # doctest: +ELLIPSIS
-    ZEO.StorageServer DEBUG
+    Z...StorageServer DEBUG
     (test-addr-1) ('1') lock: transactions waiting: 0
-    ZEO.StorageServer BLATHER
+    Z...StorageServer BLATHER
     (test-addr-1) Preparing to commit transaction: 1 objects, ... bytes
     1 callAsync serialnos ...
 
     >>> zs1.connection = None
 
-    >>> zs2 = ZEO.tests.servertesting.client(server, '2')
+    >>> zs2 = servertesting.client(server, '2')
     >>> tid2 = start_trans(zs2)
     >>> zs2.vote(tid2) # doctest: +ELLIPSIS
-    ZEO.StorageServer CRITICAL
+    Z...StorageServer CRITICAL
     (test-addr-1) Still locked after disconnected. Unlocking.
-    ZEO.StorageServer DEBUG
+    Z...StorageServer DEBUG
     (test-addr-2) ('1') lock: transactions waiting: 0
-    ZEO.StorageServer BLATHER
+    Z...StorageServer BLATHER
     (test-addr-2) Preparing to commit transaction: 1 objects, ... bytes
     2 callAsync serialnos ...
 
     >>> zs1.txnlog.close()
     >>> zs2.tpc_abort(tid2)
 
-    >>> logging.getLogger('ZEO').setLevel(logging.NOTSET)
-    >>> logging.getLogger('ZEO').removeHandler(handler)
+    >>> logging.getLogger(ZEO__name__).setLevel(logging.NOTSET)
+    >>> logging.getLogger(ZEO__name__).removeHandler(handler)
     """
 
 

@@ -12,8 +12,6 @@
 #
 ##############################################################################
 """Monitor behavior of ZEO server and record statistics.
-
-$Id$
 """
 from __future__ import print_function
 from __future__ import print_function
@@ -36,6 +34,8 @@ import asyncore
 import socket
 import time
 import logging
+
+logger = logging.getLogger(__name__)
 
 zeo_version = 'unknown'
 try:
@@ -159,7 +159,6 @@ class StatsServer(asyncore.dispatcher):
         else:
             self.create_socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.set_reuse_addr()
-        logger = logging.getLogger('ZEO.monitor')
         logger.info("listening on %s", repr(self.addr))
         self.bind(self.addr)
         self.listen(5)

@@ -2,12 +2,13 @@ You can change the address(es) of a client storaage.
 
 We'll start by setting up a server and connecting to it:
 
-    >>> import ZEO, ZEO.StorageServer, ZODB.FileStorage, transaction
-    >>> server = ZEO.StorageServer.StorageServer(
+    >>> from .. import connecting, StorageServer
+    >>> import ZODB.FileStorage, transaction
+    >>> server = StorageServer.StorageServer(
     ...     ('127.0.0.1', 0), {'1': ZODB.FileStorage.FileStorage('t.fs')})
     >>> server.start_thread()
 
-    >>> conn = ZEO.connection(server.addr, max_disconnect_poll=0.1)
+    >>> conn = connection(server.addr, max_disconnect_poll=0.1)
     >>> client = conn.db().storage
     >>> client.is_connected()
     True
@@ -26,7 +27,7 @@ And wait for the connectin to notice it's disconnected:
 
 Now, we'll restart the server and update the connection:
 
-    >>> server = ZEO.StorageServer.StorageServer(
+    >>> server = StorageServer.StorageServer(
     ...     ('127.0.0.1', 0), {'1': ZODB.FileStorage.FileStorage('t.fs')})
     >>> server.start_thread()
     >>> client.new_addr(server.addr)
@@ -34,7 +35,7 @@ Now, we'll restart the server and update the connection:
 
 Update with another client:
 
-    >>> conn2 = ZEO.connection(server.addr)
+    >>> conn2 = connection(server.addr)
     >>> conn2.root.x += 1
     >>> transaction.commit()
 

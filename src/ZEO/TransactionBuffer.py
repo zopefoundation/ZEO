@@ -25,7 +25,7 @@ from threading import Lock
 import os
 import tempfile
 import ZODB.blob
-from ZEO._compat import Pickler, Unpickler
+from ._compat import Pickler, Unpickler
 
 class TransactionBuffer:
 

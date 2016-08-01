@@ -38,7 +38,6 @@ import sys
 import os
 
 import ZConfig
-import ZEO
 
 def usage(msg):
     print(__doc__)
@@ -61,7 +60,7 @@ def options(args):
     auth_realm = None
     for k, v in opts:
         if k == '-C' or k == '--configure':
-            schemafile = os.path.join(os.path.dirname(ZEO.__file__),
+            schemafile = os.path.join(os.path.dirname(__file__),
                                                      "schema.xml")
             schema = ZConfig.loadSchema(schemafile)
             config, nil = ZConfig.loadConfig(schema, v)
@@ -109,9 +108,9 @@ def main(args=None, dbclass=None):
     if p is None:
         usage("Error: configuration does not specify auth protocol")
     if p == "digest":
-        from ZEO.auth.auth_digest import DigestDatabase as Database
+        from .auth.auth_digest import DigestDatabase as Database
     elif p == "srp":
-        from ZEO.auth.auth_srp import SRPDatabase as Database
+        from .auth.auth_srp import SRPDatabase as Database
     elif dbclass:
         # dbclass is used for testing tests.auth_plaintext, see testAuth.py
         Database = dbclass

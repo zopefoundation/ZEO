@@ -19,11 +19,11 @@ import asyncore
 import threading
 import logging
 
-import ZEO.ServerStub
-from ZEO.ClientStorage import ClientStorage
-from ZEO.Exceptions import ClientDisconnected
-from ZEO.zrpc.marshal import encode
-from ZEO.tests import forker
+from .. import ServerStub
+from ..ClientStorage import ClientStorage
+from ..Exceptions import ClientDisconnected
+from ..zrpc.marshal import encode
+from . import forker
 
 from ZODB.DB import DB
 from ZODB.POSException import ReadOnlyError, ConflictError
@@ -36,12 +36,12 @@ import ZODB.tests.util
 import transaction
 from transaction import Transaction
 
-logger = logging.getLogger('ZEO.tests.ConnectionTests')
+logger = logging.getLogger(__name__)
 
 ZERO = '\0'*8
 
-class TestServerStub(ZEO.ServerStub.StorageServer):
-    __super_getInvalidations = ZEO.ServerStub.StorageServer.getInvalidations
+class TestServerStub(ServerStub.StorageServer):
+    __super_getInvalidations = ServerStub.StorageServer.getInvalidations
 
     def getInvalidations(self, tid):
         # squirrel the results away for inspection by test case

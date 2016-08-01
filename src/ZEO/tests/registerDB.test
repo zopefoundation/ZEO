@@ -26,8 +26,8 @@ We'll create a Faux storage that has a registerDB method.
 We dont' want the storage server to try to bind to a socket.  We'll
 subclass it and give it a do-nothing dispatcher "class":
 
-    >>> import ZEO.StorageServer
-    >>> class StorageServer(ZEO.StorageServer.StorageServer):
+    >>> from .. import StorageServer
+    >>> class StorageServer(StorageServer.StorageServer):
     ...     class DispatcherClass:
     ...         __init__ = lambda *a, **kw: None
     ...         class socket:

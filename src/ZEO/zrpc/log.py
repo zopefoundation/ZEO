@@ -17,9 +17,11 @@ import logging
 
 from ZODB.loglevels import BLATHER
 
+from . import __name__ as zrpc__name__
+
 LOG_THREAD_ID = 0 # Set this to 1 during heavy debugging
 
-logger = logging.getLogger('ZEO.zrpc')
+logger = logging.getLogger(zrpc__name__)
 
 _label = "%s" % os.getpid()
 

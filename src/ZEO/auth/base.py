@@ -20,7 +20,7 @@ from __future__ import print_function
 from __future__ import print_function
 
 import os
-from ZEO.hash import sha1
+from ..hash import sha1
 
 class Client:
     # Subclass should override to list the names of methods that

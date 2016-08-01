@@ -17,13 +17,12 @@
 
 import os
 
-import ZEO
 import zdaemon.zdctl
 
 # Main program
 def main(args=None):
     options = zdaemon.zdctl.ZDCtlOptions()
-    options.schemadir = os.path.dirname(ZEO.__file__)
+    options.schemadir = os.path.dirname(__file__)
     options.schemafile = "zeoctl.xml"
     zdaemon.zdctl.main(args, options)
 

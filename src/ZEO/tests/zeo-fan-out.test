@@ -22,17 +22,18 @@ Then we'll start 2 others that use this one:
 
 Now, let's create some client storages that connect to these:
 
-    >>> import os, ZEO, ZODB.blob, ZODB.POSException, transaction
+    >>> from .. import DB
+    >>> import os, ZODB.blob, ZODB.POSException, transaction
 
-    >>> db0 = ZEO.DB(port0, blob_dir='cb0')
-    >>> db1 = ZEO.DB(addr1, blob_dir='cb1')
+    >>> db0 = DB(port0, blob_dir='cb0')
+    >>> db1 = DB(addr1, blob_dir='cb1')
     >>> tm1 = transaction.TransactionManager()
     >>> c1 = db1.open(transaction_manager=tm1)
     >>> r1 = c1.root()
     >>> r1
     {}
 
-    >>> db2 = ZEO.DB(addr2, blob_dir='cb2')
+    >>> db2 = DB(addr2, blob_dir='cb2')
     >>> tm2 = transaction.TransactionManager()
     >>> c2 = db2.open(transaction_manager=tm2)
     >>> r2 = c2.root()

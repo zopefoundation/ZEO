@@ -44,10 +44,9 @@ import socket
 import logging
 
 import ZConfig.datatypes
-import ZEO
 from zdaemon.zdoptions import ZDOptions
 
-logger = logging.getLogger('ZEO.runzeo')
+logger = logging.getLogger(__name__)
 _pid = str(os.getpid())
 
 def log(msg, level=logging.INFO, exc_info=False):
@@ -123,7 +122,7 @@ class ZEOOptions(ZDOptions, ZEOOptionsMixin):
     __doc__ = __doc__
 
     logsectionname = "eventlog"
-    schemadir = os.path.dirname(ZEO.__file__)
+    schemadir = os.path.dirname(__file__)
 
     def __init__(self):
         ZDOptions.__init__(self)
@@ -344,7 +343,7 @@ class ZEOServer:
 
 
 def create_server(storages, options):
-    from ZEO.StorageServer import StorageServer
+    from .StorageServer import StorageServer
     return StorageServer(
         options.address,
         storages,

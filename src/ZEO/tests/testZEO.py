@@ -16,12 +16,12 @@ from __future__ import print_function
 import multiprocessing
 import re
 
-from ZEO.ClientStorage import ClientStorage
-from ZEO.tests.forker import get_port
-from ZEO.tests import forker, Cache, CommitLockTests, ThreadTests
-from ZEO.tests import IterationTests
-from ZEO.zrpc.error import DisconnectedError
-from ZEO._compat import PY3
+from ..ClientStorage import ClientStorage
+from .forker import get_port
+from . import forker, Cache, CommitLockTests, ThreadTests
+from . import IterationTests
+from ..zrpc.error import DisconnectedError
+from .._compat import PY3
 from ZODB.tests import StorageTestBase, BasicStorage,  \
      TransactionalUndoStorage,  \
      PackableStorage, Synchronization, ConflictResolution, RevisionStorage, \
@@ -46,10 +46,10 @@ import threading
 import time
 import transaction
 import unittest
-import ZEO.ServerStub
-import ZEO.StorageServer
-import ZEO.tests.ConnectionTests
-import ZEO.zrpc.connection
+from .. import ServerStub
+from .. import StorageServer
+from . import ConnectionTests
+from ..zrpc import client as zrpc_client, connection as zrpc_connection
 import ZODB
 import ZODB.blob
 import ZODB.tests.hexstorage
@@ -58,7 +58,9 @@ import ZODB.tests.util
 import ZODB.utils
 import zope.testing.setupstack
 
-logger = logging.getLogger('ZEO.tests.testZEO')
+logger = logging.getLogger('__name__')
+
+from .. import connection, DB, __name__ as ZEO__name__
 
 class DummyDB:
     def invalidate(self, *args):
@@ -257,7 +259,7 @@ class GenericTests(
     def _do_store_in_separate_thread(self, oid, revid, voted):
 
         def do_store():
-            store = ZEO.ClientStorage.ClientStorage(self._storage._addr)
+            store = ClientStorage(self._storage._addr)
             try:
                 t = transaction.get()
                 store.tpc_begin(t)
@@ -367,7 +369,7 @@ class FileStorageTests(FullGenericTests):
         # FileStorage on the other end does, and thus the ClientStorage
         # instance that is connected to it reflects this.
         self.failIf(ZODB.interfaces.IStorageIteration.implementedBy(
-            ZEO.ClientStorage.ClientStorage))
+            ClientStorage))
         self.failUnless(ZODB.interfaces.IStorageIteration.providedBy(
             self._storage))
         # This is communicated using ClientStorage's _info object:
@@ -452,7 +454,7 @@ class DemoStorageTests(
         pass # DemoStorage pack doesn't do gc
     checkPackAllRevisions = checkPackWithMultiDatabaseReferences
 
-class HeartbeatTests(ZEO.tests.ConnectionTests.CommonSetupTearDown):
+class HeartbeatTests(ConnectionTests.CommonSetupTearDown):
     """Make sure a heartbeat is being sent and that it does no harm
 
     This is really hard to test properly because we can't see the data
@@ -463,9 +465,9 @@ class HeartbeatTests(ZEO.tests.ConnectionTests.CommonSetupTearDown):
 
     def setUp(self):
         # Crank down the select frequency
-        self.__old_client_timeout = ZEO.zrpc.client.client_timeout
-        ZEO.zrpc.client.client_timeout = self.__client_timeout
-        ZEO.tests.ConnectionTests.CommonSetupTearDown.setUp(self)
+        self.__old_client_timeout = zrpc_client.client_timeout
+        zrpc_client.client_timeout = self.__client_timeout
+        ConnectionTests.CommonSetupTearDown.setUp(self)
 
     __client_timeouts = 0
     def __client_timeout(self):
@@ -473,8 +475,8 @@ class HeartbeatTests(ZEO.tests.ConnectionTests.CommonSetupTearDown):
         return .1
 
     def tearDown(self):
-        ZEO.zrpc.client.client_timeout = self.__old_client_timeout
-        ZEO.tests.ConnectionTests.CommonSetupTearDown.tearDown(self)
+        zrpc_client.client_timeout = self.__old_client_timeout
+        ConnectionTests.CommonSetupTearDown.tearDown(self)
 
     def getConfig(self, path, create, read_only):
         return """<mappingstorage 1/>"""
@@ -502,7 +504,7 @@ class HeartbeatTests(ZEO.tests.ConnectionTests.CommonSetupTearDown):
         self._storage.close()
 
 
-class ZRPCConnectionTests(ZEO.tests.ConnectionTests.CommonSetupTearDown):
+class ZRPCConnectionTests(ConnectionTests.CommonSetupTearDown):
 
     def getConfig(self, path, create, read_only):
         return """<mappingstorage 1/>"""
@@ -517,7 +519,7 @@ class ZRPCConnectionTests(ZEO.tests.ConnectionTests.CommonSetupTearDown):
 
         import zope.testing.loggingsupport
         handler = zope.testing.loggingsupport.InstalledHandler(
-            'ZEO.zrpc.client')
+            zrpc_client.__name__)
 
         self._storage._rpc_mgr.map[None] = Evil()
 
@@ -789,7 +791,7 @@ class BlobAdaptedFileStorageTests(FullGenericTests, CommonBlobTests):
             # the method that is used to request data from teh server to
             # verify that it is only called once.
 
-            sendBlob_org = ZEO.ServerStub.StorageServer.sendBlob
+            sendBlob_org = ServerStub.StorageServer.sendBlob
             calls = []
             def sendBlob(self, oid, serial):
                 calls.append((oid, serial))
@@ -817,7 +819,7 @@ class BlobWritableCacheTests(FullGenericTests, CommonBlobTests):
 
 class FauxConn:
     addr = 'x'
-    peer_protocol_version = ZEO.zrpc.connection.Connection.current_protocol
+    peer_protocol_version = zrpc_connection.Connection.current_protocol
 
 class StorageServerClientWrapper:
 
@@ -834,7 +836,7 @@ class StorageServerWrapper:
 
     def __init__(self, server, storage_id):
         self.storage_id = storage_id
-        self.server = ZEO.StorageServer.ZEOStorage(server, server.read_only)
+        self.server = StorageServer.ZEOStorage(server, server.read_only)
         self.server.notifyConnected(FauxConn())
         self.server.register(storage_id, False)
         self.server.client = StorageServerClientWrapper()
@@ -879,7 +881,7 @@ class StorageServerWrapper:
 
 def multiple_storages_invalidation_queue_is_not_insane():
     """
-    >>> from ZEO.StorageServer import StorageServer, ZEOStorage
+    >>> from ..StorageServer import StorageServer, ZEOStorage
     >>> from ZODB.FileStorage import FileStorage
     >>> from ZODB.DB import DB
     >>> from persistent.mapping import PersistentMapping
@@ -927,7 +929,7 @@ restart and the client connect.
 
 Let's create a file storage and stuff some data into it:
 
-    >>> from ZEO.StorageServer import StorageServer, ZEOStorage
+    >>> from ..StorageServer import StorageServer, ZEOStorage
     >>> from ZODB.FileStorage import FileStorage
     >>> from ZODB.DB import DB
     >>> from persistent.mapping import PersistentMapping
@@ -1024,11 +1026,9 @@ transaction, we'll get a result:
 def tpc_finish_error():
     r"""Server errors in tpc_finish weren't handled properly.
 
-    >>> import ZEO.ClientStorage, ZEO.zrpc.connection
-
     >>> class Connection:
     ...     peer_protocol_version = (
-    ...         ZEO.zrpc.connection.Connection.current_protocol)
+    ...         zrpc_connection.Connection.current_protocol)
     ...     def __init__(self, client):
     ...         self.client = client
     ...     def get_addr(self):
@@ -1082,7 +1082,7 @@ def tpc_finish_error():
     ...     def iterator_gc(*args):
     ...         pass
 
-    >>> class ClientStorage(ZEO.ClientStorage.ClientStorage):
+    >>> class ClientStorage(ClientStorage):
     ...     ConnectionManagerClass = ConnectionManager
     ...     StorageServerStubClass = StorageServer
 
@@ -1135,7 +1135,8 @@ def client_has_newer_data_than_server():
     >>> db.close()
     >>> r = shutil.copyfile('Data.fs', 'Data.save')
     >>> addr, admin = start_server(keep=1)
-    >>> db = ZEO.DB(addr, name='client', max_disconnect_poll=.01)
+    >>> from .. import DB, __name__ as ZEO_name
+    >>> db = DB(addr, name='client', max_disconnect_poll=.01)
     >>> wait_connected(db.storage)
     >>> conn = db.open()
     >>> conn.root().x = 1
@@ -1150,7 +1151,7 @@ def client_has_newer_data_than_server():
 
     >>> import zope.testing.loggingsupport
     >>> handler = zope.testing.loggingsupport.InstalledHandler(
-    ...     'ZEO', level=logging.ERROR)
+    ...     ZEO_name, level=logging.ERROR)
     >>> formatter = logging.Formatter('%(name)s %(levelname)s %(message)s')
 
     >>> _, admin = start_server(addr=addr)
@@ -1174,7 +1175,7 @@ def client_has_newer_data_than_server():
 def history_over_zeo():
     """
     >>> addr, _ = start_server()
-    >>> db = ZEO.DB(addr)
+    >>> db = DB(addr)
     >>> wait_connected(db.storage)
     >>> conn = db.open()
     >>> conn.root().x = 0
@@ -1205,7 +1206,7 @@ def open_convenience():
     """Often, we just want to open a single connection.
 
     >>> addr, _ = start_server(path='data.fs')
-    >>> conn = ZEO.connection(addr)
+    >>> conn = connection(addr)
     >>> conn.root()
     {}
 
@@ -1216,7 +1217,7 @@ def open_convenience():
     Let's make sure the database was cloased when we closed the
     connection, and that the data is there.
 
-    >>> db = ZEO.DB(addr)
+    >>> db = DB(addr)
     >>> conn = db.open()
     >>> conn.root()
     {'x': 1}
@@ -1226,7 +1227,7 @@ def open_convenience():
 def client_asyncore_thread_has_name():
     """
     >>> addr, _ = start_server()
-    >>> db = ZEO.DB(addr)
+    >>> db = DB(addr)
     >>> any(t for t in threading.enumerate()
     ...     if ' zeo client networking thread' in t.getName())
     True
@@ -1239,8 +1240,8 @@ def runzeo_without_configfile():
     ...     _ = r.write('''
     ... import sys
     ... sys.path[:] = %r
-    ... import ZEO.runzeo
-    ... ZEO.runzeo.main(sys.argv[1:])
+    ... from .. import runzeo
+    ... runzeo.main(sys.argv[1:])
     ... ''' % sys.path)
 
     >>> import subprocess, re
@@ -1250,13 +1251,13 @@ def runzeo_without_configfile():
     ...     ).stdout.read()).decode('ascii'))
     ... # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     ------
-    --T INFO ZEO.runzeo () opening storage '1' using FileStorage
+    --T INFO ...runzeo () opening storage '1' using FileStorage
     ------
-    --T INFO ZEO.StorageServer StorageServer created RW with storages 1RWt
+    --T INFO ...StorageServer StorageServer created RW with storages 1RWt
     ------
-    --T INFO ZEO.zrpc () listening on ...
+    --T INFO ...zrpc () listening on ...
     ------
-    --T INFO ZEO.StorageServer closing storage '1'
+    --T INFO ...StorageServer closing storage '1'
     testing exit immediately
     """
 
@@ -1268,7 +1269,7 @@ Invalidations could cause errors when closing client storages,
     >>> writing = threading.Event()
     >>> def mad_write_thread():
     ...     global writing
-    ...     conn = ZEO.connection(addr)
+    ...     conn = connection(addr)
     ...     writing.set()
     ...     while writing.isSet():
     ...         conn.root.x = 1
@@ -1281,7 +1282,7 @@ Invalidations could cause errors when closing client storages,
     >>> _ = writing.wait()
     >>> time.sleep(.01)
     >>> for i in range(10):
-    ...     conn = ZEO.connection(addr)
+    ...     conn = connection(addr)
     ...     _ = conn._storage.load(b'\0'*8)
     ...     conn.close()
 
@@ -1293,7 +1294,8 @@ def convenient_to_pass_port_to_client_and_ZEO_dot_client():
     """Jim hates typing
 
     >>> addr, _ = start_server()
-    >>> client = ZEO.client(addr[1])
+    >>> from .. import client
+    >>> client = client(addr[1])
     >>> client.__name__ == "('127.0.0.1', %s)" % addr[1]
     True
 
@@ -1305,7 +1307,7 @@ def test_server_status():
     You can get server status using the server_status method.
 
     >>> addr, _ = start_server(zeo_conf=dict(transaction_timeout=1))
-    >>> db = ZEO.DB(addr)
+    >>> db = DB(addr)
     >>> pprint.pprint(db.storage.server_status(), width=40)
     {'aborts': 0,
      'active_txns': 0,
@@ -1330,7 +1332,7 @@ def test_ruok():
     You can also get server status using the ruok protocol.
 
     >>> addr, _ = start_server(zeo_conf=dict(transaction_timeout=1))
-    >>> db = ZEO.DB(addr) # force a transaction :)
+    >>> db = DB(addr) # force a transaction :)
     >>> import json, socket, struct
     >>> s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     >>> s.connect(addr)
@@ -1367,7 +1369,7 @@ You can make this easier by passing a label to the ClientStorage
 constructor.
 
     >>> addr, _ = start_server()
-    >>> db = ZEO.DB(addr, client_label='test-label-1')
+    >>> db = DB(addr, client_label='test-label-1')
     >>> db.close()
     >>> @wait_until
     ... def check_for_test_label_1():
@@ -1397,7 +1399,7 @@ You can specify the client label via a configuration file as well:
     ...            if 'test-label-2' in line:
     ...                print(line.split()[1:4])
     ...                return True
-    ['INFO', 'ZEO.StorageServer', '(test-label-2']
+    ['INFO', ZEO__name__ + '.StorageServer', '(test-label-2']
 
     """
 
@@ -1409,13 +1411,13 @@ conflict error, invalidate the cache entry.  This is important when
 the cache is messed up.
 
     >>> addr, _ = start_server()
-    >>> conn1 = ZEO.connection(addr)
+    >>> conn1 = connection(addr)
     >>> conn1.root.x = conn1.root().__class__()
     >>> transaction.commit()
     >>> conn1.root.x
     {}
 
-    >>> cs = ZEO.ClientStorage.ClientStorage(addr, client='cache')
+    >>> cs = ClientStorage(addr, client='cache')
     >>> conn2 = ZODB.connection(cs)
     >>> conn2.root.x
     {}
@@ -1431,8 +1433,8 @@ the cache is messed up.
 Now, let's screw up the cache by making it have a last tid that is later than
 the root serial.
 
-    >>> import ZEO.cache
-    >>> cache = ZEO.cache.ClientCache('cache-1.zec')
+    >>> from .. import cache as client_cache
+    >>> cache = client_cache.ClientCache('cache-1.zec')
     >>> cache.setLastTid(p64(u64(conn1.root.x._p_serial)+1))
     >>> cache.close()
 
@@ -1445,7 +1447,7 @@ We'll also update the server so that it's last tid is newer than the cache's:
 
 Now, if we reopen the client storage, we'll get the wrong root:
 
-    >>> cs = ZEO.ClientStorage.ClientStorage(addr, client='cache')
+    >>> cs = ClientStorage(addr, client='cache')
     >>> conn2 = ZODB.connection(cs)
     >>> conn2.root.x
     {}
@@ -1510,9 +1512,9 @@ def runzeo_logrotate_on_sigusr2():
     ... </eventlog>
     ... ''' % port)
     >>> generate_script('s', '''
-    ... import ZEO.runzeo
-    ... ZEO.runzeo.main()
-    ... ''')
+    ... from {} import runzeo
+    ... runzeo.main()
+    ... '''.format(ZEO__name__))
     >>> import subprocess, signal
     >>> p = subprocess.Popen([sys.executable, 's', '-Cc'], close_fds=True)
     >>> wait_until('started',
@@ -1545,7 +1547,7 @@ def unix_domain_sockets():
 
     >>> addr, _ = start_server(port='./sock')
 
-    >>> c = ZEO.connection(addr)
+    >>> c = connection(addr)
     >>> c.root.x = 1
     >>> transaction.commit()
     >>> c.close()
@@ -1561,7 +1563,8 @@ def gracefully_handle_abort_while_storing_many_blobs():
     >>> logging.getLogger().addHandler(handler)
 
     >>> addr, _ = start_server(blob_dir='blobs')
-    >>> client = ZEO.client(addr, blob_dir='cblobs')
+    >>> from .. import client
+    >>> client = client(addr, blob_dir='cblobs')
     >>> c = ZODB.connection(client)
     >>> c.root.x = ZODB.blob.Blob(b'z'*(1<<20))
     >>> c.root.y = ZODB.blob.Blob(b'z'*(1<<2))
@@ -1595,7 +1598,7 @@ if sys.platform.startswith('win'):
     del unix_domain_sockets
 
 def work_with_multiprocessing_process(name, addr, q):
-    conn = ZEO.connection(addr)
+    conn = connection(addr)
     q.put((name, conn.root.x))
     conn.close()
 
@@ -1615,7 +1618,7 @@ class MultiprocessingTests(unittest.TestCase):
         self.globs = {}
         forker.setUp(self)
         addr, adminaddr = self.globs['start_server']()
-        conn = ZEO.connection(addr)
+        conn = connection(addr)
         conn.root.x = 1
         transaction.commit()
         q = multiprocessing.Queue()
@@ -1651,7 +1654,7 @@ def quick_close_doesnt_kill_server():
 
     Now we should be able to connect as normal:
 
-    >>> db = ZEO.DB(addr)
+    >>> db = DB(addr)
     >>> db.storage.is_connected()
     True
 
@@ -1661,11 +1664,10 @@ def quick_close_doesnt_kill_server():
 def sync_connect_doesnt_hang():
     r"""
     >>> import threading
-    >>> import ZEO.zrpc.client
-    >>> ConnectThread = ZEO.zrpc.client.ConnectThread
-    >>> ZEO.zrpc.client.ConnectThread = lambda *a, **kw: threading.Thread()
+    >>> ConnectThread = zrpc_client.ConnectThread
+    >>> zrpc_client.ConnectThread = lambda *a, **kw: threading.Thread()
 
-    >>> class CM(ZEO.zrpc.client.ConnectionManager):
+    >>> class CM(zrpc_client.ConnectionManager):
     ...     sync_wait = 1
     ...     _start_asyncore_loop = lambda self: None
     >>> cm = CM(('', 0), object())
@@ -1680,7 +1682,7 @@ def sync_connect_doesnt_hang():
 
     >>> cm.thread.isAlive()
     False
-    >>> ZEO.zrpc.client.ConnectThread = ConnectThread
+    >>> zrpc_client.ConnectThread = ConnectThread
     """
 
 def lp143344_extension_methods_not_lost_on_server_restart():
@@ -1688,7 +1690,7 @@ def lp143344_extension_methods_not_lost_on_server_restart():
 Make sure we don't lose exension methods on server restart.
 
     >>> addr, adminaddr = start_server(keep=True)
-    >>> conn = ZEO.connection(addr)
+    >>> conn = connection(addr)
     >>> conn.root.x = 1
     >>> transaction.commit()
     >>> conn.db().storage.answer_to_the_ultimate_question()
@@ -1712,7 +1714,7 @@ def can_use_empty_string_for_local_host_on_client():
     """We should be able to spell localhost with ''.
 
     >>> (_, port), _ = start_server()
-    >>> conn = ZEO.connection(('', port))
+    >>> conn = connection(('', port))
     >>> conn.root()
     {}
     >>> conn.root.x = 1
@@ -1734,7 +1736,7 @@ quick_test_classes = [
 
 class ServerManagingClientStorage(ClientStorage):
 
-    class StorageServerStubClass(ZEO.ServerStub.StorageServer):
+    class StorageServerStubClass(ServerStub.StorageServer):
 
         # Wait for abort for the benefit of blob_transaction.txt
         def tpc_abort(self, id):
@@ -1784,7 +1786,8 @@ class ServerManagingClientStorageForIExternalGCTest(
         # Packing doesn't clear old versions out of zeo client caches,
         # so we'll clear the caches.
         self._cache.clear()
-        ZEO.ClientStorage._check_blob_cache_size(self.blob_dir, 0)
+        from ..ClientStorage import _check_blob_cache_size
+        _check_blob_cache_size(self.blob_dir, 0)
 
 def test_suite():
     suite = unittest.TestSuite()
@@ -1797,9 +1800,6 @@ def test_suite():
         (re.compile(r"u?'start': u?'[^\n]+'"), 'start'),
         (re.compile(r"u?'last-transaction': u?'[0-9a-f]+'"),
          'last-transaction'),
-        (re.compile("ZODB.POSException.ConflictError"), "ConflictError"),
-        (re.compile("ZODB.POSException.POSKeyError"), "POSKeyError"),
-        (re.compile("ZEO.Exceptions.ClientStorageError"), "ClientStorageError"),
         (re.compile(r"\[Errno \d+\]"), '[Errno N]'),
         (re.compile(r"loads=\d+\.\d+"), 'loads=42.42'),
         # Python 3 drops the u prefix
@@ -1812,14 +1812,12 @@ def test_suite():
     zeo.addTest(doctest.DocTestSuite(
         setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
         checker=renormalizing.RENormalizing(patterns),
+        optionflags=doctest.IGNORE_EXCEPTION_DETAIL,
         ))
     zeo.addTest(doctest.DocTestSuite(
-            ZEO.tests.IterationTests,
+            IterationTests,
             setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
-            checker=renormalizing.RENormalizing((
-                    (re.compile("ZEO.Exceptions.ClientDisconnected"),
-                     "ClientDisconnected"),
-                    )),
+            optionflags=doctest.IGNORE_EXCEPTION_DETAIL,
             ))
     zeo.addTest(doctest.DocFileSuite(
             'registerDB.test', globs={'print_function': print_function}))
@@ -1831,6 +1829,7 @@ def test_suite():
             'dynamic_server_ports.test', 'new_addr.test', '../nagios.rst',
             setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
             checker=renormalizing.RENormalizing(patterns),
+            optionflags=doctest.IGNORE_EXCEPTION_DETAIL,
             globs={'print_function': print_function},
             ),
         )

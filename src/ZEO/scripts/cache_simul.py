@@ -29,7 +29,7 @@ import bisect
 import struct
 import re
 import sys
-import ZEO.cache
+from .. import cache
 import argparse
 
 from ZODB.utils import z64
@@ -270,7 +270,7 @@ class CircularCacheEntry(object):
         self.end_tid = end_tid
         self.offset = offset
 
-from ZEO.cache import ZEC_HEADER_SIZE
+from ..cache import ZEC_HEADER_SIZE
 
 class CircularCacheSimulation(Simulation):
     """Simulate the ZEO 3.0 cache."""
@@ -285,8 +285,6 @@ class CircularCacheSimulation(Simulation):
     evicts = 0
 
     def __init__(self, cachelimit, rearrange):
-        from ZEO import cache
-
         Simulation.__init__(self, cachelimit, rearrange)
         self.total_evicts = 0  # number of cache evictions
 
@@ -309,7 +307,7 @@ class CircularCacheSimulation(Simulation):
 
         # The number of overhead bytes needed to store an object pickle
         # on disk (all bytes beyond those needed for the object pickle).
-        self.overhead = ZEO.cache.allocated_record_overhead
+        self.overhead = cache.allocated_record_overhead
 
         # save evictions so we can replay them, if necessary
         self.evicted = {}

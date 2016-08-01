@@ -17,7 +17,7 @@ import threading
 
 import transaction
 from ZODB.tests.StorageTestBase import zodb_pickle, MinPO
-import ZEO.ClientStorage
+from .. import ClientStorage
 
 ZERO = '\0'*8
 
@@ -67,7 +67,7 @@ class GetsThroughBeginThread(BasicThread):
     def run(self):
         try:
             self.storage.tpc_begin(self.trans)
-        except ZEO.ClientStorage.ClientStorageError:
+        except ClientStorage.ClientStorageError:
             self.gotValueError = 1
 
 

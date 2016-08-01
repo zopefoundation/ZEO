@@ -34,13 +34,13 @@ for our test:
     ...     def close(self):
     ...         print("close()")
 
-    >>> import ZEO
-    >>> ClientStorage_orig = ZEO.ClientStorage.ClientStorage
-    >>> ZEO.ClientStorage.ClientStorage = ClientStorage
+    >>> from .. import ClientStorage
+    >>> ClientStorage_orig = ClientStorage.ClientStorage
+    >>> ClientStorage.ClientStorage = ClientStorage
 
 Now, we're ready to try the script:
 
-    >>> from ZEO.scripts.zeopack import main
+    >>> from ..scripts.zeopack import main
 
 If we call it with no arguments, we get help:
 
@@ -274,6 +274,6 @@ Note that in the previous example, the first line was output through logging.
 
 .. tear down
 
-    >>> ZEO.ClientStorage.ClientStorage = ClientStorage_orig
+    >>> ClientStorage.ClientStorage = ClientStorage_orig
     >>> time.time = time_orig
     >>> time.sleep = sleep_orig

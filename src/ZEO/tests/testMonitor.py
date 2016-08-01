@@ -19,8 +19,8 @@ $Id$
 import socket
 import unittest
 
-from ZEO.tests.ConnectionTests import CommonSetupTearDown
-from ZEO.monitor import StorageStats
+from .ConnectionTests import CommonSetupTearDown
+from ..monitor import StorageStats
 
 class MonitorTests(CommonSetupTearDown):
 

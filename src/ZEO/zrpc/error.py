@@ -12,7 +12,7 @@
 #
 ##############################################################################
 from ZODB import POSException
-from ZEO.Exceptions import ClientDisconnected
+from ..Exceptions import ClientDisconnected
 
 class ZRPCError(POSException.StorageError):
     pass

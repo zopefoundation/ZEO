@@ -23,8 +23,8 @@ import transaction
 import ZODB
 from ZODB.MappingStorage import MappingStorage
 from ZODB.tests import MinPO
-from ZEO.ClientStorage import ClientStorage
-from ZEO.tests import forker
+from ..ClientStorage import ClientStorage
+from . import forker
 
 import os
 import random

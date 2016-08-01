@@ -6,7 +6,7 @@ import socket
 import sys
 import time
 import traceback
-import ZEO.ClientStorage
+from ..ClientStorage import ClientStorage
 from six.moves import map
 from six.moves import zip
 
@@ -147,8 +147,7 @@ def _main(args=None, prog=None):
 
     for addr, name in servers:
         try:
-            cs = ZEO.ClientStorage.ClientStorage(
-                addr, storage=name, wait=False, read_only=1)
+            cs = ClientStorage(addr, storage=name, wait=False, read_only=1)
             for i in range(60):
                 if cs.is_connected():
                     break

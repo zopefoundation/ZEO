@@ -26,8 +26,9 @@ import logging
 import six
 import ZODB.tests.util
 import zope.testing.setupstack
-from ZEO._compat import BytesIO
-logger = logging.getLogger('ZEO.tests.forker')
+from .._compat import BytesIO
+
+logger = logging.getLogger(__name__)
 
 class ZEOConfig:
     """Class to generate ZEO configuration file. """
@@ -136,14 +137,16 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
     fp.close()
 
     # Find the zeoserver script
-    import ZEO.tests.zeoserver
-    script = ZEO.tests.zeoserver.__file__
+    from . import zeoserver
+    script = zeoserver.__file__
     if script.endswith('.pyc'):
         script = script[:-1]
 
     # Create a list of arguments, which we'll tuplify below
     qa = _quote_arg
-    args = [qa(sys.executable), qa(script), '-C', qa(tmpfile)]
+    args = [qa(sys.executable),
+            '-m', __name__.rsplit('.', 1)[0] + '.zeoserver',
+            '-C', qa(tmpfile)]
     if keep:
         args.append("-k")
     if debug:

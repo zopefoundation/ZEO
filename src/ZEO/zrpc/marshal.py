@@ -13,9 +13,9 @@
 ##############################################################################
 import logging
 
-from ZEO._compat import Unpickler, Pickler, BytesIO, PY3, PYPY
-from ZEO.zrpc.error import ZRPCError
-from ZEO.zrpc.log import log, short_repr
+from .._compat import Unpickler, Pickler, BytesIO, PY3, PYPY
+from .error import ZRPCError
+from .log import log, short_repr
 
 def encode(*args): # args: (msgid, flags, name, args)
     # (We used to have a global pickler, but that's not thread-safe. :-( )

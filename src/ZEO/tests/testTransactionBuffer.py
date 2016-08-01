@@ -14,7 +14,7 @@
 import random
 import unittest
 
-from ZEO.TransactionBuffer import TransactionBuffer
+from ..TransactionBuffer import TransactionBuffer
 
 def random_string(size):
     """Return a random string of size size."""

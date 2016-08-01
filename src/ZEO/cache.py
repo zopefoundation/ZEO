@@ -38,7 +38,7 @@ from ZODB.utils import p64, u64, z64
 import six
 from ._compat import PYPY
 
-logger = logging.getLogger("ZEO.cache")
+logger = logging.getLogger(__name__)
 
 # A disk-based cache for ZEO clients.
 #
