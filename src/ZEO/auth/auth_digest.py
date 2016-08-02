@@ -40,10 +40,10 @@ import random
 import struct
 import time
 
-from ZEO.auth.base import Database, Client
-from ZEO.StorageServer import ZEOStorage
+from .base import Database, Client
+from ..StorageServer import ZEOStorage
 from ZEO.Exceptions import AuthError
-from ZEO.hash import sha1
+from ..hash import sha1
 
 def get_random_bytes(n=8):
     try:

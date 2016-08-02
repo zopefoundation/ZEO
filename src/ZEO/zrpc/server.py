@@ -31,9 +31,9 @@ else:
     s.close()
     del s
 
-from ZEO.zrpc.connection import Connection
-from ZEO.zrpc.log import log
-import ZEO.zrpc.log
+from .connection import Connection
+from .log import log
+from .log import logger
 import logging
 
 # Export the main asyncore loop
@@ -119,6 +119,6 @@ class Dispatcher(asyncore.dispatcher):
         except:
             if sock.fileno() in asyncore.socket_map:
                 del asyncore.socket_map[sock.fileno()]
-            ZEO.zrpc.log.logger.exception("Error in handle_accept")
+            logger.exception("Error in handle_accept")
         else:
             log("connect from %s: %s" % (repr(addr), c))

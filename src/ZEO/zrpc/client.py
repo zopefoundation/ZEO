@@ -19,12 +19,12 @@ import socket
 import sys
 import threading
 import time
-import ZEO.zrpc.trigger
+from . import trigger
 
 
-from ZEO.zrpc.connection import ManagedClientConnection
-from ZEO.zrpc.log import log
-from ZEO.zrpc.error import DisconnectedError
+from .connection import ManagedClientConnection
+from .log import log
+from .error import DisconnectedError
 
 from ZODB.POSException import ReadOnlyError
 from ZODB.loglevels import BLATHER
@@ -163,7 +163,7 @@ class ConnectionManager(object):
 
     def _start_asyncore_loop(self):
         self.map = {}
-        self.trigger = ZEO.zrpc.trigger.trigger(self.map)
+        self.trigger = trigger.trigger(self.map)
         self.loop_thread = threading.Thread(
             name="%s zeo client networking thread" % self.client.__name__,
             target=client_loop, args=(self.map,))

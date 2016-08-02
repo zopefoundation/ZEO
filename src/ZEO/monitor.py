@@ -12,8 +12,6 @@
 #
 ##############################################################################
 """Monitor behavior of ZEO server and record statistics.
-
-$Id$
 """
 from __future__ import print_function
 from __future__ import print_function
