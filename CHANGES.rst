@@ -1,8 +1,12 @@
 Changelog
 =========
 
-4.2.2 (unreleased)
+4.3.0 (2016-08-02)
 ------------------
+
+- Refuse to work with ZODB 5.
+
+  Some recent cleanups in the ZODB commit protocol are incompatible with ZEO 4.
 
 - Fix ZEO cache tracing on Python 3.
 
