@@ -32,6 +32,13 @@ logger = logging.getLogger('ZEO.tests.forker')
 
 DEBUG = os.environ.get('ZEO_TEST_SERVER_DEBUG')
 
+ZEO4_SERVER = os.environ.get('ZEO4_SERVER')
+skip_if_testing_client_against_zeo4 = (
+    (lambda func: None)
+    if ZEO4_SERVER else
+    (lambda func: func)
+    )
+
 class ZEOConfig:
     """Class to generate ZEO configuration file. """
 
@@ -104,21 +111,30 @@ def runner(config, qin, qout, timeout=None,
             ))
 
     try:
-        import ZEO.runzeo, threading
+        import threading
         from six.moves.queue import Empty
 
-        options = ZEO.runzeo.ZEOOptions()
+        if ZEO4_SERVER:
+            from .ZEO4 import runzeo
+        else:
+            from .. import runzeo
+
+        options = runzeo.ZEOOptions()
         options.realize(['-C', config])
-        server = ZEO.runzeo.ZEOServer(options)
+        server = runzeo.ZEOServer(options)
         globals()[(name if name else 'last') + '_server'] = server
         server.open_storages()
         server.clear_socket()
         server.create_server()
         logger.debug('SERVER CREATED')
-        qout.put(server.server.acceptor.addr)
+        if ZEO4_SERVER:
+            qout.put(server.server.addr)
+        else:
+            qout.put(server.server.acceptor.addr)
         logger.debug('ADDRESS SENT')
         thread = threading.Thread(
-            target=server.server.loop, kwargs=dict(timeout=.2),
+            target=server.server.loop,
+            kwargs={} if ZEO4_SERVER else dict(timeout=.2),
             name = None if name is None else name + '-server',
             )
         thread.setDaemon(True)

@@ -340,7 +340,6 @@ class FileStorageTests(FullGenericTests):
             self._storage._info['interfaces']
             )
 
-
 class FileStorageSSLTests(FileStorageTests):
 
     def getZEOConfig(self):
@@ -1123,6 +1122,7 @@ def convenient_to_pass_port_to_client_and_ZEO_dot_client():
     >>> client.close()
     """
 
+@forker.skip_if_testing_client_against_zeo4
 def test_server_status():
     """
     You can get server status using the server_status method.
@@ -1147,6 +1147,7 @@ def test_server_status():
     >>> db.close()
     """
 
+@forker.skip_if_testing_client_against_zeo4
 def test_ruok():
     """
     You can also get server status using the ruok protocol.
@@ -1453,6 +1454,7 @@ class MultiprocessingTests(unittest.TestCase):
         conn.close()
         zope.testing.setupstack.tearDown(self)
 
+@forker.skip_if_testing_client_against_zeo4
 def quick_close_doesnt_kill_server():
     r"""
 
@@ -1500,9 +1502,11 @@ def can_use_empty_string_for_local_host_on_client():
 slow_test_classes = [
     BlobAdaptedFileStorageTests, BlobWritableCacheTests,
     MappingStorageTests, DemoStorageTests,
-    FileStorageTests, FileStorageSSLTests,
+    FileStorageTests,
     FileStorageHexTests, FileStorageClientHexTests,
     ]
+if not forker.ZEO4_SERVER:
+    slow_test_classes.append(FileStorageSSLTests)
 
 quick_test_classes = [FileStorageRecoveryTests, ZRPCConnectionTests]
 
@@ -1582,7 +1586,9 @@ def test_suite():
                      "ClientDisconnected"),
                     )),
             ))
-    zeo.addTest(unittest.makeSuite(ClientConflictResolutionTests, 'check'))
+    if not forker.ZEO4_SERVER:
+        # ZEO 4 doesn't support client-side conflict resolution
+        zeo.addTest(unittest.makeSuite(ClientConflictResolutionTests, 'check'))
     zeo.layer = ZODB.tests.util.MininalTestLayer('testZeo-misc')
     suite.addTest(zeo)
 
@@ -1592,12 +1598,21 @@ def test_suite():
             'zdoptions.test',
             'drop_cache_rather_than_verify.txt', 'client-config.test',
             'protocols.test', 'zeo_blob_cache.test', 'invalidation-age.txt',
-            'dynamic_server_ports.test', '../nagios.rst',
+            '../nagios.rst',
             setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
             checker=renormalizing.RENormalizing(patterns),
             globs={'print_function': print_function},
             ),
         )
+    if not forker.ZEO4_SERVER:
+        zeo.addTest(
+            doctest.DocFileSuite(
+                'dynamic_server_ports.test',
+                setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
+                checker=renormalizing.RENormalizing(patterns),
+                globs={'print_function': print_function},
+                ),
+            )
     zeo.addTest(PackableStorage.IExternalGC_suite(
         lambda :
         ServerManagingClientStorageForIExternalGCTest(

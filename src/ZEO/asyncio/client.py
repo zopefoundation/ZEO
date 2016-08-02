@@ -599,14 +599,20 @@ class Client(object):
             self.cache.setLastTid(tid)
 
     def serialnos(self, serials):
+        # Method called by ZEO4 storage servers.
+
         # Before delegating, check for errors (likely ConflictErrors)
         # and invalidate the oids they're associated with.  In the
         # past, this was done by the client, but now we control the
         # cache and this is our last chance, as the client won't call
         # back into us when there's an error.
-        for oid, serial in serials:
-            if isinstance(serial, Exception):
+        for oid in serials:
+            if isinstance(oid, bytes):
                 self.cache.invalidate(oid, None)
+            else:
+                oid, serial = oid
+                if isinstance(serial, Exception) or serial == b'rs':
+                    self.cache.invalidate(oid, None)
 
         self.client.serialnos(serials)
 
