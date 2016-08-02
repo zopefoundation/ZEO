@@ -51,9 +51,6 @@ import ZEO.cache
 
 logger = logging.getLogger(__name__)
 
-# max signed 64-bit value ~ infinity :) Signed cuz LBTree and TimeStamp
-m64 = b'\x7f\xff\xff\xff\xff\xff\xff\xff'
-
 def tid2time(tid):
     return str(TimeStamp(tid))
 
@@ -498,7 +495,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         return self._call('loadSerial', oid, serial)
 
     def load(self, oid, version=''):
-        result = self.loadBefore(oid, m64)
+        result = self.loadBefore(oid, utils.maxtid)
         if result is None:
             raise POSException.POSKeyError(oid)
         return result[:2]

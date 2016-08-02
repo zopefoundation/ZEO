@@ -16,7 +16,7 @@ from __future__ import print_function
 import multiprocessing
 import re
 
-from ZEO.ClientStorage import ClientStorage, m64
+from ZEO.ClientStorage import ClientStorage
 from ZEO.tests import forker, Cache, CommitLockTests, ThreadTests
 from ZEO.tests import IterationTests
 from ZEO._compat import PY3
@@ -26,7 +26,7 @@ from ZODB.tests import StorageTestBase, BasicStorage,  \
      MTStorage, ReadOnlyStorage, IteratorStorage, RecoveryStorage
 from ZODB.tests.MinPO import MinPO
 from ZODB.tests.StorageTestBase import zodb_unpickle
-from ZODB.utils import p64, u64, z64
+from ZODB.utils import maxtid, p64, u64, z64
 from zope.testing import renormalizing
 
 import doctest
@@ -1401,7 +1401,7 @@ Now we'll try to use the connection, mainly to wait for everything to
 get processed. Before we fixed this by making tpc_finish a synchronous
 call to the server. we'd get some sort of error here.
 
-    >>> _ = client._call('loadBefore', b'\0'*8, m64)
+    >>> _ = client._call('loadBefore', b'\0'*8, maxtid)
 
     >>> c.close()
 

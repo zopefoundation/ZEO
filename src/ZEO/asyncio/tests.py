@@ -9,6 +9,7 @@ from zope.testing import setupstack
 from concurrent.futures import Future
 import mock
 from ZODB.POSException import ReadOnlyError
+from ZODB.utils import maxtid
 
 import collections
 import logging
@@ -16,7 +17,6 @@ import struct
 import unittest
 
 from ..Exceptions import ClientDisconnected, ProtocolError
-from ..ClientStorage import m64
 
 from .testing import Loop
 from .client import ClientRunner, Fallback
@@ -192,17 +192,18 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertEqual(self.pop(), (0, True, 'bar', (3, 4)))
 
         # Loading objects gets special handling to leverage the cache.
-        loaded = self.load_before(b'1'*8, m64)
+        loaded = self.load_before(b'1'*8, maxtid)
 
         # The data wasn't in the cache, so we made a server call:
-        self.assertEqual(self.pop(),
-                         ((b'1'*8, m64), False, 'loadBefore', (b'1'*8, m64)))
+        self.assertEqual(
+            self.pop(),
+            ((b'1'*8, maxtid), False, 'loadBefore', (b'1'*8, maxtid)))
         # Note load_before uses the oid as the message id.
-        self.respond((b'1'*8, m64), (b'data', b'a'*8, None))
+        self.respond((b'1'*8, maxtid), (b'data', b'a'*8, None))
         self.assertEqual(loaded.result(), (b'data', b'a'*8, None))
 
         # If we make another request, it will be satisfied from the cache:
-        loaded = self.load_before(b'1'*8, m64)
+        loaded = self.load_before(b'1'*8, maxtid)
         self.assertEqual(loaded.result(), (b'data', b'a'*8, None))
         self.assertFalse(transport.data)
 
@@ -210,15 +211,16 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.send('invalidateTransaction', b'b'*8, [b'1'*8])
 
         # Now, if we try to load current again, we'll make a server request.
-        loaded = self.load_before(b'1'*8, m64)
+        loaded = self.load_before(b'1'*8, maxtid)
 
         # Note that if we make another request for the same object,
         # the requests will be collapsed:
-        loaded2 = self.load_before(b'1'*8, m64)
+        loaded2 = self.load_before(b'1'*8, maxtid)
 
-        self.assertEqual(self.pop(),
-                         ((b'1'*8, m64), False, 'loadBefore', (b'1'*8, m64)))
-        self.respond((b'1'*8, m64), (b'data2', b'b'*8, None))
+        self.assertEqual(
+            self.pop(),
+            ((b'1'*8, maxtid), False, 'loadBefore', (b'1'*8, maxtid)))
+        self.respond((b'1'*8, maxtid), (b'data2', b'b'*8, None))
         self.assertEqual(loaded.result(), (b'data2', b'b'*8, None))
         self.assertEqual(loaded2.result(), (b'data2', b'b'*8, None))
 
@@ -267,13 +269,14 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
 
         # If the protocol is disconnected, it will reconnect and will
         # resolve outstanding requests with exceptions:
-        loaded = self.load_before(b'1'*8, m64)
+        loaded = self.load_before(b'1'*8, maxtid)
         f1 = self.call('foo', 1, 2)
         self.assertFalse(loaded.done() or f1.done())
-        self.assertEqual(self.pop(),
-                         [((b'1'*8, m64), False, 'loadBefore', (b'1'*8, m64)),
-                          (6, False, 'foo', (1, 2))],
-                         )
+        self.assertEqual(
+            self.pop(),
+            [((b'1'*8, maxtid), False, 'loadBefore', (b'1'*8, maxtid)),
+             (6, False, 'foo', (1, 2))],
+            )
         exc = TypeError(43)
 
         self.assertFalse(wrapper.notify_disconnected.called)
