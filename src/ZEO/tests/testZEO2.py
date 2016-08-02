@@ -397,7 +397,7 @@ If clients disconnect while waiting, they will be dequeued:
     ZEO.StorageServer INFO
     (test-addr-10) disconnected during...locked transaction
     ZEO.StorageServer WARNING
-    (test-addr-10) ('1') dequeue lock: transactions waiting: ...
+    (test-addr-10) ('1') ... lock: transactions waiting: ...
 
     >>> zs1.server_status()['waiting']
     0
