@@ -1153,9 +1153,9 @@ class StorageServer:
 
         return latest_tid, list(oids)
 
-    def loop(self):
+    def loop(self, timeout=30):
         try:
-            asyncore.loop(map=self.socket_map)
+            asyncore.loop(timeout, map=self.socket_map)
         except Exception:
             if not self.__closed:
                 raise # Unexpected exc

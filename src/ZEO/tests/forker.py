@@ -134,8 +134,7 @@ def runner(config, qin, qout, timeout=None,
             qout.put(server.server.acceptor.addr)
         logger.debug('ADDRESS SENT')
         thread = threading.Thread(
-            target=server.server.loop,
-            kwargs={} if ZEO4_SERVER else dict(timeout=.2),
+            target=server.server.loop, kwargs=dict(timeout=.2),
             name = None if name is None else name + '-server',
             )
         thread.setDaemon(True)
