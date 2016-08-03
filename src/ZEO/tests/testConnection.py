@@ -127,7 +127,7 @@ This tests tries to provoke this bug by:
 - opening a client to the server that writes some objects, filling
   it's cache at the same time,
 
-    >>> import ZODB.tests.MinPO, transaction
+    >>> import ZEO, ZODB.tests.MinPO, transaction
     >>> db = ZEO.DB(addr, client='x')
     >>> conn = db.open()
     >>> nobs = 1000
@@ -203,9 +203,9 @@ This tests tries to provoke this bug by:
     ...                          record = handler.records.pop(0)
     ...                          print(record.name, record.levelname, end=' ')
     ...                          print(handler.format(record))
-    ...        if bad:
-    ...           with open('server.log') as f:
-    ...               print(f.read())
+    ...        #if bad:
+    ...        #   with open('server.log') as f:
+    ...        #       print(f.read())
     ...        #else:
     ...        #   logging.getLogger('ZEO').debug('GOOD %s' % c)
     ...        db.close()
