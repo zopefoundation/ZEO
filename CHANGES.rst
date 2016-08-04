@@ -1,6 +1,10 @@
 Changelog
 =========
 
+- The ZEO server register method now returns the storage last
+  transaction, allowing the client to avoid an extra round trip during
+  cache verification.
+
 - Fixed bugs in using the ZEO 5 client with ZEO 4 servers.
 
 5.0.0a2 (2016-07-30)
