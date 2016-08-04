@@ -1,6 +1,8 @@
 Changelog
 =========
 
+- Fixed bugs in using the ZEO 5 client with ZEO 4 servers.
+
 5.0.0a2 (2016-07-30)
 --------------------
 

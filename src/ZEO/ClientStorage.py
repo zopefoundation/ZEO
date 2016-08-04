@@ -949,8 +949,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
     def serialnos(self, args):
         """Server callback to pass a list of changed (oid, serial) pairs.
         """
-        for oid, s in args:
-            self._tbuf.serial(oid, s)
+        self._tbuf.serialnos(args)
 
     def info(self, dict):
         """Server callback to update the info dictionary."""

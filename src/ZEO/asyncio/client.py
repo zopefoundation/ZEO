@@ -313,6 +313,12 @@ class Client(object):
         self.protocols = ()
         self.disconnected(None)
 
+        # Work around odd behavior of ZEO4 server. It may send
+        # invalidations for transactions later than the result of
+        # getInvalidations.  While we support ZEO 4 servers, we'll
+        # need to keep an invalidation queue. :(
+        self.verify_invalidation_queue = []
+
     def new_addrs(self, addrs):
         self.addrs = addrs
         if self.trying_to_connect():
@@ -409,6 +415,8 @@ class Client(object):
 
     @future_generator
     def verify(self, server_tid):
+        self.verify_invalidation_queue = [] # See comment in init :(
+
         protocol = self.protocol
         if server_tid is None:
             server_tid = yield protocol.fut('lastTransaction')
@@ -464,6 +472,12 @@ class Client(object):
             # We've been ignoring them up to this point.
             self.cache.setLastTid(server_tid)
             self.ready = True
+
+            # Gaaaa, ZEO 4 work around. See comment in __init__. :(
+            for tid, oids in self.verify_invalidation_queue:
+                if tid > server_tid:
+                    self.invalidateTransaction(tid, oids)
+            self.verify_invalidation_queue = []
 
             try:
                 info = yield protocol.fut('get_info')
@@ -597,16 +611,24 @@ class Client(object):
                 self.cache.invalidate(oid, tid)
             self.client.invalidateTransaction(tid, oids)
             self.cache.setLastTid(tid)
+        else:
+            self.verify_invalidation_queue.append((tid, oids))
 
     def serialnos(self, serials):
+        # Method called by ZEO4 storage servers.
+
         # Before delegating, check for errors (likely ConflictErrors)
         # and invalidate the oids they're associated with.  In the
         # past, this was done by the client, but now we control the
         # cache and this is our last chance, as the client won't call
         # back into us when there's an error.
-        for oid, serial in serials:
-            if isinstance(serial, Exception):
+        for oid in serials:
+            if isinstance(oid, bytes):
                 self.cache.invalidate(oid, None)
+            else:
+                oid, serial = oid
+                if isinstance(serial, Exception) or serial == b'rs':
+                    self.cache.invalidate(oid, None)
 
         self.client.serialnos(serials)
 

@@ -19,11 +19,13 @@ import random
 import sys
 import time
 import errno
+import multiprocessing
 import socket
 import subprocess
 import logging
 import tempfile
 import six
+from six.moves.queue import Empty
 import ZODB.tests.util
 import zope.testing.setupstack
 from ZEO._compat import StringIO
@@ -31,6 +33,13 @@ from ZEO._compat import StringIO
 logger = logging.getLogger('ZEO.tests.forker')
 
 DEBUG = os.environ.get('ZEO_TEST_SERVER_DEBUG')
+
+ZEO4_SERVER = os.environ.get('ZEO4_SERVER')
+skip_if_testing_client_against_zeo4 = (
+    (lambda func: None)
+    if ZEO4_SERVER else
+    (lambda func: func)
+    )
 
 class ZEOConfig:
     """Class to generate ZEO configuration file. """
@@ -104,18 +113,25 @@ def runner(config, qin, qout, timeout=None,
             ))
 
     try:
-        import ZEO.runzeo, threading
-        from six.moves.queue import Empty
+        import threading
 
-        options = ZEO.runzeo.ZEOOptions()
+        if ZEO4_SERVER:
+            from .ZEO4 import runzeo
+        else:
+            from .. import runzeo
+
+        options = runzeo.ZEOOptions()
         options.realize(['-C', config])
-        server = ZEO.runzeo.ZEOServer(options)
+        server = runzeo.ZEOServer(options)
         globals()[(name if name else 'last') + '_server'] = server
         server.open_storages()
         server.clear_socket()
         server.create_server()
         logger.debug('SERVER CREATED')
-        qout.put(server.server.acceptor.addr)
+        if ZEO4_SERVER:
+            qout.put(server.server.addr)
+        else:
+            qout.put(server.server.acceptor.addr)
         logger.debug('ADDRESS SENT')
         thread = threading.Thread(
             target=server.server.loop, kwargs=dict(timeout=.2),
@@ -125,7 +141,7 @@ def runner(config, qin, qout, timeout=None,
         thread.start()
 
         try:
-            qin.get(timeout=timeout)
+            qin.get(timeout=timeout) # wait for shutdown
         except Empty:
             pass
         server.server.close()
@@ -140,10 +156,6 @@ def runner(config, qin, qout, timeout=None,
                     pass
 
         qout.put(thread.is_alive())
-        qin.get(timeout=11) # ack
-        if hasattr(qout, 'close'):
-            qout.close()
-            qout.cancel_join_thread()
 
     except Exception:
         logger.exception("In server thread")
@@ -156,7 +168,6 @@ def runner(config, qin, qout, timeout=None,
 def stop_runner(thread, config, qin, qout, stop_timeout=9, pid=None):
     qin.put('stop')
     dirty = qout.get(timeout=stop_timeout)
-    qin.put('ack')
     if dirty:
         print("WARNING SERVER DIDN'T STOP CLEANLY", file=sys.stderr)
 
@@ -171,9 +182,6 @@ def stop_runner(thread, config, qin, qout, stop_timeout=9, pid=None):
 
     thread.join(stop_timeout)
     os.remove(config)
-    if hasattr(qin, 'close'):
-        qin.close()
-        qin.cancel_join_thread()
 
 def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
                      path='Data.fs', protocol=None, blob_dir=None,
@@ -222,7 +230,7 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
         from six.moves.queue import Queue
     else:
         from multiprocessing import Process as Thread
-        from multiprocessing import Queue
+        Queue = ThreadlessQueue
 
     qin = Queue()
     qout = Queue()
@@ -405,3 +413,17 @@ def debug_logging(logger='ZEO', stream='stderr', level=logging.DEBUG):
 def whine(*message):
     print(*message, file=sys.stderr)
     sys.stderr.flush()
+
+class ThreadlessQueue(object):
+
+    def __init__(self):
+        self.cin, self.cout = multiprocessing.Pipe(False)
+
+    def put(self, v):
+        self.cout.send(v)
+
+    def get(self, timeout=None):
+        if self.cin.poll(timeout):
+            return self.cin.recv()
+        else:
+            raise Empty()
