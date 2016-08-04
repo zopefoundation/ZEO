@@ -43,12 +43,13 @@ from ZEO.Exceptions import AuthError
 from .monitor import StorageStats, StatsServer
 from .zrpc.connection import ManagedServerConnection, Delay, MTDelay, Result
 from .zrpc.server import Dispatcher
-from ZODB.ConflictResolution import ResolvedSerial
 from ZODB.loglevels import BLATHER
 from ZODB.POSException import StorageError, StorageTransactionError
 from ZODB.POSException import TransactionError, ReadOnlyError, ConflictError
 from ZODB.serialize import referencesf
 from ZODB.utils import oid_repr, p64, u64, z64
+
+ResolvedSerial = b'rs'
 
 logger = logging.getLogger('ZEO.StorageServer')
 
