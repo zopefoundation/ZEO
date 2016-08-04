@@ -1,6 +1,11 @@
 Changelog
 =========
 
+- Added a ``ClientStorage`` ``server-sync`` configuration option and
+  ``server_sync`` constructor argument to force a server round trip at
+  the beginning of transactions to wait for any outstanding
+  invalidations at the start of the transaction to be delivered.
+
 - Fixed bugs in using the ZEO 5 client with ZEO 4 servers.
 
 5.0.0a2 (2016-07-30)
