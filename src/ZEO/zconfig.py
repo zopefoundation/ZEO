@@ -85,5 +85,6 @@ class ClientStorageConfig:
             name=config.name,
             read_only=config.read_only,
             read_only_fallback=config.read_only_fallback,
+            server_sync = config.server_sync,
             wait_timeout=config.wait_timeout,
             **options)
