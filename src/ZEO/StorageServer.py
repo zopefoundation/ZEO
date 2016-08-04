@@ -73,7 +73,7 @@ registered_methods = set(( 'get_info', 'lastTransaction',
     'history', 'record_iternext', 'sendBlob', 'getTid', 'loadSerial',
     'new_oid', 'undoa', 'undoLog', 'undoInfo', 'iterator_start',
     'iterator_next', 'iterator_record_start', 'iterator_record_next',
-    'iterator_gc', 'server_status', 'set_client_label'))
+    'iterator_gc', 'server_status', 'set_client_label', 'ping'))
 
 class ZEOStorage:
     """Proxy to underlying storage for a single remote client."""
@@ -614,6 +614,9 @@ class ZEOStorage:
     def ruok(self):
         return self.server.ruok()
 
+    def ping(self):
+        pass
+
 class StorageServerDB:
     """Adapter from StorageServerDB to ZODB.interfaces.IStorageWrapper
 
@@ -948,7 +951,6 @@ class StorageServer:
     def ruok(self):
         return dict((storage_id, self.server_status(storage_id))
                     for storage_id in self.storages)
-
 
 class StubTimeoutThread:
 

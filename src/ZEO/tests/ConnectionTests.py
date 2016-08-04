@@ -769,7 +769,7 @@ class ReconnectionTests(CommonSetupTearDown):
 
         # Accesses should fail now
         with short_timeout(self):
-            self.assertRaises(ClientDisconnected, self._storage.history, ZERO)
+            self.assertRaises(ClientDisconnected, self._storage.ping)
 
         # Restart the server, this time read-write
         self.startServer(create=0, keep=0)

@@ -120,6 +120,15 @@
       </description>
     </key>
 
+    <key name="server-sync" datatype="boolean" default="off">
+      <description>
+        A flag indicating whether calls to sync() should make a server
+        request, thus causing the storage to wait for any outstanding
+        invalidations. The sync method is called when transactions are
+        explicitly begun.
+      </description>
+    </key>
+
     <key name="wait-timeout" datatype="integer" default="30">
       <description>
          How long to wait for an initial connection, defaulting to 30

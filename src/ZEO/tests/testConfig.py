@@ -62,6 +62,7 @@ class ZEOConfigTestBase(setupstack.TestCase):
         blob_cache_size_check=10,
         read_only=False,
         read_only_fallback=False,
+        server_sync=False,
         wait_timeout=30,
         client_label=None,
         storage='1',
@@ -106,6 +107,7 @@ class ZEOConfigTest(ZEOConfigTestBase):
             blob_cache_size=424242,
             read_only=True,
             read_only_fallback=True,
+            server_sync=True,
             wait_timeout=33,
             client_label='test_client',
             name='Test'
