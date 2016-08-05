@@ -303,6 +303,8 @@ def create_MultipleUndoErrors(class_, args):
 exc_classes = {
     'builtins.KeyError': KeyError,
     'builtins.TypeError': TypeError,
+    'exceptions.KeyError': KeyError,
+    'exceptions.TypeError': TypeError,
     'ZODB.POSException.ConflictError': ZODB.POSException.ConflictError,
     'ZODB.POSException.POSKeyError': ZODB.POSException.POSKeyError,
     'ZODB.POSException.ReadConflictError': ZODB.POSException.ReadConflictError,
@@ -313,6 +315,8 @@ exc_classes = {
 exc_factories = {
     'builtins.KeyError': create_Exception,
     'builtins.TypeError': create_Exception,
+    'exceptions.KeyError': create_Exception,
+    'exceptions.TypeError': create_Exception,
     'ZODB.POSException.BTreesConflictError': create_BTreesConflictError,
     'ZODB.POSException.ConflictError': create_ConflictError,
     'ZODB.POSException.MultipleUndoErrors': create_MultipleUndoErrors,
