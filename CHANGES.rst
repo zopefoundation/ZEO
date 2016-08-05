@@ -1,6 +1,14 @@
 Changelog
 =========
 
+- Client disconnect errors are now transient errors.  When
+  applications retry jobs that raise transient errors, jobs (e.g. web
+  requests) with disconnect errors will be retried. Together with
+  blocking synchronous ZEO server calls for a limited time while
+  disconnected, this change should allow brief disconnections due to
+  server restart to avoid generating client-visible errors (e.g. 500
+  web responses).
+
 - Fixed bugs in using the ZEO 5 client with ZEO 4 servers.
 
 5.0.0a2 (2016-07-30)
