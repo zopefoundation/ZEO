@@ -1,6 +1,10 @@
 Changelog
 =========
 
+- The ZEO server register method now returns the storage last
+  transaction, allowing the client to avoid an extra round trip during
+  cache verification.
+
 - Client disconnect errors are now transient errors.  When
   applications retry jobs that raise transient errors, jobs (e.g. web
   requests) with disconnect errors will be retried. Together with
