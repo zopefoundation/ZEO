@@ -258,6 +258,8 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                 blob_cache_size * blob_cache_size_check // 100)
             self._check_blob_size()
 
+        self.server_sync = server_sync
+
         self._server = _client_factory(
             addr, self, cache, storage,
             ZEO.asyncio.client.Fallback if read_only_fallback else read_only,
@@ -271,8 +273,6 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         self._wait = self._server.wait
 
         self._commit_lock = threading.Lock()
-
-        self.server_sync = server_sync
 
         if wait:
             try:
