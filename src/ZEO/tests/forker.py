@@ -166,22 +166,27 @@ def runner(config, qin, qout, timeout=None,
             ZEO.asyncio.server.best_protocol_version = old_protocol
             ZEO.asyncio.server.ServerProtocol.protocols = old_protocols
 
-def stop_runner(thread, config, qin, qout, stop_timeout=9, pid=None):
+def stop_runner(thread, config, qin, qout, stop_timeout=19, pid=None):
     qin.put('stop')
-    dirty = qout.get(timeout=stop_timeout)
-    if dirty:
-        print("WARNING SERVER DIDN'T STOP CLEANLY", file=sys.stderr)
-
-        # The runner thread didn't stop. If it was a process,
-        # give it some time to exit
-        if hasattr(thread, 'pid') and thread.pid:
+    try:
+        dirty = qout.get(timeout=stop_timeout)
+    except Empty:
+        print("WARNING Couldn't stop server", file=sys.stderr)
+        if hasattr(thread, 'terminate'):
+            thread.terminate()
             os.waitpid(thread.pid, 0)
-        else:
-            # Gaaaa, force gc in hopes of maybe getting the unclosed
-            # sockets to get GCed
-            gc.collect()
+    else:
+        if dirty:
+            print("WARNING SERVER DIDN'T STOP CLEANLY", file=sys.stderr)
+
+            # The runner thread didn't stop. If it was a process,
+            # give it some time to exit
+            if hasattr(thread, 'pid') and thread.pid:
+                os.waitpid(thread.pid, 0)
 
     thread.join(stop_timeout)
+
+    gc.collect()
 
 def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
                      path='Data.fs', protocol=None, blob_dir=None,
