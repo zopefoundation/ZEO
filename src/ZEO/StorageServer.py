@@ -222,6 +222,8 @@ class ZEOStorage:
         self.stats = self.server.register_connection(storage_id, self)
         self.lock_manager = self.server.lock_managers[storage_id]
 
+        return self.lastTransaction()
+
     def get_info(self):
         storage = self.storage
 

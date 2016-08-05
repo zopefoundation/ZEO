@@ -831,7 +831,8 @@ Now we'll open a storage server on the data, simulating a restart:
     >>> sv = StorageServer(None, dict(fs=fs))
     >>> s = ZEOStorage(sv, sv.read_only)
     >>> s.notify_connected(FauxConn())
-    >>> s.register('fs', False)
+    >>> s.register('fs', False) == fs.lastTransaction()
+    True
 
 If we ask for the last transaction, we should get the last transaction
 we saved:
@@ -1411,6 +1412,14 @@ call to the server. we'd get some sort of error here.
 
 
 
+    """
+
+def ClientDisconnected_errors_are_TransientErrors():
+    """
+    >>> from ZEO.Exceptions import ClientDisconnected
+    >>> from transaction.interfaces import TransientError
+    >>> issubclass(ClientDisconnected, TransientError)
+    True
     """
 
 if sys.platform.startswith('win'):
