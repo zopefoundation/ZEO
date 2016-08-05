@@ -1,9 +1,5 @@
 language: python
 sudo: false
-cache:
-  pip
-  directories:
-    - eggs
 matrix:
     include:
         - os: linux
@@ -28,8 +24,11 @@ matrix:
           python: 3.5
           env: ZEO4_SERVER=1
 install:
-    - pip install -U zc.buildout
+    - pip install zc.buildout
     - buildout
+cache:
+  directories:
+    - eggs
 script:
     - bin/test -v1j99
 notifications:
