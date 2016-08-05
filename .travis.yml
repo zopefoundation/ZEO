@@ -26,6 +26,9 @@ matrix:
 install:
     - pip install zc.buildout
     - buildout
+cache:
+  directories:
+    - eggs
 script:
     - bin/test -v1j99
 notifications:
