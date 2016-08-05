@@ -139,6 +139,7 @@ def runner(config, qin, qout, timeout=None,
             )
         thread.setDaemon(True)
         thread.start()
+        os.remove(config)
 
         try:
             qin.get(timeout=timeout) # wait for shutdown
@@ -181,7 +182,6 @@ def stop_runner(thread, config, qin, qout, stop_timeout=9, pid=None):
             gc.collect()
 
     thread.join(stop_timeout)
-    os.remove(config)
 
 def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
                      path='Data.fs', protocol=None, blob_dir=None,

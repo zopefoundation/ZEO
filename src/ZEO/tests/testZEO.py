@@ -1414,6 +1414,14 @@ call to the server. we'd get some sort of error here.
 
     """
 
+def ClientDisconnected_errors_are_TransientErrors():
+    """
+    >>> from ZEO.Exceptions import ClientDisconnected
+    >>> from transaction.interfaces import TransientError
+    >>> issubclass(ClientDisconnected, TransientError)
+    True
+    """
+
 if sys.platform.startswith('win'):
     del runzeo_logrotate_on_sigusr2
     del unix_domain_sockets

@@ -180,12 +180,10 @@ Which is a short-hand for::
   connection = db.open()
 
 If you exit the Python process, the storage exits as well, as it's run
-in an in-process thread.  It will leave behind it's configuration and
-log file.  This provides a handy way to get a configuration example.
+in an in-process thread.
 
 You shut down the server more cleanly by calling the stop function
-returned by the ``ZEO.server`` function.  This will remove the
-temporary configuration file.
+returned by the ``ZEO.server`` function.
 
 To have data stored persistently, you can specify a file-storage path
 name using a ``path`` parameter.  If you want blob support, you can
