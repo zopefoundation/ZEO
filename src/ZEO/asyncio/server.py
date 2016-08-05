@@ -111,9 +111,9 @@ class ServerProtocol(base.Protocol):
         if not async:
             self.send_reply(message_id, result)
 
-    def send_reply(self, message_id, result, send_error=False):
+    def send_reply(self, message_id, result, send_error=False, flag=0):
         try:
-            result = self.encode(message_id, 0, '.reply', result)
+            result = self.encode(message_id, flag, '.reply', result)
         except Exception:
             if isinstance(result, Delay):
                 result.set_sender(message_id, self)
@@ -134,7 +134,10 @@ class ServerProtocol(base.Protocol):
     def send_error(self, message_id, exc, send_error=False):
         """Abstracting here so we can make this cleaner in the future
         """
-        self.send_reply(message_id, (exc.__class__, exc), send_error)
+        class_ = exc.__class__
+        class_ = "%s.%s" % (class_.__module__, class_.__name__)
+        args = class_, exc.__dict__ or exc.args
+        self.send_reply(message_id, args, send_error, 2)
 
     def async(self, method, *args):
         self.call_async(method, args)
