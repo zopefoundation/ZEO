@@ -37,3 +37,7 @@ class AuthError(StorageError):
 class ProtocolError(ClientStorageError):
     """A client contacted a server with an incomparible protocol
     """
+
+class ServerException(ClientStorageError):
+    """
+    """
