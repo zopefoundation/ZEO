@@ -128,7 +128,7 @@ setup(name="ZEO",
       classifiers = classifiers,
       test_suite="__main__.alltests", # to support "setup.py test"
       tests_require = tests_require,
-      extras_require = dict(test=tests_require),
+      extras_require = dict(test=tests_require, uvloop=['uvloop']),
       install_requires = install_requires,
       zip_safe = False,
       entry_points = """
