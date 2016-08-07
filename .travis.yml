@@ -18,14 +18,14 @@ matrix:
           python: 2.7
           env: ZEO4_SERVER=1
         - os: linux
-          python: 3.4
+          python: 3.5
           env: ZEO4_SERVER=1
         - os: linux
           python: 3.5
-          env: ZEO4_SERVER=1
+          env: BUILOUT_OPTIONS=extra=,uvloop
 install:
     - pip install zc.buildout
-    - buildout
+    - buildout $BUILOUT_OPTIONS
 cache:
   directories:
     - eggs
