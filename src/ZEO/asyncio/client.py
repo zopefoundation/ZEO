@@ -4,7 +4,6 @@ if PY3:
     import asyncio
     try:
         from uvloop import new_event_loop
-        print('USING_UVLOOP')
     except ImportError:
         from asyncio import new_event_loop
 else:
