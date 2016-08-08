@@ -314,9 +314,13 @@ class ZEOStorage:
         t.description = description
         t._extension = ext
 
-        self.serials = []
+        self.serials = [] # Oids who's states were "resolved" (really
+                          # changed by the storage, so committing
+                          # connection should invalidate).
         self.conflicts = {}
-        self.invalidated = []
+        self.invalidated = [] # oids of objects modified by the
+                              # transaction. Note that this doesn't
+                              # include new objects.
         self.txnlog = CommitLog()
         self.blob_log = []
         self.tid = tid
@@ -338,14 +342,12 @@ class ZEOStorage:
             return
         assert self.locked, "finished called wo lock"
 
-        self.stats.commits += 1
-        self.storage.tpc_finish(self.transaction, self._invalidate)
-        self.async('info', self.get_size_info())
-        # Note that the tid is still current because we still hold the
-        # commit lock. We'll relinquish it in _clear_transaction.
-        tid = self.storage.lastTransaction()
-        # Return the tid, for cache invalidation optimization
-        return Result(tid, self._clear_transaction)
+        with self.server._lock:
+
+            self.stats.commits += 1
+            tid = self.storage.tpc_finish(self.transaction, self._invalidate)
+            self.async('info', self.get_size_info())
+            return Result(tid, self._clear_transaction)
 
     def _invalidate(self, tid):
         self.server.invalidate(self, self.storage_id, tid, self.invalidated)
@@ -371,7 +373,19 @@ class ZEOStorage:
 
     def vote(self, tid):
         self._check_tid(tid, exc=StorageTransactionError)
-        return self.lock_manager.lock(self, self._vote)
+
+        # Gather the oids that need to be locked:
+        oids = set()
+        for op, args in self.txnlog:
+            if op == '_undo':
+                oids.update(self.storage.undo_transaction_oids)
+            else:
+                oids.add(args[0])
+
+        for args in self.blob_log:
+            oids.add(args[0])
+
+        return self.lock_manager.lock(self, oids, self._vote)
 
     def _vote(self, delay=None):
         # Called from client thread
