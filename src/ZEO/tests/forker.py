@@ -97,7 +97,7 @@ def encode_format(fmt):
 
 def runner(config, qin, qout, timeout=None,
            debug=False, name=None,
-           keep=False, protocol=None):
+           keep=False, protocol=None, profile=None):
 
     if debug or DEBUG:
         debug_logging()
@@ -133,8 +133,16 @@ def runner(config, qin, qout, timeout=None,
         else:
             qout.put(server.server.acceptor.addr)
         logger.debug('ADDRESS SENT')
+
+        if profile:
+            import cProfile
+            profiler = cProfile.Profile()
+            target = lambda : profiler.runcall(server.server.loop, timeout=.2)
+        else:
+            target = lambda : server.server.loop(timeout=.2)
+
         thread = threading.Thread(
-            target=server.server.loop, kwargs=dict(timeout=.2),
+            target=target,
             name = None if name is None else name + '-server',
             )
         thread.setDaemon(True)
@@ -147,6 +155,9 @@ def runner(config, qin, qout, timeout=None,
             pass
         server.server.close()
         thread.join(3)
+
+        if profile:
+            profiler.dump_stats(profile)
 
         if not keep:
             # Try to cleanup storage files
@@ -191,7 +202,7 @@ def stop_runner(thread, config, qin, qout, stop_timeout=19, pid=None):
 def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
                      path='Data.fs', protocol=None, blob_dir=None,
                      suicide=True, debug=False,
-                     threaded=False, start_timeout=33, name=None,
+                     threaded=False, start_timeout=33, name=None, profile=None,
                      ):
     """Start a ZEO server in a separate process.
 
@@ -242,7 +253,8 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
     thread = Thread(
         target=runner,
         args=[tmpfile, qin, qout, 999 if suicide else None],
-        kwargs=dict(debug=debug, name=name, protocol=protocol, keep=keep),
+        kwargs=dict(debug=debug, name=name, protocol=protocol, keep=keep,
+                    profile=profile),
         name = None if name is None else name + '-server-runner',
         )
     thread.daemon = True
