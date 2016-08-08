@@ -95,8 +95,10 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                  min_disconnect_poll=1, max_disconnect_poll=None,
                  wait=True,
                  drop_cache_rather_verify=True,
-                 username=None, password=None, realm=None,
                  credentials=None,
+                 server_sync=False,
+                 # The ZODB-define ZConfig support may ball these:
+                 username=None, password=None, realm=None,
                  # For tests:
                  _client_factory=ZEO.asyncio.client.ClientThread,
                  ):
@@ -181,6 +183,8 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
 
         """
 
+        assert not username or password or realm
+
         if isinstance(addr, int):
             addr = ('127.0.0.1', addr)
 
@@ -253,6 +257,8 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             self._blob_cache_size_check = (
                 blob_cache_size * blob_cache_size_check // 100)
             self._check_blob_size()
+
+        self.server_sync = server_sync
 
         self._server = _client_factory(
             addr, self, cache, storage,
@@ -376,6 +382,14 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             if (iface.__module__, iface.__name__) in self._info.get(
                 'interfaces', ()):
                 zope.interface.alsoProvides(self, iface)
+
+        if self.protocol_version >= b'Z5':
+            self.ping = lambda : self._call('ping')
+        else:
+            self.ping = lambda : self._call('lastTransaction')
+
+        if self.server_sync:
+            self.sync = self.ping
 
     def set_server_addr(self, addr):
         # Normalize server address and convert to string

@@ -454,6 +454,23 @@ read_only_fallback
 
    If ``read_only_fallback`` is set, then ``read_only`` is ignored.
 
+server_sync
+   Flag, false by default, indicating whether the ``sync`` method
+   should make a server request.  The ``sync`` method is called at the
+   start of explcitly begin transactions.  Making a server requests assures
+   that any invalidations outstanding at the beginning of a
+   transaction are processed.
+
+   Setting this to True is important when application activity is
+   spread over multiple ZEO clients. The classic example of this is
+   when a web browser makes a request to an application server (ZEO
+   client) that makes a change and then makes a request to another
+   application server that depends on the change.
+
+   Setting this to True makes transactions a little slower because of
+   the added server round trip.  For transactions that don't otherwise
+   need to access the storage server, the impact can be significant.
+
 wait_timeout
    How long to wait for an initial connection, defaulting to 30
    seconds.  If an initial connection can't be made within this time
@@ -564,6 +581,9 @@ read-only-fallback
    use a read-only connection.  This defaults to a false value.
 
    If ``read_only_fallback`` is set, then ``read_only`` is ignored.
+
+server-sync
+   Sets thr ``server_sync`` option described above.
 
 wait_timeout
    How long to wait for an initial connection, defaulting to 30
