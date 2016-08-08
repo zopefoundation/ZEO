@@ -37,6 +37,7 @@ class ServerProtocol(base.Protocol):
         """
         super(ServerProtocol, self).__init__(loop, addr)
         self.zeo_storage = zeo_storage
+        self.invalidations = []
 
     closed = False
     def close(self):
@@ -145,6 +146,15 @@ class ServerProtocol(base.Protocol):
     def async_threadsafe(self, method, *args):
         self.call_soon_threadsafe(self.call_async, method, args)
 
+    def invalidateTransaction(self, tid, invalidated):
+        self.invalidations.append((tid, invalidated))
+        self.call_soon_threadsafe(self._send_invalidations)
+
+    def _send_invalidations(self):
+        while self.invalidations:
+            args = self.invalidations.pop(0)
+            self.call_async('invalidateTransaction', args)
+
 best_protocol_version = os.environ.get(
     'ZEO_SERVER_PROTOCOL',
     ServerProtocol.protocols[-1].decode('utf-8')).encode('utf-8')
@@ -194,6 +204,7 @@ class Result(Delay):
         self.args = args
 
     def set_sender(self, msgid, protocol):
+        protocol._send_invalidations()
         reply, callback = self.args
         protocol.send_reply(msgid, reply)
         callback()

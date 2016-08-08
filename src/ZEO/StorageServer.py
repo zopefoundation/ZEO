@@ -836,7 +836,8 @@ class StorageServer:
 
         for zs in self.zeo_storages_by_storage_id[storage_id]:
             if zs is not zeo_storage:
-                zs.async_threadsafe('invalidateTransaction', tid, invalidated)
+                zs.connection.invalidateTransaction(tid, invalidated)
+                #zs.async_threadsafe('invalidateTransaction', tid, invalidated)
 
     def broadcast_info(self, storage_id, info):
         """Internal: broadcast info to clients.
