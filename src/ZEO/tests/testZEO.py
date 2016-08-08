@@ -148,12 +148,13 @@ class GenericTestBase(
 
     shared_blob_dir = False
     blob_cache_dir = None
+    server_debug = False
 
     def setUp(self):
         StorageTestBase.StorageTestBase.setUp(self)
         logger.info("setUp() %s", self.id())
-        zport, stop = forker.start_zeo_server(self.getConfig(),
-                                              self.getZEOConfig())
+        zport, stop = forker.start_zeo_server(
+            self.getConfig(), self.getZEOConfig(), debug=self.server_debug)
         self._servers = [stop]
         if not self.blob_cache_dir:
             # This is the blob cache for ClientStorage
@@ -1010,7 +1011,7 @@ def history_over_zeo():
 
 def dont_log_poskeyerrors_on_server():
     """
-    >>> addr, admin = start_server()
+    >>> addr, admin = start_server(log='server.log')
     >>> cs = ClientStorage(addr)
     >>> cs.load(ZODB.utils.p64(1))
     Traceback (most recent call last):
@@ -1190,7 +1191,7 @@ log entries with actual clients.  It's possible, sort of, but tedious.
 You can make this easier by passing a label to the ClientStorage
 constructor.
 
-    >>> addr, _ = start_server()
+    >>> addr, _ = start_server(log='server.log')
     >>> db = ZEO.DB(addr, client_label='test-label-1')
     >>> db.close()
     >>> @wait_until
@@ -1346,11 +1347,6 @@ def runzeo_logrotate_on_sigusr2():
     >>> oldlog = read('l')
     >>> os.rename('l', 'o')
     >>> os.kill(p.pid, signal.SIGUSR2)
-
-    >>> wait_until('new file', lambda : os.path.exists('l'))
-
-    XXX: if any of the previous commands failed, we'll hang here trying to
-    connect to ZEO, because doctest runs all the assertions...
 
     >>> s = ClientStorage(port)
     >>> s.close()

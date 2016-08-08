@@ -156,7 +156,7 @@ class CommonSetupTearDown(StorageTestBase):
         return {}
 
     def getServerConfig(self, addr, ro_svr):
-        zconf = forker.ZEOConfig(addr)
+        zconf = forker.ZEOConfig(addr, log='server.log')
         if ro_svr:
             zconf.read_only = 1
         if self.invq:
