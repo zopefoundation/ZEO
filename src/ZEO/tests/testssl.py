@@ -120,6 +120,7 @@ class SSLConfigTest(ZEOConfigTestBase):
 @mock.patch(('asyncio' if PY3 else 'trollius') + '.async')
 @mock.patch(('asyncio' if PY3 else 'trollius') + '.set_event_loop')
 @mock.patch(('asyncio' if PY3 else 'trollius') + '.new_event_loop')
+@mock.patch('ZEO.asyncio.client.new_event_loop')
 class SSLConfigTestMockiavellian(ZEOConfigTestBase):
 
     @mock.patch('ssl.create_default_context')
