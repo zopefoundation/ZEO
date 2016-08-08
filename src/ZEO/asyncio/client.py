@@ -5,7 +5,7 @@ if PY3:
 else:
     import trollius as asyncio
 
-from ZEO.Exceptions import ClientDisconnected
+from ZEO.Exceptions import ClientDisconnected, ServerException
 import concurrent.futures
 import functools
 import logging
@@ -208,15 +208,22 @@ class Protocol(base.Protocol):
         msgid, async, name, args = decode(data)
         if name == '.reply':
             future = self.futures.pop(msgid)
-            if (isinstance(args, tuple) and len(args) > 1 and
-                type(args[0]) == self.exception_type_type and
-                issubclass(args[0], Exception)
-                ):
-                if not issubclass(
-                    args[0], (
-                        ZODB.POSException.POSKeyError,
-                        ZODB.POSException.ConflictError,)
-                    ):
+            if (async): # ZEO 5 exception
+                class_, args = args
+                factory = exc_factories.get(class_)
+                if factory:
+                    exc = factory(class_, args)
+                    if not isinstance(exc, unlogged_exceptions):
+                        logger.error("%s from server: %s:%s",
+                                     self.name, class_, args)
+                else:
+                    exc = ServerException(class_, args)
+                future.set_exception(exc)
+            elif (isinstance(args, tuple) and len(args) > 1 and
+                  type(args[0]) == self.exception_type_type and
+                  issubclass(args[0], Exception)
+                  ):
+                if not issubclass(args[0], unlogged_exceptions):
                     logger.error("%s from server: %s.%s:%s",
                                  self.name,
                                  args[0].__module__,
@@ -270,6 +277,56 @@ class Protocol(base.Protocol):
         self.heartbeat_handle = self.loop.call_later(
             self.heartbeat_interval, self.heartbeat)
 
+def create_Exception(class_, args):
+    return exc_classes[class_](*args)
+
+def create_ConflictError(class_, args):
+    exc = exc_classes[class_](
+        message = args['message'],
+        oid     = args['oid'],
+        serials = args['serials'],
+        )
+    exc.class_name = args.get('class_name')
+    return exc
+
+def create_BTreesConflictError(class_, args):
+    return ZODB.POSException.BTreesConflictError(
+        p1 = args['p1'],
+        p2 = args['p2'],
+        p3 = args['p3'],
+        reason = args['reason'],
+        )
+
+def create_MultipleUndoErrors(class_, args):
+    return ZODB.POSException.MultipleUndoErrors(args['_errs'])
+
+exc_classes = {
+    'builtins.KeyError': KeyError,
+    'builtins.TypeError': TypeError,
+    'exceptions.KeyError': KeyError,
+    'exceptions.TypeError': TypeError,
+    'ZODB.POSException.ConflictError': ZODB.POSException.ConflictError,
+    'ZODB.POSException.POSKeyError': ZODB.POSException.POSKeyError,
+    'ZODB.POSException.ReadConflictError': ZODB.POSException.ReadConflictError,
+    'ZODB.POSException.ReadOnlyError': ZODB.POSException.ReadOnlyError,
+    'ZODB.POSException.StorageTransactionError':
+    ZODB.POSException.StorageTransactionError,
+    }
+exc_factories = {
+    'builtins.KeyError': create_Exception,
+    'builtins.TypeError': create_Exception,
+    'exceptions.KeyError': create_Exception,
+    'exceptions.TypeError': create_Exception,
+    'ZODB.POSException.BTreesConflictError': create_BTreesConflictError,
+    'ZODB.POSException.ConflictError': create_ConflictError,
+    'ZODB.POSException.MultipleUndoErrors': create_MultipleUndoErrors,
+    'ZODB.POSException.POSKeyError': create_Exception,
+    'ZODB.POSException.ReadConflictError': create_ConflictError,
+    'ZODB.POSException.ReadOnlyError': create_Exception,
+    'ZODB.POSException.StorageTransactionError': create_Exception,
+    }
+unlogged_exceptions = (ZODB.POSException.POSKeyError,
+                       ZODB.POSException.ConflictError)
 class Client(object):
     """asyncio low-level ZEO client interface
     """
