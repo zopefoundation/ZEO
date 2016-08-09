@@ -71,7 +71,7 @@ is generated before the cache is dropped or the message is logged.
 Now, we'll restart the server on the original address:
 
     >>> _, admin = start_server(zeo_conf=dict(invalidation_queue_size=1),
-    ...                         addr=addr, keep=1, threaded=True)
+    ...                         addr=addr, keep=1)
 
     >>> wait_connected(db.storage)
 

@@ -2,8 +2,13 @@ from .._compat import PY3
 
 if PY3:
     import asyncio
+    try:
+        from uvloop import new_event_loop
+    except ImportError:
+        from asyncio import new_event_loop
 else:
     import trollius as asyncio
+    from trollius import new_event_loop
 
 import json
 import logging
@@ -223,7 +228,7 @@ class Acceptor(object):
         self.storage_server = storage_server
         self.addr = addr
         self.ssl_context = ssl
-        self.event_loop = loop = asyncio.new_event_loop()
+        self.event_loop = loop = new_event_loop()
 
         if isinstance(addr, tuple):
             cr = loop.create_server(self.factory, addr[0], addr[1],
