@@ -497,7 +497,7 @@ def test_prefetch(self):
     >>> count = 999
 
     >>> import ZEO
-    >>> addr, stop = ZEO.server()
+    >>> addr, stop = ZEO.server(threaded=False)
     >>> conn = ZEO.connection(addr)
     >>> root = conn.root()
     >>> cls = root.__class__

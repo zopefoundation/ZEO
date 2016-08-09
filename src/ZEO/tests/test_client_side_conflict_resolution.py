@@ -111,7 +111,7 @@ class ClientSideConflictResolutionTests(zope.testing.setupstack.TestCase):
 
     def test_client_side(self):
         # First, traditional:
-        addr, stop = ZEO.server('data.fs')
+        addr, stop = ZEO.server('data.fs', threaded=False)
         db = ZEO.DB(addr)
         with db.transaction() as conn:
             conn.root.l = Length(0)
@@ -130,6 +130,7 @@ class ClientSideConflictResolutionTests(zope.testing.setupstack.TestCase):
         addr2, stop = ZEO.server(
             storage_conf='<mappingstorage>\n</mappingstorage>\n',
             zeo_conf=dict(client_conflict_resolution=True),
+            threaded=False,
             )
 
         db = ZEO.DB(addr2)

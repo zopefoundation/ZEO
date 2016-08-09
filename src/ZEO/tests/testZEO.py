@@ -1609,15 +1609,6 @@ def test_suite():
             globs={'print_function': print_function},
             ),
         )
-    if not forker.ZEO4_SERVER:
-        zeo.addTest(
-            doctest.DocFileSuite(
-                'dynamic_server_ports.test',
-                setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
-                checker=renormalizing.RENormalizing(patterns),
-                globs={'print_function': print_function},
-                ),
-            )
     zeo.addTest(PackableStorage.IExternalGC_suite(
         lambda :
         ServerManagingClientStorageForIExternalGCTest(
@@ -1654,6 +1645,17 @@ def test_suite():
         'ClientStorageNonSharedBlobs', ServerManagingClientStorage))
     suite.addTest(ZODB.tests.testblob.storage_reusable_suite(
         'ClientStorageSharedBlobs', create_storage_shared))
+
+    if not forker.ZEO4_SERVER:
+        from .threaded import threaded_server_tests
+        dynamic_server_ports_suite = doctest.DocFileSuite(
+            'dynamic_server_ports.test',
+            setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
+            checker=renormalizing.RENormalizing(patterns),
+            globs={'print_function': print_function},
+            )
+        dynamic_server_ports_suite.layer = threaded_server_tests
+        suite.addTest(dynamic_server_ports_suite)
 
     return suite
 

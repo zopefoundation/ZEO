@@ -19,6 +19,7 @@ from zope.testing import setupstack
 from ZODB.config import storageFromString
 
 from .forker import start_zeo_server
+from .threaded import threaded_server_tests
 
 class ZEOConfigTestBase(setupstack.TestCase):
 
@@ -120,4 +121,6 @@ class ZEOConfigTest(ZEOConfigTestBase):
                                      blob_cache_size_check=50)
 
 def test_suite():
-    return unittest.makeSuite(ZEOConfigTest)
+    suite = unittest.makeSuite(ZEOConfigTest)
+    suite.layer = threaded_server_tests
+    return suite

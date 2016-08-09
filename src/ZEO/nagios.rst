@@ -10,7 +10,7 @@ ZEO includes a script that provides a nagios monitor plugin:
 In it's simplest form, the script just checks if it can get status:
 
     >>> import ZEO
-    >>> addr, stop = ZEO.server('test.fs')
+    >>> addr, stop = ZEO.server('test.fs', threaded=False)
     >>> saddr = ':'.join(map(str, addr)) # (host, port) -> host:port
 
     >>> nagios([saddr])
@@ -39,7 +39,7 @@ The monitor will optionally output server metric data. There are 2
 kinds of metrics it can output, level and rate metric. If we use the
 -m/--output-metrics option, we'll just get rate metrics:
 
-    >>> addr, stop = ZEO.server('test.fs')
+    >>> addr, stop = ZEO.server('test.fs', threaded=False)
     >>> saddr = ':'.join(map(str, addr)) # (host, port) -> host:port
     >>> nagios([saddr, '-m'])
     OK|active_txns=0
@@ -115,7 +115,7 @@ profixes metrics with a storage id.
     ... </mappingstorage>
     ... <mappingstorage second>
     ... </mappingstorage>
-    ... """)
+    ... """, threaded=False)
     >>> saddr = ':'.join(map(str, addr)) # (host, port) -> host:port
     >>> nagios([saddr, '-m', '-sstatus'])
     Empty storage u'first'|first:active_txns=0
