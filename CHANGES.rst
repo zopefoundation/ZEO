@@ -6,6 +6,9 @@ Changelog
   the beginning of transactions to wait for any outstanding
   invalidations at the start of the transaction to be delivered.
 
+- When creating an ad hoc server, a log file isn't created by
+  default. You must pass a ``log`` option specifying a log file name.
+
 - The ZEO server register method now returns the storage last
   transaction, allowing the client to avoid an extra round trip during
   cache verification.

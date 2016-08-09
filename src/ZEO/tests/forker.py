@@ -44,12 +44,19 @@ skip_if_testing_client_against_zeo4 = (
 class ZEOConfig:
     """Class to generate ZEO configuration file. """
 
-    def __init__(self, addr, **options):
-        if isinstance(addr, str):
-            self.logpath = addr+'.log'
-        else:
-            self.logpath = 'server.log'
+    def __init__(self, addr, log=None, **options):
+        if log:
+            if isinstance(log, str):
+                self.logpath = log
+            elif isinstance(addr, str):
+                self.logpath = addr+'.log'
+            else:
+                self.logpath = 'server.log'
+
+        if not isinstance(addr, str):
             addr = '%s:%s' % addr
+
+        self.log = log
         self.address = addr
         self.read_only = None
         self.loglevel = 'INFO'
@@ -72,14 +79,15 @@ class ZEOConfig:
 
         print("</zeo>", file=f)
 
-        print("""
-        <eventlog>
-          level %s
-          <logfile>
-             path %s
-          </logfile>
-        </eventlog>
-        """ % (self.loglevel, self.logpath), file=f)
+        if self.log:
+            print("""
+            <eventlog>
+              level %s
+              <logfile>
+                 path %s
+              </logfile>
+            </eventlog>
+            """ % (self.loglevel, self.logpath), file=f)
 
     def __str__(self):
         f = StringIO()
@@ -191,7 +199,7 @@ def stop_runner(thread, config, qin, qout, stop_timeout=19, pid=None):
 def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
                      path='Data.fs', protocol=None, blob_dir=None,
                      suicide=True, debug=False,
-                     threaded=False, start_timeout=33, name=None,
+                     threaded=False, start_timeout=33, name=None, log=None,
                      ):
     """Start a ZEO server in a separate process.
 
@@ -218,7 +226,7 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
         else:
             addr = port
 
-        z = ZEOConfig(addr)
+        z = ZEOConfig(addr, log=log)
         if zeo_conf:
             z.__dict__.update(zeo_conf)
         zeo_conf = str(z)
