@@ -41,18 +41,12 @@ with::
 
 in ZEO.StorageServer.
 """
-from .._compat import PY3
-
-if PY3:
-    import asyncio
-else:
-    import trollius as asyncio
-
 import asyncore
 import socket
 import threading
 import time
 
+from .compat import asyncio, new_event_loop
 from .server import ServerProtocol
 
 # _has_dualstack: True if the dual-stack sockets are supported
@@ -169,8 +163,7 @@ class Acceptor(asyncore.dispatcher):
             logger.debug("new connection %s" % (addr,))
 
             def run():
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
+                loop = new_event_loop()
                 zs = self.storage_server.create_client_handler()
                 protocol = ServerProtocol(loop, self.addr, zs)
                 protocol.stop = loop.stop
@@ -179,7 +172,7 @@ class Acceptor(asyncore.dispatcher):
                     cr = loop.create_connection((lambda : protocol), sock=sock)
                 else:
                     if hasattr(loop, 'connect_accepted_socket'):
-                        loop.connect_accepted_socket(
+                        cr = loop.connect_accepted_socket(
                             (lambda : protocol), sock, ssl=self.ssl_context)
                     else:
                         #######################################################

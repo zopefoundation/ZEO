@@ -1,15 +1,3 @@
-from .._compat import PY3
-
-if PY3:
-    import asyncio
-    try:
-        from uvloop import new_event_loop
-    except ImportError:
-        from asyncio import new_event_loop
-else:
-    import trollius as asyncio
-    from trollius import new_event_loop
-
 from ZEO.Exceptions import ClientDisconnected, ServerException
 import concurrent.futures
 import functools
@@ -24,6 +12,7 @@ import ZEO.Exceptions
 import ZEO.interfaces
 
 from . import base
+from .compat import asyncio, new_event_loop
 from .marshal import decode
 
 logger = logging.getLogger(__name__)
