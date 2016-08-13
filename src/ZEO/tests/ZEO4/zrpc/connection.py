@@ -17,13 +17,12 @@ import json
 import sys
 import threading
 import logging
-import ZEO.zrpc.marshal
+from . import marshal
+from . import trigger
 
-import ZEO.zrpc.trigger
-
-from ZEO.zrpc import smac
-from ZEO.zrpc.error import ZRPCError, DisconnectedError
-from ZEO.zrpc.log import short_repr, log
+from . import smac
+from .error import ZRPCError, DisconnectedError
+from .log import short_repr, log
 from ZODB.loglevels import BLATHER, TRACE
 import ZODB.POSException
 
@@ -242,19 +241,24 @@ class Connection(smac.SizedMessageAsyncConnection, object):
     #         Undone oid info returned by vote.
     #
     # Z3101 -- checkCurrentSerialInTransaction
+    #
+    # Z4 -- checkCurrentSerialInTransaction
+    #       No-longer call load.
 
     # Protocol variables:
     # Our preferred protocol.
-    current_protocol = b"Z3101"
+    current_protocol = b"Z4"
 
     # If we're a client, an exhaustive list of the server protocols we
     # can accept.
-    servers_we_can_talk_to = [b"Z308", b"Z309", b"Z310", current_protocol]
+    servers_we_can_talk_to = [b"Z308", b"Z309", b"Z310", b"Z3101",
+                              current_protocol]
 
     # If we're a server, an exhaustive list of the client protocols we
     # can accept.
     clients_we_can_talk_to = [
-        b"Z200", b"Z201", b"Z303", b"Z308", b"Z309", b"Z310", current_protocol]
+        b"Z200", b"Z201", b"Z303", b"Z308", b"Z309", b"Z310", b"Z3101",
+        current_protocol]
 
     # This is pretty excruciating.  Details:
     #
@@ -285,9 +289,9 @@ class Connection(smac.SizedMessageAsyncConnection, object):
     # our peer.
     def __init__(self, sock, addr, obj, tag, map=None):
         self.obj = None
-        self.decode = ZEO.zrpc.marshal.decode
-        self.encode = ZEO.zrpc.marshal.encode
-        self.fast_encode = ZEO.zrpc.marshal.fast_encode
+        self.decode = marshal.decode
+        self.encode = marshal.encode
+        self.fast_encode = marshal.fast_encode
 
         self.closed = False
         self.peer_protocol_version = None # set in recv_handshake()
@@ -608,9 +612,9 @@ class ManagedServerConnection(Connection):
         map = {}
         Connection.__init__(self, sock, addr, obj, b'S', map=map)
 
-        self.decode = ZEO.zrpc.marshal.server_decode
+        self.decode = marshal.server_decode
 
-        self.trigger = ZEO.zrpc.trigger.trigger(map)
+        self.trigger = trigger.trigger(map)
         self.call_from_thread = self.trigger.pull_trigger
 
         t = threading.Thread(target=server_loop, args=(map,))

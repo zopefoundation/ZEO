@@ -1,15 +1,35 @@
 language: python
 sudo: false
-python:
-    - 2.7
-    - 3.3
-    - 3.4
-    - pypy
+matrix:
+    include:
+        - os: linux
+          python: 2.7
+        - os: linux
+          python: 3.4
+        - os: linux
+          python: 3.5
+        - os: linux
+          python: 3.4
+          env: ZEO_MTACCEPTOR=1
+        - os: linux
+          python: 3.5
+          env: ZEO_MTACCEPTOR=1
+        - os: linux
+          python: 2.7
+          env: ZEO4_SERVER=1
+        - os: linux
+          python: 3.5
+          env: ZEO4_SERVER=1
+        - os: linux
+          python: 3.5
+          env: BUILOUT_OPTIONS=extra=,uvloop
 install:
-    - pip install -U setuptools
-    - python bootstrap.py
-    - bin/buildout
+    - pip install zc.buildout
+    - buildout $BUILOUT_OPTIONS
+cache:
+  directories:
+    - eggs
 script:
-    - bin/test -v1 -j99
+    - bin/test -v1j99
 notifications:
     email: false

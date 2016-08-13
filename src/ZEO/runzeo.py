@@ -22,7 +22,6 @@ Options:
 -f/--filename FILENAME -- filename for FileStorage
 -t/--timeout TIMEOUT -- transaction timeout in seconds (default no timeout)
 -h/--help -- print this usage message and exit
--m/--monitor ADDRESS -- address of monitor server ([HOST:]PORT or PATH)
 --pid-file PATH -- relative path to output file containing this process's pid;
                    default $(INSTANCE_HOME)/var/ZEO.pid but only if envar
                    INSTANCE_HOME is defined
@@ -72,9 +71,6 @@ class ZEOOptionsMixin:
     def handle_address(self, arg):
         self.family, self.address = parse_binding_address(arg)
 
-    def handle_monitor_address(self, arg):
-        self.monitor_family, self.monitor_address = parse_binding_address(arg)
-
     def handle_filename(self, arg):
         from ZODB.config import FileStorage # That's a FileStorage *opener*!
         class FSConfig:
@@ -102,21 +98,17 @@ class ZEOOptionsMixin:
         self.add("address", "zeo.address.address",
                  required="no server address specified; use -a or -C")
         self.add("read_only", "zeo.read_only", default=0)
+        self.add("client_conflict_resolution",
+                 "zeo.client_conflict_resolution",
+                 default=0)
         self.add("invalidation_queue_size", "zeo.invalidation_queue_size",
                  default=100)
         self.add("invalidation_age", "zeo.invalidation_age")
         self.add("transaction_timeout", "zeo.transaction_timeout",
                  "t:", "timeout=", float)
-        self.add("monitor_address", "zeo.monitor_address.address",
-                 "m:", "monitor=", self.handle_monitor_address)
-        self.add('auth_protocol', 'zeo.authentication_protocol',
-                 None, 'auth-protocol=', default=None)
-        self.add('auth_database', 'zeo.authentication_database',
-                 None, 'auth-database=')
-        self.add('auth_realm', 'zeo.authentication_realm',
-                 None, 'auth-realm=')
         self.add('pid_file', 'zeo.pid_filename',
                  None, 'pid-file=')
+        self.add("ssl", "zeo.ssl")
 
 class ZEOOptions(ZDOptions, ZEOOptionsMixin):
 
@@ -184,6 +176,7 @@ class ZEOServer:
             self.options.address[1] is None):
             self.options.address = self.options.address[0], 0
             return
+
         if self.can_connect(self.options.family, self.options.address):
             self.options.usage("address %s already in use" %
                                repr(self.options.address))
@@ -349,13 +342,11 @@ def create_server(storages, options):
         options.address,
         storages,
         read_only = options.read_only,
+        client_conflict_resolution=options.client_conflict_resolution,
         invalidation_queue_size = options.invalidation_queue_size,
         invalidation_age = options.invalidation_age,
         transaction_timeout = options.transaction_timeout,
-        monitor_address = options.monitor_address,
-        auth_protocol = options.auth_protocol,
-        auth_database = options.auth_database,
-        auth_realm = options.auth_realm,
+        ssl = options.ssl,
         )
 
 
@@ -392,6 +383,12 @@ def main(args=None):
     options.realize(args)
     s = ZEOServer(options)
     s.main()
+
+def run(args):
+    options = ZEOOptions()
+    options.realize(args)
+    s = ZEOServer(options)
+    s.run()
 
 if __name__ == "__main__":
     main()

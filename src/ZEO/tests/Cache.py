@@ -44,8 +44,8 @@ class TransUndoStorageWithCache:
 
         self._storage.tpc_finish(t)
 
-        assert len(oids) == 1
-        assert oids[0] == oid
+        [uoid] = oids
+        assert uoid == oid
         data, revid = self._storage.load(oid, '')
         obj = zodb_unpickle(data)
         assert obj == MinPO(24)

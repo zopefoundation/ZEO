@@ -19,17 +19,16 @@ import socket
 import sys
 import threading
 import time
-import ZEO.zrpc.trigger
+from . import trigger
 
 
-from ZEO.zrpc.connection import ManagedClientConnection
-from ZEO.zrpc.log import log
-from ZEO.zrpc.error import DisconnectedError
+from .connection import ManagedClientConnection
+from .log import log
+from .error import DisconnectedError
 
 from ZODB.POSException import ReadOnlyError
 from ZODB.loglevels import BLATHER
 from six.moves import map
-from six.moves import zip
 
 
 def client_timeout():
@@ -51,7 +50,7 @@ def client_loop(map):
 
             try:
                 r, w, e = select.select(r, w, e, client_timeout())
-            except select.error as err:
+            except (select.error, RuntimeError) as err:
                 # Python >= 3.3 makes select.error an alias of OSError,
                 # which is not subscriptable but does have the 'errno' attribute
                 err_errno = getattr(err, 'errno', None) or err[0]
@@ -68,6 +67,13 @@ def client_loop(map):
                             continue
                         if [fd for fd in w if fd not in map]:
                             continue
+
+                        # Hm, on Mac OS X, we could get a run time
+                        # error and end up here, but retrying select
+                        # would work.  Let's try:
+                        select.select(r, w, e, 0)
+                        # we survived, keep going :)
+                        continue
 
                     raise
                 else:
@@ -157,7 +163,7 @@ class ConnectionManager(object):
 
     def _start_asyncore_loop(self):
         self.map = {}
-        self.trigger = ZEO.zrpc.trigger.trigger(self.map)
+        self.trigger = trigger.trigger(self.map)
         self.loop_thread = threading.Thread(
             name="%s zeo client networking thread" % self.client.__name__,
             target=client_loop, args=(self.map,))
@@ -446,12 +452,10 @@ class ConnectThread(threading.Thread):
             if domain == socket.AF_INET:
                 host, port = addr
                 for (family, socktype, proto, cannoname, sockaddr
-                     ) in socket.getaddrinfo(host or 'localhost', port):
-                    # we only speak TCP, so let's skip UDP and RAW sockets
-                    # otherwise we'll try to connect to the same address
-                    # three times in a row
-                    if socktype != socket.SOCK_STREAM:
-                        continue
+                     ) in socket.getaddrinfo(host or 'localhost', port,
+                                             socket.AF_INET,
+                                             socket.SOCK_STREAM
+                                            ): # prune non-TCP results
                     # for IPv6, drop flowinfo, and restrict addresses
                     # to [host]:port
                     yield family, sockaddr[:2]

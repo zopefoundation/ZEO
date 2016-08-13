@@ -31,9 +31,9 @@ else:
     s.close()
     del s
 
-from ZEO.zrpc.connection import Connection
-from ZEO.zrpc.log import log
-import ZEO.zrpc.log
+from .connection import Connection
+from .log import log
+from .log import logger
 import logging
 
 # Export the main asyncore loop
@@ -70,7 +70,19 @@ class Dispatcher(asyncore.dispatcher):
             self.create_socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.set_reuse_addr()
         log("listening on %s" % str(self.addr), logging.INFO)
-        self.bind(self.addr)
+
+        for i in range(25):
+            try:
+                self.bind(self.addr)
+            except Exception as exc:
+                log("bind failed %s waiting", i)
+                if i == 24:
+                    raise
+                else:
+                    time.sleep(5)
+            else:
+                break
+
         self.listen(5)
 
     def writable(self):
@@ -107,6 +119,6 @@ class Dispatcher(asyncore.dispatcher):
         except:
             if sock.fileno() in asyncore.socket_map:
                 del asyncore.socket_map[sock.fileno()]
-            ZEO.zrpc.log.logger.exception("Error in handle_accept")
+            logger.exception("Error in handle_accept")
         else:
             log("connect from %s: %s" % (repr(addr), c))

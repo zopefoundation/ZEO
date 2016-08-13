@@ -27,10 +27,11 @@ if os.environ.get('USE_ZOPE_TESTING_DOCTEST'):
 else:
     import doctest
 import unittest
-import ZEO.tests.forker
-import ZEO.tests.testMonitor
-import ZEO.zrpc.connection
 import ZODB.tests.util
+
+import ZEO
+
+from . import forker
 
 class FileStorageConfig:
     def getConfig(self, path, create, read_only):
@@ -90,40 +91,11 @@ class MappingStorageTimeoutTests(
     ):
     pass
 
-class MonitorTests(ZEO.tests.testMonitor.MonitorTests):
-
-    def check_connection_management(self):
-        # Open and close a few connections, making sure that
-        # the resulting number of clients is 0.
-
-        s1 = self.openClientStorage()
-        s2 = self.openClientStorage()
-        s3 = self.openClientStorage()
-        stats = self.parse(self.get_monitor_output())[1]
-        self.assertEqual(stats.clients, 3)
-        s1.close()
-        s3.close()
-        s2.close()
-
-        ZEO.tests.forker.wait_until(
-            "Number of clients shown in monitor drops to 0",
-            lambda :
-            self.parse(self.get_monitor_output())[1].clients == 0
-            )
-
-    def check_connection_management_with_old_client(self):
-        # Check that connection management works even when using an
-        # older protcool that requires a connection adapter.
-        test_protocol = b"Z303"
-        current_protocol = ZEO.zrpc.connection.Connection.current_protocol
-        ZEO.zrpc.connection.Connection.current_protocol = test_protocol
-        ZEO.zrpc.connection.Connection.servers_we_can_talk_to.append(
-            test_protocol)
-        try:
-            self.check_connection_management()
-        finally:
-            ZEO.zrpc.connection.Connection.current_protocol = current_protocol
-            ZEO.zrpc.connection.Connection.servers_we_can_talk_to.pop()
+class SSLConnectionTests(
+    MappingStorageConfig,
+    ConnectionTests.SSLConnectionTests,
+    ):
+    pass
 
 
 test_classes = [FileStorageConnectionTests,
@@ -132,8 +104,9 @@ test_classes = [FileStorageConnectionTests,
                 FileStorageTimeoutTests,
                 MappingStorageConnectionTests,
                 MappingStorageTimeoutTests,
-                MonitorTests,
                 ]
+if not forker.ZEO4_SERVER:
+    test_classes.append(SSLConnectionTests)
 
 def invalidations_while_connecting():
     r"""
@@ -154,7 +127,7 @@ This tests tries to provoke this bug by:
 - opening a client to the server that writes some objects, filling
   it's cache at the same time,
 
-    >>> import ZODB.tests.MinPO, transaction
+    >>> import ZEO, ZODB.tests.MinPO, transaction
     >>> db = ZEO.DB(addr, client='x')
     >>> conn = db.open()
     >>> nobs = 1000
@@ -213,7 +186,7 @@ This tests tries to provoke this bug by:
     ...            def _():
     ...                if (db.storage.is_connected()
     ...                        and db.storage.lastTransaction()
-    ...                            == db.storage._server.lastTransaction()
+    ...                            == db.storage._call('lastTransaction')
     ...                        ):
     ...                    #logging.getLogger('ZEO').debug(
     ...                    #   'Connected %r' % db.storage.lastTransaction())
@@ -230,9 +203,9 @@ This tests tries to provoke this bug by:
     ...                          record = handler.records.pop(0)
     ...                          print(record.name, record.levelname, end=' ')
     ...                          print(handler.format(record))
-    ...        if bad:
-    ...           with open('server-%s.log' % addr[1]) as f:
-    ...               print(f.read())
+    ...        #if bad:
+    ...        #   with open('server.log') as f:
+    ...        #       print(f.read())
     ...        #else:
     ...        #   logging.getLogger('ZEO').debug('GOOD %s' % c)
     ...        db.close()
@@ -261,7 +234,7 @@ def test_suite():
         sub = unittest.makeSuite(klass, 'check')
         suite.addTest(sub)
     suite.addTest(doctest.DocTestSuite(
-        setUp=ZEO.tests.forker.setUp, tearDown=setupstack.tearDown,
+        setUp=forker.setUp, tearDown=setupstack.tearDown,
         ))
     suite.layer = ZODB.tests.util.MininalTestLayer('ZEO Connection Tests')
     return suite

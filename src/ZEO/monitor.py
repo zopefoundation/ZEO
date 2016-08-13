@@ -59,7 +59,6 @@ class StorageStats:
         self.commits = 0
         self.aborts = 0
         self.active_txns = 0
-        self.verifying_clients = 0
         self.lock_time = None
         self.conflicts = 0
         self.conflicts_resolved = 0
@@ -114,79 +113,3 @@ class StorageStats:
         print("Stores:", self.stores, file=f)
         print("Conflicts:", self.conflicts, file=f)
         print("Conflicts resolved:", self.conflicts_resolved, file=f)
-
-class StatsClient(asyncore.dispatcher):
-
-    def __init__(self, sock, addr):
-        asyncore.dispatcher.__init__(self, sock)
-        self.buf = []
-        self.closed = 0
-
-    def close(self):
-        self.closed = 1
-        # The socket is closed after all the data is written.
-        # See handle_write().
-
-    def write(self, s):
-        self.buf.append(s)
-
-    def writable(self):
-        return len(self.buf)
-
-    def readable(self):
-        return 0
-
-    def handle_write(self):
-        s = "".join(self.buf)
-        self.buf = []
-        n = self.socket.send(s.encode('ascii'))
-        if n < len(s):
-            self.buf.append(s[:n])
-
-        if self.closed and not self.buf:
-            asyncore.dispatcher.close(self)
-
-class StatsServer(asyncore.dispatcher):
-
-    StatsConnectionClass = StatsClient
-
-    def __init__(self, addr, stats):
-        asyncore.dispatcher.__init__(self)
-        self.addr = addr
-        self.stats = stats
-        if type(self.addr) == tuple:
-            self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-        else:
-            self.create_socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self.set_reuse_addr()
-        logger = logging.getLogger('ZEO.monitor')
-        logger.info("listening on %s", repr(self.addr))
-        self.bind(self.addr)
-        self.listen(5)
-
-    def writable(self):
-        return 0
-
-    def readable(self):
-        return 1
-
-    def handle_accept(self):
-        try:
-            sock, addr = self.accept()
-        except socket.error:
-            return
-        f = self.StatsConnectionClass(sock, addr)
-        self.dump(f)
-        f.close()
-
-    def dump(self, f):
-        print("ZEO monitor server version %s" % zeo_version, file=f)
-        print(time.ctime(), file=f)
-        print(file=f)
-
-        L = sorted(self.stats.keys())
-        for k in L:
-            stats = self.stats[k]
-            print("Storage:", k, file=f)
-            stats.dump(f)
-            print(file=f)

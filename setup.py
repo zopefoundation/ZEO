@@ -11,31 +11,44 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-"""Setup
-"""
-version = '4.2.0.dev0'
+version = '5.0.0a2'
+
 from setuptools import setup, find_packages
 import os
 import sys
 
-if sys.version_info < (2, 7):
-    print("This version of ZEO requires Python 2.7 or higher")
+if sys.version_info < (2, 7, 9):
+    print("This version of ZEO requires Python 2.7.9 or higher")
     sys.exit(0)
 
-if (3, 0) < sys.version_info < (3, 3):
-    print("This version of ZEO requires Python 3.3 or higher")
+if (3, 0) < sys.version_info < (3, 4):
+    print("This version of ZEO requires Python 3.4 or higher")
     sys.exit(0)
 
+install_requires = [
+    'ZODB >= 5.0.0a5',
+    'six',
+    'transaction >= 1.6.0',
+    'persistent >= 4.1.0',
+    'zc.lockfile',
+    'ZConfig',
+    'zdaemon',
+    'zope.interface',
+    ]
 
-classifiers = """\
+tests_require = ['zope.testing', 'manuel', 'random2', 'mock']
+
+if sys.version_info[:2] < (3, ):
+    install_requires.extend(('futures', 'trollius'))
+
+classifiers = """
 Intended Audience :: Developers
 License :: OSI Approved :: Zope Public License
-Programming Language :: Python
 Programming Language :: Python :: 2
 Programming Language :: Python :: 2.7
 Programming Language :: Python :: 3
-Programming Language :: Python :: 3.3
 Programming Language :: Python :: 3.4
+Programming Language :: Python :: 3.5
 Programming Language :: Python :: Implementation :: CPython
 Programming Language :: Python :: Implementation :: PyPy
 Topic :: Database
@@ -43,7 +56,7 @@ Topic :: Software Development :: Libraries :: Python Modules
 Operating System :: Microsoft :: Windows
 Operating System :: Unix
 Framework :: ZODB
-"""
+""".strip().split('\n')
 
 def _modname(path, base, name=''):
     if path == base:
@@ -96,8 +109,6 @@ def alltests():
                     _unittests_only(suite, mod.test_suite())
     return suite
 
-tests_require = ['zope.testing', 'manuel', 'random2']
-
 long_description = (
     open('README.rst').read()
     + '\n' +
@@ -114,20 +125,11 @@ setup(name="ZEO",
       package_dir = {'': 'src'},
       license = "ZPL 2.1",
       platforms = ["any"],
-      classifiers = filter(None, classifiers.split("\n")),
+      classifiers = classifiers,
       test_suite="__main__.alltests", # to support "setup.py test"
       tests_require = tests_require,
-      extras_require = dict(test=tests_require),
-      install_requires = [
-          'ZODB >= 4.2.0b1',
-          'six',
-          'transaction',
-          'persistent >= 4.1.0',
-          'zc.lockfile',
-          'ZConfig',
-          'zdaemon',
-          'zope.interface',
-          ],
+      extras_require = dict(test=tests_require, uvloop=['uvloop >=0.5.1']),
+      install_requires = install_requires,
       zip_safe = False,
       entry_points = """
       [console_scripts]

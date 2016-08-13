@@ -25,46 +25,32 @@ def new_store_data():
     """Return arbitrary data to use as argument to store() method."""
     return random_string(8), random_string(random.randrange(1000))
 
-def new_invalidate_data():
-    """Return arbitrary data to use as argument to invalidate() method."""
-    return random_string(8)
+def store(tbuf, resolved=False):
+    data = new_store_data()
+    tbuf.store(*data)
+    if resolved:
+        tbuf.server_resolve(data[0])
+    return data
 
 class TransBufTests(unittest.TestCase):
 
     def checkTypicalUsage(self):
-        tbuf = TransactionBuffer()
-        tbuf.store(*new_store_data())
-        tbuf.invalidate(new_invalidate_data())
+        tbuf = TransactionBuffer(0)
+        store(tbuf)
+        store(tbuf)
         for o in tbuf:
             pass
 
-    def doUpdates(self, tbuf):
+    def checkOrderPreserved(self):
+        tbuf = TransactionBuffer(0)
         data = []
         for i in range(10):
-            d = new_store_data()
-            tbuf.store(*d)
-            data.append(d)
-            d = new_invalidate_data()
-            tbuf.invalidate(d)
-            data.append(d)
+            data.append((store(tbuf), False))
+            data.append((store(tbuf, True), True))
 
-        for i, x in enumerate(tbuf):
-            if x[1] is None:
-                # the tbuf add a dummy None to invalidates
-                x = x[0]
-            self.assertEqual(x, data[i])
-
-    def checkOrderPreserved(self):
-        tbuf = TransactionBuffer()
-        self.doUpdates(tbuf)
-
-    def checkReusable(self):
-        tbuf = TransactionBuffer()
-        self.doUpdates(tbuf)
-        tbuf.clear()
-        self.doUpdates(tbuf)
-        tbuf.clear()
-        self.doUpdates(tbuf)
+        for i, (oid, d, resolved) in enumerate(tbuf):
+            self.assertEqual((oid, d), data[i][0])
+            self.assertEqual(resolved, data[i][1])
 
 def test_suite():
     return unittest.makeSuite(TransBufTests, 'check')

@@ -314,7 +314,9 @@ class CacheTests(ZODB.tests.util.TestCase):
             # We use large-2 for the same reason we used small-1 above.
             expected_len = large-2
             self.assertEquals(len(cache), expected_len)
-            expected_oids = set(list(range(11, 50))+list(range(106, 110))+list(range(200, 305)))
+            expected_oids = set(list(range(11, 50)) +
+                                list(range(106, 110)) +
+                                list(range(200, 305)))
             self.assertEquals(set(u64(oid) for (oid, tid) in cache.contents()),
                               expected_oids)
 
@@ -335,6 +337,21 @@ class CacheTests(ZODB.tests.util.TestCase):
         self.cache.setLastTid(p64(5))
         self.cache.setLastTid(p64(3))
         self.cache.setLastTid(p64(4))
+
+    def test_loadBefore_doesnt_miss_current(self):
+        # Make sure that loadBefore get's current data if there
+        # isn't non-current data
+
+        cache = self.cache
+        oid = n1
+        cache.store(oid, n1, None, b'first')
+        self.assertEqual(cache.loadBefore(oid, n1), None)
+        self.assertEqual(cache.loadBefore(oid, n2), (b'first', n1, None))
+        self.cache.invalidate(oid, n2)
+        cache.store(oid, n2, None, b'second')
+        self.assertEqual(cache.loadBefore(oid, n1), None)
+        self.assertEqual(cache.loadBefore(oid, n2), (b'first', n1, n2))
+        self.assertEqual(cache.loadBefore(oid, n3), (b'second', n2, None))
 
 def kill_does_not_cause_cache_corruption():
     r"""
@@ -410,58 +427,6 @@ Traceback (most recent call last):
 LockError: Couldn't lock 'cache.lock'
 
 >>> cache.close()
-"""
-
-def thread_safe():
-    r"""
-
->>> import ZEO.cache, ZODB.utils
->>> cache = ZEO.cache.ClientCache('cache', 1000000)
-
->>> for i in range(100):
-...     cache.store(ZODB.utils.p64(i), ZODB.utils.p64(1), None, b'0')
-
->>> import random2 as random, sys, threading
->>> random = random.Random(0)
->>> stop = False
->>> read_failure = None
-
->>> def read_thread():
-...     def pick_oid():
-...         return ZODB.utils.p64(random.randint(0,99))
-...
-...     try:
-...         while not stop:
-...             cache.load(pick_oid())
-...             cache.loadBefore(pick_oid(), ZODB.utils.p64(2))
-...     except:
-...         global read_failure
-...         read_failure = sys.exc_info()
-
->>> thread = threading.Thread(target=read_thread)
->>> thread.start()
-
->>> for tid in range(2,10):
-...     for oid in range(100):
-...         oid = ZODB.utils.p64(oid)
-...         cache.invalidate(oid, ZODB.utils.p64(tid))
-...         cache.store(oid, ZODB.utils.p64(tid), None, str(tid).encode())
-
->>> stop = True
->>> thread.join()
->>> if read_failure:
-...    print('Read failure:')
-...    import traceback
-...    traceback.print_exception(*read_failure)
-
->>> expected = b'9', ZODB.utils.p64(9)
->>> for oid in range(100):
-...     loaded = cache.load(ZODB.utils.p64(oid))
-...     if loaded != expected:
-...         print(oid, loaded)
-
->>> cache.close()
-
 """
 
 def broken_non_current():

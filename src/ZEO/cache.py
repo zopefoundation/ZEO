@@ -29,12 +29,11 @@ import BTrees.LOBTree
 import logging
 import os
 import tempfile
-import threading
 import time
 
 import ZODB.fsIndex
 import zc.lockfile
-from ZODB.utils import p64, u64, z64
+from ZODB.utils import p64, u64, z64, RLock
 import six
 from ._compat import PYPY
 
@@ -131,16 +130,6 @@ allocated_record_overhead = 43
 # to the end of the file that the new object can't fit in one
 # contiguous chunk, currentofs is reset to ZEC_HEADER_SIZE first.
 
-
-def locked(func):
-    def _locked_wrapper(inst, *args, **kwargs):
-        inst._lock.acquire()
-        try:
-            return func(inst, *args, **kwargs)
-        finally:
-            inst._lock.release()
-    return _locked_wrapper
-
 # Under PyPy, the available dict specializations perform significantly
 # better (faster) than the pure-Python BTree implementation. They may
 # use less memory too. And we don't require any of the special BTree features...
@@ -193,6 +182,8 @@ class ClientCache(object):
         # currentofs.
         self.currentofs = ZEC_HEADER_SIZE
 
+        self._lock = RLock()
+
         # self.f is the open file object.
         # When we're not reusing an existing file, self.f is left None
         # here -- the scan() method must be called then to open the file
@@ -243,8 +234,6 @@ class ClientCache(object):
 
         self._setup_trace(path)
 
-        self._lock = threading.RLock()
-
     # Backward compatibility. Client code used to have to use the fc
     # attr to get to the file cache to get cache stats.
     @property
@@ -252,9 +241,10 @@ class ClientCache(object):
         return self
 
     def clear(self):
-        self.f.seek(ZEC_HEADER_SIZE)
-        self.f.truncate()
-        self._initfile(ZEC_HEADER_SIZE)
+        with self._lock:
+            self.f.seek(ZEC_HEADER_SIZE)
+            self.f.truncate()
+            self._initfile(ZEC_HEADER_SIZE)
 
     ##
     # Scan the current contents of the cache file, calling `install`
@@ -463,28 +453,29 @@ class ClientCache(object):
     # instance, and also written out near the start of the cache file.  The
     # new tid must be strictly greater than our current idea of the most
     # recent tid.
-    @locked
     def setLastTid(self, tid):
-        if (not tid) or (tid == z64):
-            return
-        if (tid <= self.tid) and self._len:
-            if tid == self.tid:
-                return                  # Be a little forgiving
-            raise ValueError("new last tid (%s) must be greater than "
-                             "previous one (%s)"
-                             % (u64(tid), u64(self.tid)))
-        assert isinstance(tid, bytes) and len(tid) == 8, tid
-        self.tid = tid
-        self.f.seek(len(magic))
-        self.f.write(tid)
-        self.f.flush()
+        with self._lock:
+            if (not tid) or (tid == z64):
+                return
+            if (tid <= self.tid) and self._len:
+                if tid == self.tid:
+                    return                  # Be a little forgiving
+                raise ValueError("new last tid (%s) must be greater than "
+                                 "previous one (%s)"
+                                 % (u64(tid), u64(self.tid)))
+            assert isinstance(tid, bytes) and len(tid) == 8, tid
+            self.tid = tid
+            self.f.seek(len(magic))
+            self.f.write(tid)
+            self.f.flush()
 
     ##
     # Return the last transaction seen by the cache.
     # @return a transaction id
     # @defreturn string, or 8 nulls if no transaction is yet known
     def getLastTid(self):
-        return self.tid
+        with self._lock:
+            return self.tid
 
     ##
     # Return the current data record for oid.
@@ -492,52 +483,55 @@ class ClientCache(object):
     # @return (data record, serial number, tid), or None if the object is not
     #         in the cache
     # @defreturn 3-tuple: (string, string, string)
-
-    @locked
-    def load(self, oid):
-        ofs = self.current.get(oid)
-        if ofs is None:
-            self._trace(0x20, oid)
-            return None
-        self.f.seek(ofs)
-        read = self.f.read
-        status = read(1)
-        assert status == b'a', (ofs, self.f.tell(), oid)
-        size, saved_oid, tid, end_tid, lver, ldata = unpack(
-            ">I8s8s8sHI", read(34))
-        assert saved_oid == oid, (ofs, self.f.tell(), oid, saved_oid)
-        assert end_tid == z64, (ofs, self.f.tell(), oid, tid, end_tid)
-        assert lver == 0, "Versions aren't supported"
-
-        data = read(ldata)
-        assert len(data) == ldata, (ofs, self.f.tell(), oid, len(data), ldata)
-
-        # WARNING: The following assert changes the file position.
-        # We must not depend on this below or we'll fail in optimized mode.
-        assert read(8) == oid, (ofs, self.f.tell(), oid)
-
-        self._n_accesses += 1
-        self._trace(0x22, oid, tid, end_tid, ldata)
-
-        ofsofs = self.currentofs - ofs
-        if ofsofs < 0:
-            ofsofs += self.maxsize
-
-        if (ofsofs > self.rearrange and
-            self.maxsize > 10*len(data) and
-            size > 4):
-            # The record is far back and might get evicted, but it's
-            # valuable, so move it forward.
-
-            # Remove fromn old loc:
-            del self.current[oid]
+    def load(self, oid, before_tid=None):
+        with self._lock:
+            ofs = self.current.get(oid)
+            if ofs is None:
+                self._trace(0x20, oid)
+                return None
             self.f.seek(ofs)
-            self.f.write(b'f'+pack(">I", size))
+            read = self.f.read
+            status = read(1)
+            assert status == b'a', (ofs, self.f.tell(), oid)
+            size, saved_oid, tid, end_tid, lver, ldata = unpack(
+                ">I8s8s8sHI", read(34))
+            assert saved_oid == oid, (ofs, self.f.tell(), oid, saved_oid)
+            assert end_tid == z64, (ofs, self.f.tell(), oid, tid, end_tid)
+            assert lver == 0, "Versions aren't supported"
 
-            # Write to new location:
-            self._store(oid, tid, None, data, size)
+            if before_tid and tid >= before_tid:
+                return None
 
-        return data, tid
+            data = read(ldata)
+            assert len(data) == ldata, (
+                ofs, self.f.tell(), oid, len(data), ldata)
+
+            # WARNING: The following assert changes the file position.
+            # We must not depend on this below or we'll fail in optimized mode.
+            assert read(8) == oid, (ofs, self.f.tell(), oid)
+
+            self._n_accesses += 1
+            self._trace(0x22, oid, tid, end_tid, ldata)
+
+            ofsofs = self.currentofs - ofs
+            if ofsofs < 0:
+                ofsofs += self.maxsize
+
+            if (ofsofs > self.rearrange and
+                self.maxsize > 10*len(data) and
+                size > 4):
+                # The record is far back and might get evicted, but it's
+                # valuable, so move it forward.
+
+                # Remove fromn old loc:
+                del self.current[oid]
+                self.f.seek(ofs)
+                self.f.write(b'f'+pack(">I", size))
+
+                # Write to new location:
+                self._store(oid, tid, None, data, size)
+
+            return data, tid
 
     ##
     # Return a non-current revision of oid that was current before tid.
@@ -545,44 +539,57 @@ class ClientCache(object):
     # @param tid id of transaction that wrote next revision of oid
     # @return data record, serial number, start tid, and end tid
     # @defreturn 4-tuple: (string, string, string, string)
-
-    @locked
     def loadBefore(self, oid, before_tid):
-        noncurrent_for_oid = self.noncurrent.get(u64(oid))
-        if noncurrent_for_oid is None:
-            self._trace(0x24, oid, "", before_tid)
-            return None
+        with self._lock:
+            noncurrent_for_oid = self.noncurrent.get(u64(oid))
+            if noncurrent_for_oid is None:
+                result = self.load(oid, before_tid)
+                if result:
+                    return result[0], result[1], None
+                else:
+                    self._trace(0x24, oid, "", before_tid)
+                    return result
 
-        items = noncurrent_for_oid.items(None, u64(before_tid)-1)
-        if not items:
-            self._trace(0x24, oid, "", before_tid)
-            return None
-        tid, ofs = items[-1]
+            items = noncurrent_for_oid.items(None, u64(before_tid)-1)
+            if not items:
+                result = self.load(oid, before_tid)
+                if result:
+                    return result[0], result[1], None
+                else:
+                    self._trace(0x24, oid, "", before_tid)
+                    return result
 
-        self.f.seek(ofs)
-        read = self.f.read
-        status = read(1)
-        assert status == b'a', (ofs, self.f.tell(), oid, before_tid)
-        size, saved_oid, saved_tid, end_tid, lver, ldata = unpack(
-            ">I8s8s8sHI", read(34))
-        assert saved_oid == oid, (ofs, self.f.tell(), oid, saved_oid)
-        assert saved_tid == p64(tid), (ofs, self.f.tell(), oid, saved_tid, tid)
-        assert end_tid != z64, (ofs, self.f.tell(), oid)
-        assert lver == 0, "Versions aren't supported"
-        data = read(ldata)
-        assert len(data) == ldata, (ofs, self.f.tell())
+            tid, ofs = items[-1]
 
-        # WARNING: The following assert changes the file position.
-        # We must not depend on this below or we'll fail in optimized mode.
-        assert read(8) == oid, (ofs, self.f.tell(), oid)
+            self.f.seek(ofs)
+            read = self.f.read
+            status = read(1)
+            assert status == b'a', (ofs, self.f.tell(), oid, before_tid)
+            size, saved_oid, saved_tid, end_tid, lver, ldata = unpack(
+                ">I8s8s8sHI", read(34))
+            assert saved_oid == oid, (ofs, self.f.tell(), oid, saved_oid)
+            assert saved_tid == p64(tid), (
+                ofs, self.f.tell(), oid, saved_tid, tid)
+            assert end_tid != z64, (ofs, self.f.tell(), oid)
+            assert lver == 0, "Versions aren't supported"
+            data = read(ldata)
+            assert len(data) == ldata, (ofs, self.f.tell())
 
-        if end_tid < before_tid:
-            self._trace(0x24, oid, "", before_tid)
-            return None
+            # WARNING: The following assert changes the file position.
+            # We must not depend on this below or we'll fail in optimized mode.
+            assert read(8) == oid, (ofs, self.f.tell(), oid)
 
-        self._n_accesses += 1
-        self._trace(0x26, oid, "", saved_tid)
-        return data, saved_tid, end_tid
+            if end_tid < before_tid:
+                result = self.load(oid, before_tid)
+                if result:
+                    return result[0], result[1], None
+                else:
+                    self._trace(0x24, oid, "", before_tid)
+                    return result
+
+            self._n_accesses += 1
+            self._trace(0x26, oid, "", saved_tid)
+            return data, saved_tid, end_tid
 
     ##
     # Store a new data record in the cache.
@@ -592,48 +599,49 @@ class ClientCache(object):
     #                revision of oid.  If end_tid is None, the data is
     #                current.
     # @param data the actual data
-
-    @locked
     def store(self, oid, start_tid, end_tid, data):
-        seek = self.f.seek
-        if end_tid is None:
-            ofs = self.current.get(oid)
-            if ofs:
-                seek(ofs)
-                read = self.f.read
-                status = read(1)
-                assert status == b'a', (ofs, self.f.tell(), oid)
-                size, saved_oid, saved_tid, end_tid = unpack(
-                    ">I8s8s8s", read(28))
-                assert saved_oid == oid, (ofs, self.f.tell(), oid, saved_oid)
-                assert end_tid == z64, (ofs, self.f.tell(), oid)
-                if saved_tid == start_tid:
+        with self._lock:
+            seek = self.f.seek
+            if end_tid is None:
+                ofs = self.current.get(oid)
+                if ofs:
+                    seek(ofs)
+                    read = self.f.read
+                    status = read(1)
+                    assert status == b'a', (ofs, self.f.tell(), oid)
+                    size, saved_oid, saved_tid, end_tid = unpack(
+                        ">I8s8s8s", read(28))
+                    assert saved_oid == oid, (
+                        ofs, self.f.tell(), oid, saved_oid)
+                    assert end_tid == z64, (ofs, self.f.tell(), oid)
+                    if saved_tid == start_tid:
+                        return
+                    raise ValueError("already have current data for oid")
+            else:
+                noncurrent_for_oid = self.noncurrent.get(u64(oid))
+                if noncurrent_for_oid and (
+                    u64(start_tid) in noncurrent_for_oid):
                     return
-                raise ValueError("already have current data for oid")
-        else:
-            noncurrent_for_oid = self.noncurrent.get(u64(oid))
-            if noncurrent_for_oid and (u64(start_tid) in noncurrent_for_oid):
+
+            size = allocated_record_overhead + len(data)
+
+            # A number of cache simulation experiments all concluded that the
+            # 2nd-level ZEO cache got a much higher hit rate if "very large"
+            # objects simply weren't cached.  For now, we ignore the request
+            # only if the entire cache file is too small to hold the object.
+            if size >= min(max_block_size, self.maxsize - ZEC_HEADER_SIZE):
                 return
 
-        size = allocated_record_overhead + len(data)
+            self._n_adds += 1
+            self._n_added_bytes += size
+            self._len += 1
 
-        # A number of cache simulation experiments all concluded that the
-        # 2nd-level ZEO cache got a much higher hit rate if "very large"
-        # objects simply weren't cached.  For now, we ignore the request
-        # only if the entire cache file is too small to hold the object.
-        if size >= min(max_block_size, self.maxsize - ZEC_HEADER_SIZE):
-            return
+            self._store(oid, start_tid, end_tid, data, size)
 
-        self._n_adds += 1
-        self._n_added_bytes += size
-        self._len += 1
-
-        self._store(oid, start_tid, end_tid, data, size)
-
-        if end_tid:
-            self._trace(0x54, oid, start_tid, end_tid, dlen=len(data))
-        else:
-            self._trace(0x52, oid, start_tid, dlen=len(data))
+            if end_tid:
+                self._trace(0x54, oid, start_tid, end_tid, dlen=len(data))
+            else:
+                self._trace(0x52, oid, start_tid, dlen=len(data))
 
     def _store(self, oid, start_tid, end_tid, data, size):
         # Low-level store used by store and load
@@ -699,37 +707,38 @@ class ClientCache(object):
     # - oid object id
     # - tid the id of the transaction that wrote a new revision of oid,
     #        or None to forget all cached info about oid.
-    @locked
     def invalidate(self, oid, tid):
-        ofs = self.current.get(oid)
-        if ofs is None:
-            # 0x10 == invalidate (miss)
-            self._trace(0x10, oid, tid)
-            return
-
-        self.f.seek(ofs)
-        read = self.f.read
-        status = read(1)
-        assert status == b'a', (ofs, self.f.tell(), oid)
-        size, saved_oid, saved_tid, end_tid = unpack(">I8s8s8s", read(28))
-        assert saved_oid == oid, (ofs, self.f.tell(), oid, saved_oid)
-        assert end_tid == z64, (ofs, self.f.tell(), oid)
-        del self.current[oid]
-        if tid is None:
-            self.f.seek(ofs)
-            self.f.write(b'f'+pack(">I", size))
-            # 0x1E = invalidate (hit, discarding current or non-current)
-            self._trace(0x1E, oid, tid)
-            self._len -= 1
-        else:
-            if tid == saved_tid:
-                logger.warning("Ignoring invalidation with same tid as current")
+        with self._lock:
+            ofs = self.current.get(oid)
+            if ofs is None:
+                # 0x10 == invalidate (miss)
+                self._trace(0x10, oid, tid)
                 return
-            self.f.seek(ofs+21)
-            self.f.write(tid)
-            self._set_noncurrent(oid, saved_tid, ofs)
-            # 0x1C = invalidate (hit, saving non-current)
-            self._trace(0x1C, oid, tid)
+
+            self.f.seek(ofs)
+            read = self.f.read
+            status = read(1)
+            assert status == b'a', (ofs, self.f.tell(), oid)
+            size, saved_oid, saved_tid, end_tid = unpack(">I8s8s8s", read(28))
+            assert saved_oid == oid, (ofs, self.f.tell(), oid, saved_oid)
+            assert end_tid == z64, (ofs, self.f.tell(), oid)
+            del self.current[oid]
+            if tid is None:
+                self.f.seek(ofs)
+                self.f.write(b'f'+pack(">I", size))
+                # 0x1E = invalidate (hit, discarding current or non-current)
+                self._trace(0x1E, oid, tid)
+                self._len -= 1
+            else:
+                if tid == saved_tid:
+                    logger.warning(
+                        "Ignoring invalidation with same tid as current")
+                    return
+                self.f.seek(ofs+21)
+                self.f.write(tid)
+                self._set_noncurrent(oid, saved_tid, ofs)
+                # 0x1C = invalidate (hit, saving non-current)
+                self._trace(0x1C, oid, tid)
 
     ##
     # Generates (oid, serial) oairs for all objects in the
@@ -740,19 +749,13 @@ class ClientCache(object):
         seek = self.f.seek
         read = self.f.read
         for oid, ofs in six.iteritems(self.current):
-            self._lock.acquire()
-            try:
-                seek(ofs)
-                status = read(1)
-                assert status == b'a', (ofs, self.f.tell(), oid)
-                size, saved_oid, tid, end_tid = unpack(">I8s8s8s", read(28))
-                assert saved_oid == oid, (ofs, self.f.tell(), oid, saved_oid)
-                assert end_tid == z64, (ofs, self.f.tell(), oid)
-                result = oid, tid
-            finally:
-                self._lock.release()
-
-            yield result
+            seek(ofs)
+            status = read(1)
+            assert status == b'a', (ofs, self.f.tell(), oid)
+            size, saved_oid, tid, end_tid = unpack(">I8s8s8s", read(28))
+            assert saved_oid == oid, (ofs, self.f.tell(), oid, saved_oid)
+            assert end_tid == z64, (ofs, self.f.tell(), oid)
+            yield oid, tid
 
     def dump(self):
         from ZODB.utils import oid_repr
