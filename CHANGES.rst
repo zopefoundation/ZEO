@@ -84,8 +84,6 @@ Dropped features:
 
 - Server support for clients older than ZEO 4.2.0
 
-
-
 4.2.0 (2016-06-15)
 ------------------
 

@@ -12,14 +12,9 @@
 # FOR A PARTICULAR PURPOSE
 #
 ##############################################################################
-"""Cache simulation.
+"""
+Cache simulation.
 
-Usage: simul.py [-s size] tracefile
-
-Options:
--s size: cache size in MB (default 20 MB)
--i: summarizing interval in minutes (default 15; max 60)
--r: rearrange factor
 
 Note:
 
@@ -27,102 +22,52 @@ Note:
 
 - The simulation will be far off if the trace file
   was created starting with a non-empty cache
-
-
 """
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 
 import bisect
-import getopt
 import struct
 import re
 import sys
 import ZEO.cache
+import argparse
 
-from ZODB.utils import z64, u64
+from ZODB.utils import z64
+
+from .cache_stats import add_interval_argument
+from .cache_stats import add_tracefile_argument
 
 # we assign ctime locally to facilitate test replacement!
 from time import ctime
 import six
 
-def usage(msg):
-    print(msg, file=sys.stderr)
-    print(__doc__, file=sys.stderr)
 
 def main(args=None):
     if args is None:
         args = sys.argv[1:]
     # Parse options.
     MB = 1<<20
-    cachelimit = 20*MB
-    rearrange = 0.8
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--size", "-s",
+                        default=20*MB, dest="cachelimit",
+                        type=lambda s: int(float(s)*MB),
+                        help="cache size in MB (default 20MB)")
+    add_interval_argument(parser)
+    parser.add_argument("--rearrange", "-r",
+                        default=0.8, type=float,
+                        help="rearrange factor")
+    add_tracefile_argument(parser)
+
     simclass = CircularCacheSimulation
-    interval_step = 15
-    try:
-        opts, args = getopt.getopt(args, "s:i:r:")
-    except getopt.error as msg:
-        usage(msg)
-        return 2
 
-    for o, a in opts:
-        if o == '-s':
-            cachelimit = int(float(a)*MB)
-        elif o == '-i':
-            interval_step = int(a)
-        elif o == '-r':
-            rearrange = float(a)
-        else:
-            assert False, (o, a)
+    options = parser.parse_args(args)
 
-    interval_step *= 60
-    if interval_step <= 0:
-        interval_step = 60
-    elif interval_step > 3600:
-        interval_step = 3600
-
-    if len(args) != 1:
-        usage("exactly one file argument required")
-        return 2
-    filename = args[0]
-
-    # Open file.
-    if filename.endswith(".gz"):
-        # Open gzipped file.
-        try:
-            import gzip
-        except ImportError:
-            print("can't read gzipped files (no module gzip)", file=sys.stderr)
-            return 1
-        try:
-            f = gzip.open(filename, "rb")
-        except IOError as msg:
-            print("can't open %s: %s" % (filename, msg), file=sys.stderr)
-            return 1
-    elif filename == "-":
-        # Read from stdin.
-        f = sys.stdin
-    else:
-        # Open regular file.
-        try:
-            f = open(filename, "rb")
-        except IOError as msg:
-            print("can't open %s: %s" % (filename, msg), file=sys.stderr)
-            return 1
+    f = options.tracefile
+    interval_step = options.interval
 
     # Create simulation object.
-    sim = simclass(cachelimit, rearrange)
-    interval_sim = simclass(cachelimit, rearrange)
+    sim = simclass(options.cachelimit, options.rearrange)
+    interval_sim = simclass(options.cachelimit, options.rearrange)
 
     # Print output header.
     sim.printheader()
