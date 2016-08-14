@@ -429,58 +429,6 @@ LockError: Couldn't lock 'cache.lock'
 >>> cache.close()
 """
 
-def thread_safe():
-    r"""
-
->>> import ZEO.cache, ZODB.utils
->>> cache = ZEO.cache.ClientCache('cache', 1000000)
-
->>> for i in range(100):
-...     cache.store(ZODB.utils.p64(i), ZODB.utils.p64(1), None, b'0')
-
->>> import random2 as random, sys, threading
->>> random = random.Random(0)
->>> stop = False
->>> read_failure = None
-
->>> def read_thread():
-...     def pick_oid():
-...         return ZODB.utils.p64(random.randint(0,99))
-...
-...     try:
-...         while not stop:
-...             cache.load(pick_oid())
-...             cache.loadBefore(pick_oid(), ZODB.utils.p64(2))
-...     except:
-...         global read_failure
-...         read_failure = sys.exc_info()
-
->>> thread = threading.Thread(target=read_thread)
->>> thread.start()
-
->>> for tid in range(2,10):
-...     for oid in range(100):
-...         oid = ZODB.utils.p64(oid)
-...         cache.invalidate(oid, ZODB.utils.p64(tid))
-...         cache.store(oid, ZODB.utils.p64(tid), None, str(tid).encode())
-
->>> stop = True
->>> thread.join()
->>> if read_failure:
-...    print('Read failure:')
-...    import traceback
-...    traceback.print_exception(*read_failure)
-
->>> expected = b'9', ZODB.utils.p64(9)
->>> for oid in range(100):
-...     loaded = cache.load(ZODB.utils.p64(oid))
-...     if loaded != expected:
-...         print(oid, loaded)
-
->>> cache.close()
-
-"""
-
 def broken_non_current():
     r"""
 

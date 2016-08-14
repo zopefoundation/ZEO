@@ -2,12 +2,10 @@ You can change the address(es) of a client storaage.
 
 We'll start by setting up a server and connecting to it:
 
-    >>> import ZEO, ZEO.StorageServer, ZODB.FileStorage, transaction
-    >>> server = ZEO.StorageServer.StorageServer(
-    ...     ('127.0.0.1', 0), {'1': ZODB.FileStorage.FileStorage('t.fs')})
-    >>> server.start_thread()
+    >>> import ZEO, transaction
 
-    >>> conn = ZEO.connection(server.addr, max_disconnect_poll=0.1)
+    >>> addr, stop = ZEO.server(path='test.fs', threaded=False)
+    >>> conn = ZEO.connection(addr)
     >>> client = conn.db().storage
     >>> client.is_connected()
     True
@@ -18,28 +16,25 @@ We'll start by setting up a server and connecting to it:
 
 Now we'll close the server:
 
-    >>> server.close()
+    >>> stop()
 
 And wait for the connectin to notice it's disconnected:
 
     >>> wait_until(lambda : not client.is_connected())
 
-Now, we'll restart the server and update the connection:
+Now, we'll restart the server:
 
-    >>> server = ZEO.StorageServer.StorageServer(
-    ...     ('127.0.0.1', 0), {'1': ZODB.FileStorage.FileStorage('t.fs')})
-    >>> server.start_thread()
-    >>> client.new_addr(server.addr)
-
+    >>> addr, stop = ZEO.server(path='test.fs', threaded=False)
 
 Update with another client:
 
-    >>> conn2 = ZEO.connection(server.addr)
+    >>> conn2 = ZEO.connection(addr)
     >>> conn2.root.x += 1
     >>> transaction.commit()
 
-Wait for connect:
+Update the connection and wait for connect:
 
+    >>> client.new_addr(addr)
     >>> wait_until(lambda : client.is_connected())
     >>> _ = transaction.begin()
     >>> conn.root()
@@ -49,4 +44,4 @@ Wait for connect:
 
     >>> conn.close()
     >>> conn2.close()
-    >>> server.close()
+    >>> stop()

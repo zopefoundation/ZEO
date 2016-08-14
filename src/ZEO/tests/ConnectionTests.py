@@ -11,68 +11,45 @@
 # FOR A PARTICULAR PURPOSE
 #
 ##############################################################################
-
+import concurrent.futures
+import contextlib
 import os
 import time
 import socket
-import asyncore
 import threading
 import logging
 
-import ZEO.ServerStub
 from ZEO.ClientStorage import ClientStorage
 from ZEO.Exceptions import ClientDisconnected
-from ZEO.zrpc.marshal import encode
+from ZEO.asyncio.marshal import encode
 from ZEO.tests import forker
 
 from ZODB.DB import DB
 from ZODB.POSException import ReadOnlyError, ConflictError
 from ZODB.tests.StorageTestBase import StorageTestBase
 from ZODB.tests.MinPO import MinPO
-from ZODB.tests.StorageTestBase \
-     import zodb_pickle, zodb_unpickle, handle_all_serials, handle_serials
+from ZODB.tests.StorageTestBase import zodb_pickle, zodb_unpickle
 import ZODB.tests.util
 
 import transaction
 from transaction import Transaction
 
+from . import testssl
+
 logger = logging.getLogger('ZEO.tests.ConnectionTests')
 
 ZERO = '\0'*8
-
-class TestServerStub(ZEO.ServerStub.StorageServer):
-    __super_getInvalidations = ZEO.ServerStub.StorageServer.getInvalidations
-
-    def getInvalidations(self, tid):
-        # squirrel the results away for inspection by test case
-        self._last_invals = self.__super_getInvalidations(tid)
-        return self._last_invals
 
 class TestClientStorage(ClientStorage):
 
     test_connection = False
 
-    StorageServerStubClass = TestServerStub
-
     connection_count_for_tests = 0
 
-    def notifyConnected(self, conn):
-        ClientStorage.notifyConnected(self, conn)
+    def notify_connected(self, conn, info):
+        ClientStorage.notify_connected(self, conn, info)
         self.connection_count_for_tests += 1
-
-    def verify_cache(self, stub):
-        self.end_verify = threading.Event()
-        self.verify_result = ClientStorage.verify_cache(self, stub)
-
-    def endVerify(self):
-        ClientStorage.endVerify(self)
-        self.end_verify.set()
-
-    def testConnection(self, conn):
-        try:
-            return ClientStorage.testConnection(self, conn)
-        finally:
-            self.test_connection = True
+        self.verify_result = conn.verify_result
 
 class DummyDB:
     def invalidate(self, *args, **kwargs):
@@ -80,6 +57,9 @@ class DummyDB:
 
     def invalidateCache(self):
         pass
+
+    transform_record_data = untransform_record_data = lambda self, data: data
+
 
 class CommonSetupTearDown(StorageTestBase):
     """Common boilerplate"""
@@ -89,7 +69,6 @@ class CommonSetupTearDown(StorageTestBase):
     keep = 0
     invq = None
     timeout = None
-    monitor = 0
     db_class = DummyDB
 
     def setUp(self, before=None):
@@ -102,41 +81,22 @@ class CommonSetupTearDown(StorageTestBase):
         self.__super_setUp()
         logging.info("setUp() %s", self.id())
         self.file = 'storage_conf'
-        self.addr = []
-        self._pids = []
         self._servers = []
-        self.conf_paths = []
         self.caches = []
-        self._newAddr()
+        self.addr = [('127.0.0.1', 0)]
         self.startServer()
-
-#         self._old_log_level = logging.getLogger().getEffectiveLevel()
-#         logging.getLogger().setLevel(logging.WARNING)
-#         self._log_handler = logging.StreamHandler()
-#         logging.getLogger().addHandler(self._log_handler)
 
     def tearDown(self):
         """Try to cause the tests to halt"""
-#         logging.getLogger().setLevel(self._old_log_level)
-#         logging.getLogger().removeHandler(self._log_handler)
-#         logging.info("tearDown() %s" % self.id())
 
-        for p in self.conf_paths:
-            os.remove(p)
         if getattr(self, '_storage', None) is not None:
             self._storage.close()
             if hasattr(self._storage, 'cleanup'):
                 logging.debug("cleanup storage %s" %
                          self._storage.__name__)
                 self._storage.cleanup()
-        for adminaddr in self._servers:
-            if adminaddr is not None:
-                forker.shutdown_zeo_server(adminaddr)
-        for pid in self._pids:
-            try:
-                os.waitpid(pid, 0)
-            except OSError:
-                pass # The subprocess module may already have waited
+        for stop in self._servers:
+            stop()
 
         for c in self.caches:
             for i in 0, 1:
@@ -166,7 +126,7 @@ class CommonSetupTearDown(StorageTestBase):
         self.addr.append(self._getAddr())
 
     def _getAddr(self):
-        return 'localhost', forker.get_port(self)
+        return '127.0.0.1', forker.get_port(self)
 
     def getConfig(self, path, create, read_only):
         raise NotImplementedError
@@ -188,18 +148,17 @@ class CommonSetupTearDown(StorageTestBase):
                                     min_disconnect_poll=0.1,
                                     read_only=read_only,
                                     read_only_fallback=read_only_fallback,
-                                    username=username,
-                                    password=password,
-                                    realm=realm)
+                                    **self._client_options())
         storage.registerDB(DummyDB())
         return storage
 
+    def _client_options(self):
+        return {}
+
     def getServerConfig(self, addr, ro_svr):
-        zconf = forker.ZEOConfig(addr)
+        zconf = forker.ZEOConfig(addr, log='server.log')
         if ro_svr:
             zconf.read_only = 1
-        if self.monitor:
-            zconf.monitor_address = ("", 42000)
         if self.invq:
             zconf.invalidation_queue_size = self.invq
         if self.timeout:
@@ -207,7 +166,7 @@ class CommonSetupTearDown(StorageTestBase):
         return zconf
 
     def startServer(self, create=1, index=0, read_only=0, ro_svr=0, keep=None,
-                    path=None):
+                    path=None, **kw):
         addr = self.addr[index]
         logging.info("startServer(create=%d, index=%d, read_only=%d) @ %s" %
                      (create, index, read_only, addr))
@@ -217,48 +176,33 @@ class CommonSetupTearDown(StorageTestBase):
         zconf = self.getServerConfig(addr, ro_svr)
         if keep is None:
             keep = self.keep
-        zeoport, adminaddr, pid, path = forker.start_zeo_server(
-            sconf, zconf, addr[1], keep)
-        self.conf_paths.append(path)
-        self._pids.append(pid)
-        self._servers.append(adminaddr)
+        zeoport, stop = forker.start_zeo_server(
+            sconf, zconf, addr[1], keep, **kw)
+        self._servers.append(stop)
+        if addr[1] == 0:
+            self.addr[index] = zeoport
 
     def shutdownServer(self, index=0):
         logging.info("shutdownServer(index=%d) @ %s" %
                      (index, self._servers[index]))
-        adminaddr = self._servers[index]
-        if adminaddr is not None:
-            forker.shutdown_zeo_server(adminaddr)
-            self._servers[index] = None
+        stop = self._servers[index]
+        if stop is not None:
+            stop()
+            self._servers[index] = lambda : None
 
     def pollUp(self, timeout=30.0, storage=None):
         if storage is None:
             storage = self._storage
-        # Poll until we're connected.
-        now = time.time()
-        giveup = now + timeout
-        while not storage.is_connected():
-            asyncore.poll(0.1)
-            now = time.time()
-            if now > giveup:
-                self.fail("timed out waiting for storage to connect")
-            # When the socket map is empty, poll() returns immediately,
-            # and this is a pure busy-loop then.  At least on some Linux
-            # flavors, that can starve the thread trying to connect,
-            # leading to grossly increased runtime (typical) or bogus
-            # "timed out" failures.  A little sleep here cures both.
-            time.sleep(0.1)
+        storage.server_status()
 
     def pollDown(self, timeout=30.0):
         # Poll until we're disconnected.
         now = time.time()
         giveup = now + timeout
         while self._storage.is_connected():
-            asyncore.poll(0.1)
             now = time.time()
             if now > giveup:
                 self.fail("timed out waiting for storage to disconnect")
-            # See pollUp() for why we sleep a little here.
             time.sleep(0.1)
 
 
@@ -334,8 +278,9 @@ class ConnectionTests(CommonSetupTearDown):
         # object is not in the cache.
         self.shutdownServer()
         self._storage = self.openClientStorage('test', 1000, wait=0)
-        self.assertRaises(ClientDisconnected,
-                          self._storage.load, b'fredwash', '')
+        with short_timeout(self):
+            self.assertRaises(ClientDisconnected,
+                              self._storage.load, b'fredwash', '')
         self._storage.close()
 
     def checkBasicPersistence(self):
@@ -401,7 +346,8 @@ class ConnectionTests(CommonSetupTearDown):
         self.assertEqual(expected2, self._storage.load(oid2, ''))
         # But oid1 should have been purged, so that trying to load it will
         # try to fetch it from the (non-existent) ZEO server.
-        self.assertRaises(ClientDisconnected, self._storage.load, oid1, '')
+        with short_timeout(self):
+            self.assertRaises(ClientDisconnected, self._storage.load, oid1, '')
         self._storage.close()
 
     def checkVerificationInvalidationPersists(self):
@@ -465,7 +411,7 @@ class ConnectionTests(CommonSetupTearDown):
 
     def checkBadMessage1(self):
         # not even close to a real message
-        self._bad_message("salty")
+        self._bad_message(b"salty")
 
     def checkBadMessage2(self):
         # just like a real message, but with an unpicklable argument
@@ -485,22 +431,36 @@ class ConnectionTests(CommonSetupTearDown):
         self._storage = self.openClientStorage()
         self._dostore()
 
-        # break into the internals to send a bogus message
-        zrpc_conn = self._storage._server.rpc
-        zrpc_conn.message_output(msg)
+        generation = self._storage._connection_generation
 
+        future = concurrent.futures.Future()
+
+        def write():
+            try:
+                self._storage._server.client.protocol._write(msg)
+            except Exception as exc:
+                future.set_exception(exc)
+            else:
+                future.set_result(None)
+
+        # break into the internals to send a bogus message
+        self._storage._server.loop.call_soon_threadsafe(write)
+        future.result()
+
+        # If we manage to call _dostore before the server disconnects
+        # us, we'll get a ClientDisconnected error.  When we retry, it
+        # will succeed.  It will succeed because:
+        # - _dostore calls tpc_abort
+        # - tpc_abort makes a synchronous call to the server to abort
+        #   the transaction
+        # - when disconnected, synchronous calls are blocked for a little
+        #   while while reconnecting (or they timeout of it takes too long).
         try:
             self._dostore()
         except ClientDisconnected:
-            pass
-        else:
-            self._storage.close()
-            self.fail("Server did not disconnect after bogus message")
-        self._storage.close()
+            self._dostore()
 
-        self._storage = self.openClientStorage()
-        self._dostore()
-        self._storage.close()
+        self.assertTrue(self._storage._connection_generation > generation)
 
     # Test case for multiple storages participating in a single
     # transaction.  This is not really a connection test, but it needs
@@ -579,20 +539,35 @@ class ConnectionTests(CommonSetupTearDown):
         self._storage = self.openClientStorage()
         self._dostore()
         self.shutdownServer()
-        self.assertRaises(ClientDisconnected, self._storage.load, b'\0'*8, '')
+        with short_timeout(self):
+            self.assertRaises(ClientDisconnected,
+                              self._storage.load, b'\0'*8, '')
 
         self.startServer()
 
         # No matter how long we wait, the client won't reconnect:
         time.sleep(2)
-        self.assertRaises(ClientDisconnected, self._storage.load, b'\0'*8, '')
+        with short_timeout(self):
+            self.assertRaises(ClientDisconnected,
+                              self._storage.load, b'\0'*8, '')
+
+class SSLConnectionTests(ConnectionTests):
+
+    def getServerConfig(self, addr, ro_svr):
+        return testssl.server_config.replace(
+            '127.0.0.1:0',
+            '{}: {}\nread-only {}'.format(
+                addr[0], addr[1], 'true' if ro_svr else 'false'))
+
+    def _client_options(self):
+        return {'ssl': testssl.client_ssl()}
+
 
 class InvqTests(CommonSetupTearDown):
     invq = 3
 
     def checkQuickVerificationWith2Clients(self):
         perstorage = self.openClientStorage(cache="test", cache_size=4000)
-        self.assertEqual(perstorage.verify_result, "empty cache")
 
         self._storage = self.openClientStorage()
         oid = self._storage.new_oid()
@@ -622,8 +597,6 @@ class InvqTests(CommonSetupTearDown):
 
         perstorage = self.openClientStorage(cache="test")
         self.assertEqual(perstorage.verify_result, "quick verification")
-        self.assertEqual(perstorage._server._last_invals,
-                         (revid, [oid]))
 
         self.assertEqual(perstorage.load(oid, ''),
                          self._storage.load(oid, ''))
@@ -655,13 +628,7 @@ class InvqTests(CommonSetupTearDown):
             revid = self._dostore(oid, revid)
 
         perstorage = self.openClientStorage(cache="test")
-        self.assertEqual(perstorage.verify_result, "full verification")
-        t = time.time() + 30
-        while not perstorage.end_verify.isSet():
-            perstorage.sync()
-            if time.time() > t:
-                self.fail("timed out waiting for endVerify")
-
+        self.assertEqual(perstorage.verify_result, "cache too old, clearing")
         self.assertEqual(self._storage.load(oid, '')[1], revid)
         self.assertEqual(perstorage.load(oid, ''),
                          self._storage.load(oid, ''))
@@ -720,7 +687,8 @@ class ReconnectionTests(CommonSetupTearDown):
         # Poll until the client disconnects
         self.pollDown()
         # Stores should fail now
-        self.assertRaises(ClientDisconnected, self._dostore)
+        with short_timeout(self):
+            self.assertRaises(ClientDisconnected, self._dostore)
 
         # Restart the server
         self.startServer(create=0)
@@ -769,7 +737,8 @@ class ReconnectionTests(CommonSetupTearDown):
         # Poll until the client disconnects
         self.pollDown()
         # Stores should fail now
-        self.assertRaises(ClientDisconnected, self._dostore)
+        with short_timeout(self):
+            self.assertRaises(ClientDisconnected, self._dostore)
 
         # Restart the server
         self.startServer(create=0, read_only=1, keep=0)
@@ -797,8 +766,10 @@ class ReconnectionTests(CommonSetupTearDown):
         self._servers = []
         # Poll until the client disconnects
         self.pollDown()
-        # Stores should fail now
-        self.assertRaises(ClientDisconnected, self._dostore)
+
+        # Accesses should fail now
+        with short_timeout(self):
+            self.assertRaises(ClientDisconnected, self._storage.ping)
 
         # Restart the server, this time read-write
         self.startServer(create=0, keep=0)
@@ -852,7 +823,7 @@ class ReconnectionTests(CommonSetupTearDown):
         self.pollUp()
         # There were no transactions committed, so no verification
         # should be needed.
-        self.assertEqual(self._storage.verify_result, "no verification")
+        self.assertEqual(self._storage.verify_result, "Cache up to date")
 
     def checkNoVerificationOnServerRestartWith2Clients(self):
         perstorage = self.openClientStorage(cache="test")
@@ -883,8 +854,8 @@ class ReconnectionTests(CommonSetupTearDown):
         self.pollUp(storage=perstorage)
         # There were no transactions committed, so no verification
         # should be needed.
-        self.assertEqual(self._storage.verify_result, "no verification")
-        self.assertEqual(perstorage.verify_result, "no verification")
+        self.assertEqual(self._storage.verify_result, "Cache up to date")
+        self.assertEqual(perstorage.verify_result, "Cache up to date")
         perstorage.close()
         self._storage.close()
 
@@ -898,10 +869,10 @@ class ReconnectionTests(CommonSetupTearDown):
             data = zodb_pickle(MinPO(oid))
             self._storage.store(oid, None, data, '', txn)
         self.shutdownServer()
-        self.assertRaises(ClientDisconnected, self._storage.tpc_vote, txn)
-        self._storage.tpc_abort(txn)
+        with short_timeout(self):
+            self.assertRaises(ClientDisconnected, self._storage.tpc_vote, txn)
         self.startServer(create=0)
-        self._storage._wait()
+        self._storage.tpc_abort(txn)
         self._dostore()
 
         # This test is supposed to cover the following error, although
@@ -985,15 +956,16 @@ class TimeoutTests(CommonSetupTearDown):
     timeout = 1
 
     def checkTimeout(self):
-        storage = self.openClientStorage()
+        self._storage = storage = self.openClientStorage()
         txn = Transaction()
         storage.tpc_begin(txn)
         storage.tpc_vote(txn)
         time.sleep(2)
-        self.assertRaises(ClientDisconnected, storage.tpc_finish, txn)
+        with short_timeout(self):
+            self.assertRaises(ClientDisconnected, storage.tpc_finish, txn)
 
         # Make sure it's logged as CRITICAL
-        for line in open("server-%s.log" % self.addr[0][1]):
+        for line in open("server.log"):
             if (('Transaction timeout after' in line) and
                 ('CRITICAL ZEO.StorageServer' in line)
                 ):
@@ -1048,90 +1020,6 @@ class TimeoutTests(CommonSetupTearDown):
         # or the server.
         self.assertRaises(KeyError, storage.load, oid, '')
 
-    def checkTimeoutProvokingConflicts(self):
-        self._storage = storage = self.openClientStorage()
-        # Assert that the zeo cache is empty.
-        self.assert_(not list(storage._cache.contents()))
-        # Create the object
-        oid = storage.new_oid()
-        obj = MinPO(7)
-        # We need to successfully commit an object now so we have something to
-        # conflict about.
-        t = Transaction()
-        storage.tpc_begin(t)
-        revid1a = storage.store(oid, ZERO, zodb_pickle(obj), '', t)
-        revid1b = storage.tpc_vote(t)
-        revid1 = handle_serials(oid, revid1a, revid1b)
-        storage.tpc_finish(t)
-        # Now do a store, sleeping before the finish so as to cause a timeout.
-        obj.value = 8
-        t = Transaction()
-        old_connection_count = storage.connection_count_for_tests
-        storage.tpc_begin(t)
-        revid2a = storage.store(oid, revid1, zodb_pickle(obj), '', t)
-        revid2b = storage.tpc_vote(t)
-        revid2 = handle_serials(oid, revid2a, revid2b)
-
-        # Now sleep long enough for the storage to time out.
-        # This used to sleep for 3 seconds, and sometimes (but very rarely)
-        # failed then.  Now we try for a minute.  It typically succeeds
-        # on the second time thru the loop, and, since self.timeout is 1,
-        # it's typically faster now (2/1.8 ~= 1.11 seconds sleeping instead
-        # of 3).
-        deadline = time.time() + 60 # wait up to a minute
-        while time.time() < deadline:
-            if (storage.is_connected() and
-                (storage.connection_count_for_tests == old_connection_count)
-                ):
-                time.sleep(self.timeout / 1.8)
-            else:
-                break
-        self.assert_(
-            (not storage.is_connected())
-            or
-            (storage.connection_count_for_tests > old_connection_count)
-            )
-        storage._wait()
-        self.assert_(storage.is_connected())
-        # We expect finish to fail.
-        self.assertRaises(ClientDisconnected, storage.tpc_finish, t)
-        storage.tpc_abort(t)
-
-        # Now we think we've committed the second transaction, but we really
-        # haven't.  A third one should produce a POSKeyError on the server,
-        # which manifests as a ConflictError on the client.
-        obj.value = 9
-        t = Transaction()
-        storage.tpc_begin(t)
-        storage.store(oid, revid2, zodb_pickle(obj), '', t)
-        self.assertRaises(ConflictError, storage.tpc_vote, t)
-        # Even aborting won't help.
-        storage.tpc_abort(t)
-        self.assertRaises(ZODB.POSException.StorageTransactionError,
-                          storage.tpc_finish, t)
-        # Try again.
-        obj.value = 10
-        t = Transaction()
-        storage.tpc_begin(t)
-        storage.store(oid, revid2, zodb_pickle(obj), '', t)
-        # Even aborting won't help.
-        self.assertRaises(ConflictError, storage.tpc_vote, t)
-        # Abort this one and try a transaction that should succeed.
-        storage.tpc_abort(t)
-
-        # Now do a store.
-        obj.value = 11
-        t = Transaction()
-        storage.tpc_begin(t)
-        revid2a = storage.store(oid, revid1, zodb_pickle(obj), '', t)
-        revid2b = storage.tpc_vote(t)
-        revid2 = handle_serials(oid, revid2a, revid2b)
-        storage.tpc_finish(t)
-        # Now load the object and verify that it has a value of 11.
-        data, revid = storage.load(oid, '')
-        self.assertEqual(zodb_unpickle(data), MinPO(11))
-        self.assertEqual(revid, revid2)
-
 class MSTThread(threading.Thread):
 
     __super_init = threading.Thread.__init__
@@ -1176,14 +1064,12 @@ class MSTThread(threading.Thread):
                     data = MinPO("%s.%s.t%d.o%d" % (tname, c.__name, i, j))
                     #print(data.value)
                     data = zodb_pickle(data)
-                    s = c.store(oid, ZERO, data, '', t)
-                    c.__serials.update(handle_all_serials(oid, s))
+                    c.store(oid, ZERO, data, '', t)
 
             # Vote on all servers and handle serials
             for c in clients:
                 #print("%s.%s.%s vote" % (tname, c.__name, i))
-                s = c.tpc_vote(t)
-                c.__serials.update(handle_all_serials(None, s))
+                c.tpc_vote(t)
 
             # Finish on all servers
             for c in clients:
@@ -1205,6 +1091,14 @@ class MSTThread(threading.Thread):
                 c.close()
             except:
                 pass
+
+
+@contextlib.contextmanager
+def short_timeout(self):
+    old = self._storage._server.timeout
+    self._storage._server.timeout = 1
+    yield
+    self._storage._server.timeout = old
 
 # Run IPv6 tests if V6 sockets are supported
 try:

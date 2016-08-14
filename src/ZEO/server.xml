@@ -1,0 +1,120 @@
+<component>
+
+  <sectiontype name="ssl" datatype="ZEO.zconfig.server_ssl">
+
+    <key name="certificate" datatype="existing-dirpath" required="yes">
+      <description>
+        The full path to an SSL certificate file.
+      </description>
+    </key>
+
+    <key name="key" datatype="existing-dirpath" required="no">
+      <description>
+        The full path to an SSL key file for the server certificate.
+      </description>
+    </key>
+
+    <key name="password-function" required="no">
+      <description>
+        Dotted name of importable function for retrieving a password
+        for the client certificate key.
+      </description>
+    </key>
+
+    <key name="authenticate" required="yes">
+      <description>
+        Path to a file or directory containing client certificates to
+        be authenticated. This can also be - or SIGNED to require
+        signed client certificates.
+      </description>
+    </key>
+
+  </sectiontype>
+
+  <sectiontype name="zeo">
+
+    <section type="ssl" name="*" attribute="ssl" />
+
+    <description>
+      The content of a ZEO section describe operational parameters
+      of a ZEO server except for the storage(s) to be served.
+    </description>
+
+    <key name="address" datatype="socket-binding-address"
+         required="yes">
+      <description>
+        The address at which the server should listen.  This can be in
+        the form 'host:port' to signify a TCP/IP connection or a
+        pathname string to signify a Unix domain socket connection (at
+        least one '/' is required).  A hostname may be a DNS name or a
+        dotted IP address.  If the hostname is omitted, the platform's
+        default behavior is used when binding the listening socket (''
+        is passed to socket.bind() as the hostname portion of the
+        address).
+      </description>
+    </key>
+
+    <key name="read-only" datatype="boolean"
+         required="no"
+         default="false">
+      <description>
+        Flag indicating whether the server should operate in read-only
+        mode.  Defaults to false.  Note that even if the server is
+        operating in writable mode, individual storages may still be
+        read-only.  But if the server is in read-only mode, no write
+        operations are allowed, even if the storages are writable.  Note
+        that pack() is considered a read-only operation.
+      </description>
+    </key>
+
+    <key name="invalidation-queue-size" datatype="integer"
+         required="no"
+         default="100">
+      <description>
+        The storage server keeps a queue of the objects modified by the
+        last N transactions, where N == invalidation_queue_size.  This
+        queue is used to speed client cache verification when a client
+        disconnects for a short period of time.
+      </description>
+    </key>
+
+    <key name="invalidation-age" datatype="float" required="no">
+      <description>
+        The maximum age of a client for which quick-verification
+        invalidations will be provided by iterating over the served
+        storage. This option should only be used if the served storage
+        supports efficient iteration from a starting point near the
+        end of the transaction history (e.g. end of file).
+      </description>
+    </key>
+
+    <key name="transaction-timeout" datatype="integer"
+         required="no">
+      <description>
+        The maximum amount of time to wait for a transaction to commit
+        after acquiring the storage lock, specified in seconds.  If the
+        transaction takes too long, the client connection will be closed
+        and the transaction aborted.
+      </description>
+    </key>
+
+    <key name="pid-filename" datatype="existing-dirpath"
+         required="no">
+      <description>
+        The full path to the file in which to write the ZEO server's Process ID
+        at startup. If omitted, $INSTANCE/var/ZEO.pid is used.
+      </description>
+      <metadefault>$INSTANCE/var/ZEO.pid (or $clienthome/ZEO.pid)</metadefault>
+    </key>
+
+    <key name="client-conflict-resolution" datatype="boolean"
+         required="no" default="false">
+      <description>
+        Flag indicating whether the server should return conflict
+        errors to the client, for resolution there.
+      </description>
+    </key>
+
+  </sectiontype>
+
+</component>

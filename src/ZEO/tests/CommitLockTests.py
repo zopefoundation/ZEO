@@ -30,6 +30,8 @@ class DummyDB:
     def invalidate(self, *args, **kwargs):
         pass
 
+    transform_record_data = untransform_record_data = lambda self, data: data
+
 class WorkerThread(TestThread):
 
     # run the entire test in a thread so that the blocking call for
@@ -60,17 +62,11 @@ class WorkerThread(TestThread):
         # coordinate the action of multiple threads that all call
         # vote().  This method sends the vote call, then sets the
         # event saying vote was called, then waits for the vote
-        # response.  It digs deep into the implementation of the client.
+        # response.
 
-        # This method is a replacement for:
-        #     self.ready.set()
-        #     self.storage.tpc_vote(self.trans)
-
-        rpc = self.storage._server.rpc
-        msgid = rpc._deferred_call('vote', id(self.trans))
+        future = self.storage._server.call_future('vote', id(self.trans))
         self.ready.set()
-        rpc._deferred_wait(msgid)
-        self.storage._check_serials()
+        future.result(9)
 
 class CommitLockTests:
 
@@ -133,7 +129,8 @@ class CommitLockTests:
         # list is a socket domain (AF_INET, AF_UNIX, etc.) and an
         # address.
         addr = self._storage._addr
-        new = ZEO.ClientStorage.ClientStorage(addr, wait=1)
+        new = ZEO.ClientStorage.ClientStorage(
+            addr, wait=1, **self._client_options())
         new.registerDB(DummyDB())
         return new
 

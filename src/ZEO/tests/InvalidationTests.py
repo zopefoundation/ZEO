@@ -324,8 +324,8 @@ class InvalidationTests:
 
     def checkConcurrentUpdates2Storages_emulated(self):
         self._storage = storage1 = self.openClientStorage()
-        storage2 = self.openClientStorage()
         db1 = DB(storage1)
+        storage2 = self.openClientStorage()
         db2 = DB(storage2)
 
         cn = db1.open()
@@ -349,8 +349,8 @@ class InvalidationTests:
 
     def checkConcurrentUpdates2Storages(self):
         self._storage = storage1 = self.openClientStorage()
-        storage2 = self.openClientStorage()
         db1 = DB(storage1)
+        storage2 = self.openClientStorage()
         db2 = DB(storage2)
         stop = threading.Event()
 

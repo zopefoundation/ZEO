@@ -500,7 +500,8 @@ def days(f):
     minute(f, 10, detail=0)
 
 
-new_connection_idre = re.compile(r"new connection \('(\d+.\d+.\d+.\d+)', (\d+)\):")
+new_connection_idre = re.compile(
+    r"new connection \('(\d+.\d+.\d+.\d+)', (\d+)\):")
 def verify(f):
     f, = f
 
