@@ -1,6 +1,9 @@
 Changelog
 =========
 
+5.0.0b0 (2016-08-18)
+--------------------
+
 - Added a ``ClientStorage`` ``server-sync`` configuration option and
   ``server_sync`` constructor argument to force a server round trip at
   the beginning of transactions to wait for any outstanding

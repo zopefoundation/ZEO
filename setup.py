@@ -11,7 +11,7 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-version = '5.0.0a2'
+version = '5.0.0b0'
 
 from setuptools import setup, find_packages
 import os
