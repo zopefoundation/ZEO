@@ -1,6 +1,56 @@
 Changelog
 =========
 
+5.0.0 (2016-09-06)
+------------------
+
+This is a major ZEO revision, which replaces the ZEO network protocol
+implementation.
+
+New features:
+
+- SSL support
+
+- Optional client-side conflict resolution.
+
+- Lots of mostly internal clean ups.
+
+- ``ClientStorage``server-sync`` configuration option and
+  ``server_sync`` constructor argument to force a server round trip at
+  the beginning of transactions to wait for any outstanding
+  invalidations at the start of the transaction to be delivered.
+
+- Client disconnect errors are now transient errors.  When
+  applications retry jobs that raise transient errors, jobs (e.g. web
+  requests) with disconnect errors will be retried. Together with
+  blocking synchronous ZEO server calls for a limited time while
+  disconnected, this change should allow brief disconnections due to
+  server restart to avoid generating client-visible errors (e.g. 500
+  web responses).
+
+- ClientStorage prefetch method to prefetch oids.
+
+  When oids are prefetched, requests are made at once, but the caller
+  doesn't block waiting for the results.  Rather, then the caller
+  later tries to fetch data for one of the object ids, it's either
+  delivered right away from the ZEO cache, if the prefetch for the
+  object id has completed, or the caller blocks until the inflight
+  prefetch completes. (No new request is made.)
+
+Dropped features:
+
+- The ZEO authentication protocol.
+
+  This will be replaced by new authentication mechanims leveraging SSL.
+
+- The ZEO monitor server.
+
+- Full cache verification.
+
+- Client suppprt for servers older than ZODB 3.9
+
+- Server support for clients older than ZEO 4.2.0
+
 5.0.0b0 (2016-08-18)
 --------------------
 
