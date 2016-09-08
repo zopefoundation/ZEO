@@ -19,11 +19,11 @@ import sys
 
 if sys.version_info < (2, 7, 9):
     print("This version of ZEO requires Python 2.7.9 or higher")
-    sys.exit(0)
+    sys.exit(1)
 
 if (3, 0) < sys.version_info < (3, 4):
     print("This version of ZEO requires Python 3.4 or higher")
-    sys.exit(0)
+    sys.exit(1)
 
 install_requires = [
     'ZODB >= 5.0.0a5',
