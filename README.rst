@@ -243,9 +243,6 @@ ZODB documentation for information on configuring storages. See
 `Configuring event logs <logs.rst>`_ for information on configuring
 server logs.
 
-An **easy way to get started** with configuration is to run an add-hoc
-server and copy the generated configuration.
-
 The zeo section must list the address.  All the other keys are
 optional.
 
