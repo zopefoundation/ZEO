@@ -63,7 +63,7 @@ class Protocol(base.Protocol):
     # One place where special care was required was in cache setup on
     # connect. See finish connect below.
 
-    protocols = b'Z309', b'Z310', b'Z3101', b'Z4', b'Z5'
+    protocols = (b'M5', )
 
     def __init__(self, loop,
                  addr, client, storage_key, read_only, connect_poll=1,
@@ -199,10 +199,15 @@ class Protocol(base.Protocol):
 
     exception_type_type = type(Exception)
     def message_received(self, data):
-        msgid, async, name, args = decode(data)
-        if name == '.reply':
+        msgid, name, args = decode(data)
+        if name in 'RE':
             future = self.futures.pop(msgid)
-            if (async): # ZEO 5 exception
+            if isinstance(future, tuple):
+                future = self.futures.pop(future)
+
+            if name == 'R':
+                future.set_result(args)
+            else:
                 class_, args = args
                 factory = exc_factories.get(class_)
                 if factory:
@@ -212,22 +217,10 @@ class Protocol(base.Protocol):
                                      self.name, class_, args)
                 else:
                     exc = ServerException(class_, args)
+
                 future.set_exception(exc)
-            elif (isinstance(args, tuple) and len(args) > 1 and
-                  type(args[0]) == self.exception_type_type and
-                  issubclass(args[0], Exception)
-                  ):
-                if not issubclass(args[0], unlogged_exceptions):
-                    logger.error("%s from server: %s.%s:%s",
-                                 self.name,
-                                 args[0].__module__,
-                                 args[0].__name__,
-                                 args[1])
-                future.set_exception(args[1])
-            else:
-                future.set_result(args)
         else:
-            assert async # clients only get async calls
+            assert msgid == 0 # clients only get async calls
             if name in self.client_methods:
                 getattr(self.client, name)(*args)
             else:
@@ -237,7 +230,7 @@ class Protocol(base.Protocol):
     def call(self, future, method, args):
         self.message_id += 1
         self.futures[self.message_id] = future
-        self._write(self.encode(self.message_id, False, method, args))
+        self._write(self.encode(self.message_id, method, args))
         return future
 
     def fut(self, method, *args):
@@ -245,13 +238,15 @@ class Protocol(base.Protocol):
 
     def load_before(self, oid, tid):
         # Special-case loadBefore, so we collapse outstanding requests
-        message_id = (oid, tid)
-        future = self.futures.get(message_id)
+        oid_tid = (oid, tid)
+        future = self.futures.get(oid_tid)
         if future is None:
             future = asyncio.Future(loop=self.loop)
-            self.futures[message_id] = future
+            self.futures[oid_tid] = future
+            self.message_id += 1
+            self.futures[self.message_id] = oid_tid
             self._write(
-                self.encode(message_id, False, 'loadBefore', (oid, tid)))
+                self.encode(self.message_id, 'loadBefore', oid_tid))
         return future
 
     # Methods called by the server.
@@ -267,7 +262,7 @@ class Protocol(base.Protocol):
 
     def heartbeat(self, write=True):
         if write:
-            self._write(b'(J\xff\xff\xff\xffK\x00U\x06.replyNt.')
+            self._write(b'\x93\xff\xa0\xc0')
         self.heartbeat_handle = self.loop.call_later(
             self.heartbeat_interval, self.heartbeat)
 

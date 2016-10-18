@@ -34,6 +34,7 @@ install_requires = [
     'ZConfig',
     'zdaemon',
     'zope.interface',
+    'msgpack-python',
     ]
 
 tests_require = ['zope.testing', 'manuel', 'random2', 'mock']
