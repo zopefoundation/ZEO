@@ -180,7 +180,8 @@ class Protocol(base.Protocol):
             try:
                 server_tid = yield self.fut(
                     'register', self.storage_key,
-                    self.read_only if self.read_only is not Fallback else False,
+                    bool(self.read_only if self.read_only is not Fallback
+                         else False),
                     *credentials)
             except ZODB.POSException.ReadOnlyError:
                 if self.read_only is Fallback:
