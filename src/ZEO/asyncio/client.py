@@ -15,6 +15,8 @@ from . import base
 from .compat import asyncio, new_event_loop
 from .marshal import decode
 
+from .threaded import EventLoop as new_event_loop
+
 logger = logging.getLogger(__name__)
 
 Fallback = object()
@@ -122,7 +124,12 @@ class Protocol(base.Protocol):
             cr = self.loop.create_unix_connection(
                 self.protocol_factory, self.addr, ssl=self.ssl)
 
-        self._connecting = cr = asyncio.async(cr, loop=self.loop)
+        if hasattr(self.loop, 'create_task'):
+            cr = self.loop.create_task(cr)
+        else:
+            cr = asyncio.async(cr, loop=self.loop)
+
+        self._connecting = cr
 
         @cr.add_done_callback
         def done_connecting(future):
