@@ -65,7 +65,6 @@ class EventLoop:
         self,
         protocol_factory,
         host=None, port=None,
-        *,
         ssl=None, server_hostname=None
         ):
         future = concurrent.futures.Future()
