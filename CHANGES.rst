@@ -4,8 +4,11 @@ Changelog
 5.0.2 (unreleased)
 ------------------
 
+- Provide much better performance on Python 2.
+
 - Provide better error messages when pip tries to install ZEO on an
-  unsupported Python version. See `issue 75 <https://github.com/zopefoundation/ZEO/issues/75>`_.
+  unsupported Python version. See `issue 75
+  <https://github.com/zopefoundation/ZEO/issues/75>`_.
 
 5.0.1 (2016-09-06)
 ------------------
