@@ -971,8 +971,8 @@ def test_prefetch(self):
     >>> conn.close()
     >>> conn = ZEO.connection(addr)
     >>> storage = conn.db().storage
-    >>> len(storage._cache)
-    1
+    >>> len(storage._cache) <= 1
+    True
     >>> storage.prefetch(oids, conn._storage._start)
 
     The prefetch returns before the cache is filled:
