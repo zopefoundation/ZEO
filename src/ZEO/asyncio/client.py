@@ -547,7 +547,7 @@ class Client(object):
     def get_peername(self):
         return self.protocol.get_peername()
 
-    def call_async_threadsafe(self, future, _, method, args):
+    def call_async_threadsafe(self, future, wait_ready, method, args):
         if self.ready:
             self.protocol.call_async(method, args)
             future.set_result(None)
@@ -557,7 +557,7 @@ class Client(object):
     def call_async_from_same_thread(self, method, *args):
         return self.protocol.call_async(method, args)
 
-    def call_async_iter_threadsafe(self, future, _, it):
+    def call_async_iter_threadsafe(self, future, wait_ready, it):
         if self.ready:
             self.protocol.call_async_iter(it)
             future.set_result(None)
@@ -623,7 +623,7 @@ class Client(object):
         except Exception:
             logger.exception("prefetch %r %r" % (oid, tid))
 
-    def prefetch(self, future, _, oids, tid):
+    def prefetch(self, future, wait_ready, oids, tid):
         if self.ready:
             for oid in oids:
                 if self.cache.loadBefore(oid, tid) is None:
@@ -634,7 +634,7 @@ class Client(object):
             future.set_exception(ClientDisconnected())
 
     @future_generator
-    def tpc_finish_threadsafe(self, future, _, tid, updates, f):
+    def tpc_finish_threadsafe(self, future, wait_ready, tid, updates, f):
         if self.ready:
             try:
                 tid = yield self.protocol.fut('tpc_finish', tid)
@@ -804,7 +804,7 @@ class ClientRunner(object):
 
         self.__call = call_closed
 
-    def apply_threadsafe(self, future, _, func, *args):
+    def apply_threadsafe(self, future, wait_ready, func, *args):
         try:
             future.set_result(func(*args))
         except Exception as exc:
