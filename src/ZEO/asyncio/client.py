@@ -547,7 +547,7 @@ class Client(object):
     def get_peername(self):
         return self.protocol.get_peername()
 
-    def call_async_threadsafe(self, future, method, args):
+    def call_async_threadsafe(self, future, wait_ready, method, args):
         if self.ready:
             self.protocol.call_async(method, args)
             future.set_result(None)
@@ -557,7 +557,7 @@ class Client(object):
     def call_async_from_same_thread(self, method, *args):
         return self.protocol.call_async(method, args)
 
-    def call_async_iter_threadsafe(self, future, it):
+    def call_async_iter_threadsafe(self, future, wait_ready, it):
         if self.ready:
             self.protocol.call_async_iter(it)
             future.set_result(None)
@@ -581,16 +581,19 @@ class Client(object):
                     else:
                         self._when_ready(func, result_future, *args)
 
-    def call_threadsafe(self, future, method, args):
+    def call_threadsafe(self, future, wait_ready, method, args):
         if self.ready:
             self.protocol.call(future, method, args)
+        elif wait_ready:
+            self._when_ready(
+                self.call_threadsafe, future, wait_ready, method, args)
         else:
-            self._when_ready(self.call_threadsafe, future, method, args)
+            future.set_exception(ClientDisconnected())
 
     # Special methods because they update the cache.
 
     @future_generator
-    def load_before_threadsafe(self, future, oid, tid):
+    def load_before_threadsafe(self, future, wait_ready, oid, tid):
         data = self.cache.loadBefore(oid, tid)
         if data is not None:
             future.set_result(data)
@@ -604,8 +607,11 @@ class Client(object):
                 if data:
                     data, start, end = data
                     self.cache.store(oid, start, end, data)
+        elif wait_ready:
+            self._when_ready(
+                self.load_before_threadsafe, future, wait_ready, oid, tid)
         else:
-            self._when_ready(self.load_before_threadsafe, future, oid, tid)
+            future.set_exception(ClientDisconnected())
 
     @future_generator
     def _prefetch(self, oid, tid):
@@ -617,7 +623,7 @@ class Client(object):
         except Exception:
             logger.exception("prefetch %r %r" % (oid, tid))
 
-    def prefetch(self, future, oids, tid):
+    def prefetch(self, future, wait_ready, oids, tid):
         if self.ready:
             for oid in oids:
                 if self.cache.loadBefore(oid, tid) is None:
@@ -628,7 +634,7 @@ class Client(object):
             future.set_exception(ClientDisconnected())
 
     @future_generator
-    def tpc_finish_threadsafe(self, future, tid, updates, f):
+    def tpc_finish_threadsafe(self, future, wait_ready, tid, updates, f):
         if self.ready:
             try:
                 tid = yield self.protocol.fut('tpc_finish', tid)
@@ -652,7 +658,7 @@ class Client(object):
         else:
             future.set_exception(ClientDisconnected())
 
-    def close_threadsafe(self, future):
+    def close_threadsafe(self, future, _):
         self.close()
         future.set_result(None)
 
@@ -720,15 +726,30 @@ class ClientRunner(object):
         def call(meth, *args, **kw):
             timeout = kw.pop('timeout', None)
             assert not kw
+
+            # Some explanation of the code below.
+            # Timeouts on Python 2 are expensive, so we try to avoid
+            # them if we're connected.  The 3rd argument below is a
+            # wait flag.  If false, and we're disconnected, we fail
+            # immediately. If that happens, then we try again with the
+            # wait flag set to True and wait with the default timeout.
             result = Future()
-            call_soon_threadsafe(meth, result, *args)
-            return self.wait_for_result(result, timeout)
+            call_soon_threadsafe(meth, result, timeout is not None, *args)
+            try:
+                return self.wait_for_result(result, timeout)
+            except ClientDisconnected:
+                if timeout is None:
+                    result = Future()
+                    call_soon_threadsafe(meth, result, True, *args)
+                    return self.wait_for_result(result, self.timeout)
+                else:
+                    raise
 
         self.__call = call
 
     def wait_for_result(self, future, timeout):
         try:
-            return future.result(self.timeout if timeout is None else timeout)
+            return future.result(timeout)
         except concurrent.futures.TimeoutError:
             if not self.client.ready:
                 raise ClientDisconnected("timed out waiting for connection")
@@ -742,7 +763,7 @@ class ClientRunner(object):
         # for tests
         result = concurrent.futures.Future()
         self.loop.call_soon_threadsafe(
-            self.call_threadsafe, result, method, args)
+            self.call_threadsafe, result, True, method, args)
         return result
 
     def async(self, method, *args):
@@ -783,7 +804,7 @@ class ClientRunner(object):
 
         self.__call = call_closed
 
-    def apply_threadsafe(self, future, func, *args):
+    def apply_threadsafe(self, future, wait_ready, func, *args):
         try:
             future.set_result(func(*args))
         except Exception as exc:

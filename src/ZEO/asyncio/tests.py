@@ -113,6 +113,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
             sized(self.encode(message_id, False, '.reply', result)))
 
     def wait_for_result(self, future, timeout):
+        if future.done() and future.exception() is not None:
+            raise future.exception()
         return future
 
     def testClientBasics(self):
@@ -145,8 +147,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         # connecting, we get an error. This is because some dufus
         # decided to create a client storage without waiting for it to
         # connect.
-        f1 = self.call('foo', 1, 2)
-        self.assertTrue(isinstance(f1.exception(), ClientDisconnected))
+        self.assertRaises(ClientDisconnected, self.call, 'foo', 1, 2)
 
         # When the client is reconnecting, it's ready flag is set to False and
         # it queues calls:
@@ -155,8 +156,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertFalse(f1.done())
 
         # If we try to make an async call, we get an immediate error:
-        f2 = self.async('bar', 3, 4)
-        self.assert_(isinstance(f2.exception(), ClientDisconnected))
+        self.assertRaises(ClientDisconnected, self.async, 'bar', 3, 4)
 
         # The wrapper object (ClientStorage) hasn't been notified:
         self.assertFalse(wrapper.notify_connected.called)
