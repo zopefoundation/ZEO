@@ -1,7 +1,7 @@
 Changelog
 =========
 
-5.0.2 (unreleased)
+5.0.2 (2016-11-02)
 ------------------
 
 - Provide much better performance on Python 2.
