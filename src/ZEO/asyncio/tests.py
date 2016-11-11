@@ -110,7 +110,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
 
     def respond(self, message_id, result):
         self.loop.protocol.data_received(
-            sized(self.encode(message_id, False, '.reply', result)))
+            sized(self.encode(message_id, 'R', result)))
 
     def wait_for_result(self, future, timeout):
         if future.done() and future.exception() is not None:
@@ -674,7 +674,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
 
         # The heartbeat function sends heartbeat data and reschedules itself.
         func()
-        self.assertEqual(self.pop(), (-1, 0, '.reply', None))
+        self.assertEqual(self.pop()[0], -1)
         self.assertTrue(protocol.heartbeat_handle != handle)
 
         delay, func, args, handle = loop.later.pop()
@@ -781,7 +781,7 @@ class ServerTests(Base, setupstack.TestCase):
 
         if expect is not self:
             self.assertEqual(self.pop(),
-                             (self.message_id, False, '.reply', expect))
+                             (self.message_id, 'R', expect))
 
     def testServerBasics(self):
         # A simple listening thread accepts connections.  It creats
@@ -803,7 +803,7 @@ class ServerTests(Base, setupstack.TestCase):
         self.call('register', False, expect=None)
 
         # It does other things, like, send hearbeats:
-        protocol.data_received(sized(b'(J\xff\xff\xff\xffK\x00U\x06.replyNt.'))
+        protocol.data_received(sized(b'\x93\xff\xa0\xc0'))
 
         # The client can make async calls:
         self.send('register')

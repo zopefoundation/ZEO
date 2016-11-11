@@ -139,10 +139,10 @@ class Protocol(asyncio.Protocol):
         self.finish_connect(protocol_version)
 
     def call_async(self, method, args):
-        self._write(self.encode(0, True, method, args))
+        self._write(self.encode(0, method, args))
 
     def call_async_iter(self, it):
-        self._writeit(self.encode(0, True, method, args)
+        self._writeit(self.encode(0, method, args)
                       for method, args in it)
 
     def pause_writing(self):

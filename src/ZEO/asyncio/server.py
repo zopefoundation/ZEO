@@ -17,7 +17,7 @@ class ServerProtocol(base.Protocol):
     """asyncio low-level ZEO server interface
     """
 
-    protocols = (b'Z5', )
+    protocols = (b'M5', )
 
     name = 'server protocol'
     methods = set(('register', ))
@@ -79,7 +79,7 @@ class ServerProtocol(base.Protocol):
 
     def message_received(self, message):
         try:
-            message_id, async, name, args = server_decode(message)
+            message_id, name, args = server_decode(message)
         except Exception:
             logger.exception("Can't deserialize message")
             self.close()
@@ -96,18 +96,20 @@ class ServerProtocol(base.Protocol):
         except Exception as exc:
             if not isinstance(exc, self.unlogged_exception_types):
                 logger.exception(
-                    "Bad %srequest, %r", 'async ' if async else '', name)
-            if async:
+                    "Bad %srequest, %r",
+                    'async ' if message_id == 0 else '',
+                    name)
+            if message_id == 0:
                 return self.close() # No way to recover/cry for help
             else:
                 return self.send_error(message_id, exc)
 
-        if not async:
+        if message_id != 0:
             self.send_reply(message_id, result)
 
-    def send_reply(self, message_id, result, send_error=False, flag=0):
+    def send_reply(self, message_id, result, send_error=False, rtype='R'):
         try:
-            result = self.encode(message_id, flag, '.reply', result)
+            result = self.encode(message_id, rtype, result)
         except Exception:
             if isinstance(result, Delay):
                 result.set_sender(message_id, self)
@@ -131,7 +133,7 @@ class ServerProtocol(base.Protocol):
         class_ = exc.__class__
         class_ = "%s.%s" % (class_.__module__, class_.__name__)
         args = class_, exc.__dict__ or exc.args
-        self.send_reply(message_id, args, send_error, 2)
+        self.send_reply(message_id, args, send_error, 'E')
 
     def async(self, method, *args):
         self.call_async(method, args)

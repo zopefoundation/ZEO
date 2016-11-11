@@ -793,7 +793,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
     def tpc_transaction(self):
         return self._transaction
 
-    def tpc_begin(self, txn, tid=None, status=' '):
+    def tpc_begin(self, txn, tid=None, status=b' '):
         """Storage API: begin a transaction."""
         if self._is_read_only:
             raise POSException.ReadOnlyError()
@@ -823,7 +823,10 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         try:
             self._async(
                 'tpc_begin', id(txn),
-                txn.user, txn.description, txn._extension, tid, status)
+                txn.user.encode('utf-8'),
+                txn.description.encode('utf-8'),
+                b'', # TODO: deal with extension info
+                tid, status)
         except ClientDisconnected:
             self.tpc_end(txn)
             raise
