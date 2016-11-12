@@ -76,13 +76,14 @@ class Acceptor(asyncore.dispatcher):
     And creates a separate thread for each.
     """
 
-    def __init__(self, storage_server, addr, ssl):
+    def __init__(self, storage_server, addr, ssl, msgpack):
         self.storage_server = storage_server
         self.addr = addr
         self.__socket_map = {}
         asyncore.dispatcher.__init__(self, map=self.__socket_map)
 
         self.ssl_context = ssl
+        self.msgpack = msgpack
         self._open_socket()
 
     def _open_socket(self):
@@ -165,7 +166,7 @@ class Acceptor(asyncore.dispatcher):
             def run():
                 loop = new_event_loop()
                 zs = self.storage_server.create_client_handler()
-                protocol = ServerProtocol(loop, self.addr, zs)
+                protocol = ServerProtocol(loop, self.addr, zs, self.msgpack)
                 protocol.stop = loop.stop
 
                 if self.ssl_context is None:

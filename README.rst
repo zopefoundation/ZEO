@@ -289,6 +289,13 @@ client-conflict-resolution
         Flag indicating that clients should perform conflict
         resolution. This option defaults to false.
 
+msgpack
+        Use msgpack to serialize and de-serialize ZEO protocol messages.
+
+        An advantage of using msgpack for ZEO communication is that
+        it's a little bit faster and a ZEO server can support Python 2
+        or Python 3 clients (but not both).
+
 Server SSL configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~
 

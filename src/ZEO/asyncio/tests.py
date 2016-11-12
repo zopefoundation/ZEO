@@ -21,13 +21,16 @@ from ..Exceptions import ClientDisconnected, ProtocolError
 from .testing import Loop
 from .client import ClientRunner, Fallback
 from .server import new_connection, best_protocol_version
-from .marshal import encoder, decode
+from .marshal import encoder, decoder
 
 class Base(object):
 
+    enc = b'Z'
+
     def setUp(self):
         super(Base, self).setUp()
-        self.encode = encoder()
+        self.encode = encoder(self.enc)
+        self.decode = decoder(self.enc)
 
     def unsized(self, data, unpickle=False):
         result = []
@@ -36,7 +39,11 @@ class Base(object):
             data = data[2:]
             self.assertEqual(struct.unpack(">I", size)[0], len(message))
             if unpickle:
-                message = decode(message)
+                message = tuple(self.decode(message))
+                if isinstance(message[-1], list):
+                    message = message[:-1] + (tuple(message[-1]),)
+                if isinstance(message[0], list):
+                    message = (tuple(message[-1]),) + message[1:]
             result.append(message)
 
         if len(result) == 1:
@@ -98,8 +105,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         transport = loop.transport
 
         if finish_start:
-            protocol.data_received(sized(b'Z3101'))
-            self.assertEqual(self.pop(2, False), b'Z3101')
+            protocol.data_received(sized(self.enc + b'3101'))
+            self.assertEqual(self.pop(2, False), self.enc + b'3101')
             self.respond(1, None)
             self.respond(2, 'a'*8)
             self.pop(4)
@@ -108,9 +115,9 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
 
         return (wrapper, cache, self.loop, self.client, protocol, transport)
 
-    def respond(self, message_id, result):
+    def respond(self, message_id, result, async=False):
         self.loop.protocol.data_received(
-            sized(self.encode(message_id, False, '.reply', result)))
+            sized(self.encode(message_id, async, '.reply', result)))
 
     def wait_for_result(self, future, timeout):
         if future.done() and future.exception() is not None:
@@ -133,11 +140,11 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         # The server sends the client it's protocol. In this case,
         # it's a very high one.  The client will send it's highest that
         # it can use.
-        protocol.data_received(sized(b'Z99999'))
+        protocol.data_received(sized(self.enc + b'99999'))
 
         # The client sends back a handshake, and registers the
         # storage, and requests the last transaction.
-        self.assertEqual(self.pop(2, False), b'Z5')
+        self.assertEqual(self.pop(2, False), self.enc + b'5')
         self.assertEqual(self.pop(), (1, False, 'register', ('TEST', False)))
 
         # The client isn't connected until it initializes it's cache:
@@ -195,12 +202,10 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         loaded = self.load_before(b'1'*8, maxtid)
 
         # The data wasn't in the cache, so we made a server call:
-        self.assertEqual(
-            self.pop(),
-            ((b'1'*8, maxtid), False, 'loadBefore', (b'1'*8, maxtid)))
+        self.assertEqual(self.pop(), (5, False, 'loadBefore', (b'1'*8, maxtid)))
         # Note load_before uses the oid as the message id.
-        self.respond((b'1'*8, maxtid), (b'data', b'a'*8, None))
-        self.assertEqual(loaded.result(), (b'data', b'a'*8, None))
+        self.respond(5, (b'data', b'a'*8, None))
+        self.assertEqual(tuple(loaded.result()), (b'data', b'a'*8, None))
 
         # If we make another request, it will be satisfied from the cache:
         loaded = self.load_before(b'1'*8, maxtid)
@@ -217,27 +222,23 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         # the requests will be collapsed:
         loaded2 = self.load_before(b'1'*8, maxtid)
 
-        self.assertEqual(
-            self.pop(),
-            ((b'1'*8, maxtid), False, 'loadBefore', (b'1'*8, maxtid)))
-        self.respond((b'1'*8, maxtid), (b'data2', b'b'*8, None))
-        self.assertEqual(loaded.result(), (b'data2', b'b'*8, None))
-        self.assertEqual(loaded2.result(), (b'data2', b'b'*8, None))
+        self.assertEqual(self.pop(), (6, False, 'loadBefore', (b'1'*8, maxtid)))
+        self.respond(6, (b'data2', b'b'*8, None))
+        self.assertEqual(tuple(loaded.result()), (b'data2', b'b'*8, None))
+        self.assertEqual(tuple(loaded2.result()), (b'data2', b'b'*8, None))
 
         # Loading non-current data may also be satisfied from cache
         loaded = self.load_before(b'1'*8, b'b'*8)
-        self.assertEqual(loaded.result(), (b'data', b'a'*8, b'b'*8))
+        self.assertEqual(tuple(loaded.result()), (b'data', b'a'*8, b'b'*8))
         self.assertFalse(transport.data)
         loaded = self.load_before(b'1'*8, b'c'*8)
-        self.assertEqual(loaded.result(), (b'data2', b'b'*8, None))
+        self.assertEqual(tuple(loaded.result()), (b'data2', b'b'*8, None))
         self.assertFalse(transport.data)
         loaded = self.load_before(b'1'*8, b'_'*8)
 
-        self.assertEqual(
-            self.pop(),
-            ((b'1'*8, b'_'*8), False, 'loadBefore', (b'1'*8, b'_'*8)))
-        self.respond((b'1'*8, b'_'*8), (b'data0', b'^'*8, b'_'*8))
-        self.assertEqual(loaded.result(), (b'data0', b'^'*8, b'_'*8))
+        self.assertEqual(self.pop(), (7, False, 'loadBefore', (b'1'*8, b'_'*8)))
+        self.respond(7, (b'data0', b'^'*8, b'_'*8))
+        self.assertEqual(tuple(loaded.result()), (b'data0', b'^'*8, b'_'*8))
 
         # When committing transactions, we need to update the cache
         # with committed data.  To do this, we pass a (oid, data, resolved)
@@ -259,8 +260,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
                          cache.load(b'4'*8))
         self.assertEqual(cache.load(b'1'*8), (b'data2', b'b'*8))
         self.assertEqual(self.pop(),
-                         (5, False, 'tpc_finish', (b'd'*8,)))
-        self.respond(5, b'e'*8)
+                         (8, False, 'tpc_finish', (b'd'*8,)))
+        self.respond(8, b'e'*8)
         self.assertEqual(committed.result(), b'e'*8)
         self.assertEqual(cache.load(b'1'*8), None)
         self.assertEqual(cache.load(b'2'*8), ('committed 2', b'e'*8))
@@ -274,8 +275,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertFalse(loaded.done() or f1.done())
         self.assertEqual(
             self.pop(),
-            [((b'1'*8, maxtid), False, 'loadBefore', (b'1'*8, maxtid)),
-             (6, False, 'foo', (1, 2))],
+            [(9, False, 'loadBefore', (b'1'*8, maxtid)),
+             (10, False, 'foo', (1, 2))],
             )
         exc = TypeError(43)
 
@@ -301,8 +302,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         # This time we'll send a lower protocol version.  The client
         # will send it back, because it's lower than the client's
         # protocol:
-        protocol.data_received(sized(b'Z310'))
-        self.assertEqual(self.unsized(transport.pop(2)), b'Z310')
+        protocol.data_received(sized(self.enc + b'310'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'310')
         self.assertEqual(self.pop(), (1, False, 'register', ('TEST', False)))
         self.assertFalse(wrapper.notify_connected.called)
 
@@ -337,8 +338,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         cache.store(b'2'*8, b'a'*8, None, '2 data')
 
         self.assertFalse(client.connected.done() or transport.data)
-        protocol.data_received(sized(b'Z3101'))
-        self.assertEqual(self.unsized(transport.pop(2)), b'Z3101')
+        protocol.data_received(sized(self.enc + b'3101'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'3101')
         self.respond(1, None)
         self.respond(2, b'e'*8)
         self.pop(4)
@@ -372,8 +373,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertTrue(cache)
 
         self.assertFalse(client.connected.done() or transport.data)
-        protocol.data_received(sized(b'Z3101'))
-        self.assertEqual(self.unsized(transport.pop(2)), b'Z3101')
+        protocol.data_received(sized(self.enc + b'3101'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'3101')
         self.respond(1, None)
         self.respond(2, b'e'*8)
         self.pop(4)
@@ -423,8 +424,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertEqual(sorted(loop.connecting), addrs[:1])
         protocol = loop.protocol
         transport = loop.transport
-        protocol.data_received(sized(b'Z3101'))
-        self.assertEqual(self.unsized(transport.pop(2)), b'Z3101')
+        protocol.data_received(sized(self.enc + b'3101'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'3101')
         self.respond(1, None)
 
         # Now, when the first connection fails, it won't be retried,
@@ -441,8 +442,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         wrapper, cache, loop, client, protocol, transport = self.start()
         cache.store(b'4'*8, b'a'*8, None, '4 data')
         cache.setLastTid('b'*8)
-        protocol.data_received(sized(b'Z3101'))
-        self.assertEqual(self.unsized(transport.pop(2)), b'Z3101')
+        protocol.data_received(sized(self.enc + b'3101'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'3101')
         self.respond(1, None)
         self.respond(2, 'a'*8)
         self.pop()
@@ -455,8 +456,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertFalse(transport is loop.transport)
         protocol = loop.protocol
         transport = loop.transport
-        protocol.data_received(sized(b'Z3101'))
-        self.assertEqual(self.unsized(transport.pop(2)), b'Z3101')
+        protocol.data_received(sized(self.enc + b'3101'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'3101')
         self.respond(1, None)
         self.respond(2, 'b'*8)
         self.pop(4)
@@ -475,13 +476,13 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         # We'll treat the first address as read-only and we'll let it connect:
         loop.connect_connecting(addrs[0])
         protocol, transport = loop.protocol, loop.transport
-        protocol.data_received(sized(b'Z3101'))
-        self.assertEqual(self.unsized(transport.pop(2)), b'Z3101')
+        protocol.data_received(sized(self.enc + b'3101'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'3101')
         # We see that the client tried a writable connection:
         self.assertEqual(self.pop(),
                          (1, False, 'register', ('TEST', False)))
         # We respond with a read-only exception:
-        self.respond(1, (ReadOnlyError, ReadOnlyError()))
+        self.respond(1, ('ZODB.POSException.ReadOnlyError', ()), True)
         self.assertTrue(self.is_read_only())
 
         # The client tries for a read-only connection:
@@ -507,8 +508,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
 
         # We connect the second address:
         loop.connect_connecting(addrs[1])
-        loop.protocol.data_received(sized(b'Z3101'))
-        self.assertEqual(self.unsized(loop.transport.pop(2)), b'Z3101')
+        loop.protocol.data_received(sized(self.enc + b'3101'))
+        self.assertEqual(self.unsized(loop.transport.pop(2)), self.enc + b'3101')
         self.assertEqual(self.parse(loop.transport.pop()),
                          (1, False, 'register', ('TEST', False)))
         self.assertTrue(self.is_read_only())
@@ -542,8 +543,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
     def test_invalidations_while_verifying(self):
         # While we're verifying, invalidations are ignored
         wrapper, cache, loop, client, protocol, transport = self.start()
-        protocol.data_received(sized(b'Z3101'))
-        self.assertEqual(self.unsized(transport.pop(2)), b'Z3101')
+        protocol.data_received(sized(self.enc + b'3101'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'3101')
         self.respond(1, None)
         self.pop(4)
         self.send('invalidateTransaction', b'b'*8, [b'1'*8], called=False)
@@ -560,8 +561,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
 
         # Similarly, invalidations aren't processed while reconnecting:
 
-        protocol.data_received(sized(b'Z3101'))
-        self.assertEqual(self.unsized(transport.pop(2)), b'Z3101')
+        protocol.data_received(sized(self.enc + b'3101'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'3101')
         self.respond(1, None)
         self.pop(4)
         self.send('invalidateTransaction', b'd'*8, [b'1'*8], called=False)
@@ -604,7 +605,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         wrapper, cache, loop, client, protocol, transport = self.start()
         with mock.patch("ZEO.asyncio.client.logger.error") as error:
             self.assertFalse(error.called)
-            protocol.data_received(sized(b'Z200'))
+            protocol.data_received(sized(self.enc + b'200'))
             self.assert_(isinstance(error.call_args[0][1], ProtocolError))
 
 
@@ -688,6 +689,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         protocol.connection_lost(None)
         self.assertTrue(handle.cancelled)
 
+class MsgpackClientTests(ClientTests):
+    enc = b'M'
 
 class MemoryCache(object):
 
@@ -750,12 +753,13 @@ class ServerTests(Base, setupstack.TestCase):
     # connections. Servers are pretty passive.
 
     def connect(self, finish=False):
-        protocol = server_protocol()
+        protocol = server_protocol(self.enc == b'M')
         self.loop = protocol.loop
         self.target = protocol.zeo_storage
         if finish:
-            self.assertEqual(self.pop(parse=False), best_protocol_version)
-            protocol.data_received(sized(b'Z5'))
+            self.assertEqual(self.pop(parse=False),
+                             self.enc + best_protocol_version)
+            protocol.data_received(sized(self.enc + b'5'))
         return protocol
 
     message_id = 0
@@ -790,12 +794,13 @@ class ServerTests(Base, setupstack.TestCase):
         self.assertFalse(protocol.zeo_storage.notify_connected.called)
 
         # The server sends it's protocol.
-        self.assertEqual(self.pop(parse=False), best_protocol_version)
+        self.assertEqual(self.pop(parse=False),
+                         self.enc + best_protocol_version)
 
         # The client sends it's protocol:
-        protocol.data_received(sized(b'Z5'))
+        protocol.data_received(sized(self.enc + b'5'))
 
-        self.assertEqual(protocol.protocol_version, b'Z5')
+        self.assertEqual(protocol.protocol_version, self.enc + b'5')
 
         protocol.zeo_storage.notify_connected.assert_called_once_with(protocol)
 
@@ -823,7 +828,11 @@ class ServerTests(Base, setupstack.TestCase):
         self.call('foo', target=None)
         self.assertTrue(protocol.loop.transport.closed)
 
-def server_protocol(zeo_storage=None,
+class MsgpackServerTests(ServerTests):
+    enc = b'M'
+
+def server_protocol(msgpack,
+                    zeo_storage=None,
                     protocol_version=None,
                     addr=('1.2.3.4', '42'),
                     ):
@@ -831,7 +840,7 @@ def server_protocol(zeo_storage=None,
         zeo_storage = mock.Mock()
     loop = Loop()
     sock = () # anything not None
-    new_connection(loop, addr, sock, zeo_storage)
+    new_connection(loop, addr, sock, zeo_storage, msgpack)
     if protocol_version:
         loop.protocol.data_received(sized(protocol_version))
     return loop.protocol
@@ -861,4 +870,6 @@ def test_suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(ClientTests))
     suite.addTest(unittest.makeSuite(ServerTests))
+    suite.addTest(unittest.makeSuite(MsgpackClientTests))
+    suite.addTest(unittest.makeSuite(MsgpackServerTests))
     return suite

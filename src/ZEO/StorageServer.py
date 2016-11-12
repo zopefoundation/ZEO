@@ -663,6 +663,7 @@ class StorageServer:
                  ssl=None,
                  client_conflict_resolution=False,
                  Acceptor=Acceptor,
+                 msgpack=False,
                  ):
         """StorageServer constructor.
 
@@ -757,7 +758,7 @@ class StorageServer:
         self.client_conflict_resolution = client_conflict_resolution
 
         if addr is not None:
-            self.acceptor = Acceptor(self, addr, ssl)
+            self.acceptor = Acceptor(self, addr, ssl, msgpack)
             if isinstance(addr, tuple) and addr[0]:
                 self.addr = self.acceptor.addr
             else:

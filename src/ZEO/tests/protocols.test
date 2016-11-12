@@ -17,7 +17,7 @@ Let's start a Z4 server
     ... '''
 
     >>> addr, stop = start_server(
-    ...    storage_conf, dict(invalidation_queue_size=5), protocol=b'Z4')
+    ...    storage_conf, dict(invalidation_queue_size=5), protocol=b'4')
 
 A current client should be able to connect to a old server:
 

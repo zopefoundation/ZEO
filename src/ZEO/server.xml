@@ -115,6 +115,16 @@
       </description>
     </key>
 
+    <key name="msgpack" datatype="boolean" required="no" default="false">
+      <description>
+        Use msgpack to serialize and de-serialize ZEO protocol messages.
+
+        An advantage of using msgpack for ZEO communication is that
+        it's a little bit faster and a ZEO server can support Python 2
+        or Python 3 clients (but not both).
+      </description>
+    </key>
+
   </sectiontype>
 
 </component>

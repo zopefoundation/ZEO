@@ -100,6 +100,7 @@ class ZEOOptionsMixin:
         self.add("client_conflict_resolution",
                  "zeo.client_conflict_resolution",
                  default=0)
+        self.add("msgpack", "zeo.msgpack", default=0)
         self.add("invalidation_queue_size", "zeo.invalidation_queue_size",
                  default=100)
         self.add("invalidation_age", "zeo.invalidation_age")
@@ -342,6 +343,7 @@ def create_server(storages, options):
         storages,
         read_only = options.read_only,
         client_conflict_resolution=options.client_conflict_resolution,
+        msgpack=options.msgpack,
         invalidation_queue_size = options.invalidation_queue_size,
         invalidation_age = options.invalidation_age,
         transaction_timeout = options.transaction_timeout,

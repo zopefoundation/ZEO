@@ -26,9 +26,17 @@ from ..shortrepr import short_repr
 
 logger = logging.getLogger(__name__)
 
-def encoder():
+def encoder(protocol):
     """Return a non-thread-safe encoder
     """
+
+    if protocol[:1] == b'M':
+        from msgpack import packb
+        def encode(*args):
+            return packb(args, use_bin_type=True)
+        return encode
+    else:
+        assert protocol[:1] == b'Z'
 
     if PY3 or PYPY:
         f = BytesIO()
@@ -54,9 +62,20 @@ def encoder():
 
 def encode(*args):
 
-    return encoder()(*args)
+    return encoder(b'Z')(*args)
 
-def decode(msg):
+def decoder(protocol):
+    if protocol[:1] == b'M':
+        from msgpack import unpackb
+        def msgpack_decode(data):
+            """Decodes msg and returns its parts"""
+            return unpackb(data, encoding='utf-8')
+        return msgpack_decode
+    else:
+        assert protocol[:1] == b'Z'
+        return pickle_decode
+
+def pickle_decode(msg):
     """Decodes msg and returns its parts"""
     unpickler = Unpickler(BytesIO(msg))
     unpickler.find_global = find_global
@@ -71,7 +90,14 @@ def decode(msg):
         logger.error("can't decode message: %s" % short_repr(msg))
         raise
 
-def server_decode(msg):
+def server_decoder(protocol):
+    if protocol[:1] == b'M':
+        return decoder(protocol)
+    else:
+        assert protocol[:1] == b'Z'
+        return pickle_server_decode
+
+def pickle_server_decode(msg):
     """Decodes msg and returns its parts"""
     unpickler = Unpickler(BytesIO(msg))
     unpickler.find_global = server_find_global
