@@ -70,7 +70,7 @@ class ZEOConfig:
 
         for name in (
             'invalidation_queue_size', 'invalidation_age',
-            'transaction_timeout', 'pid_filename',
+            'transaction_timeout', 'pid_filename', 'msgpack',
             'ssl_certificate', 'ssl_key', 'client_conflict_resolution',
             ):
             v = getattr(self, name, None)
@@ -200,6 +200,7 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
                      path='Data.fs', protocol=None, blob_dir=None,
                      suicide=True, debug=False,
                      threaded=False, start_timeout=33, name=None, log=None,
+                     show_config=False
                      ):
     """Start a ZEO server in a separate process.
 
@@ -231,11 +232,14 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
             z.__dict__.update(zeo_conf)
         zeo_conf = str(z)
 
+    zeo_conf = str(zeo_conf) + '\n\n' + storage_conf
+    if show_config:
+        print(zeo_conf)
+
     # Store the config info in a temp file.
     tmpfile = tempfile.mktemp(".conf", dir=os.getcwd())
     fp = open(tmpfile, 'w')
-    fp.write(str(zeo_conf) + '\n\n')
-    fp.write(storage_conf)
+    fp.write(zeo_conf)
     fp.close()
 
     if threaded:
