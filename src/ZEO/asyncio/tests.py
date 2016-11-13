@@ -26,6 +26,7 @@ from .marshal import encoder, decoder
 class Base(object):
 
     enc = b'Z'
+    seq_type = list
 
     def setUp(self):
         super(Base, self).setUp()
@@ -39,11 +40,7 @@ class Base(object):
             data = data[2:]
             self.assertEqual(struct.unpack(">I", size)[0], len(message))
             if unpickle:
-                message = tuple(self.decode(message))
-                if isinstance(message[-1], list):
-                    message = message[:-1] + (tuple(message[-1]),)
-                if isinstance(message[0], list):
-                    message = (tuple(message[-1]),) + message[1:]
+                message = self.decode(message)
             result.append(message)
 
         if len(result) == 1:
@@ -205,7 +202,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertEqual(self.pop(), (5, False, 'loadBefore', (b'1'*8, maxtid)))
         # Note load_before uses the oid as the message id.
         self.respond(5, (b'data', b'a'*8, None))
-        self.assertEqual(tuple(loaded.result()), (b'data', b'a'*8, None))
+        self.assertEqual(loaded.result(), (b'data', b'a'*8, None))
 
         # If we make another request, it will be satisfied from the cache:
         loaded = self.load_before(b'1'*8, maxtid)
@@ -213,7 +210,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertFalse(transport.data)
 
         # Let's send an invalidation:
-        self.send('invalidateTransaction', b'b'*8, [b'1'*8])
+        self.send('invalidateTransaction', b'b'*8, self.seq_type([b'1'*8]))
 
         # Now, if we try to load current again, we'll make a server request.
         loaded = self.load_before(b'1'*8, maxtid)
@@ -224,21 +221,21 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
 
         self.assertEqual(self.pop(), (6, False, 'loadBefore', (b'1'*8, maxtid)))
         self.respond(6, (b'data2', b'b'*8, None))
-        self.assertEqual(tuple(loaded.result()), (b'data2', b'b'*8, None))
-        self.assertEqual(tuple(loaded2.result()), (b'data2', b'b'*8, None))
+        self.assertEqual(loaded.result(), (b'data2', b'b'*8, None))
+        self.assertEqual(loaded2.result(), (b'data2', b'b'*8, None))
 
         # Loading non-current data may also be satisfied from cache
         loaded = self.load_before(b'1'*8, b'b'*8)
-        self.assertEqual(tuple(loaded.result()), (b'data', b'a'*8, b'b'*8))
+        self.assertEqual(loaded.result(), (b'data', b'a'*8, b'b'*8))
         self.assertFalse(transport.data)
         loaded = self.load_before(b'1'*8, b'c'*8)
-        self.assertEqual(tuple(loaded.result()), (b'data2', b'b'*8, None))
+        self.assertEqual(loaded.result(), (b'data2', b'b'*8, None))
         self.assertFalse(transport.data)
         loaded = self.load_before(b'1'*8, b'_'*8)
 
         self.assertEqual(self.pop(), (7, False, 'loadBefore', (b'1'*8, b'_'*8)))
         self.respond(7, (b'data0', b'^'*8, b'_'*8))
-        self.assertEqual(tuple(loaded.result()), (b'data0', b'^'*8, b'_'*8))
+        self.assertEqual(loaded.result(), (b'data0', b'^'*8, b'_'*8))
 
         # When committing transactions, we need to update the cache
         # with committed data.  To do this, we pass a (oid, data, resolved)
@@ -549,7 +546,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.pop(4)
         self.send('invalidateTransaction', b'b'*8, [b'1'*8], called=False)
         self.respond(2, b'a'*8)
-        self.send('invalidateTransaction', b'c'*8, [b'1'*8], no_output=False)
+        self.send('invalidateTransaction', b'c'*8, self.seq_type([b'1'*8]),
+                  no_output=False)
         self.assertEqual(self.pop(), (3, False, 'get_info', ()))
 
         # We'll disconnect:
@@ -567,7 +565,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.pop(4)
         self.send('invalidateTransaction', b'd'*8, [b'1'*8], called=False)
         self.respond(2, b'c'*8)
-        self.send('invalidateTransaction', b'e'*8, [b'1'*8], no_output=False)
+        self.send('invalidateTransaction', b'e'*8, self.seq_type([b'1'*8]),
+                  no_output=False)
         self.assertEqual(self.pop(), (3, False, 'get_info', ()))
 
     def test_flow_control(self):
@@ -691,6 +690,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
 
 class MsgpackClientTests(ClientTests):
     enc = b'M'
+    seq_type = tuple
 
 class MemoryCache(object):
 
@@ -830,6 +830,7 @@ class ServerTests(Base, setupstack.TestCase):
 
 class MsgpackServerTests(ServerTests):
     enc = b'M'
+    seq_type = tuple
 
 def server_protocol(msgpack,
                     zeo_storage=None,

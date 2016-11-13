@@ -11,7 +11,7 @@ from ..shortrepr import short_repr
 
 from . import base
 from .compat import asyncio, new_event_loop
-from .marshal import server_decoder, encoder
+from .marshal import server_decoder, encoder, reduce_exception
 
 class ServerProtocol(base.Protocol):
     """asyncio low-level ZEO server interface
@@ -70,7 +70,7 @@ class ServerProtocol(base.Protocol):
                 logger.info("received handshake %r" %
                             str(protocol_version.decode('ascii')))
                 self.protocol_version = protocol_version
-                self.encode = encoder(protocol_version)
+                self.encode = encoder(protocol_version, True)
                 self.decode = server_decoder(protocol_version)
                 self.zeo_storage.notify_connected(self)
             else:
@@ -135,10 +135,7 @@ class ServerProtocol(base.Protocol):
     def send_error(self, message_id, exc, send_error=False):
         """Abstracting here so we can make this cleaner in the future
         """
-        class_ = exc.__class__
-        class_ = "%s.%s" % (class_.__module__, class_.__name__)
-        args = class_, exc.__dict__ or exc.args
-        self.send_reply(message_id, args, send_error, 2)
+        self.send_reply(message_id, reduce_exception(exc), send_error, 2)
 
     def async(self, method, *args):
         self.call_async(method, args)
