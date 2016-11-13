@@ -39,7 +39,7 @@ class StorageServer:
     """
 
     def __init__(self, test, storage,
-                 protocol_version=best_protocol_version,
+                 protocol_version=b'Z' + best_protocol_version,
                  **kw):
         self.test = test
         self.storage_server = ZEO.StorageServer.StorageServer(

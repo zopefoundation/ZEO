@@ -228,7 +228,7 @@ class ZEOStorage:
         storage = self.storage
 
         supportsUndo = (getattr(storage, 'supportsUndo', lambda : False)()
-                        and self.connection.protocol_version >= b'Z310')
+                        and self.connection.protocol_version[1:] >= b'310')
 
         # Communicate the backend storage interfaces to the client
         storage_provides = zope.interface.providedBy(storage)
