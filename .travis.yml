@@ -13,7 +13,10 @@ matrix:
           env: ZEO_MTACCEPTOR=1
         - os: linux
           python: 3.5
-          env: ZEO_MTACCEPTOR=1
+          env: ZEO_MSGPACK=1 ZEO_MTACCEPTOR=1
+        - os: linux
+          python: 2.7
+          env: ZEO_MSGPACK=1
         - os: linux
           python: 2.7
           env: ZEO4_SERVER=1
