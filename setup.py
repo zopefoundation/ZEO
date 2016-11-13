@@ -28,7 +28,7 @@ if (3, 0) < sys.version_info < (3, 4):
 install_requires = [
     'ZODB >= 5.0.0a5',
     'six',
-    'transaction >= 1.6.0',
+    'transaction >= 2.0.2',
     'persistent >= 4.1.0',
     'zc.lockfile',
     'ZConfig',
