@@ -1,6 +1,13 @@
 Changelog
 =========
 
+
+4.3.1 (2016-11-18)
+------------------
+
+- Require transaction 1 to avoid cleanups that break ZEO 4.
+
+
 4.3.0 (2016-08-02)
 ------------------
 

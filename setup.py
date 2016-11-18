@@ -12,7 +12,7 @@
 #
 ##############################################################################
 
-version = '4.3.0'
+version = '4.3.1'
 
 from setuptools import setup, find_packages
 import os
@@ -121,7 +121,7 @@ setup(name="ZEO",
       install_requires = [
           'ZODB >= 4.2.0b1, <4.999',
           'six',
-          'transaction',
+          'transaction < 2.0.0',
           'persistent >= 4.1.0',
           'zc.lockfile',
           'ZConfig',
