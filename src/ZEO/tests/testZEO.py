@@ -1470,7 +1470,7 @@ if os.environ.get('ZEO_MSGPACK'):
         """
         >>> import ZEO
 
-        >>> a, s = ZEO.server()
+        >>> a, s = ZEO.server(threaded=False)
         >>> conn = ZEO.connection(a)
         >>> str(conn.db().storage.protocol_version.decode('ascii'))
         'M5'
@@ -1481,13 +1481,13 @@ else:
         """
         >>> import ZEO
 
-        >>> a, s = ZEO.server()
+        >>> a, s = ZEO.server(threaded=False)
         >>> conn = ZEO.connection(a)
         >>> str(conn.db().storage.protocol_version.decode('ascii'))
         'Z5'
         >>> conn.close(); s()
 
-        >>> a, s = ZEO.server(zeo_conf=dict(msgpack=True))
+        >>> a, s = ZEO.server(zeo_conf=dict(msgpack=True), threaded=False)
         >>> conn = ZEO.connection(a)
         >>> str(conn.db().storage.protocol_version.decode('ascii'))
         'M5'
