@@ -230,11 +230,17 @@ This tests tries to provoke this bug by:
 
 def test_suite():
     suite = unittest.TestSuite()
+
     for klass in test_classes:
         sub = unittest.makeSuite(klass, 'check')
+        sub.layer = ZODB.tests.util.MininalTestLayer(
+            klass.__name__ + ' ZEO Connection Tests')
         suite.addTest(sub)
-    suite.addTest(doctest.DocTestSuite(
+
+    sub = doctest.DocTestSuite(
         setUp=forker.setUp, tearDown=setupstack.tearDown,
-        ))
-    suite.layer = ZODB.tests.util.MininalTestLayer('ZEO Connection Tests')
+        )
+    sub.layer = ZODB.tests.util.MininalTestLayer('ZEO Connection DocTests')
+    suite.addTest(sub)
+
     return suite
