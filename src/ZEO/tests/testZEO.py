@@ -1465,34 +1465,35 @@ def ClientDisconnected_errors_are_TransientErrors():
     True
     """
 
-if os.environ.get('ZEO_MSGPACK'):
-    def test_runzeo_msgpack_support():
-        """
-        >>> import ZEO
+if not os.environ.get('ZEO4_SERVER'):
+    if os.environ.get('ZEO_MSGPACK'):
+        def test_runzeo_msgpack_support():
+            """
+            >>> import ZEO
 
-        >>> a, s = ZEO.server(threaded=False)
-        >>> conn = ZEO.connection(a)
-        >>> str(conn.db().storage.protocol_version.decode('ascii'))
-        'M5'
-        >>> conn.close(); s()
-        """
-else:
-    def test_runzeo_msgpack_support():
-        """
-        >>> import ZEO
+            >>> a, s = ZEO.server(threaded=False)
+            >>> conn = ZEO.connection(a)
+            >>> str(conn.db().storage.protocol_version.decode('ascii'))
+            'M5'
+            >>> conn.close(); s()
+            """
+    else:
+        def test_runzeo_msgpack_support():
+            """
+            >>> import ZEO
 
-        >>> a, s = ZEO.server(threaded=False)
-        >>> conn = ZEO.connection(a)
-        >>> str(conn.db().storage.protocol_version.decode('ascii'))
-        'Z5'
-        >>> conn.close(); s()
+            >>> a, s = ZEO.server(threaded=False)
+            >>> conn = ZEO.connection(a)
+            >>> str(conn.db().storage.protocol_version.decode('ascii'))
+            'Z5'
+            >>> conn.close(); s()
 
-        >>> a, s = ZEO.server(zeo_conf=dict(msgpack=True), threaded=False)
-        >>> conn = ZEO.connection(a)
-        >>> str(conn.db().storage.protocol_version.decode('ascii'))
-        'M5'
-        >>> conn.close(); s()
-        """
+            >>> a, s = ZEO.server(zeo_conf=dict(msgpack=True), threaded=False)
+            >>> conn = ZEO.connection(a)
+            >>> str(conn.db().storage.protocol_version.decode('ascii'))
+            'M5'
+            >>> conn.close(); s()
+            """
 
 if sys.platform.startswith('win'):
     del runzeo_logrotate_on_sigusr2
