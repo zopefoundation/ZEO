@@ -1,6 +1,8 @@
 Changelog
 =========
 
+- Fixed: ZEO needed changes to work with recent transaction changes.
+
 5.0.2 (2016-11-02)
 ------------------
 

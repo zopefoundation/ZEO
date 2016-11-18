@@ -13,10 +13,9 @@
 ##############################################################################
 """Tests of the ZEO cache"""
 
+from ZODB.Connection import TransactionMetaData
 from ZODB.tests.MinPO import MinPO
 from ZODB.tests.StorageTestBase import zodb_unpickle
-
-from transaction import Transaction
 
 class TransUndoStorageWithCache:
 
@@ -35,7 +34,7 @@ class TransUndoStorageWithCache:
         tid = info[0]['id']
 
         # Now start an undo transaction
-        t = Transaction()
+        t = TransactionMetaData()
         t.note('undo1')
         oids = self._begin_undos_vote(t, tid)
 

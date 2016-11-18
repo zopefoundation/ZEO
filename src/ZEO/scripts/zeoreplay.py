@@ -48,7 +48,7 @@ from ZODB.FileStorage import FileStorage
 #from BDBStorage.BDBFullStorage import BDBFullStorage
 #from Standby.primary import PrimaryStorage
 #from Standby.config import RS_PORT
-from ZODB.Transaction import Transaction
+from ZODB.Connection import TransactionMetaData
 from ZODB.utils import p64
 from functools import reduce
 
@@ -149,7 +149,7 @@ class ReplayTxn(TxnStat):
     def replay(self):
         ZERO = '\0'*8
         t0 = now()
-        t = Transaction()
+        t = TransactionMetaData()
         self._storage.tpc_begin(t)
         for obj in self._objects:
             oid = obj.oid

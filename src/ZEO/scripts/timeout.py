@@ -18,7 +18,7 @@ from __future__ import print_function
 import sys
 import time
 
-from ZODB.Transaction import Transaction
+from ZODB.Connection import TransactionMetaData
 from ZODB.tests.MinPO import MinPO
 from ZODB.tests.StorageTestBase import zodb_pickle
 from ZEO.ClientStorage import ClientStorage
@@ -57,7 +57,7 @@ def main():
     revid = ZERO
     data = MinPO("timeout.py")
     pickled_data = zodb_pickle(data)
-    t = Transaction()
+    t = TransactionMetaData()
     t.user = "timeout.py"
     storage.tpc_begin(t)
     storage.store(oid, revid, pickled_data, '', t)

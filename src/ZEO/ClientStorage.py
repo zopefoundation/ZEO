@@ -474,11 +474,8 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             raise POSException.ReadOnlyError()
 
         try:
-            buf = trans.data(self)
-        except KeyError:
-            buf = None
-
-        if buf is None:
+            buf = trans.__buf
+        except AttributeError:
             raise POSException.StorageTransactionError(
                 "Transaction not committing", meth, trans)
 
@@ -799,40 +796,35 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             raise POSException.ReadOnlyError()
 
         try:
-            tbuf = txn.data(self)
+            tbuf = txn.__buf
         except AttributeError:
-            # Gaaaa. This is a recovery transaction. Work around this
-            # until we can think of something better. XXX
-            tb = {}
-            txn.data = tb.__getitem__
-            txn.set_data = tb.__setitem__
-        except KeyError:
-            pass
+            txn.__buf = tbuf = TransactionBuffer(self._connection_generation)
         else:
-            if tbuf is not None:
-                raise POSException.StorageTransactionError(
-                    "Duplicate tpc_begin calls for same transaction")
+            raise POSException.StorageTransactionError(
+                "Duplicate tpc_begin calls for same transaction")
 
-        txn.set_data(self, TransactionBuffer(self._connection_generation))
 
         # XXX we'd like to allow multiple transactions at a time at some point,
         # but for now, due to server limitations, TCBOO.
         self._commit_lock.acquire()
-        self._tbuf = txn.data(self)
+        self._tbuf = tbuf
 
         try:
             self._async(
                 'tpc_begin', id(txn),
-                txn.user, txn.description, txn._extension, tid, status)
+                txn.user, txn.description, txn.extension, tid, status)
         except ClientDisconnected:
             self.tpc_end(txn)
             raise
 
     def tpc_end(self, txn):
-        tbuf = txn.data(self)
-        if tbuf is not None:
+        try:
+            tbuf = txn.__buf
+        except AttributeError:
+            pass
+        else:
+            del txn.__buf
             tbuf.close()
-            txn.set_data(self, None)
             self._commit_lock.release()
 
     def lastTransaction(self):
@@ -845,8 +837,8 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         they normally would.)
         """
         try:
-            tbuf = txn.data(self)
-        except KeyError:
+            tbuf = txn.__buf
+        except AttributeError:
             return
 
         try:
