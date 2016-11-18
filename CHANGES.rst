@@ -1,7 +1,12 @@
 Changelog
 =========
 
+5.0.4 (2016-11-18)
+------------------
+
 - Fixed: ZEO needed changes to work with recent transaction changes.
+
+  ZEO now works with the latest versions of ZODB and transaction
 
 5.0.3 (2016-11-18)
 ------------------
