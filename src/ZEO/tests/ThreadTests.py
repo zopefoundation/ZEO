@@ -15,7 +15,7 @@
 
 import threading
 
-import transaction
+from ZODB.Connection import TransactionMetaData
 from ZODB.tests.StorageTestBase import zodb_pickle, MinPO
 import ZEO.Exceptions
 
@@ -24,7 +24,7 @@ ZERO = '\0'*8
 class BasicThread(threading.Thread):
     def __init__(self, storage, doNextEvent, threadStartedEvent):
         self.storage = storage
-        self.trans = transaction.Transaction()
+        self.trans = TransactionMetaData()
         self.doNextEvent = doNextEvent
         self.threadStartedEvent = threadStartedEvent
         self.gotValueError = 0

@@ -11,7 +11,7 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-version = '5.0.2'
+version = '5.0.4'
 
 from setuptools import setup, find_packages
 import os
@@ -26,9 +26,9 @@ if (3, 0) < sys.version_info < (3, 4):
     sys.exit(1)
 
 install_requires = [
-    'ZODB >= 5.0.0a5',
+    'ZODB >= 5.1.1',
     'six',
-    'transaction >= 2.0.2',
+    'transaction >= 2.0.3',
     'persistent >= 4.1.0',
     'zc.lockfile',
     'ZConfig',

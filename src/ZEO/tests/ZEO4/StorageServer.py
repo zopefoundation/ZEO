@@ -28,7 +28,6 @@ import sys
 import tempfile
 import threading
 import time
-import transaction
 import warnings
 from .zrpc.error import DisconnectedError
 import ZODB.blob
@@ -43,6 +42,7 @@ from ZEO.Exceptions import AuthError
 from .monitor import StorageStats, StatsServer
 from .zrpc.connection import ManagedServerConnection, Delay, MTDelay, Result
 from .zrpc.server import Dispatcher
+from ZODB.Connection import TransactionMetaData
 from ZODB.loglevels import BLATHER
 from ZODB.POSException import StorageError, StorageTransactionError
 from ZODB.POSException import TransactionError, ReadOnlyError, ConflictError
@@ -375,11 +375,8 @@ class ZEOStorage:
                 raise StorageTransactionError("Multiple simultaneous tpc_begin"
                                               " requests from one client.")
 
-        t = transaction.Transaction()
+        t = TransactionMetaData(user, description, ext)
         t.id = id
-        t.user = user
-        t.description = description
-        t._extension = ext
 
         self.serials = []
         self.invalidated = []

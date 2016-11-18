@@ -24,6 +24,7 @@ from ZEO.Exceptions import ClientDisconnected
 from ZEO.asyncio.marshal import encode
 from ZEO.tests import forker
 
+from ZODB.Connection import TransactionMetaData
 from ZODB.DB import DB
 from ZODB.POSException import ReadOnlyError, ConflictError
 from ZODB.tests.StorageTestBase import StorageTestBase
@@ -32,7 +33,6 @@ from ZODB.tests.StorageTestBase import zodb_pickle, zodb_unpickle
 import ZODB.tests.util
 
 import transaction
-from transaction import Transaction
 
 from . import testssl
 
@@ -863,7 +863,7 @@ class ReconnectionTests(CommonSetupTearDown):
         self._storage = self.openClientStorage()
         self._dostore()
         oids = [self._storage.new_oid() for i in range(5)]
-        txn = Transaction()
+        txn = TransactionMetaData()
         self._storage.tpc_begin(txn)
         for oid in oids:
             data = zodb_pickle(MinPO(oid))
@@ -957,7 +957,7 @@ class TimeoutTests(CommonSetupTearDown):
 
     def checkTimeout(self):
         self._storage = storage = self.openClientStorage()
-        txn = Transaction()
+        txn = TransactionMetaData()
         storage.tpc_begin(txn)
         storage.tpc_vote(txn)
         time.sleep(2)
@@ -977,7 +977,7 @@ class TimeoutTests(CommonSetupTearDown):
 
     def checkTimeoutOnAbort(self):
         storage = self.openClientStorage()
-        txn = Transaction()
+        txn = TransactionMetaData()
         storage.tpc_begin(txn)
         storage.tpc_vote(txn)
         storage.tpc_abort(txn)
@@ -985,7 +985,7 @@ class TimeoutTests(CommonSetupTearDown):
 
     def checkTimeoutOnAbortNoLock(self):
         storage = self.openClientStorage()
-        txn = Transaction()
+        txn = TransactionMetaData()
         storage.tpc_begin(txn)
         storage.tpc_abort(txn)
         storage.close()
@@ -998,7 +998,7 @@ class TimeoutTests(CommonSetupTearDown):
         oid = storage.new_oid()
         obj = MinPO(7)
         # Now do a store, sleeping before the finish so as to cause a timeout
-        t = Transaction()
+        t = TransactionMetaData()
         old_connection_count = storage.connection_count_for_tests
         storage.tpc_begin(t)
         revid1 = storage.store(oid, ZERO, zodb_pickle(obj), '', t)
@@ -1051,7 +1051,7 @@ class MSTThread(threading.Thread):
                 c.__serials = {}
 
             # Begin a transaction
-            t = Transaction()
+            t = TransactionMetaData()
             for c in clients:
                 #print("%s.%s.%s begin" % (tname, c.__name, i))
                 c.tpc_begin(t)

@@ -8,6 +8,20 @@ Changelog
   servers to support Python 2 or 3 clients (but not both at the same
   time) and may provide a small performance improvement.
 
+5.0.4 (2016-11-18)
+------------------
+
+- Fixed: ZEO needed changes to work with recent transaction changes.
+
+  ZEO now works with the latest versions of ZODB and transaction
+
+5.0.3 (2016-11-18)
+------------------
+
+- Temporarily require non-quite-current versions of ZODB and
+  transaction until we can sort out some recent breakage.
+>>>>>>> origin/master
+
 5.0.2 (2016-11-02)
 ------------------
 
