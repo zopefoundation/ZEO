@@ -823,7 +823,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         try:
             self._async(
                 'tpc_begin', id(txn),
-                txn.user, txn.description, txn._extension, tid, status)
+                txn.user, txn.description, txn.extension, tid, status)
         except ClientDisconnected:
             self.tpc_end(txn)
             raise

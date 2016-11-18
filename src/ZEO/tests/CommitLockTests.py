@@ -17,7 +17,7 @@ import threading
 import time
 
 from persistent.TimeStamp import TimeStamp
-import transaction
+from ZODB.Connection import TransactionMetaData
 from ZODB.tests.StorageTestBase import zodb_pickle, MinPO
 
 import ZEO.ClientStorage
@@ -89,7 +89,7 @@ class CommitLockTests:
         self._storages = []
 
     def _start_txn(self):
-        txn = transaction.Transaction()
+        txn = TransactionMetaData()
         self._storage.tpc_begin(txn)
         oid = self._storage.new_oid()
         self._storage.store(oid, ZERO, zodb_pickle(MinPO(1)), '', txn)
@@ -104,7 +104,7 @@ class CommitLockTests:
 
         for i in range(self.NUM_CLIENTS):
             storage = self._duplicate_client()
-            txn = transaction.Transaction()
+            txn = TransactionMetaData()
             tid = self._get_timestamp()
 
             t = WorkerThread(self, storage, txn)

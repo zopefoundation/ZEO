@@ -17,6 +17,8 @@ import transaction
 import six
 import gc
 
+from ZODB.Connection import TransactionMetaData
+
 from ..asyncio.testing import AsyncRPC
 
 class IterationTests:
@@ -28,14 +30,16 @@ class IterationTests:
         # First, confirm that it ran
         self.assertTrue(self._storage._iterators._last_gc > 0)
         gc_enabled = gc.isenabled()
-        gc.disable() # make sure there's no race conditions cleaning out the weak refs
+        # make sure there's no race conditions cleaning out the weak refs
+        gc.disable()
         try:
             self.assertEquals(0, len(self._storage._iterator_ids))
         except AssertionError:
             # Ok, we have ids. That should also mean that the
             # weak dictionary has the same length.
 
-            self.assertEqual(len(self._storage._iterators), len(self._storage._iterator_ids))
+            self.assertEqual(len(self._storage._iterators),
+                             len(self._storage._iterator_ids))
             # Now if we do a collection and re-ask for iterator_gc
             # everything goes away as expected.
             gc.enable()
@@ -44,7 +48,8 @@ class IterationTests:
 
             self._storage._iterator_gc()
 
-            self.assertEqual(len(self._storage._iterators), len(self._storage._iterator_ids))
+            self.assertEqual(len(self._storage._iterators),
+                             len(self._storage._iterator_ids))
             self.assertEquals(0, len(self._storage._iterator_ids))
         finally:
             if gc_enabled:
@@ -126,7 +131,7 @@ class IterationTests:
 
         iid = list(self._storage._iterator_ids)[0]
 
-        t = transaction.Transaction()
+        t = TransactionMetaData()
         self._storage._iterators._last_gc = -1
         self._storage.tpc_begin(t)
         self._storage.tpc_abort(t)
@@ -143,7 +148,7 @@ class IterationTests:
         six.advance_iterator(self._storage.iterator())
 
         iid = list(self._storage._iterator_ids)[0]
-        t = transaction.Transaction()
+        t = TransactionMetaData()
         self._storage.tpc_begin(t)
         # Show that after disconnecting, the client side GCs the iterators
         # as well. I'm calling this directly to avoid accidentally

@@ -20,6 +20,8 @@ from ZEO.ClientStorage import ClientStorage
 from ZEO.tests import forker, Cache, CommitLockTests, ThreadTests
 from ZEO.tests import IterationTests
 from ZEO._compat import PY3
+
+from ZODB.Connection import TransactionMetaData
 from ZODB.tests import StorageTestBase, BasicStorage,  \
      TransactionalUndoStorage,  \
      PackableStorage, Synchronization, ConflictResolution, RevisionStorage, \
@@ -551,7 +553,7 @@ class CommonBlobTests:
         data = zodb_pickle(blob)
         self.assert_(os.path.exists(tfname))
 
-        t = transaction.Transaction()
+        t = TransactionMetaData()
         try:
             self._storage.tpc_begin(t)
             self._storage.storeBlob(oid, ZERO, data, tfname, '', t)
@@ -590,7 +592,7 @@ class CommonBlobTests:
         oid = self._storage.new_oid()
         data = zodb_pickle(blob)
 
-        t = transaction.Transaction()
+        t = TransactionMetaData()
         try:
             self._storage.tpc_begin(t)
             self._storage.storeBlob(oid, ZERO, data, tfname, '', t)
@@ -614,7 +616,7 @@ class CommonBlobTests:
         oid = self._storage.new_oid()
         with open('blob_file', 'wb') as f:
             f.write(b'I am a happy blob.')
-        t = transaction.Transaction()
+        t = TransactionMetaData()
         self._storage.tpc_begin(t)
         self._storage.storeBlob(
           oid, ZODB.utils.z64, 'foo', 'blob_file', '', t)
@@ -655,7 +657,7 @@ class BlobAdaptedFileStorageTests(FullGenericTests, CommonBlobTests):
             data = zodb_pickle(blob)
             self.assert_(os.path.exists(tfname))
 
-            t = transaction.Transaction()
+            t = TransactionMetaData()
             try:
                 self._storage.tpc_begin(t)
                 self._storage.storeBlob(oid, ZERO, data, tfname, '', t)
@@ -918,24 +920,25 @@ def tpc_finish_error():
     >>> conn = db.open()
     >>> conn.root.x = 1
     >>> t = conn.transaction_manager.get()
-    >>> conn._storage.tpc_begin(t)
+    >>> conn.tpc_begin(t)
     >>> conn.commit(t)
-    >>> _ = client.tpc_vote(t)
+    >>> transaction_meta_data = t.data(conn)
+    >>> _ = client.tpc_vote(transaction_meta_data)
 
     Cause some breakage by messing with the clients transaction
     buffer, sadly, using implementation details:
 
-    >>> tbuf = t.data(client)
+    >>> tbuf = client._check_trans(transaction_meta_data, 'test')
     >>> tbuf.client_resolved = None
 
     tpc_finish will fail:
 
-    >>> client.tpc_finish(t) # doctest: +ELLIPSIS
+    >>> client.tpc_finish(transaction_meta_data) # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
     AttributeError: ...
 
-    >>> client.tpc_abort(t)
+    >>> client.tpc_abort(transaction_meta_data)
     >>> t.abort()
 
     But we can still load the saved data:
