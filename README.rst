@@ -290,7 +290,8 @@ client-conflict-resolution
         resolution. This option defaults to false.
 
 msgpack
-        Use msgpack to serialize and de-serialize ZEO protocol messages.
+        Use `msgpack <http://msgpack.org/index.html>`_ to serialize
+        and de-serialize ZEO protocol messages.
 
         An advantage of using msgpack for ZEO communication is that
         it's a tiny bit faster and a ZEO server can support Python 2
