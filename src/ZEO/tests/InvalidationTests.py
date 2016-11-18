@@ -83,7 +83,7 @@ class StressTask:
     def commit(self):
         cn = self.cn
         key = self.startnum
-        self.tm.get().note("add key %s" % key)
+        self.tm.get().note(u"add key %s" % key)
         try:
             self.tm.get().commit()
         except ConflictError as msg:
@@ -155,7 +155,7 @@ class StressThread(FailableThread):
         while not self.stop.isSet():
             try:
                 tree[key] = self.threadnum
-                tm.get().note("add key %s" % key)
+                tm.get().note(u"add key %s" % key)
                 tm.commit()
                 self.commitdict[self] = 1
                 if self.sleep:
@@ -218,7 +218,7 @@ class LargeUpdatesThread(FailableThread):
                     break
             else:
                 # print("%d set #%d" % (self.threadnum, len(keys)))
-                transaction.get().note("keys %s" % ", ".join(map(str, keys)))
+                transaction.get().note(u"keys %s" % ", ".join(map(str, keys)))
                 try:
                     transaction.commit()
                     self.commitdict[self] = 1
