@@ -20,7 +20,6 @@ Changelog
 
 - Temporarily require non-quite-current versions of ZODB and
   transaction until we can sort out some recent breakage.
->>>>>>> origin/master
 
 5.0.2 (2016-11-02)
 ------------------
