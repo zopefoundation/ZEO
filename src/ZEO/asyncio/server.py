@@ -17,7 +17,7 @@ class ServerProtocol(base.Protocol):
     """asyncio low-level ZEO server interface
     """
 
-    protocols = (b'5', )
+    protocols = (b'5', b'501')
 
     name = 'server protocol'
     methods = set(('register', ))

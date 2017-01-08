@@ -41,6 +41,7 @@ from ZEO._compat import Pickler, Unpickler, PY3, BytesIO
 from ZEO.Exceptions import AuthError
 from ZEO.monitor import StorageStats
 from ZEO.asyncio.server import Delay, MTDelay, Result
+from ZODB._compat import loads
 from ZODB.Connection import TransactionMetaData
 from ZODB.loglevels import BLATHER
 from ZODB.POSException import StorageError, StorageTransactionError
@@ -297,7 +298,7 @@ class ZEOStorage:
     def undoLog(self, first, last):
         return run_in_thread(self.storage.undoLog, first, last)
 
-    def tpc_begin(self, id, user, description, ext, tid=None, status=" "):
+    def tpc_begin(self, id, user, description, ext, tid=None, status=b" "):
         if self.read_only:
             raise ReadOnlyError()
         if self.transaction is not None:
@@ -308,6 +309,8 @@ class ZEOStorage:
                 raise StorageTransactionError("Multiple simultaneous tpc_begin"
                                               " requests from one client.")
 
+        if isinstance(ext, bytes):
+            ext = loads(ext) if ext else {}
         t = TransactionMetaData(user, description, ext)
         t.id = id
 
@@ -382,7 +385,7 @@ class ZEOStorage:
                 % (self.txnlog.stores, self.txnlog.size()),
                 level=BLATHER)
 
-            if (self.tid is not None) or (self.status != ' '):
+            if (self.tid is not None) or (self.status != b' '):
                 self.storage.tpc_begin(self.transaction,
                                        self.tid, self.status)
             else:

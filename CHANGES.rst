@@ -8,6 +8,9 @@ Changelog
   servers to support Python 2 or 3 clients (but not both at the same
   time) and may provide a small performance improvement.
 
+- Added protocol 501, to work with byteserver. (Transactiinb extended
+  info are pickles on client.)
+
 5.0.4 (2016-11-18)
 ------------------
 

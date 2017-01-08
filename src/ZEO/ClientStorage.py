@@ -45,6 +45,7 @@ from ZEO.Exceptions import ClientDisconnected
 from ZEO.TransactionBuffer import TransactionBuffer
 from ZODB import POSException
 from ZODB import utils
+from ZODB._compat import dumps, _protocol
 
 import ZEO.asyncio.client
 import ZEO.cache
@@ -793,7 +794,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
     def tpc_transaction(self):
         return self._transaction
 
-    def tpc_begin(self, txn, tid=None, status=' '):
+    def tpc_begin(self, txn, tid=None, status=b' '):
         """Storage API: begin a transaction."""
         if self._is_read_only:
             raise POSException.ReadOnlyError()
@@ -820,10 +821,14 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         self._commit_lock.acquire()
         self._tbuf = txn.data(self)
 
+        extension = txn.extension
+        if self.protocol_version >= b'501':
+            extension = dumps(extension, _protocol) if extension else b''
+
         try:
             self._async(
                 'tpc_begin', id(txn),
-                txn.user, txn.description, txn.extension, tid, status)
+                txn.user, txn.description, extension, tid, status)
         except ClientDisconnected:
             self.tpc_end(txn)
             raise

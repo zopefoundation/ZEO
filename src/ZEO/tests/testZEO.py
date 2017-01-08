@@ -1485,13 +1485,13 @@ if not os.environ.get('ZEO4_SERVER'):
             >>> a, s = ZEO.server(threaded=False)
             >>> conn = ZEO.connection(a)
             >>> str(conn.db().storage.protocol_version.decode('ascii'))
-            'Z5'
+            'Z501'
             >>> conn.close(); s()
 
             >>> a, s = ZEO.server(zeo_conf=dict(msgpack=True), threaded=False)
             >>> conn = ZEO.connection(a)
             >>> str(conn.db().storage.protocol_version.decode('ascii'))
-            'M5'
+            'M501'
             >>> conn.close(); s()
             """
 

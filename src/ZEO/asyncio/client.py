@@ -63,7 +63,7 @@ class Protocol(base.Protocol):
     # One place where special care was required was in cache setup on
     # connect. See finish connect below.
 
-    protocols = b'309', b'310', b'3101', b'4', b'5'
+    protocols = b'309', b'310', b'3101', b'4', b'5', b'501'
 
     def __init__(self, loop,
                  addr, client, storage_key, read_only, connect_poll=1,
@@ -186,7 +186,8 @@ class Protocol(base.Protocol):
             try:
                 server_tid = yield self.fut(
                     'register', self.storage_key,
-                    self.read_only if self.read_only is not Fallback else False,
+                    bool(self.read_only if self.read_only is not Fallback
+                         else False),
                     *credentials)
             except ZODB.POSException.ReadOnlyError:
                 if self.read_only is Fallback:
@@ -206,6 +207,7 @@ class Protocol(base.Protocol):
     exception_type_type = type(Exception)
     def message_received(self, data):
         msgid, async, name, args = self.decode(data)
+
         if name == '.reply':
             future = self.futures.pop(msgid)
             if isinstance(future, tuple):
