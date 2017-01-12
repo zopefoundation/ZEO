@@ -141,6 +141,7 @@ class ZEOServer:
 
     def __init__(self, options):
         self.options = options
+        self.server = None
 
     def main(self):
         self.setup_default_logging()
@@ -153,7 +154,7 @@ class ZEOServer:
             self.create_server()
             self.loop_forever()
         finally:
-            self.server.close()
+            self.close_server()
             self.clear_socket()
             self.remove_pidfile()
 
@@ -253,6 +254,10 @@ class ZEOServer:
             print("testing exit immediately")
         else:
             self.server.loop()
+
+    def close_server(self):
+        if self.server is not None:
+            self.server.close()
 
     def handle_sigterm(self):
         log("terminated by SIGTERM")

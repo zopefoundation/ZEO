@@ -180,6 +180,9 @@ Dropped features:
 
 - Drop support for Python 2.6 and 3.2.
 
+- Fix AttributeError: 'ZEOServer' object has no attribute 'server' when
+  StorageServer creation fails.
+
 4.2.0b1 (2015-06-05)
 --------------------
 
