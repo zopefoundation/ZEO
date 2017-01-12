@@ -127,7 +127,6 @@ class Protocol(asyncio.Protocol):
                     self.getting_size = True
                     self.message_received(collected)
             except Exception:
-                #import traceback; traceback.print_exc()
                 logger.exception("data_received %s %s %s",
                                  self.want, self.got, self.getting_size)
 
