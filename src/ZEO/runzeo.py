@@ -343,7 +343,8 @@ def create_server(storages, options):
         storages,
         read_only = options.read_only,
         client_conflict_resolution=options.client_conflict_resolution,
-        msgpack=options.msgpack or os.environ.get('ZEO_MSGPACK'),
+        msgpack=(options.msgpack if isinstance(options.msgpack, bool)
+                 else os.environ.get('ZEO_MSGPACK')),
         invalidation_queue_size = options.invalidation_queue_size,
         invalidation_age = options.invalidation_age,
         transaction_timeout = options.transaction_timeout,

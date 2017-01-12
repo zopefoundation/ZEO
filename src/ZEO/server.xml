@@ -115,7 +115,7 @@
       </description>
     </key>
 
-    <key name="msgpack" datatype="boolean" required="no" default="false">
+    <key name="msgpack" datatype="boolean" required="no">
       <description>
         Use msgpack to serialize and de-serialize ZEO protocol messages.
 
