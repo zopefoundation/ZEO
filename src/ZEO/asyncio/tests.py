@@ -199,9 +199,9 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         loaded = self.load_before(b'1'*8, maxtid)
 
         # The data wasn't in the cache, so we made a server call:
-        self.assertEqual(self.pop(), (5, False, 'loadBefore', (b'1'*8, maxtid)))
+        self.assertEqual(self.pop(), ((b'1'*8, maxtid), False, 'loadBefore', (b'1'*8, maxtid)))
         # Note load_before uses the oid as the message id.
-        self.respond(5, (b'data', b'a'*8, None))
+        self.respond((b'1'*8, maxtid), (b'data', b'a'*8, None))
         self.assertEqual(loaded.result(), (b'data', b'a'*8, None))
 
         # If we make another request, it will be satisfied from the cache:
@@ -219,8 +219,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         # the requests will be collapsed:
         loaded2 = self.load_before(b'1'*8, maxtid)
 
-        self.assertEqual(self.pop(), (6, False, 'loadBefore', (b'1'*8, maxtid)))
-        self.respond(6, (b'data2', b'b'*8, None))
+        self.assertEqual(self.pop(), ((b'1'*8, maxtid), False, 'loadBefore', (b'1'*8, maxtid)))
+        self.respond((b'1'*8, maxtid), (b'data2', b'b'*8, None))
         self.assertEqual(loaded.result(), (b'data2', b'b'*8, None))
         self.assertEqual(loaded2.result(), (b'data2', b'b'*8, None))
 
@@ -233,8 +233,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertFalse(transport.data)
         loaded = self.load_before(b'1'*8, b'_'*8)
 
-        self.assertEqual(self.pop(), (7, False, 'loadBefore', (b'1'*8, b'_'*8)))
-        self.respond(7, (b'data0', b'^'*8, b'_'*8))
+        self.assertEqual(self.pop(), ((b'1'*8, b'_'*8), False, 'loadBefore', (b'1'*8, b'_'*8)))
+        self.respond((b'1'*8, b'_'*8), (b'data0', b'^'*8, b'_'*8))
         self.assertEqual(loaded.result(), (b'data0', b'^'*8, b'_'*8))
 
         # When committing transactions, we need to update the cache
@@ -257,8 +257,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
                          cache.load(b'4'*8))
         self.assertEqual(cache.load(b'1'*8), (b'data2', b'b'*8))
         self.assertEqual(self.pop(),
-                         (8, False, 'tpc_finish', (b'd'*8,)))
-        self.respond(8, b'e'*8)
+                         (5, False, 'tpc_finish', (b'd'*8,)))
+        self.respond(5, b'e'*8)
         self.assertEqual(committed.result(), b'e'*8)
         self.assertEqual(cache.load(b'1'*8), None)
         self.assertEqual(cache.load(b'2'*8), ('committed 2', b'e'*8))
@@ -272,8 +272,9 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertFalse(loaded.done() or f1.done())
         self.assertEqual(
             self.pop(),
-            [(9, False, 'loadBefore', (b'1'*8, maxtid)),
-             (10, False, 'foo', (1, 2))],
+            [((b'11111111', b'\x7f\xff\xff\xff\xff\xff\xff\xff'),
+              False, 'loadBefore', (b'1'*8, maxtid)),
+             (6, False, 'foo', (1, 2))],
             )
         exc = TypeError(43)
 

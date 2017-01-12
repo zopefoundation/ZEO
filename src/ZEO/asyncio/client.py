@@ -150,8 +150,6 @@ class Protocol(base.Protocol):
             # We have to be careful processing the futures, because
             # exception callbacks might modufy them.
             for f in self.pop_futures():
-                if isinstance(f, tuple):
-                    continue
                 f.set_exception(ClientDisconnected(exc or 'connection lost'))
             self.closed = True
             self.client.disconnected(self)
@@ -208,9 +206,6 @@ class Protocol(base.Protocol):
         msgid, async, name, args = self.decode(data)
         if name == '.reply':
             future = self.futures.pop(msgid)
-            if isinstance(future, tuple):
-                future = self.futures.pop(future)
-
             if (async): # ZEO 5 exception
                 class_, args = args
                 factory = exc_factories.get(class_)
@@ -254,15 +249,13 @@ class Protocol(base.Protocol):
 
     def load_before(self, oid, tid):
         # Special-case loadBefore, so we collapse outstanding requests
-        oid_tid = (oid, tid)
-        future = self.futures.get(oid_tid)
+        message_id = (oid, tid)
+        future = self.futures.get(message_id)
         if future is None:
             future = asyncio.Future(loop=self.loop)
-            self.futures[oid_tid] = future
-            self.message_id += 1
-            self.futures[self.message_id] = oid_tid
+            self.futures[message_id] = future
             self._write(
-                self.encode(self.message_id, False, 'loadBefore', (oid, tid)))
+                self.encode(message_id, False, 'loadBefore', (oid, tid)))
         return future
 
     # Methods called by the server.
