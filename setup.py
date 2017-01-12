@@ -36,7 +36,7 @@ install_requires = [
     'zope.interface',
     ]
 
-tests_require = ['zope.testing', 'manuel', 'random2', 'mock']
+tests_require = ['zope.testing', 'manuel', 'random2', 'mock', 'msgpack-python']
 
 if sys.version_info[:2] < (3, ):
     install_requires.extend(('futures', 'trollius'))
@@ -128,7 +128,11 @@ setup(name="ZEO",
       classifiers = classifiers,
       test_suite="__main__.alltests", # to support "setup.py test"
       tests_require = tests_require,
-      extras_require = dict(test=tests_require, uvloop=['uvloop >=0.5.1']),
+      extras_require = dict(
+          test=tests_require,
+          uvloop=['uvloop >=0.5.1'],
+          msgpack=['msgpack-python'],
+          ),
       install_requires = install_requires,
       zip_safe = False,
       entry_points = """

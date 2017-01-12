@@ -10,8 +10,6 @@ import socket
 from struct import unpack
 import sys
 
-from .marshal import encoder
-
 logger = logging.getLogger(__name__)
 
 INET_FAMILIES = socket.AF_INET, socket.AF_INET6
@@ -135,7 +133,6 @@ class Protocol(asyncio.Protocol):
     def first_message_received(self, protocol_version):
         # Handler for first/handshake message, set up in __init__
         del self.message_received # use default handler from here on
-        self.encode = encoder()
         self.finish_connect(protocol_version)
 
     def call_async(self, method, args):

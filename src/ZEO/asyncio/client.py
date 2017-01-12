@@ -13,7 +13,7 @@ import ZEO.interfaces
 
 from . import base
 from .compat import asyncio, new_event_loop
-from .marshal import decode
+from .marshal import encoder, decoder
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +63,7 @@ class Protocol(base.Protocol):
     # One place where special care was required was in cache setup on
     # connect. See finish connect below.
 
-    protocols = b'Z309', b'Z310', b'Z3101', b'Z4', b'Z5'
+    protocols = b'309', b'310', b'3101', b'4', b'5'
 
     def __init__(self, loop,
                  addr, client, storage_key, read_only, connect_poll=1,
@@ -165,12 +165,16 @@ class Protocol(base.Protocol):
         # lastTid before processing (and possibly missing) subsequent
         # invalidations.
 
-        self.protocol_version = min(protocol_version, self.protocols[-1])
-
-        if self.protocol_version not in self.protocols:
+        version = min(protocol_version[1:], self.protocols[-1])
+        if version not in self.protocols:
             self.client.register_failed(
                 self, ZEO.Exceptions.ProtocolError(protocol_version))
             return
+
+        self.protocol_version = protocol_version[:1] + version
+        self.encode = encoder(protocol_version)
+        self.decode = decoder(protocol_version)
+        self.heartbeat_bytes = self.encode(-1, 0, '.reply', None)
 
         self._write(self.protocol_version)
 
@@ -199,7 +203,7 @@ class Protocol(base.Protocol):
 
     exception_type_type = type(Exception)
     def message_received(self, data):
-        msgid, async, name, args = decode(data)
+        msgid, async, name, args = self.decode(data)
         if name == '.reply':
             future = self.futures.pop(msgid)
             if (async): # ZEO 5 exception
@@ -267,7 +271,7 @@ class Protocol(base.Protocol):
 
     def heartbeat(self, write=True):
         if write:
-            self._write(b'(J\xff\xff\xff\xffK\x00U\x06.replyNt.')
+            self._write(self.heartbeat_bytes)
         self.heartbeat_handle = self.loop.call_later(
             self.heartbeat_interval, self.heartbeat)
 

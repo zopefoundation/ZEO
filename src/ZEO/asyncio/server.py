@@ -11,13 +11,13 @@ from ..shortrepr import short_repr
 
 from . import base
 from .compat import asyncio, new_event_loop
-from .marshal import server_decode
+from .marshal import server_decoder, encoder, reduce_exception
 
 class ServerProtocol(base.Protocol):
     """asyncio low-level ZEO server interface
     """
 
-    protocols = (b'Z5', )
+    protocols = (b'5', )
 
     name = 'server protocol'
     methods = set(('register', ))
@@ -26,11 +26,15 @@ class ServerProtocol(base.Protocol):
         ZODB.POSException.POSKeyError,
         )
 
-    def __init__(self, loop, addr, zeo_storage):
+    def __init__(self, loop, addr, zeo_storage, msgpack):
         """Create a server's client interface
         """
         super(ServerProtocol, self).__init__(loop, addr)
         self.zeo_storage = zeo_storage
+
+        self.announce_protocol = (
+          (b'M' if msgpack else b'Z') + best_protocol_version
+        )
 
     closed = False
     def close(self):
@@ -44,7 +48,7 @@ class ServerProtocol(base.Protocol):
     def connection_made(self, transport):
         self.connected = True
         super(ServerProtocol, self).connection_made(transport)
-        self._write(best_protocol_version)
+        self._write(self.announce_protocol)
 
     def connection_lost(self, exc):
         self.connected = False
@@ -61,10 +65,13 @@ class ServerProtocol(base.Protocol):
             self._write(json.dumps(self.zeo_storage.ruok()).encode("ascii"))
             self.close()
         else:
-            if protocol_version in self.protocols:
+            version = protocol_version[1:]
+            if version in self.protocols:
                 logger.info("received handshake %r" %
                             str(protocol_version.decode('ascii')))
                 self.protocol_version = protocol_version
+                self.encode = encoder(protocol_version, True)
+                self.decode = server_decoder(protocol_version)
                 self.zeo_storage.notify_connected(self)
             else:
                 logger.error("bad handshake %s" % short_repr(protocol_version))
@@ -79,7 +86,7 @@ class ServerProtocol(base.Protocol):
 
     def message_received(self, message):
         try:
-            message_id, async, name, args = server_decode(message)
+            message_id, async, name, args = self.decode(message)
         except Exception:
             logger.exception("Can't deserialize message")
             self.close()
@@ -128,10 +135,7 @@ class ServerProtocol(base.Protocol):
     def send_error(self, message_id, exc, send_error=False):
         """Abstracting here so we can make this cleaner in the future
         """
-        class_ = exc.__class__
-        class_ = "%s.%s" % (class_.__module__, class_.__name__)
-        args = class_, exc.__dict__ or exc.args
-        self.send_reply(message_id, args, send_error, 2)
+        self.send_reply(message_id, reduce_exception(exc), send_error, 2)
 
     def async(self, method, *args):
         self.call_async(method, args)
@@ -144,8 +148,8 @@ best_protocol_version = os.environ.get(
     ServerProtocol.protocols[-1].decode('utf-8')).encode('utf-8')
 assert best_protocol_version in ServerProtocol.protocols
 
-def new_connection(loop, addr, socket, zeo_storage):
-    protocol = ServerProtocol(loop, addr, zeo_storage)
+def new_connection(loop, addr, socket, zeo_storage, msgpack):
+    protocol = ServerProtocol(loop, addr, zeo_storage, msgpack)
     cr = loop.create_connection((lambda : protocol), sock=socket)
     asyncio.async(cr, loop=loop)
 
@@ -213,10 +217,11 @@ class MTDelay(Delay):
 
 class Acceptor(object):
 
-    def __init__(self, storage_server, addr, ssl):
+    def __init__(self, storage_server, addr, ssl, msgpack):
         self.storage_server = storage_server
         self.addr = addr
         self.ssl_context = ssl
+        self.msgpack = msgpack
         self.event_loop = loop = new_event_loop()
 
         if isinstance(addr, tuple):
@@ -243,7 +248,8 @@ class Acceptor(object):
         try:
             logger.debug("Accepted connection")
             zs = self.storage_server.create_client_handler()
-            protocol = ServerProtocol(self.event_loop, self.addr, zs)
+            protocol = ServerProtocol(
+                self.event_loop, self.addr, zs, self.msgpack)
         except Exception:
             logger.exception("Failure in protocol factory")
 

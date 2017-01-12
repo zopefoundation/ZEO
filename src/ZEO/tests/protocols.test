@@ -17,15 +17,15 @@ Let's start a Z4 server
     ... '''
 
     >>> addr, stop = start_server(
-    ...    storage_conf, dict(invalidation_queue_size=5), protocol=b'Z4')
+    ...    storage_conf, dict(invalidation_queue_size=5), protocol=b'4')
 
 A current client should be able to connect to a old server:
 
     >>> import ZEO, ZODB.blob, transaction
     >>> db = ZEO.DB(addr, client='client', blob_dir='blobs')
     >>> wait_connected(db.storage)
-    >>> str(db.storage.protocol_version.decode('ascii'))
-    'Z4'
+    >>> str(db.storage.protocol_version.decode('ascii'))[1:]
+    '4'
 
     >>> conn = db.open()
     >>> conn.root().x = 0

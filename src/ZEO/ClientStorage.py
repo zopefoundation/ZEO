@@ -383,7 +383,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                 'interfaces', ()):
                 zope.interface.alsoProvides(self, iface)
 
-        if self.protocol_version >= b'Z5':
+        if self.protocol_version[1:] >= b'5':
             self.ping = lambda : self._call('ping')
         else:
             self.ping = lambda : self._call('lastTransaction')

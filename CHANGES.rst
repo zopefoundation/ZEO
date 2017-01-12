@@ -1,6 +1,13 @@
 Changelog
 =========
 
+- Added support for serializing ZEO messages using `msgpack
+  <http://msgpack.org/index.html>`_ rather than pickle.  This helps
+  pave the way to supporting `byteserver
+  <https://github.com/jimfulton/byteserver>`_, but it also allows ZEO
+  servers to support Python 2 or 3 clients (but not both at the same
+  time) and may provide a small performance improvement.
+
 5.0.4 (2016-11-18)
 ------------------
 

@@ -44,7 +44,7 @@ class StorageServer(ZEO.StorageServer.StorageServer):
 def client(server, name='client'):
     zs = ZEO.StorageServer.ZEOStorage(server)
     protocol = ZEO.asyncio.tests.server_protocol(
-        zs, protocol_version=b'Z5', addr='test-addr-%s' % name)
+        False, zs, protocol_version=b'Z5', addr='test-addr-%s' % name)
     zs.notify_connected(protocol)
     zs.register('1', 0)
     return zs
