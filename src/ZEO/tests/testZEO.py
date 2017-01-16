@@ -102,31 +102,28 @@ class MiscZEOTests:
 
     def checkZEOInvalidation(self):
         addr = self._storage._addr
-        storage2 = self._wrap_client(
-            ClientStorage(addr, wait=1, **self._client_options()))
+        db = ZODB.DB(self._wrap_client(
+            ClientStorage(addr, wait=1, **self._client_options())))
         try:
-            oid = self._storage.new_oid()
-            ob = MinPO('first')
-            revid1 = self._dostore(oid, data=ob)
-            data, serial = storage2.load(oid, '')
-            self.assertEqual(zodb_unpickle(data), MinPO('first'))
-            self.assertEqual(serial, revid1)
-            revid2 = self._dostore(oid, data=MinPO('second'), revid=revid1)
+            cn = db.open()
+            cn.root()['a'] = ob = MinPO('first')
+            transaction.commit()
+            serial = self._dostore(ob._p_oid, data=MinPO('second'),
+                                   revid=ob._p_serial)
 
             # Now, storage 2 should eventually get the new data. It
             # will take some time, although hopefully not much.
             # We'll poll till we get it and whine if we time out:
             for n in range(30):
                 time.sleep(.1)
-                data, serial = storage2.load(oid, '')
-                if (serial == revid2 and
-                    zodb_unpickle(data) == MinPO('second')
-                    ):
+                transaction.begin()
+                if ob.value == 'second':
+                    self.assertEqual(ob._p_serial, serial)
                     break
             else:
                 raise AssertionError('Invalidation message was not sent!')
         finally:
-            storage2.close()
+            db.close()
 
     def checkVolatileCacheWithImmediateLastTransaction(self):
         # Earlier, a ClientStorage would not have the last transaction id
