@@ -23,7 +23,7 @@ from ZEO._compat import PY3
 from ZEO._compat import WIN
 
 from ZODB.Connection import TransactionMetaData
-from ZODB.tests import StorageTestBase, BasicStorage,  \
+from ZODB.tests import testZODB, StorageTestBase, BasicStorage,  \
      TransactionalUndoStorage,  \
      PackableStorage, Synchronization, ConflictResolution, RevisionStorage, \
      MTStorage, ReadOnlyStorage, IteratorStorage, RecoveryStorage
@@ -422,7 +422,7 @@ class FileStorageRecoveryTests(StorageTestBase.StorageTestBase,
         return self._new_storage()
 
 
-class FileStorageTests(FullGenericTests):
+class FileStorageTests(FullGenericTests, testZODB.ZODBTests):
     """Test ZEO backed by a FileStorage."""
 
     def getConfig(self):
@@ -454,6 +454,16 @@ class FileStorageTests(FullGenericTests):
         self.assertEqual(self._expected_interfaces,
             self._storage._info['interfaces']
             )
+
+    @property
+    def _db(self):
+        self.__dict__['_db'] = db = ZODB.DB(self._storage)
+        def tearDown():
+            self._db.close()
+            del self.tearDown
+            self.tearDown()
+        self.tearDown = tearDown
+        return db
 
 
 class FileStorageSSLTests(FileStorageTests):
