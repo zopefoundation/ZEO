@@ -230,6 +230,10 @@ class ZEOStorage(object):
         supportsUndo = (getattr(storage, 'supportsUndo', lambda : False)()
                         and self.connection.protocol_version[1:] >= b'310')
 
+        supportsTransactionInformationRaw = \
+                getattr(storage, 'supportsTransactionInformationRaw',
+                        lambda : False)()
+
         # Communicate the backend storage interfaces to the client
         storage_provides = zope.interface.providedBy(storage)
         interfaces = []
@@ -240,6 +244,7 @@ class ZEOStorage(object):
                 'size': storage.getSize(),
                 'name': storage.getName(),
                 'supportsUndo': supportsUndo,
+                'supportsTransactionInformationRaw': supportsTransactionInformationRaw,
                 'supports_record_iternext': hasattr(self, 'record_iternext'),
                 'interfaces': tuple(interfaces),
                 }
@@ -571,6 +576,10 @@ class ZEOStorage(object):
                     info.user,
                     info.description,
                     info.extension)
+            # propagate IStorageTransactionInformationRaw if we have its data
+            raw_extension = getattr(info, "raw_extension", None)
+            if raw_extension is not None:
+                item += (raw_extension,)
             # Keep a reference to the last iterator result to allow starting a
             # record iterator off it.
             self._txn_iterators_last[iid] = info

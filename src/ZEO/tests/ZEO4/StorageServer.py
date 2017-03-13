@@ -719,6 +719,10 @@ class ZEOStorage(object):
                     info.user,
                     info.description,
                     info.extension)
+            # propagate IStorageTransactionInformationRaw if we have its data
+            raw_extension = getattr(info, "raw_extension", None)
+            if raw_extension is not None:
+                item += (raw_extension,)
             # Keep a reference to the last iterator result to allow starting a
             # record iterator off it.
             self._txn_iterators_last[iid] = info

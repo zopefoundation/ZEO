@@ -371,14 +371,20 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
 
         self._info.update(info)
 
-        for iface in (
+        ifacev = (
             ZODB.interfaces.IStorageRestoreable,
             ZODB.interfaces.IStorageIteration,
             ZODB.interfaces.IStorageUndoable,
             ZODB.interfaces.IStorageCurrentRecordIteration,
             ZODB.interfaces.IBlobStorage,
             ZODB.interfaces.IExternalGC,
-            ):
+        )
+        # if ZODB is recent enough to have IStorageIterationRaw - use it too
+        IStorageIterationRaw = getattr(ZODB.interfaces, 'IStorageIterationRaw', None)
+        if IStorageIterationRaw is not None:
+            ifacev += (IStorageIterationRaw,)
+
+        for iface in ifacev:
             if (iface.__module__, iface.__name__) in self._info.get(
                 'interfaces', ()):
                 zope.interface.alsoProvides(self, iface)
@@ -978,7 +984,11 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         if self._db is not None:
             self._db.invalidate(tid, oids)
 
-    # IStorageIteration
+    # IStorageIteration + IStorageIterationRaw
+
+    def supportsTransactionInformationRaw(self):
+        """Storage API: return whether iterated transactions are provided with raw metadata"""
+        return self._info.get('supportsTransactionInformationRaw', False)
 
     def iterator(self, start=None, stop=None):
         """Return an IStorageTransactionInformation iterator."""
@@ -1068,18 +1078,13 @@ class TransactionIterator(object):
 
 class ClientStorageTransactionInformation(ZODB.BaseStorage.TransactionRecord):
 
-    def __init__(self, storage, txiter, tid, status, user, description,
-                 extension):
+    def __init__(self, storage, txiter, *args):
         self._storage = storage
         self._txiter = txiter
         self._completed = False
         self._riid = None
 
-        self.tid = tid
-        self.status = status
-        self.user = user
-        self.description = description
-        self.extension = extension
+        super(ClientStorageTransactionInformation, self).__init__(*args)
 
     def __iter__(self):
         riid = self._storage._call('iterator_record_start',

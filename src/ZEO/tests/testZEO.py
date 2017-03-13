@@ -173,6 +173,11 @@ class GenericTestBase(
             )
         self._storage.registerDB(DummyDB())
 
+        # here we trust ZEO to properly propagate
+        # supportsTransactionInformationRaw from original storage.
+        self.supportsTransactionInformationRaw = \
+                self._storage.supportsTransactionInformationRaw()
+
     def getZEOConfig(self):
         return forker.ZEOConfig(('127.0.0.1', 0))
 
@@ -320,15 +325,22 @@ class FileStorageTests(FullGenericTests):
         </filestorage>
         """
 
-    _expected_interfaces = (
-        ('ZODB.interfaces', 'IStorageRestoreable'),
-        ('ZODB.interfaces', 'IStorageIteration'),
-        ('ZODB.interfaces', 'IStorageUndoable'),
-        ('ZODB.interfaces', 'IStorageCurrentRecordIteration'),
-        ('ZODB.interfaces', 'IExternalGC'),
-        ('ZODB.interfaces', 'IStorage'),
-        ('zope.interface', 'Interface'),
-        )
+    def setUp(self):
+        super(FileStorageTests, self).setUp()
+
+        self._expected_interfaces = set((
+            ('ZODB.interfaces', 'IStorageRestoreable'),
+            ('ZODB.interfaces', 'IStorageIteration'),
+            ('ZODB.interfaces', 'IStorageUndoable'),
+            ('ZODB.interfaces', 'IStorageCurrentRecordIteration'),
+            ('ZODB.interfaces', 'IExternalGC'),
+            ('ZODB.interfaces', 'IStorage'),
+            ('zope.interface', 'Interface'),
+        ))
+
+        if self.supportsTransactionInformationRaw:
+            self._expected_interfaces.add(
+                ('ZODB.interfaces', 'IStorageIterationRaw'))
 
     def checkInterfaceFromRemoteStorage(self):
         # ClientStorage itself doesn't implement IStorageIteration, but the
@@ -338,9 +350,17 @@ class FileStorageTests(FullGenericTests):
             ZEO.ClientStorage.ClientStorage))
         self.failUnless(ZODB.interfaces.IStorageIteration.providedBy(
             self._storage))
+        # same for IStorageIterationRaw
+        IStorageIterationRaw = getattr(ZODB.interfaces, 'IStorageIterationRaw', None)
+        if IStorageIterationRaw is not None:
+            self.failIf(IStorageIterationRaw.implementedBy(
+                ZEO.ClientStorage.ClientStorage))
+            self.assertEqual(IStorageIterationRaw.providedBy(self._storage),
+                             self.supportsTransactionInformationRaw)
+
         # This is communicated using ClientStorage's _info object:
         self.assertEquals(self._expected_interfaces,
-            self._storage._info['interfaces']
+            set(self._storage._info['interfaces'])
             )
 
 class FileStorageSSLTests(FileStorageTests):
@@ -353,16 +373,12 @@ class FileStorageSSLTests(FileStorageTests):
 
 
 class FileStorageHexTests(FileStorageTests):
-    _expected_interfaces = (
-        ('ZODB.interfaces', 'IStorageRestoreable'),
-        ('ZODB.interfaces', 'IStorageIteration'),
-        ('ZODB.interfaces', 'IStorageUndoable'),
-        ('ZODB.interfaces', 'IStorageCurrentRecordIteration'),
-        ('ZODB.interfaces', 'IExternalGC'),
-        ('ZODB.interfaces', 'IStorage'),
-        ('ZODB.interfaces', 'IStorageWrapper'),
-        ('zope.interface', 'Interface'),
-        )
+
+    def setUp(self):
+        super(FileStorageHexTests, self).setUp()
+
+        self._expected_interfaces.add(
+            ('ZODB.interfaces', 'IStorageWrapper'))
 
     def getConfig(self):
         return """\
