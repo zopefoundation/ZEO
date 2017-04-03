@@ -1,19 +1,27 @@
-==========================
-ZEO
-==========================
+============================================================
+ZEO - Single-server client-server database server for ZODB
+============================================================
+
+ZEO is a client-server storage for `ZODB <http://www.zodb.org>`_ for
+sharing a single storage among many clients. When you use ZEO, a
+lower-level storage, typically a file storage, is opened in the ZEO
+server process.  Client programs connect to this process using a ZEO
+ClientStorage.  ZEO provides a consistent view of the database to all
+clients.  The ZEO client and server communicate using a custom
+protocol layered on top of TCP.
+
+Some alternatives to ZEO:
+
+- `NEO <http://www.neoppod.org/>`_ is a distributed-server
+  client-server storage.
+
+- `RelStorage <http://relstorage.readthedocs.io/en/latest/>`_
+  leverages the RDBMS servers to provide a client-server storage.
 
 .. contents::
 
 Introduction
 ============
-
-ZEO (Zope Enterprise Objects) is a client-server system for sharing a
-single storage among many clients. When you use ZEO, a lower-level
-storage, typically a file storage, is opened in the ZEO server
-process.  Client programs connect to this process using a ZEO
-ClientStorage.  ZEO provides a consistent view of the database to all
-clients.  The ZEO client and server communicate using a custom
-protocol layered on top of TCP.
 
 There are several features that affect the behavior of
 ZEO.  This section describes how a few of these features
@@ -74,7 +82,7 @@ server. In this case, if the invalidation queue is too small, but a
 client has been disconnected for a time interval that is less than the
 invalidation age, then invalidations are replayed by iterating over
 the lower-level storage on the server.  If the age is too high, and
-clients are disconneced for a long time, then this can put a lot of
+clients are disconnected for a long time, then this can put a lot of
 load on the server.
 
 Transaction timeouts
@@ -135,7 +143,7 @@ Installing software
 ===================
 
 ZEO is installed like any other Python package using pip, buildout, or
-pther Python packaging tools.
+other Python packaging tools.
 
 Running the server
 ==================
@@ -147,7 +155,7 @@ accepts command line options, the most important of which is the
 via configuration files.  The ``runzeo`` script also accepts some
 command-line arguments for ad-hoc configurations, but there's an
 easier way to run an ad-hoc server described below.  For more on
-configuraing a ZEO server see `Server configuration`_ below.
+configuring a ZEO server see `Server configuration`_ below.
 
 Server quick-start/ad-hoc operation
 -----------------------------------
@@ -196,9 +204,9 @@ function. See it's documentation string for more information.
 Server configuration
 --------------------
 
-The script runzeo.py runs the ZEO server.  The server can be
-configured using command-line arguments or a config file.  This
-document only describes the config file.  Run runzeo.py
+The script ``runzeo`` runs the ZEO server.  The server can be
+configured using command-line arguments or a configuration file.  This
+document only describes the configuration file.  Run ``runzeo``
 -h to see the list of command-line arguments.
 
 The configuration file specifies the underlying storage the server
@@ -236,14 +244,13 @@ typing::
 
     runzeo -C zeo.config
 
-A configuration file consists of a <zeo> section and a storage
+A configuration file consists of a ``<zeo>`` section and a storage
 section, where the storage section can use any of the valid ZODB
-storage types.  It may also contain an eventlog configuration.  See
-ZODB documentation for information on configuring storages. See
-`Configuring event logs <logs.rst>`_ for information on configuring
-server logs.
+storage types.  It may also contain an event log configuration.  See
+`ZODB documentation <http://www.zodb.org>`_ for information on
+configuring storages.
 
-The zeo section must list the address.  All the other keys are
+The ``zeo`` section must list the address.  All the other keys are
 optional.
 
 address
@@ -353,15 +360,12 @@ authenticate
 Running the ZEO server as a daemon
 ----------------------------------
 
-In an operational setting, you will want to run the ZEO server a
-daemon process that is restarted when it dies.  The zdaemon package
-provides two tools for running daemons: zdrun.py and zdctl.py. You can
-find zdaemon and it's documentation at
-http://pypi.python.org/pypi/zdaemon.
-
-Note that ``runzeo`` makes no attempt to implemnt a well behaved
-daemon. It expects that functionality to be provided by a wrapper like
-zdaemon or supervisord.
+In an operational setting, you will want to run the ZEO server as a
+daemon process that is restarted when it dies.  ``runzeo`` makes no
+attempt to implement a well behaved daemon. It expects that
+functionality to be provided by a wrapper like `zdaemon
+<https://pypi.python.org/pypi/zdaemon>`_ or `supervisord
+<http://supervisord.org/>`_.
 
 Rotating log files
 ------------------
@@ -392,8 +396,8 @@ function::
 
 In the example above, we created a client that connected to a storage
 listening on port 8200 on local host.  The first argument is an
-address, or list of addresses to connect to.  There are many additinal
-options, decumented below that should be given as keyword arguments.
+address, or list of addresses to connect to.  There are many additional
+options, documented below that should be given as keyword arguments.
 
 Addresses can be:
 
@@ -410,7 +414,7 @@ cache_size
 
 cache
    The ZEO cache to be used.  This can be a file name, which will
-   cause a persisetnt standard persistent ZEO cache to be used and
+   cause a persistent standard persistent ZEO cache to be used and
    stored in the given name.  This can also be an object that
    implements ``ZEO.interfaces.ICache``.
 
@@ -436,7 +440,7 @@ blob_cache_size
 
 blob_cache_size_check
    The total size of data to be downloaded to trigger blob cache size
-   reduction. The defaukt is 10 (percent).  This controls how often to
+   reduction. The default is 10 (percent).  This controls how often to
    remove blobs from the cache.
 
 ssl
@@ -465,7 +469,7 @@ read_only_fallback
 server_sync
    Flag, false by default, indicating whether the ``sync`` method
    should make a server request.  The ``sync`` method is called at the
-   start of explcitly begin transactions.  Making a server requests assures
+   start of explicitly begin transactions.  Making a server requests assures
    that any invalidations outstanding at the beginning of a
    transaction are processed.
 
@@ -574,7 +578,7 @@ blob-cache-size
 
 blob-cache-size-check
    The total size of data to be downloaded to trigger blob cache size
-   reduction. The defaukt is 10 (percent).  This controls how often to
+   reduction. The default is 10 (percent).  This controls how often to
    remove blobs from the cache.
 
 read-only
@@ -591,7 +595,7 @@ read-only-fallback
    If ``read_only_fallback`` is set, then ``read_only`` is ignored.
 
 server-sync
-   Sets thr ``server_sync`` option described above.
+   Sets the ``server_sync`` option described above.
 
 wait_timeout
    How long to wait for an initial connection, defaulting to 30
@@ -631,7 +635,7 @@ An ``ssl`` subsection can be used to enable and configure SSL, as in::
 
 In the example above, SSL is enabled in it's simplest form:
 
-- The cient expects the server to have a signed certificate, which the
+- The client expects the server to have a signed certificate, which the
   client validates.
 
 - The server server host name ``zeo.example.com`` is checked against
@@ -658,7 +662,7 @@ authenticate
   ``ssl.SSLContext.load_verify_locations``.)
 
   If this setting is used. then certificate authentication is
-  used to authenticate the server.  The server must be configuted
+  used to authenticate the server.  The server must be configured
   with one of the certificates supplied using this setting.
 
 check-hostname
@@ -670,6 +674,6 @@ server-hostname
   used in the server address.  This option must be used when
   ``check-hostname`` is true and when a server address has no host
   name (localhost, or unix domain socket) or when there is more
-  than one seerver and server hostnames differ.
+  than one server and server hostnames differ.
 
   Using this setting implies a true value for the ``check-hostname`` setting.
