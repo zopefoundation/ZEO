@@ -10,7 +10,7 @@
   <import package="ZODB"/>
 
   <!-- Use the ZEO server information structure. -->
-  <import package="ZEO"/>
+  <import package="ZEO" file="server.xml" />
 
   <import package="ZConfig.components.logger"/>
 

@@ -1,12 +1,20 @@
 Changelog
 =========
 
+5.0.4 (unreleased)
+------------------
+
 - Added support for serializing ZEO messages using `msgpack
   <http://msgpack.org/index.html>`_ rather than pickle.  This helps
   pave the way to supporting `byteserver
   <https://github.com/jimfulton/byteserver>`_, but it also allows ZEO
   servers to support Python 2 or 3 clients (but not both at the same
   time) and may provide a small performance improvement.
+
+- Possibly fixed the deprecated and untested zeoctl script.
+
+- Removed zeopasswd, which no longer makes sense given that ZEO
+  authentication was removed, in favor of SSL.
 
 5.0.4 (2016-11-18)
 ------------------

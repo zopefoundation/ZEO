@@ -139,7 +139,6 @@ setup(name="ZEO",
       [console_scripts]
       zeopack = ZEO.scripts.zeopack:main
       runzeo = ZEO.runzeo:main
-      zeopasswd = ZEO.zeopasswd:main
       zeoctl = ZEO.zeoctl:main
       zeo-nagios = ZEO.nagios:main
       """,
