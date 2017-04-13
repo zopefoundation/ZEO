@@ -536,7 +536,7 @@ class ConnectThread(threading.Thread):
             # TODO: should check deadline
 
 
-class ConnectWrapper:
+class ConnectWrapper(object):
     """An object that handles the connection procedure for one socket.
 
     This is a little state machine with states:

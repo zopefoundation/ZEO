@@ -21,7 +21,7 @@ from ZODB.Connection import TransactionMetaData
 
 from ..asyncio.testing import AsyncRPC
 
-class IterationTests:
+class IterationTests(object):
 
     def _assertIteratorIdsEmpty(self):
         # Account for the need to run a GC collection

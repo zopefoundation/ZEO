@@ -7,7 +7,7 @@ import unittest
 from ZEO.runzeo import ZEOServer
 
 
-class TestStorageServer:
+class TestStorageServer(object):
 
     def __init__(self, fail_create_server):
         self.called = []

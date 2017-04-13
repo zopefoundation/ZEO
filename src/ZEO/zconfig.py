@@ -49,7 +49,7 @@ def server_ssl(section):
 def client_ssl(section):
     return ssl_config(section, False)
 
-class ClientStorageConfig:
+class ClientStorageConfig(object):
 
     def __init__(self, config):
         self.config = config

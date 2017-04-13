@@ -27,7 +27,7 @@ import ZODB.blob
 
 from ZEO._compat import Pickler, Unpickler
 
-class TransactionBuffer:
+class TransactionBuffer(object):
 
     # The TransactionBuffer is used by client storage to hold update
     # data until the tpc_finish().  It is only used by a single

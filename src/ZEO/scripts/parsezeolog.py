@@ -47,7 +47,7 @@ def parse_line(line):
     m = meth_name, tuple(meth_args)
     return t, m
 
-class TStats:
+class TStats(object):
 
     counter = 1
 
@@ -73,7 +73,7 @@ class TStats:
         print(self.fmt % (time.ctime(self.begin), d_vote, d_finish,
                           self.user, self.url))
 
-class TransactionParser:
+class TransactionParser(object):
 
     def __init__(self):
         self.txns = {}

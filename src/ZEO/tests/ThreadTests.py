@@ -71,7 +71,7 @@ class GetsThroughBeginThread(BasicThread):
             self.gotValueError = 1
 
 
-class ThreadTests:
+class ThreadTests(object):
     # Thread 1 should start a transaction, but not get all the way through it.
     # Main thread should close the connection.  Thread 1 should then get
     # disconnected.

@@ -16,7 +16,7 @@ import unittest
 
 import ZEO.asyncio.testing
 
-class FakeStorageBase:
+class FakeStorageBase(object):
 
     def __getattr__(self, name):
         if name in ('getTid', 'history', 'load', 'loadSerial',
@@ -43,7 +43,7 @@ class FakeStorage(FakeStorageBase):
 
         return oid, oid*8, 'data ' + oid, next
 
-class FakeServer:
+class FakeServer(object):
     storages = {
         '1': FakeStorage(),
         '2': FakeStorageBase(),
@@ -55,7 +55,7 @@ class FakeServer:
 
     client_conflict_resolution = False
 
-class FakeConnection:
+class FakeConnection(object):
     protocol_version = b'Z4'
     addr = 'test'
 

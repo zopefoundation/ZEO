@@ -47,7 +47,7 @@ else:
     if zeo_dist is not None:
         zeo_version = zeo_dist.version
 
-class StorageStats:
+class StorageStats(object):
     """Per-storage usage statistics."""
 
     def __init__(self, connections=None):

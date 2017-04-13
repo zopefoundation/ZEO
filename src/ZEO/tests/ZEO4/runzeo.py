@@ -64,7 +64,7 @@ def windows_shutdown_handler():
     import asyncore
     asyncore.close_all()
 
-class ZEOOptionsMixin:
+class ZEOOptionsMixin(object):
 
     storages = None
 
@@ -76,7 +76,7 @@ class ZEOOptionsMixin:
 
     def handle_filename(self, arg):
         from ZODB.config import FileStorage # That's a FileStorage *opener*!
-        class FSConfig:
+        class FSConfig(object):
             def __init__(self, name, path):
                 self._name = name
                 self.path = path
@@ -145,7 +145,7 @@ class ZEOOptions(ZDOptions, ZEOOptionsMixin):
                     break
 
 
-class ZEOServer:
+class ZEOServer(object):
 
     def __init__(self, options):
         self.options = options
