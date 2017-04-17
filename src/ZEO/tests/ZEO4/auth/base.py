@@ -22,7 +22,7 @@ from __future__ import print_function
 import os
 from ..hash import sha1
 
-class Client:
+class Client(object):
     # Subclass should override to list the names of methods that
     # will be called on the server.
     extensions = []
@@ -37,7 +37,7 @@ def sort(L):
     L.sort()
     return L
 
-class Database:
+class Database(object):
     """Abstracts a password database.
 
     This class is used both in the authentication process (via

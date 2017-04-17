@@ -41,7 +41,7 @@ skip_if_testing_client_against_zeo4 = (
     (lambda func: func)
     )
 
-class ZEOConfig:
+class ZEOConfig(object):
     """Class to generate ZEO configuration file. """
 
     def __init__(self, addr, log=None, **options):

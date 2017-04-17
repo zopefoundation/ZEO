@@ -64,7 +64,7 @@ class StorageServerError(StorageError):
     """Error reported when an unpicklable exception is raised."""
 
 
-class ZEOStorage:
+class ZEOStorage(object):
     """Proxy to underlying storage for a single remote client."""
 
     # A list of extension methods.  A subclass with extra methods
@@ -758,7 +758,7 @@ class ZEOStorage:
     def set_client_label(self, label):
         self.log_label = str(label)+' '+_addr_label(self.connection.addr)
 
-class StorageServerDB:
+class StorageServerDB(object):
 
     def __init__(self, server, storage_id):
         self.server = server
@@ -776,7 +776,7 @@ class StorageServerDB:
 
     transform_record_data = untransform_record_data = lambda self, data: data
 
-class StorageServer:
+class StorageServer(object):
 
     """The server side implementation of ZEO.
 
@@ -1328,7 +1328,7 @@ def _level_for_waiting(waiting):
     else:
         return logging.DEBUG
 
-class StubTimeoutThread:
+class StubTimeoutThread(object):
 
     def begin(self, client):
         pass
@@ -1434,7 +1434,7 @@ class SlowMethodThread(threading.Thread):
             self.delay.reply(result)
 
 
-class ClientStub:
+class ClientStub(object):
 
     def __init__(self, rpc):
         self.rpc = rpc
@@ -1494,7 +1494,7 @@ class ClientStub308(ClientStub):
     def invalidateVerify(self, oid):
         ClientStub.invalidateVerify(self, (oid, ''))
 
-class ZEOStorage308Adapter:
+class ZEOStorage308Adapter(object):
 
     def __init__(self, storage):
         self.storage = storage
@@ -1582,7 +1582,7 @@ def _addr_label(addr):
         host, port = addr
         return str(host) + ":" + str(port)
 
-class CommitLog:
+class CommitLog(object):
 
     def __init__(self):
         self.file = tempfile.TemporaryFile(suffix=".comit-log")
@@ -1624,7 +1624,7 @@ class CommitLog:
             self.file.close()
             self.file = None
 
-class ServerEvent:
+class ServerEvent(object):
 
     def __init__(self, server, **kw):
         self.__dict__.update(kw)

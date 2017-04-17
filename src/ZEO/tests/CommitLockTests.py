@@ -26,7 +26,7 @@ from ZEO.tests.TestThread import TestThread
 
 ZERO = b'\0'*8
 
-class DummyDB:
+class DummyDB(object):
     def invalidate(self, *args, **kwargs):
         pass
 
@@ -68,7 +68,7 @@ class WorkerThread(TestThread):
         self.ready.set()
         future.result(9)
 
-class CommitLockTests:
+class CommitLockTests(object):
 
     NUM_CLIENTS = 5
 

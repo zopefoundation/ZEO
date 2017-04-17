@@ -33,7 +33,7 @@ import ZEO
 
 from . import forker
 
-class FileStorageConfig:
+class FileStorageConfig(object):
     def getConfig(self, path, create, read_only):
         return """\
         <filestorage 1>
@@ -44,7 +44,7 @@ class FileStorageConfig:
                              create and 'yes' or 'no',
                              read_only and 'yes' or 'no')
 
-class MappingStorageConfig:
+class MappingStorageConfig(object):
     def getConfig(self, path, create, read_only):
         return """<mappingstorage 1/>"""
 

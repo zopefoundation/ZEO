@@ -61,7 +61,7 @@ from . import testssl
 
 logger = logging.getLogger('ZEO.tests.testZEO')
 
-class DummyDB:
+class DummyDB(object):
     def invalidate(self, *args):
         pass
     def invalidateCache(*unused):
@@ -75,7 +75,7 @@ class CreativeGetState(persistent.Persistent):
         return super(CreativeGetState, self).__getstate__()
 
 
-class MiscZEOTests:
+class MiscZEOTests(object):
     """ZEO tests that don't fit in elsewhere."""
 
     def checkCreativeGetState(self):
@@ -490,7 +490,7 @@ class ZRPCConnectionTests(ZEO.tests.ConnectionTests.CommonSetupTearDown):
         self._storage = storage
         assert storage.is_connected()
 
-        class DummyDB:
+        class DummyDB(object):
             _invalidatedCache = 0
             def invalidateCache(self):
                 self._invalidatedCache += 1
@@ -522,7 +522,7 @@ class ZRPCConnectionTests(ZEO.tests.ConnectionTests.CommonSetupTearDown):
         self.assertEqual(db._invalidatedCache, base+1)
 
 
-class CommonBlobTests:
+class CommonBlobTests(object):
 
     def getConfig(self):
         return """
@@ -706,7 +706,7 @@ class BlobWritableCacheTests(FullGenericTests, CommonBlobTests):
     blob_cache_dir = 'blobs'
     shared_blob_dir = True
 
-class FauxConn:
+class FauxConn(object):
     addr = 'x'
     protocol_version = ZEO.asyncio.server.best_protocol_version
     peer_protocol_version = protocol_version
@@ -718,7 +718,7 @@ class FauxConn:
 
     call_soon_threadsafe = async_threadsafe = async
 
-class StorageServerWrapper:
+class StorageServerWrapper(object):
 
     def __init__(self, server, storage_id):
         self.storage_id = storage_id

@@ -75,7 +75,7 @@ registered_methods = set(( 'get_info', 'lastTransaction',
     'iterator_next', 'iterator_record_start', 'iterator_record_next',
     'iterator_gc', 'server_status', 'set_client_label', 'ping'))
 
-class ZEOStorage:
+class ZEOStorage(object):
     """Proxy to underlying storage for a single remote client."""
 
     connected = connection = stats = storage = storage_id = transaction = None
@@ -616,7 +616,7 @@ class ZEOStorage:
     def ping(self):
         pass
 
-class StorageServerDB:
+class StorageServerDB(object):
     """Adapter from StorageServerDB to ZODB.interfaces.IStorageWrapper
 
     This is used in a ZEO fan-out situation, where a storage server
@@ -642,7 +642,7 @@ class StorageServerDB:
 
     transform_record_data = untransform_record_data = lambda self, data: data
 
-class StorageServer:
+class StorageServer(object):
 
     """The server side implementation of ZEO.
 
@@ -952,7 +952,7 @@ class StorageServer:
         return dict((storage_id, self.server_status(storage_id))
                     for storage_id in self.storages)
 
-class StubTimeoutThread:
+class StubTimeoutThread(object):
 
     def begin(self, client):
         pass
@@ -1067,7 +1067,7 @@ def _addr_label(addr):
         host, port = addr
         return str(host) + ":" + str(port)
 
-class CommitLog:
+class CommitLog(object):
 
     def __init__(self):
         self.file = tempfile.TemporaryFile(suffix=".comit-log")
@@ -1109,7 +1109,7 @@ class CommitLog:
             self.file.close()
             self.file = None
 
-class ServerEvent:
+class ServerEvent(object):
 
     def __init__(self, server, **kw):
         self.__dict__.update(kw)

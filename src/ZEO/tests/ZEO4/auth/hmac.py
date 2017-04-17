@@ -14,7 +14,7 @@ def _strxor(s1, s2):
 # hashing module used.
 digest_size = None
 
-class HMAC:
+class HMAC(object):
     """RFC2104 HMAC class.
 
     This supports the API for Cryptographic Hash Functions (PEP 247).

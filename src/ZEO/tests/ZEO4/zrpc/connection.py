@@ -32,7 +32,7 @@ exception_type_type = type(Exception)
 
 debug_zrpc = False
 
-class Delay:
+class Delay(object):
     """Used to delay response to client for synchronous calls.
 
     When a synchronous call is made and the original handler returns
