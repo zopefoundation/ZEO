@@ -275,7 +275,7 @@ class ZEOServer(object):
     def handle_sigusr2(self):
         # log rotation signal - do the same as Zope 2.7/2.8...
         if self.options.config_logger is None or os.name not in ("posix", "nt"):
-            log("received SIGUSR2, but it was not handled!", 
+            log("received SIGUSR2, but it was not handled!",
                 level=logging.WARNING)
             return
 
@@ -342,7 +342,7 @@ class ZEOServer(object):
 
 
 def create_server(storages, options):
-    from .StorageServer import StorageServer
+    from ZEO.StorageServer import StorageServer
     return StorageServer(
         options.address,
         storages,
