@@ -1,5 +1,9 @@
 import unittest
 
+import mock
+import os
+
+from ZEO._compat import PY3
 from ZEO.runzeo import ZEOServer
 
 
@@ -134,19 +138,42 @@ class CloseServerTests(unittest.TestCase):
         self.assertEqual(hasattr(zeo, "server"), True)
         self.assertEqual(zeo.server, None)
 
-
+@mock.patch('os.unlink')
 class TestZEOServerSocket(unittest.TestCase):
 
-    def test_clear_with_native_str(self):
+    def _unlinked(self, unlink, options):
+        server = ZEOServer(options)
+        server.clear_socket()
+        unlink.assert_called_once()
+
+    def _not_unlinked(self, unlink, options):
+        server = ZEOServer(options)
+        server.clear_socket()
+        unlink.assert_not_called()
+
+    def test_clear_with_native_str(self, unlink):
         class Options(object):
             address = "a str that does not exist"
+        self._unlinked(unlink, Options)
 
-        server = ZEOServer(Options())
-        self.assertTrue(server.clear_socket())
-
-    def test_clear_with_unicode_str(self):
+    def test_clear_with_unicode_str(self, unlink):
         class Options(object):
             address = u"a str that does not exist"
+        self._unlinked(unlink, Options)
 
-        server = ZEOServer(Options())
-        self.assertTrue(server.clear_socket())
+    def test_clear_with_bytes(self, unlink):
+        class Options(object):
+            address = b'a byte str that does not exist'
+
+        if PY3:
+            # bytes are not a string type under Py3
+            assertion = self._not_unlinked
+        else:
+            assertion = self._unlinked
+
+        assertion(unlink, Options)
+
+    def test_clear_with_tuple(self, unlink):
+        class Options(object):
+            address = ('abc', 1)
+        self._not_unlinked(unlink, Options)

@@ -196,7 +196,6 @@ class ZEOServer(object):
                 os.unlink(self.options.address)
             except os.error:
                 pass
-            return True
 
     def open_storages(self):
         self.storages = {}
