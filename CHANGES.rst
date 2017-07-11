@@ -6,7 +6,7 @@ Changelog
 
 - All classes are new-style classes on Python 2 (they were already
   new-style on Python 3). This improves performance on PyPy. See
-  `issue 86 <<https://github.com/zopefoundation/ZEO/pull/86>`_.
+  `issue 86 <https://github.com/zopefoundation/ZEO/pull/86>`_.
 
 - Fixed removing UNIX socket files under Python 2 with ZConfig 3.2.0.
   See `issue 90 <https://github.com/zopefoundation/ZEO/issues/90>`_.

@@ -15,15 +15,6 @@ version = '5.1.1.dev0'
 
 from setuptools import setup, find_packages
 import os
-import sys
-
-if sys.version_info < (2, 7, 9):
-    print("This version of ZEO requires Python 2.7.9 or higher")
-    sys.exit(1)
-
-if (3, 0) < sys.version_info < (3, 4):
-    print("This version of ZEO requires Python 3.4 or higher")
-    sys.exit(1)
 
 install_requires = [
     'ZODB >= 5.1.1',
@@ -34,12 +25,15 @@ install_requires = [
     'ZConfig',
     'zdaemon',
     'zope.interface',
-    ]
+]
 
-tests_require = ['zope.testing', 'manuel', 'random2', 'mock', 'msgpack-python']
-
-if sys.version_info[:2] < (3, ):
-    install_requires.extend(('futures', 'trollius'))
+tests_require = [
+    'zope.testing',
+    'manuel',
+    'random2',
+    'mock',
+    'msgpack-python',
+]
 
 classifiers = """
 Intended Audience :: Developers
@@ -113,35 +107,44 @@ long_description = (
     open('README.rst').read()
     + '\n' +
     open('CHANGES.rst').read()
-    )
+)
 setup(name="ZEO",
       version=version,
-      description = long_description.split('\n', 2)[1],
-      long_description = long_description,
-      url = 'https://pypi.python.org/pypi/ZEO',
+      description=long_description.split('\n', 2)[1],
+      long_description=long_description,
+      url='https://github.com/zopefoundation/ZEO',
       author="Zope Foundation and Contributors",
       author_email="zodb@googlegroups.com",
       keywords=['database', 'zodb'],
-      packages = find_packages('src'),
-      package_dir = {'': 'src'},
-      license = "ZPL 2.1",
-      platforms = ["any"],
-      classifiers = classifiers,
+      packages=find_packages('src'),
+      package_dir={'': 'src'},
+      license="ZPL 2.1",
+      platforms=["any"],
+      classifiers=classifiers,
       test_suite="__main__.alltests", # to support "setup.py test"
-      tests_require = tests_require,
-      extras_require = dict(
-          test=tests_require,
-          uvloop=['uvloop >=0.5.1'],
-          msgpack=['msgpack-python'],
-          ),
-      install_requires = install_requires,
-      zip_safe = False,
-      entry_points = """
+      tests_require=tests_require,
+      extras_require={
+          'test': tests_require,
+          'uvloop': [
+              'uvloop >=0.5.1'
+          ],
+          'msgpack': [
+              'msgpack-python'
+          ],
+          ':python_version == "2.7"': [
+              'futures',
+              'trollius',
+          ],
+      },
+      install_requires=install_requires,
+      zip_safe=False,
+      entry_points="""
       [console_scripts]
       zeopack = ZEO.scripts.zeopack:main
       runzeo = ZEO.runzeo:main
       zeoctl = ZEO.zeoctl:main
       zeo-nagios = ZEO.nagios:main
       """,
-      include_package_data = True,
-      )
+      include_package_data=True,
+      python_requires='>=2.7.9,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*',
+)

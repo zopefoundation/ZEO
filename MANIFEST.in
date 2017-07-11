@@ -3,7 +3,11 @@ include *.txt
 include *.py
 include buildout.cfg
 include tox.ini
+include .travis.yml
+include COPYING
+include log.ini
 
 recursive-include src *
+recursive-include doc *.txt
 
 global-exclude *.pyc
