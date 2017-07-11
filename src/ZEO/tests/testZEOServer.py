@@ -1,9 +1,9 @@
-#
-# Fix AttributeError: 'ZEOServer' object has no attribute 'server' in
-# ZEOServer.main
-#
 import unittest
 
+import mock
+import os
+
+from ZEO._compat import PY3
 from ZEO.runzeo import ZEOServer
 
 
@@ -55,9 +55,6 @@ class TestZEOServer(ZEOServer):
         self.called.append("close_server")
         ZEOServer.close_server(self)
 
-    def clear_socket(self):
-        self.called.append("clear_socket")
-
     def remove_pidfile(self):
         self.called.append("remove_pidfile")
 
@@ -65,6 +62,10 @@ class TestZEOServer(ZEOServer):
 class AttributeErrorTests(unittest.TestCase):
 
     def testFailCreateServer(self):
+        #
+        # Fix AttributeError: 'ZEOServer' object has no attribute
+        # 'server' in ZEOServer.main
+        #
         # Demonstrate the AttributeError
         zeo = TestZEOServer(fail_create_server=True)
         self.assertRaises(RuntimeError, zeo.main)
@@ -137,9 +138,42 @@ class CloseServerTests(unittest.TestCase):
         self.assertEqual(hasattr(zeo, "server"), True)
         self.assertEqual(zeo.server, None)
 
+@mock.patch('os.unlink')
+class TestZEOServerSocket(unittest.TestCase):
 
-def test_suite():
-    suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(AttributeErrorTests))
-    suite.addTest(unittest.makeSuite(CloseServerTests))
-    return suite
+    def _unlinked(self, unlink, options):
+        server = ZEOServer(options)
+        server.clear_socket()
+        unlink.assert_called_once()
+
+    def _not_unlinked(self, unlink, options):
+        server = ZEOServer(options)
+        server.clear_socket()
+        unlink.assert_not_called()
+
+    def test_clear_with_native_str(self, unlink):
+        class Options(object):
+            address = "a str that does not exist"
+        self._unlinked(unlink, Options)
+
+    def test_clear_with_unicode_str(self, unlink):
+        class Options(object):
+            address = u"a str that does not exist"
+        self._unlinked(unlink, Options)
+
+    def test_clear_with_bytes(self, unlink):
+        class Options(object):
+            address = b'a byte str that does not exist'
+
+        if PY3:
+            # bytes are not a string type under Py3
+            assertion = self._not_unlinked
+        else:
+            assertion = self._unlinked
+
+        assertion(unlink, Options)
+
+    def test_clear_with_tuple(self, unlink):
+        class Options(object):
+            address = ('abc', 1)
+        self._not_unlinked(unlink, Options)

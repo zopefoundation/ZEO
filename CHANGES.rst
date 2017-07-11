@@ -8,6 +8,8 @@ Changelog
   new-style on Python 3). This improves performance on PyPy. See
   `issue 86 <<https://github.com/zopefoundation/ZEO/pull/86>`_.
 
+- Fixed removing UNIX socket files under Python 2 with ZConfig 3.2.0.
+  See `issue 90 <https://github.com/zopefoundation/ZEO/issues/90>`_.
 
 5.1.0 (2017-04-03)
 ------------------

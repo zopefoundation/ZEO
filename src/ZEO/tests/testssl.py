@@ -369,6 +369,12 @@ def client_ssl(cafile=server_key,
     context.check_hostname = False
     return context
 
-# Here's a command to create a cert/key pair:
-# openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem \
-#             -days 999999 -nodes -batch
+# See
+# https://discuss.pivotal.io/hc/en-us/articles/202653388-How-to-renew-an-expired-Apache-Web-Server-self-signed-certificate-using-the-OpenSSL-tool
+# for instructions on updating the server.pem (the certificate) if
+# needed. server.pem.csr is the request.
+# This should do it:
+# openssl x509 -req -days 999999 -in src/ZEO/tests/server.pem.csr -signkey src/ZEO/tests/server_key.pem -out src/ZEO/tests/server.pem
+# If you need to create a new key first:
+# openssl genrsa -out server_key.pem 2048
+# These two files should then be copied to client_key.pem and client.pem.
