@@ -190,10 +190,10 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
 
         self.__name__ = name or str(addr) # Standard convention for storages
 
-        if isinstance(addr, str):
+        if isinstance(addr, six.string_types):
             addr = [addr]
         elif (isinstance(addr, tuple) and len(addr) == 2 and
-              isinstance(addr[0], str) and isinstance(addr[1], int)):
+              isinstance(addr[0], six.string_types) and isinstance(addr[1], int)):
             addr = [addr]
 
         logger.info(

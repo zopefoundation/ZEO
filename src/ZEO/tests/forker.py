@@ -53,7 +53,7 @@ class ZEOConfig(object):
             else:
                 self.logpath = 'server.log'
 
-        if not isinstance(addr, str):
+        if not isinstance(addr, six.string_types):
             addr = '%s:%s' % addr
 
         self.log = log
