@@ -29,18 +29,16 @@ Options:
 Unless -C is specified, -a and -f are required.
 """
 from __future__ import print_function
-from __future__ import print_function
 
 # The code here is designed to be reused by other, similar servers.
-# For the forseeable future, it must work under Python 2.1 as well as
-# 2.2 and above.
 
-import asyncore
 import os
 import sys
 import signal
 import socket
 import logging
+
+import six
 
 import ZConfig.datatypes
 from zdaemon.zdoptions import ZDOptions
@@ -193,11 +191,12 @@ class ZEOServer(object):
             return 1
 
     def clear_socket(self):
-        if isinstance(self.options.address, type("")):
+        if isinstance(self.options.address, six.string_types):
             try:
                 os.unlink(self.options.address)
             except os.error:
                 pass
+            return True
 
     def open_storages(self):
         self.storages = {}
@@ -275,7 +274,7 @@ class ZEOServer(object):
     def handle_sigusr2(self):
         # log rotation signal - do the same as Zope 2.7/2.8...
         if self.options.config_logger is None or os.name not in ("posix", "nt"):
-            log("received SIGUSR2, but it was not handled!", 
+            log("received SIGUSR2, but it was not handled!",
                 level=logging.WARNING)
             return
 

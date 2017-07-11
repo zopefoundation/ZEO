@@ -1,7 +1,3 @@
-#
-# Fix AttributeError: 'ZEOServer' object has no attribute 'server' in
-# ZEOServer.main
-#
 import unittest
 
 from ZEO.runzeo import ZEOServer
@@ -55,9 +51,6 @@ class TestZEOServer(ZEOServer):
         self.called.append("close_server")
         ZEOServer.close_server(self)
 
-    def clear_socket(self):
-        self.called.append("clear_socket")
-
     def remove_pidfile(self):
         self.called.append("remove_pidfile")
 
@@ -65,6 +58,10 @@ class TestZEOServer(ZEOServer):
 class AttributeErrorTests(unittest.TestCase):
 
     def testFailCreateServer(self):
+        #
+        # Fix AttributeError: 'ZEOServer' object has no attribute
+        # 'server' in ZEOServer.main
+        #
         # Demonstrate the AttributeError
         zeo = TestZEOServer(fail_create_server=True)
         self.assertRaises(RuntimeError, zeo.main)
@@ -138,8 +135,18 @@ class CloseServerTests(unittest.TestCase):
         self.assertEqual(zeo.server, None)
 
 
-def test_suite():
-    suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(AttributeErrorTests))
-    suite.addTest(unittest.makeSuite(CloseServerTests))
-    return suite
+class TestZEOServerSocket(unittest.TestCase):
+
+    def test_clear_with_native_str(self):
+        class Options(object):
+            address = "a str that does not exist"
+
+        server = ZEOServer(Options())
+        self.assertTrue(server.clear_socket())
+
+    def test_clear_with_unicode_str(self):
+        class Options(object):
+            address = u"a str that does not exist"
+
+        server = ZEOServer(Options())
+        self.assertTrue(server.clear_socket())
