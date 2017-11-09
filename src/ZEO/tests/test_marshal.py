@@ -1,11 +1,18 @@
 import unittest
 from ZEO.asyncio.marshal import encode
 from ZEO.asyncio.marshal import pickle_server_decode
-from ZopeUndo.Prefix import Prefix
+
+try:
+    from ZopeUndo.Prefix import Prefix
+except ImportError:
+    _HAVE_ZOPE_UNDO = False
+else:
+    _HAVE_ZOPE_UNDO = True
 
 
 class MarshalTests(unittest.TestCase):
 
+    @unittest.skipUnless(_HAVE_ZOPE_UNDO)
     def testServerDecodeZopeUndoFilter(self):
         # this is an example (1) of Zope2's arguments for
         # undoInfo call. Arguments are encoded by ZEO client
@@ -25,4 +32,3 @@ def test_suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(MarshalTests))
     return suite
-
