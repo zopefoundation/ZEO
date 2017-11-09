@@ -33,7 +33,6 @@ tests_require = [
     'random2',
     'mock',
     'msgpack-python',
-    'ZopeUndo',
 ]
 
 classifiers = """
