@@ -12,7 +12,7 @@ else:
 
 class MarshalTests(unittest.TestCase):
 
-    @unittest.skipUnless(_HAVE_ZOPE_UNDO)
+    @unittest.skipUnless(_HAVE_ZOPE_UNDO, 'ZopeUndo is not installed')
     def testServerDecodeZopeUndoFilter(self):
         # this is an example (1) of Zope2's arguments for
         # undoInfo call. Arguments are encoded by ZEO client
