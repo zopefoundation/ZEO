@@ -157,7 +157,7 @@ def find_global(module, name):
 def server_find_global(module, name):
     """Helper for message unpickler"""
     try:
-        if module != 'ZopeUndo.Prefix':
+        if module not in ('ZopeUndo.Prefix', 'copy_reg', '__builtin__'):
             raise ImportError
         m = __import__(module, _globals, _globals, _silly)
     except ImportError as msg:
