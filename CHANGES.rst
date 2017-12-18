@@ -1,7 +1,7 @@
 Changelog
 =========
 
-5.1.1 (unreleased)
+5.1.1 (2017-12-18)
 ------------------
 
 - All classes are new-style classes on Python 2 (they were already
