@@ -75,28 +75,54 @@ class CreativeGetState(persistent.Persistent):
         return super(CreativeGetState, self).__getstate__()
 
 
-class DummyClientThread(object):
-    def __init__(self, *args, **kw):
-        self._args = args
-        self._kw = kw
-    def call(self):
-        pass
-    def async(self):
-        pass
-    def async_iter(self):
-        pass
-    def wait(self):
-        pass
-
 
 class Test_convenience_functions(unittest.TestCase):
 
     def test_ZEO_client_convenience(self):
+        import mock
         import ZEO
 
+        client_thread = mock.Mock(
+            spec=['call', 'async', 'async_iter', 'wait'])
         client = ZEO.client(
-            8001, wait=False, _client_factory=DummyClientThread)
+            8001, wait=False, _client_factory=client_thread)
         self.assertIsInstance(client, ClientStorage)
+
+    def test_ZEO_DB_convenience_ok(self):
+        import mock
+        import ZEO
+
+        client_mock = mock.Mock(spec=['close'])
+        client_patch = mock.patch('ZEO.client', return_value=client_mock)
+        DB_patch = mock.patch('ZODB.DB')
+
+        dummy = object()
+
+        with client_patch as client:
+            with DB_patch as patched:
+                db = ZEO.DB(dummy)
+
+        self.assertIs(db, patched())
+        client.assert_called_once_with(dummy)
+        client_mock.close.assert_not_called()
+
+    def test_ZEO_DB_convenience_error(self):
+        import mock
+        import ZEO
+
+        client_mock = mock.Mock(spec=['close'])
+        client_patch = mock.patch('ZEO.client', return_value=client_mock)
+        DB_patch = mock.patch('ZODB.DB', side_effect=ValueError)
+
+        dummy = object()
+
+        with client_patch as client:
+            with DB_patch:
+                with self.assertRaises(ValueError):
+                    ZEO.DB(dummy)
+
+        client.assert_called_once_with(dummy)
+        client_mock.close.assert_called_once()
 
 
 class MiscZEOTests(object):
