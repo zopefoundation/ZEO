@@ -75,6 +75,30 @@ class CreativeGetState(persistent.Persistent):
         return super(CreativeGetState, self).__getstate__()
 
 
+class DummyClientThread(object):
+    def __init__(self, *args, **kw):
+        self._args = args
+        self._kw = kw
+    def call(self):
+        pass
+    def async(self):
+        pass
+    def async_iter(self):
+        pass
+    def wait(self):
+        pass
+
+
+class Test_convenience_functions(unittest.TestCase):
+
+    def test_ZEO_client_convenience(self):
+        import ZEO
+
+        client = ZEO.client(
+            8001, wait=False, _client_factory=DummyClientThread)
+        self.assertIsInstance(client, ClientStorage)
+
+
 class MiscZEOTests(object):
     """ZEO tests that don't fit in elsewhere."""
 
@@ -1636,7 +1660,9 @@ class ServerManagingClientStorageForIExternalGCTest(
         ZEO.ClientStorage._check_blob_cache_size(self.blob_dir, 0)
 
 def test_suite():
-    suite = unittest.TestSuite()
+    suite = unittest.TestSuite((
+        unittest.makeSuite(Test_convenience_functions),
+    ))
 
     zeo = unittest.TestSuite()
     zeo.addTest(unittest.makeSuite(ZODB.tests.util.AAAA_Test_Runner_Hack))
