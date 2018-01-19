@@ -9,3 +9,4 @@ eggs
 parts
 testing.log
 .dir-locals.el
+data.fs*

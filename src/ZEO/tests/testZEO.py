@@ -75,6 +75,94 @@ class CreativeGetState(persistent.Persistent):
         return super(CreativeGetState, self).__getstate__()
 
 
+
+class Test_convenience_functions(unittest.TestCase):
+
+    def test_ZEO_client_convenience(self):
+        import mock
+        import ZEO
+
+        client_thread = mock.Mock(
+            spec=['call', 'async', 'async_iter', 'wait'])
+        client = ZEO.client(
+            8001, wait=False, _client_factory=client_thread)
+        self.assertIsInstance(client, ClientStorage)
+
+    def test_ZEO_DB_convenience_ok(self):
+        import mock
+        import ZEO
+
+        client_mock = mock.Mock(spec=['close'])
+        client_patch = mock.patch('ZEO.client', return_value=client_mock)
+        DB_patch = mock.patch('ZODB.DB')
+
+        dummy = object()
+
+        with client_patch as client:
+            with DB_patch as patched:
+                db = ZEO.DB(dummy)
+
+        self.assertIs(db, patched())
+        client.assert_called_once_with(dummy)
+        client_mock.close.assert_not_called()
+
+    def test_ZEO_DB_convenience_error(self):
+        import mock
+        import ZEO
+
+        client_mock = mock.Mock(spec=['close'])
+        client_patch = mock.patch('ZEO.client', return_value=client_mock)
+        DB_patch = mock.patch('ZODB.DB', side_effect=ValueError)
+
+        dummy = object()
+
+        with client_patch as client:
+            with DB_patch:
+                with self.assertRaises(ValueError):
+                    ZEO.DB(dummy)
+
+        client.assert_called_once_with(dummy)
+        client_mock.close.assert_called_once()
+
+    def test_ZEO_connection_convenience_ok(self):
+        import mock
+        import ZEO
+
+        ret = object()
+        DB_mock = mock.Mock(spec=[
+            'close', 'open_then_close_db_when_connection_closes'])
+        DB_mock.open_then_close_db_when_connection_closes.return_value = ret
+        DB_patch = mock.patch('ZEO.DB', return_value=DB_mock)
+
+        dummy = object()
+
+        with DB_patch as patched:
+            conn = ZEO.connection(dummy)
+
+        self.assertIs(conn, ret)
+        patched.assert_called_once_with(dummy)
+        DB_mock.close.assert_not_called()
+
+    def test_ZEO_connection_convenience_value(self):
+        import mock
+        import ZEO
+
+        DB_mock = mock.Mock(spec=[
+            'close', 'open_then_close_db_when_connection_closes'])
+        otc = DB_mock.open_then_close_db_when_connection_closes
+        otc.side_effect = ValueError
+        DB_patch = mock.patch('ZEO.DB', return_value=DB_mock)
+
+        dummy = object()
+
+        with DB_patch as patched:
+            with self.assertRaises(ValueError):
+                ZEO.connection(dummy)
+
+        patched.assert_called_once_with(dummy)
+        DB_mock.close.assert_called_once()
+
+
 class MiscZEOTests(object):
     """ZEO tests that don't fit in elsewhere."""
 
@@ -1636,7 +1724,9 @@ class ServerManagingClientStorageForIExternalGCTest(
         ZEO.ClientStorage._check_blob_cache_size(self.blob_dir, 0)
 
 def test_suite():
-    suite = unittest.TestSuite()
+    suite = unittest.TestSuite((
+        unittest.makeSuite(Test_convenience_functions),
+    ))
 
     zeo = unittest.TestSuite()
     zeo.addTest(unittest.makeSuite(ZODB.tests.util.AAAA_Test_Runner_Hack))
