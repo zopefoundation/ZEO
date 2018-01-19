@@ -40,7 +40,7 @@ def connection(*args, **kw):
         return db.open_then_close_db_when_connection_closes()
     except Exception:
         db.close()
-        ra
+        raise
 
 def server(path=None, blob_dir=None, storage_conf=None, zeo_conf=None,
            port=0, threaded=True, **kw):

@@ -124,6 +124,44 @@ class Test_convenience_functions(unittest.TestCase):
         client.assert_called_once_with(dummy)
         client_mock.close.assert_called_once()
 
+    def test_ZEO_connection_convenience_ok(self):
+        import mock
+        import ZEO
+
+        ret = object()
+        DB_mock = mock.Mock(spec=[
+            'close', 'open_then_close_db_when_connection_closes'])
+        DB_mock.open_then_close_db_when_connection_closes.return_value = ret
+        DB_patch = mock.patch('ZEO.DB', return_value=DB_mock)
+
+        dummy = object()
+
+        with DB_patch as patched:
+            conn = ZEO.connection(dummy)
+
+        self.assertIs(conn, ret)
+        patched.assert_called_once_with(dummy)
+        DB_mock.close.assert_not_called()
+
+    def test_ZEO_connection_convenience_value(self):
+        import mock
+        import ZEO
+
+        DB_mock = mock.Mock(spec=[
+            'close', 'open_then_close_db_when_connection_closes'])
+        otc = DB_mock.open_then_close_db_when_connection_closes
+        otc.side_effect = ValueError
+        DB_patch = mock.patch('ZEO.DB', return_value=DB_mock)
+
+        dummy = object()
+
+        with DB_patch as patched:
+            with self.assertRaises(ValueError):
+                ZEO.connection(dummy)
+
+        patched.assert_called_once_with(dummy)
+        DB_mock.close.assert_called_once()
+
 
 class MiscZEOTests(object):
     """ZEO tests that don't fit in elsewhere."""
