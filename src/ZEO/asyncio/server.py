@@ -90,6 +90,7 @@ class ServerProtocol(base.Protocol):
         except Exception:
             logger.exception("Can't deserialize message")
             self.close()
+            return
 
         if message_id == -1:
             return # keep-alive
