@@ -20,6 +20,7 @@ from ZEO.ClientStorage import ClientStorage
 from ZEO.tests import forker, Cache, CommitLockTests, ThreadTests
 from ZEO.tests import IterationTests
 from ZEO._compat import PY3
+from ZEO._compat import WIN
 
 from ZODB.Connection import TransactionMetaData
 from ZODB.tests import StorageTestBase, BasicStorage,  \
@@ -1583,7 +1584,7 @@ if not os.environ.get('ZEO4_SERVER'):
             >>> conn.close(); s()
             """
 
-if sys.platform.startswith('win'):
+if WIN:
     del runzeo_logrotate_on_sigusr2
     del unix_domain_sockets
 
