@@ -1,7 +1,7 @@
 Changelog
 =========
 
-5.1.2 (unreleased)
+5.1.2 (2018-03-27)
 ------------------
 
 - Fix: ZEO didn't work with a change in ZODB 5.4.0.
