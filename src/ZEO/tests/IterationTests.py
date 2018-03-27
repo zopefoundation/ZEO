@@ -33,7 +33,7 @@ class IterationTests(object):
         # make sure there's no race conditions cleaning out the weak refs
         gc.disable()
         try:
-            self.assertEquals(0, len(self._storage._iterator_ids))
+            self.assertEqual(0, len(self._storage._iterator_ids))
         except AssertionError:
             # Ok, we have ids. That should also mean that the
             # weak dictionary has the same length.
@@ -50,7 +50,7 @@ class IterationTests(object):
 
             self.assertEqual(len(self._storage._iterators),
                              len(self._storage._iterator_ids))
-            self.assertEquals(0, len(self._storage._iterator_ids))
+            self.assertEqual(0, len(self._storage._iterator_ids))
         finally:
             if gc_enabled:
                 gc.enable()
@@ -63,7 +63,7 @@ class IterationTests(object):
 
         iid = server.iterator_start(None, None)
         # None signals the end of iteration.
-        self.assertEquals(None, server.iterator_next(iid))
+        self.assertEqual(None, server.iterator_next(iid))
         # The server has disposed the iterator already.
         self.assertRaises(KeyError, server.iterator_next, iid)
 
@@ -80,10 +80,10 @@ class IterationTests(object):
         # At this point, a wrapping iterator might not have called the CS
         # iterator yet. We'll consume one item to make sure this happens.
         six.advance_iterator(iterator)
-        self.assertEquals(1, len(self._storage._iterator_ids))
+        self.assertEqual(1, len(self._storage._iterator_ids))
         iid = list(self._storage._iterator_ids)[0]
-        self.assertEquals([], list(iterator))
-        self.assertEquals(0, len(self._storage._iterator_ids))
+        self.assertEqual([], list(iterator))
+        self.assertEqual(0, len(self._storage._iterator_ids))
 
         # The iterator has run through, so the server has already disposed it.
         self.assertRaises(KeyError, self._storage._call, 'iterator_next', iid)
@@ -98,7 +98,7 @@ class IterationTests(object):
         # don't see the transaction we just wrote being picked up, because
         # iterators only see the state from the point in time when they were
         # created.)
-        self.assert_(list(iterator))
+        self.assertTrue(list(iterator))
 
     def checkIteratorGCStorageCommitting(self):
         # We want the iterator to be garbage-collected, so we don't keep any
@@ -111,7 +111,7 @@ class IterationTests(object):
         self._dostore()
         six.advance_iterator(self._storage.iterator())
 
-        self.assertEquals(1, len(self._storage._iterator_ids))
+        self.assertEqual(1, len(self._storage._iterator_ids))
         iid = list(self._storage._iterator_ids)[0]
 
         # GC happens at the transaction boundary. After that, both the storage
@@ -154,7 +154,7 @@ class IterationTests(object):
         # as well. I'm calling this directly to avoid accidentally
         # calling tpc_abort implicitly.
         self._storage.notify_disconnected()
-        self.assertEquals(0, len(self._storage._iterator_ids))
+        self.assertEqual(0, len(self._storage._iterator_ids))
 
     def checkIteratorParallel(self):
         self._dostore()
@@ -163,10 +163,10 @@ class IterationTests(object):
         iter2 = self._storage.iterator()
         txn_info1 = six.advance_iterator(iter1)
         txn_info2 = six.advance_iterator(iter2)
-        self.assertEquals(txn_info1.tid, txn_info2.tid)
+        self.assertEqual(txn_info1.tid, txn_info2.tid)
         txn_info1 = six.advance_iterator(iter1)
         txn_info2 = six.advance_iterator(iter2)
-        self.assertEquals(txn_info1.tid, txn_info2.tid)
+        self.assertEqual(txn_info1.tid, txn_info2.tid)
         self.assertRaises(StopIteration, next, iter1)
         self.assertRaises(StopIteration, next, iter2)
 

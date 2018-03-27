@@ -122,7 +122,7 @@ class Protocol(base.Protocol):
             cr = self.loop.create_unix_connection(
                 self.protocol_factory, self.addr, ssl=self.ssl)
 
-        self._connecting = cr = asyncio.async(cr, loop=self.loop)
+        self._connecting = cr = asyncio.ensure_future(cr, loop=self.loop)
 
         @cr.add_done_callback
         def done_connecting(future):

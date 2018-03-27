@@ -4,7 +4,9 @@ Changelog
 5.1.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Allow ``zodbpickle.binary`` to be used in RPC requests, which is
+  necessary for compatibility with ZODB 5.4.0 on Python 2. See `issue
+  107 <https://github.com/zopefoundation/ZEO/issues/107>`_.
 
 
 5.1.1 (2017-12-18)

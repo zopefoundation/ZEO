@@ -156,9 +156,10 @@ def find_global(module, name):
 
 def server_find_global(module, name):
     """Helper for message unpickler"""
+    if module not in ('ZopeUndo.Prefix', 'copy_reg', '__builtin__', 'zodbpickle'):
+        raise ImportError("Module not allowed: %s" % (module,))
+
     try:
-        if module not in ('ZopeUndo.Prefix', 'copy_reg', '__builtin__'):
-            raise ImportError
         m = __import__(module, _globals, _globals, _silly)
     except ImportError as msg:
         raise ImportError("import error %s: %s" % (module, msg))

@@ -118,7 +118,7 @@ class SSLConfigTest(ZEOConfigTestBase):
         stop()
 
 @unittest.skipIf(forker.ZEO4_SERVER, "ZEO4 servers don't support SSL")
-@mock.patch(('asyncio' if PY3 else 'trollius') + '.async')
+@mock.patch(('asyncio' if PY3 else 'trollius') + '.ensure_future')
 @mock.patch(('asyncio' if PY3 else 'trollius') + '.set_event_loop')
 @mock.patch(('asyncio' if PY3 else 'trollius') + '.new_event_loop')
 @mock.patch('ZEO.asyncio.client.new_event_loop')

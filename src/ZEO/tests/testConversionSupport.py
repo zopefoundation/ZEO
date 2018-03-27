@@ -122,6 +122,9 @@ First, fake out the connection manager so we can make a connection:
     ...            next = None
     ...
     ...        return oid, oid*8, 'data ' + oid, next
+    ...
+    ...    def close(self):
+    ...        pass
 
     >>> client = ZEO.client(
     ...     '', wait=False, _client_factory=Client)
@@ -138,6 +141,7 @@ Now we'll have our way with it's private _server attr:
     2
     3
     4
+    >>> client.close()
 
 """
 

@@ -51,6 +51,7 @@ class TransBufTests(unittest.TestCase):
         for i, (oid, d, resolved) in enumerate(tbuf):
             self.assertEqual((oid, d), data[i][0])
             self.assertEqual(resolved, data[i][1])
+        tbuf.close()
 
 def test_suite():
     return unittest.makeSuite(TransBufTests, 'check')
