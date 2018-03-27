@@ -60,7 +60,7 @@ class FakeConnection(object):
     addr = 'test'
 
     call_soon_threadsafe = lambda f, *a: f(*a)
-    async = async_threadsafe = None
+    async_ = async_threadsafe = None
 
 def test_server_record_iternext():
     """
@@ -123,8 +123,6 @@ First, fake out the connection manager so we can make a connection:
     ...
     ...        return oid, oid*8, 'data ' + oid, next
     ...
-    ...    def close(self):
-    ...        pass
 
     >>> client = ZEO.client(
     ...     '', wait=False, _client_factory=Client)

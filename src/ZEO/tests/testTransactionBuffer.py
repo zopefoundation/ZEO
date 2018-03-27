@@ -40,6 +40,7 @@ class TransBufTests(unittest.TestCase):
         store(tbuf)
         for o in tbuf:
             pass
+        tbuf.close()
 
     def checkOrderPreserved(self):
         tbuf = TransactionBuffer(0)

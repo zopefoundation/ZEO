@@ -25,10 +25,10 @@ class ServerProtocol(object):
     def call_soon_threadsafe(self, func, *args):
         func(*args)
 
-    def async(self, *args):
+    def async_(self, *args):
         self.calls.append(args)
 
-    async_threadsafe = async
+    async_threadsafe = async_
 
 class StorageServer(object):
     """Create a client interface to a StorageServer.

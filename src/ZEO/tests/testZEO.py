@@ -801,11 +801,11 @@ class FauxConn(object):
     peer_protocol_version = protocol_version
 
     serials = []
-    def async(self, method, *args):
+    def async_(self, method, *args):
         if method == 'serialnos':
             self.serials.extend(args[0])
 
-    call_soon_threadsafe = async_threadsafe = async
+    call_soon_threadsafe = async_threadsafe = async_
 
 class StorageServerWrapper(object):
 

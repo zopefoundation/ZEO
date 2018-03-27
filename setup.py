@@ -33,6 +33,7 @@ tests_require = [
     'random2',
     'mock',
     'msgpack-python',
+    'zope.testrunner',
 ]
 
 classifiers = """

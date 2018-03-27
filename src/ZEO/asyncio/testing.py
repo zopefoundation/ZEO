@@ -167,7 +167,10 @@ class ClientRunner(object):
     def call(self, method, *args, **kw):
         return getattr(self, method)(*args)
 
-    async = async_iter = call
+    async_ = async_iter = call
 
     def wait(self, timeout=None):
+        pass
+
+    def close(self):
         pass

@@ -86,7 +86,7 @@ class ServerProtocol(base.Protocol):
 
     def message_received(self, message):
         try:
-            message_id, async, name, args = self.decode(message)
+            message_id, async_, name, args = self.decode(message)
         except Exception:
             logger.exception("Can't deserialize message")
             self.close()
@@ -104,13 +104,13 @@ class ServerProtocol(base.Protocol):
         except Exception as exc:
             if not isinstance(exc, self.unlogged_exception_types):
                 logger.exception(
-                    "Bad %srequest, %r", 'async ' if async else '', name)
-            if async:
+                    "Bad %srequest, %r", 'async ' if async_ else '', name)
+            if async_:
                 return self.close() # No way to recover/cry for help
             else:
                 return self.send_error(message_id, exc)
 
-        if not async:
+        if not async_:
             self.send_reply(message_id, result)
 
     def send_reply(self, message_id, result, send_error=False, flag=0):
@@ -138,7 +138,7 @@ class ServerProtocol(base.Protocol):
         """
         self.send_reply(message_id, reduce_exception(exc), send_error, 2)
 
-    def async(self, method, *args):
+    def async_(self, method, *args):
         self.call_async(method, args)
 
     def async_threadsafe(self, method, *args):

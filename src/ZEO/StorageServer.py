@@ -104,7 +104,7 @@ class ZEOStorage(object):
         self.connected = True
         assert conn.protocol_version is not None
         self.log_label = _addr_label(conn.addr)
-        self.async = conn.async
+        self.async_ = conn.async_
         self.async_threadsafe = conn.async_threadsafe
 
     def notify_disconnected(self):
@@ -337,7 +337,7 @@ class ZEOStorage(object):
 
         self.stats.commits += 1
         self.storage.tpc_finish(self.transaction, self._invalidate)
-        self.async('info', self.get_size_info())
+        self.async_('info', self.get_size_info())
         # Note that the tid is still current because we still hold the
         # commit lock. We'll relinquish it in _clear_transaction.
         tid = self.storage.lastTransaction()

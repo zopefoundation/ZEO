@@ -543,7 +543,7 @@ class Connection(smac.SizedMessageAsyncConnection, object):
         else:
             self.__super_setSessionKey(key)
 
-    def send_call(self, method, args, async=False):
+    def send_call(self, method, args, async_=False):
         # send a message and return its msgid
         if async:
             msgid = 0
