@@ -191,7 +191,7 @@ class Acceptor(asyncore.dispatcher):
                             server_hostname=''
                             )
 
-                asyncio.async(cr, loop=loop)
+                asyncio.ensure_future(cr, loop=loop)
                 loop.run_forever()
                 loop.close()
 

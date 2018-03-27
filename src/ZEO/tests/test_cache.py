@@ -141,12 +141,12 @@ class CacheTests(ZODB.tests.util.TestCase):
         for i in range(50):
             n = p64(i)
             cache.store(n, n, None, data[i])
-            self.assertEquals(len(cache), i + 1)
+            self.assertEqual(len(cache), i + 1)
         # The cache is now almost full.  The next insert
         # should delete some objects.
         n = p64(50)
         cache.store(n, n, None, data[51])
-        self.assert_(len(cache) < 51)
+        self.assertTrue(len(cache) < 51)
 
         # TODO:  Need to make sure eviction of non-current data
         # are handled correctly.
@@ -174,41 +174,44 @@ class CacheTests(ZODB.tests.util.TestCase):
         eq(dict([(k, dict(v)) for (k, v) in copy.noncurrent.items()]),
            dict([(k, dict(v)) for (k, v) in self.cache.noncurrent.items()]),
            )
+        copy.close()
 
     def testCurrentObjectLargerThanCache(self):
         if self.cache.path:
             os.remove(self.cache.path)
+        self.cache.close()
         self.cache = ZEO.cache.ClientCache(size=50)
 
         # We store an object that is a bit larger than the cache can handle.
         self.cache.store(n1, n2, None, "x"*64)
         # We can see that it was not stored.
-        self.assertEquals(None, self.cache.load(n1))
+        self.assertEqual(None, self.cache.load(n1))
         # If an object cannot be stored in the cache, it must not be
         # recorded as current.
-        self.assert_(n1 not in self.cache.current)
+        self.assertTrue(n1 not in self.cache.current)
         # Regression test: invalidation must still work.
         self.cache.invalidate(n1, n2)
 
     def testOldObjectLargerThanCache(self):
         if self.cache.path:
             os.remove(self.cache.path)
+        self.cache.close()
         cache = ZEO.cache.ClientCache(size=50)
 
         # We store an object that is a bit larger than the cache can handle.
         cache.store(n1, n2, n3, "x"*64)
         # We can see that it was not stored.
-        self.assertEquals(None, cache.load(n1))
+        self.assertEqual(None, cache.load(n1))
         # If an object cannot be stored in the cache, it must not be
         # recorded as non-current.
-        self.assert_(1 not in cache.noncurrent)
+        self.assertTrue(1 not in cache.noncurrent)
 
     def testVeryLargeCaches(self):
         cache = ZEO.cache.ClientCache('cache', size=(1<<32)+(1<<20))
         cache.store(n1, n2, None, b"x")
         cache.close()
         cache = ZEO.cache.ClientCache('cache', size=(1<<33)+(1<<20))
-        self.assertEquals(cache.load(n1), (b'x', n2))
+        self.assertEqual(cache.load(n1), (b'x', n2))
         cache.close()
 
     def testConversionOfLargeFreeBlocks(self):
@@ -225,8 +228,8 @@ class CacheTests(ZODB.tests.util.TestCase):
         cache.close()
         with open('cache', 'rb') as f:
             f.seek(12)
-            self.assertEquals(f.read(1), b'f')
-            self.assertEquals(struct.unpack(">I", f.read(4))[0],
+            self.assertEqual(f.read(1), b'f')
+            self.assertEqual(struct.unpack(">I", f.read(4))[0],
                             ZEO.cache.max_block_size)
 
     if not sys.platform.startswith('linux'):
@@ -261,8 +264,8 @@ class CacheTests(ZODB.tests.util.TestCase):
                 'cache', size=ZEO.cache.ZEC_HEADER_SIZE+100*recsize+extra)
             for i in range(100):
                 cache.store(p64(i), n1, None, data)
-            self.assertEquals(len(cache), 100)
-            self.assertEquals(os.path.getsize(
+            self.assertEqual(len(cache), 100)
+            self.assertEqual(os.path.getsize(
                 'cache'), ZEO.cache.ZEC_HEADER_SIZE+100*recsize+extra)
 
             # Now make it smaller
@@ -270,10 +273,10 @@ class CacheTests(ZODB.tests.util.TestCase):
             small = 50
             cache = ZEO.cache.ClientCache(
                 'cache', size=ZEO.cache.ZEC_HEADER_SIZE+small*recsize+extra)
-            self.assertEquals(len(cache), small)
-            self.assertEquals(os.path.getsize(
+            self.assertEqual(len(cache), small)
+            self.assertEqual(os.path.getsize(
                 'cache'), ZEO.cache.ZEC_HEADER_SIZE+small*recsize+extra)
-            self.assertEquals(set(u64(oid) for (oid, tid) in cache.contents()),
+            self.assertEqual(set(u64(oid) for (oid, tid) in cache.contents()),
                               set(range(small)))
             for i in range(100, 110):
                 cache.store(p64(i), n1, None, data)
@@ -282,9 +285,9 @@ class CacheTests(ZODB.tests.util.TestCase):
             # evicted because of the optimization to assure that we
             # always get a free block after a new allocated block.
             expected_len = small - 1
-            self.assertEquals(len(cache), expected_len)
+            self.assertEqual(len(cache), expected_len)
             expected_oids = set(list(range(11, 50))+list(range(100, 110)))
-            self.assertEquals(
+            self.assertEqual(
                 set(u64(oid) for (oid, tid) in cache.contents()),
                 expected_oids)
 
@@ -292,8 +295,8 @@ class CacheTests(ZODB.tests.util.TestCase):
             cache.close()
             cache = ZEO.cache.ClientCache(
                 'cache', size=ZEO.cache.ZEC_HEADER_SIZE+small*recsize+extra)
-            self.assertEquals(len(cache), expected_len)
-            self.assertEquals(set(u64(oid) for (oid, tid) in cache.contents()),
+            self.assertEqual(len(cache), expected_len)
+            self.assertEqual(set(u64(oid) for (oid, tid) in cache.contents()),
                               expected_oids)
 
             # Now make it bigger
@@ -301,10 +304,10 @@ class CacheTests(ZODB.tests.util.TestCase):
             large = 150
             cache = ZEO.cache.ClientCache(
                 'cache', size=ZEO.cache.ZEC_HEADER_SIZE+large*recsize+extra)
-            self.assertEquals(len(cache), expected_len)
-            self.assertEquals(os.path.getsize(
+            self.assertEqual(len(cache), expected_len)
+            self.assertEqual(os.path.getsize(
                 'cache'), ZEO.cache.ZEC_HEADER_SIZE+large*recsize+extra)
-            self.assertEquals(set(u64(oid) for (oid, tid) in cache.contents()),
+            self.assertEqual(set(u64(oid) for (oid, tid) in cache.contents()),
                               expected_oids)
 
 
@@ -313,19 +316,19 @@ class CacheTests(ZODB.tests.util.TestCase):
 
             # We use large-2 for the same reason we used small-1 above.
             expected_len = large-2
-            self.assertEquals(len(cache), expected_len)
+            self.assertEqual(len(cache), expected_len)
             expected_oids = set(list(range(11, 50)) +
                                 list(range(106, 110)) +
                                 list(range(200, 305)))
-            self.assertEquals(set(u64(oid) for (oid, tid) in cache.contents()),
+            self.assertEqual(set(u64(oid) for (oid, tid) in cache.contents()),
                               expected_oids)
 
             # Make sure we can reopen with same size
             cache.close()
             cache = ZEO.cache.ClientCache(
                 'cache', size=ZEO.cache.ZEC_HEADER_SIZE+large*recsize+extra)
-            self.assertEquals(len(cache), expected_len)
-            self.assertEquals(set(u64(oid) for (oid, tid) in cache.contents()),
+            self.assertEqual(len(cache), expected_len)
+            self.assertEqual(set(u64(oid) for (oid, tid) in cache.contents()),
                               expected_oids)
 
             # Cleanup

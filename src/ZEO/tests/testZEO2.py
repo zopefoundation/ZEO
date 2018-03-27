@@ -149,6 +149,7 @@ We can start another client and get the storage lock.
     >>> zs1.tpc_finish('1').set_sender(0, zs1.connection)
 
     >>> fs.close()
+    >>> server.close()
     """
 
 def errors_in_vote_should_clear_lock():
@@ -408,6 +409,7 @@ If clients disconnect while waiting, they will be dequeued:
 
     >>> logging.getLogger('ZEO').setLevel(logging.NOTSET)
     >>> logging.getLogger('ZEO').removeHandler(handler)
+    >>> server.close()
     """
 
 def lock_sanity_check():
@@ -489,6 +491,8 @@ ZEOStorage as closed and see if trying to get a lock cleans it up:
 
     >>> logging.getLogger('ZEO').setLevel(logging.NOTSET)
     >>> logging.getLogger('ZEO').removeHandler(handler)
+
+    >>> server.close()
     """
 
 def test_suite():
@@ -507,4 +511,3 @@ def test_suite():
 
 if __name__ == '__main__':
     unittest.main(defaultTest='test_suite')
-

@@ -152,7 +152,7 @@ assert best_protocol_version in ServerProtocol.protocols
 def new_connection(loop, addr, socket, zeo_storage, msgpack):
     protocol = ServerProtocol(loop, addr, zeo_storage, msgpack)
     cr = loop.create_connection((lambda : protocol), sock=socket)
-    asyncio.async(cr, loop=loop)
+    asyncio.ensure_future(cr, loop=loop)
 
 class Delay(object):
     """Used to delay response to client for synchronous calls.
@@ -231,7 +231,7 @@ class Acceptor(object):
         else:
             cr = loop.create_unix_server(self.factory, addr, ssl=ssl)
 
-        f = asyncio.async(cr, loop=loop)
+        f = asyncio.ensure_future(cr, loop=loop)
         server = loop.run_until_complete(f)
 
         self.server = server
@@ -271,7 +271,7 @@ class Acceptor(object):
 
         self.server.close()
 
-        f = asyncio.async(self.server.wait_closed(), loop=loop)
+        f = asyncio.ensure_future(self.server.wait_closed(), loop=loop)
         @f.add_done_callback
         def server_closed(f):
             # stop the loop when the server closes:

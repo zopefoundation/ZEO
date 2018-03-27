@@ -221,15 +221,15 @@ class MiscZEOTests(object):
         # available right after successful connection, this is required now.
         addr = self._storage._addr
         storage2 = ClientStorage(addr, **self._client_options())
-        self.assert_(storage2.is_connected())
-        self.assertEquals(ZODB.utils.z64, storage2.lastTransaction())
+        self.assertTrue(storage2.is_connected())
+        self.assertEqual(ZODB.utils.z64, storage2.lastTransaction())
         storage2.close()
 
         self._dostore()
         storage3 = ClientStorage(addr, **self._client_options())
-        self.assert_(storage3.is_connected())
-        self.assertEquals(8, len(storage3.lastTransaction()))
-        self.assertNotEquals(ZODB.utils.z64, storage3.lastTransaction())
+        self.assertTrue(storage3.is_connected())
+        self.assertEqual(8, len(storage3.lastTransaction()))
+        self.assertNotEqual(ZODB.utils.z64, storage3.lastTransaction())
         storage3.close()
 
 class GenericTestBase(
@@ -422,12 +422,12 @@ class FileStorageTests(FullGenericTests):
         # ClientStorage itself doesn't implement IStorageIteration, but the
         # FileStorage on the other end does, and thus the ClientStorage
         # instance that is connected to it reflects this.
-        self.failIf(ZODB.interfaces.IStorageIteration.implementedBy(
+        self.assertFalse(ZODB.interfaces.IStorageIteration.implementedBy(
             ZEO.ClientStorage.ClientStorage))
-        self.failUnless(ZODB.interfaces.IStorageIteration.providedBy(
+        self.assertTrue(ZODB.interfaces.IStorageIteration.providedBy(
             self._storage))
         # This is communicated using ClientStorage's _info object:
-        self.assertEquals(self._expected_interfaces,
+        self.assertEqual(self._expected_interfaces,
             self._storage._info['interfaces']
             )
 
@@ -552,7 +552,7 @@ class ZRPCConnectionTests(ZEO.tests.ConnectionTests.CommonSetupTearDown):
 
         log = str(handler)
         handler.uninstall()
-        self.assert_("Client loop stopped unexpectedly" in log)
+        self.assertTrue("Client loop stopped unexpectedly" in log)
 
     def checkExceptionLogsAtError(self):
         # Test the exceptions are logged at error
@@ -570,7 +570,7 @@ class ZRPCConnectionTests(ZEO.tests.ConnectionTests.CommonSetupTearDown):
         self.assertRaises(ZODB.POSException.POSKeyError,
                           self._storage.history, None, None)
         handler.uninstall()
-        self.assertEquals(str(handler), '')
+        self.assertEqual(str(handler), '')
 
     def checkConnectionInvalidationOnReconnect(self):
 
@@ -639,7 +639,7 @@ class CommonBlobTests(object):
         tfname = bd_fh.name
         oid = self._storage.new_oid()
         data = zodb_pickle(blob)
-        self.assert_(os.path.exists(tfname))
+        self.assertTrue(os.path.exists(tfname))
 
         t = TransactionMetaData()
         try:
@@ -650,9 +650,9 @@ class CommonBlobTests(object):
         except:
             self._storage.tpc_abort(t)
             raise
-        self.assert_(not os.path.exists(tfname))
+        self.assertTrue(not os.path.exists(tfname))
         filename = self._storage.fshelper.getBlobFilename(oid, revid)
-        self.assert_(os.path.exists(filename))
+        self.assertTrue(os.path.exists(filename))
         with open(filename, 'rb') as f:
             self.assertEqual(somedata, f.read())
 
@@ -693,11 +693,11 @@ class CommonBlobTests(object):
         filename = self._storage.loadBlob(oid, serial)
         with open(filename, 'rb') as f:
             self.assertEqual(somedata, f.read())
-        self.assert_(not(os.stat(filename).st_mode & stat.S_IWRITE))
-        self.assert_((os.stat(filename).st_mode & stat.S_IREAD))
+        self.assertTrue(not(os.stat(filename).st_mode & stat.S_IWRITE))
+        self.assertTrue((os.stat(filename).st_mode & stat.S_IREAD))
 
     def checkTemporaryDirectory(self):
-        self.assertEquals(os.path.join(self.blob_cache_dir, 'tmp'),
+        self.assertEqual(os.path.join(self.blob_cache_dir, 'tmp'),
                           self._storage.temporaryDirectory())
 
     def checkTransactionBufferCleanup(self):
@@ -726,14 +726,14 @@ class BlobAdaptedFileStorageTests(FullGenericTests, CommonBlobTests):
                 somedata.write(("%s\n" % i).encode('ascii'))
 
             def check_data(path):
-                self.assert_(os.path.exists(path))
-                f = open(path, 'rb')
+                self.assertTrue(os.path.exists(path))
                 somedata.seek(0)
                 d1 = d2 = 1
-                while d1 or d2:
-                    d1 = f.read(8096)
-                    d2 = somedata.read(8096)
-                    self.assertEqual(d1, d2)
+                with open(path, 'rb') as f:
+                    while d1 or d2:
+                        d1 = f.read(8096)
+                        d2 = somedata.read(8096)
+                        self.assertEqual(d1, d2)
             somedata.seek(0)
 
             blob = Blob()
@@ -743,7 +743,7 @@ class BlobAdaptedFileStorageTests(FullGenericTests, CommonBlobTests):
                 tfname = bd_fh.name
             oid = self._storage.new_oid()
             data = zodb_pickle(blob)
-            self.assert_(os.path.exists(tfname))
+            self.assertTrue(os.path.exists(tfname))
 
             t = TransactionMetaData()
             try:
@@ -756,7 +756,7 @@ class BlobAdaptedFileStorageTests(FullGenericTests, CommonBlobTests):
                 raise
 
             # The uncommitted data file should have been removed
-            self.assert_(not os.path.exists(tfname))
+            self.assertTrue(not os.path.exists(tfname))
 
             # The file should be in the cache ...
             filename = self._storage.fshelper.getBlobFilename(oid, revid)
@@ -768,7 +768,7 @@ class BlobAdaptedFileStorageTests(FullGenericTests, CommonBlobTests):
                 ZODB.blob.BushyLayout().getBlobFilePath(oid, revid),
                 )
 
-            self.assert_(server_filename.startswith(self.blobdir))
+            self.assertTrue(server_filename.startswith(self.blobdir))
             check_data(server_filename)
 
             # If we remove it from the cache and call loadBlob, it should
@@ -1203,7 +1203,7 @@ def runzeo_without_configfile():
     ... ''' % sys.path)
 
     >>> import subprocess, re
-    >>> print(re.sub(b'\d\d+|[:]', b'', subprocess.Popen(
+    >>> print(re.sub(br'\d\d+|[:]', b'', subprocess.Popen(
     ...     [sys.executable, 'runzeo', '-a:0', '-ft', '--test'],
     ...     stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
     ...     ).stdout.read()).decode('ascii'))

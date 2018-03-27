@@ -266,7 +266,7 @@ class ConnectionTests(CommonSetupTearDown):
         self.startServer(create=0, index=0, ro_svr=1)
         # Start a read-only-fallback client
         self._storage = self.openClientStorage(read_only_fallback=1)
-        self.assert_(self._storage.isReadOnly())
+        self.assertTrue(self._storage.isReadOnly())
         # Stores should fail here
         self.assertRaises(ReadOnlyError, self._dostore)
         self._storage.close()
@@ -493,7 +493,7 @@ class ConnectionTests(CommonSetupTearDown):
             # Wait for all threads to finish
             for t in threads:
                 t.join(60)
-                self.failIf(t.isAlive(), "%s didn't die" % t.getName())
+                self.assertFalse(t.isAlive(), "%s didn't die" % t.getName())
         finally:
             for t in threads:
                 t.closeclients()
@@ -949,7 +949,7 @@ class ReconnectionTests(CommonSetupTearDown):
                 break
             except ClientDisconnected:
                 time.sleep(0.5)
-        self.assert_(did_a_store)
+        self.assertTrue(did_a_store)
         self._storage.close()
 
 class TimeoutTests(CommonSetupTearDown):
@@ -971,7 +971,7 @@ class TimeoutTests(CommonSetupTearDown):
                 ):
                 break
         else:
-            self.assert_(False, 'bad logging')
+            self.assertTrue(False, 'bad logging')
 
         storage.close()
 
@@ -993,7 +993,7 @@ class TimeoutTests(CommonSetupTearDown):
     def checkTimeoutAfterVote(self):
         self._storage = storage = self.openClientStorage()
         # Assert that the zeo cache is empty
-        self.assert_(not list(storage._cache.contents()))
+        self.assertTrue(not list(storage._cache.contents()))
         # Create the object
         oid = storage.new_oid()
         obj = MinPO(7)
@@ -1005,17 +1005,17 @@ class TimeoutTests(CommonSetupTearDown):
         storage.tpc_vote(t)
         # Now sleep long enough for the storage to time out
         time.sleep(3)
-        self.assert_(
+        self.assertTrue(
             (not storage.is_connected())
             or
             (storage.connection_count_for_tests > old_connection_count)
             )
         storage._wait()
-        self.assert_(storage.is_connected())
+        self.assertTrue(storage.is_connected())
         # We expect finish to fail
         self.assertRaises(ClientDisconnected, storage.tpc_finish, t)
         # The cache should still be empty
-        self.assert_(not list(storage._cache.contents()))
+        self.assertTrue(not list(storage._cache.contents()))
         # Load should fail since the object should not be in either the cache
         # or the server.
         self.assertRaises(KeyError, storage.load, oid, '')
@@ -1079,10 +1079,10 @@ class MSTThread(threading.Thread):
             for c in clients:
                 # Check that we got serials for all oids
                 for oid in c.__oids:
-                    testcase.failUnless(oid in c.__serials)
+                    testcase.assertIn(oid, c.__serials)
                 # Check that we got serials for no other oids
                 for oid in c.__serials.keys():
-                    testcase.failUnless(oid in c.__oids)
+                    testcase.assertIn(oid, c.__oids)
 
     def closeclients(self):
         # Close clients opened by run()
@@ -1102,7 +1102,8 @@ def short_timeout(self):
 
 # Run IPv6 tests if V6 sockets are supported
 try:
-    socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+    with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as s:
+        pass
 except (socket.error, AttributeError):
     pass
 else:

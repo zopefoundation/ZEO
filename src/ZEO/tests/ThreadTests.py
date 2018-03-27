@@ -119,7 +119,7 @@ class ThreadTests(object):
         for t in threads:
             t.join(30)
         for i in threads:
-            self.failUnless(not t.isAlive())
+            self.assertFalse(t.isAlive())
 
     # Helper for checkMTStores
     def mtstorehelper(self):
