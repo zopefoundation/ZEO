@@ -1,35 +1,38 @@
 language: python
 sudo: false
+env:
+    global:
+        - PYTHONWARNINGS=ignore
 matrix:
     include:
         - os: linux
           python: 2.7
-        - os: linux
-          python: pypy
-        - os: linux
-          python: 3.4
-        - os: linux
-          python: 3.5
-        - os: linux
-          python: 3.6
-        - os: linux
-          python: 3.4
-          env: ZEO_MTACCEPTOR=1
-        - os: linux
-          python: 3.5
-          env: ZEO_MSGPACK=1 ZEO_MTACCEPTOR=1
-        - os: linux
-          python: 2.7
-          env: ZEO_MSGPACK=1
-        - os: linux
-          python: 2.7
-          env: ZEO4_SERVER=1
-        - os: linux
-          python: 3.5
-          env: ZEO4_SERVER=1
-        - os: linux
-          python: 3.5
-          env: BUILOUT_OPTIONS=extra=,uvloop
+        # - os: linux
+        #   python: pypy
+        # - os: linux
+        #   python: 3.4
+        # - os: linux
+        #   python: 3.5
+        # - os: linux
+        #   python: 3.6
+        # - os: linux
+        #   python: 3.4
+        #   env: ZEO_MTACCEPTOR=1
+        # - os: linux
+        #   python: 3.5
+        #   env: ZEO_MSGPACK=1 ZEO_MTACCEPTOR=1
+        # - os: linux
+        #   python: 2.7
+        #   env: ZEO_MSGPACK=1
+        # - os: linux
+        #   python: 2.7
+        #   env: ZEO4_SERVER=1
+        # - os: linux
+        #   python: 3.5
+        #   env: ZEO4_SERVER=1
+        # - os: linux
+        #   python: 3.5
+        #   env: BUILOUT_OPTIONS=extra=,uvloop
 install:
     - pip install zc.buildout
     - buildout $BUILOUT_OPTIONS
@@ -37,6 +40,6 @@ cache:
   directories:
     - eggs
 script:
-    - bin/test -vv -j99
+    - bin/test -vvv -c
 notifications:
     email: false
