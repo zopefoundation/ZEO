@@ -4,7 +4,7 @@ from zope.testing import setupstack
 
 from .. import server, client
 
-from . import forker
+from ZEO import _forker as forker
 
 if forker.ZEO4_SERVER:
     server_ping_method = 'lastTransaction'

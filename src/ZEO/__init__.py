@@ -81,10 +81,10 @@ def server(path=None, blob_dir=None, storage_conf=None, zeo_conf=None,
        dynamically.
 
     """
-    import os, ZEO.tests.forker
+    import ZEO._forker as forker
     if storage_conf is None and path is None:
         storage_conf = '<mappingstorage>\n</mappingstorage>'
 
-    return ZEO.tests.forker.start_zeo_server(
+    return forker.start_zeo_server(
         storage_conf, zeo_conf, port, keep=True, path=path,
         blob_dir=blob_dir, suicide=False, threaded=threaded, **kw)
