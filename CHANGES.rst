@@ -4,7 +4,8 @@ Changelog
 5.2.0 (unreleased)
 ------------------
 
-- Fix ``ZEO.server`` relying on test dependencies. See `issue 105
+- Fixed: The quickstart/ad-hoc/play ZEO server relied on test
+  dependencies. See `issue 105
   <https://github.com/zopefoundation/ZEO/issues/105>`_.
 
 - Disallow passing strings as addresses to ClientStorage under Windows
@@ -16,8 +17,10 @@ Changelog
   with Python 3.7. See `issue 104
   <https://github.com/zopefoundation/ZEO/issues/104>`_.
 
-- Fix: Client-side updates for ZODB 5.4.0 or databases that already
-  had ``zodbpickle.binary`` OIDs. See `issue 113
+- Fixed to work with some changes made in ZODB 5.4.0.
+
+  Client-side updates are incuded for ZODB 5.4.0 or databases that
+  already had ``zodbpickle.binary`` OIDs. See `issue 113
   <https://github.com/zopefoundation/ZEO/issues/113>`_.
 
 - ZEO now uses pickle protocol 3 for both Python 2 and Python 3.
