@@ -29,6 +29,7 @@ import six
 import ZODB.tests.util
 import zope.testing.setupstack
 
+from ZEO._compat import WIN
 from ZEO import _forker
 
 logger = logging.getLogger('ZEO.tests.forker')
@@ -60,7 +61,7 @@ runner = _forker.runner
 stop_runner = _forker.stop_runner
 start_zeo_server = _forker.start_zeo_server
 
-if sys.platform[:3].lower() == "win":
+if WIN:
     def _quote_arg(s):
         return '"%s"' % s
 else:

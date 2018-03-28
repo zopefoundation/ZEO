@@ -41,6 +41,7 @@ import six
 
 from persistent.TimeStamp import TimeStamp
 from ZEO._compat import get_ident
+from ZEO._compat import WIN
 from ZEO.Exceptions import ClientDisconnected
 from ZEO.TransactionBuffer import TransactionBuffer
 from ZODB import POSException
@@ -191,6 +192,8 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         self.__name__ = name or str(addr) # Standard convention for storages
 
         if isinstance(addr, six.string_types):
+            if WIN:
+                raise ValueError("Unix sockets are not available on Windows")
             addr = [addr]
         elif (isinstance(addr, tuple) and len(addr) == 2 and
               isinstance(addr[0], six.string_types) and isinstance(addr[1], int)):

@@ -7,6 +7,10 @@ Changelog
 - Fix ``ZEO.server`` relying on test dependencies. See `issue 105
   <https://github.com/zopefoundation/ZEO/issues/105>`_.
 
+- Disallow passing strings as addresses to ClientStorage under Windows
+  because string addresses are used for unix-domain sockets, which
+  aren't supported on Windows. See `issue 107
+  <https://github.com/zopefoundation/ZEO/issues/107>`_.
 
 5.1.2 (2018-03-27)
 ------------------

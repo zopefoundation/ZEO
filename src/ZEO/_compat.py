@@ -19,6 +19,7 @@ import platform
 PY3 = sys.version_info[0] >= 3
 PY32 = sys.version_info[:2] == (3, 2)
 PYPY = getattr(platform, 'python_implementation', lambda: None)() == 'PyPy'
+WIN = sys.platform.startswith('win')
 
 if PY3:
     from pickle import Pickler, Unpickler as _Unpickler, dump, dumps, loads
