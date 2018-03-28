@@ -1,7 +1,7 @@
 Changelog
 =========
 
-5.2.0 (unreleased)
+5.2.0 (2018-03-28)
 ------------------
 
 - Fixed: The quickstart/ad-hoc/play ZEO server relied on test
