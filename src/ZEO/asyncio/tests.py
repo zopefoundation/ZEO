@@ -112,9 +112,9 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
 
         return (wrapper, cache, self.loop, self.client, protocol, transport)
 
-    def respond(self, message_id, result, async=False):
+    def respond(self, message_id, result, async_=False):
         self.loop.protocol.data_received(
-            sized(self.encode(message_id, async, '.reply', result)))
+            sized(self.encode(message_id, async_, '.reply', result)))
 
     def wait_for_result(self, future, timeout):
         if future.done() and future.exception() is not None:
@@ -160,7 +160,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertFalse(f1.done())
 
         # If we try to make an async call, we get an immediate error:
-        self.assertRaises(ClientDisconnected, self.async, 'bar', 3, 4)
+        self.assertRaises(ClientDisconnected, self.async_, 'bar', 3, 4)
 
         # The wrapper object (ClientStorage) hasn't been notified:
         self.assertFalse(wrapper.notify_connected.called)
@@ -191,7 +191,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertEqual(f1.result(), 42)
 
         # Now we can make async calls:
-        f2 = self.async('bar', 3, 4)
+        f2 = self.async_('bar', 3, 4)
         self.assertTrue(f2.done() and f2.exception() is None)
         self.assertEqual(self.pop(), (0, True, 'bar', (3, 4)))
 
@@ -581,10 +581,10 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
 
         # Give the transport a small capacity:
         transport.capacity = 2
-        self.async('foo')
-        self.async('bar')
-        self.async('baz')
-        self.async('splat')
+        self.async_('foo')
+        self.async_('bar')
+        self.async_('baz')
+        self.async_('splat')
 
         # The first 2 were sent, but the remaining were queued.
         self.assertEqual(self.pop(),

@@ -418,10 +418,10 @@ class Connection(smac.SizedMessageAsyncConnection, object):
         # will raise an exception.  The exception will ultimately
         # result in asycnore calling handle_error(), which will
         # close the connection.
-        msgid, async, name, args = self.decode(message)
+        msgid, async_, name, args = self.decode(message)
 
         if debug_zrpc:
-            self.log("recv msg: %s, %s, %s, %s" % (msgid, async, name,
+            self.log("recv msg: %s, %s, %s, %s" % (msgid, async_, name,
                                                    short_repr(args)),
                      level=TRACE)
 
@@ -446,12 +446,12 @@ class Connection(smac.SizedMessageAsyncConnection, object):
                     self.send_reply(msgid, ret)
 
         elif name == REPLY:
-            assert not async
+            assert not async_
             self.handle_reply(msgid, args)
         else:
-            self.handle_request(msgid, async, name, args)
+            self.handle_request(msgid, async_, name, args)
 
-    def handle_request(self, msgid, async, name, args):
+    def handle_request(self, msgid, async_, name, args):
         obj = self.obj
 
         if name.startswith('_') or not hasattr(obj, name):
@@ -482,14 +482,14 @@ class Connection(smac.SizedMessageAsyncConnection, object):
                 self.log("%s() raised exception: %s" % (name, msg),
                          logging.ERROR, exc_info=True)
             error = sys.exc_info()[:2]
-            if async:
+            if async_:
                 self.log("Asynchronous call raised exception: %s" % self,
                          level=logging.ERROR, exc_info=True)
             else:
                 self.return_error(msgid, *error)
             return
 
-        if async:
+        if async_:
             if ret is not None:
                 raise ZRPCError("async method %s returned value %s" %
                                 (name, short_repr(ret)))
@@ -543,17 +543,17 @@ class Connection(smac.SizedMessageAsyncConnection, object):
         else:
             self.__super_setSessionKey(key)
 
-    def send_call(self, method, args, async=False):
+    def send_call(self, method, args, async_=False):
         # send a message and return its msgid
-        if async:
+        if async_:
             msgid = 0
         else:
             msgid = self._new_msgid()
 
         if debug_zrpc:
-            self.log("send msg: %d, %d, %s, ..." % (msgid, async, method),
+            self.log("send msg: %d, %d, %s, ..." % (msgid, async_, method),
                      level=TRACE)
-        buf = self.encode(msgid, async, method, args)
+        buf = self.encode(msgid, async_, method, args)
         self.message_output(buf)
         return msgid
 

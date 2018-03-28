@@ -17,6 +17,8 @@ from ZEO._compat import Unpickler, Pickler, BytesIO, PY3, PYPY
 from .error import ZRPCError
 from .log import log, short_repr
 
+PY2 = not PY3
+
 def encode(*args): # args: (msgid, flags, name, args)
     # (We used to have a global pickler, but that's not thread-safe. :-( )
 
@@ -106,6 +108,8 @@ _silly = ('__doc__',)
 
 exception_type_type = type(Exception)
 
+_SAFE_MODULE_NAMES = ('ZopeUndo.Prefix', 'copy_reg', '__builtin__', 'zodbpickle')
+
 def find_global(module, name):
     """Helper for message unpickler"""
     try:
@@ -118,7 +122,7 @@ def find_global(module, name):
     except AttributeError:
         raise ZRPCError("module %s has no global %s" % (module, name))
 
-    safe = getattr(r, '__no_side_effects__', 0)
+    safe = getattr(r, '__no_side_effects__', 0) or (PY2 and module in _SAFE_MODULE_NAMES)
     if safe:
         return r
 
@@ -130,9 +134,10 @@ def find_global(module, name):
 
 def server_find_global(module, name):
     """Helper for message unpickler"""
+    if module not in _SAFE_MODULE_NAMES:
+        raise ImportError("Module not allowed: %s" % (module,))
+
     try:
-        if module != 'ZopeUndo.Prefix':
-            raise ImportError
         m = __import__(module, _globals, _globals, _silly)
     except ImportError as msg:
         raise ZRPCError("import error %s: %s" % (module, msg))

@@ -271,7 +271,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             credentials=credentials,
             )
         self._call = self._server.call
-        self._async = self._server.async
+        self._async = self._server.async_
         self._async_iter = self._server.async_iter
         self._wait = self._server.wait
 

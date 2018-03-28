@@ -24,6 +24,7 @@ import logging
 from .._compat import Unpickler, Pickler, BytesIO, PY3, PYPY
 from ..shortrepr import short_repr
 
+PY2 = not PY3
 logger = logging.getLogger(__name__)
 
 def encoder(protocol, server=False):
@@ -132,6 +133,8 @@ _silly = ('__doc__',)
 
 exception_type_type = type(Exception)
 
+_SAFE_MODULE_NAMES = ('ZopeUndo.Prefix', 'copy_reg', '__builtin__', 'zodbpickle')
+
 def find_global(module, name):
     """Helper for message unpickler"""
     try:
@@ -144,7 +147,7 @@ def find_global(module, name):
     except AttributeError:
         raise ImportError("module %s has no global %s" % (module, name))
 
-    safe = getattr(r, '__no_side_effects__', 0)
+    safe = getattr(r, '__no_side_effects__', 0) or (PY2 and module in _SAFE_MODULE_NAMES)
     if safe:
         return r
 
@@ -156,7 +159,7 @@ def find_global(module, name):
 
 def server_find_global(module, name):
     """Helper for message unpickler"""
-    if module not in ('ZopeUndo.Prefix', 'copy_reg', '__builtin__', 'zodbpickle'):
+    if module not in _SAFE_MODULE_NAMES:
         raise ImportError("Module not allowed: %s" % (module,))
 
     try:

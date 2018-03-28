@@ -203,10 +203,10 @@ class Protocol(base.Protocol):
 
     exception_type_type = type(Exception)
     def message_received(self, data):
-        msgid, async, name, args = self.decode(data)
+        msgid, async_, name, args = self.decode(data)
         if name == '.reply':
             future = self.futures.pop(msgid)
-            if (async): # ZEO 5 exception
+            if async_: # ZEO 5 exception
                 class_, args = args
                 factory = exc_factories.get(class_)
                 if factory:
@@ -231,7 +231,7 @@ class Protocol(base.Protocol):
             else:
                 future.set_result(args)
         else:
-            assert async # clients only get async calls
+            assert async_ # clients only get async calls
             if name in self.client_methods:
                 getattr(self.client, name)(*args)
             else:
@@ -770,7 +770,7 @@ class ClientRunner(object):
             self.call_threadsafe, result, True, method, args)
         return result
 
-    def async(self, method, *args):
+    def async_(self, method, *args):
         return self.__call(self.call_async_threadsafe, method, args)
 
     def async_iter(self, it):

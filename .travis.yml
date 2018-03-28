@@ -13,10 +13,10 @@ matrix:
         - os: linux
           python: 3.6
         - os: linux
-          python: 3.4
+          python: 3.6
           env: ZEO_MTACCEPTOR=1
         - os: linux
-          python: 3.5
+          python: 3.6
           env: ZEO_MSGPACK=1 ZEO_MTACCEPTOR=1
         - os: linux
           python: 2.7
