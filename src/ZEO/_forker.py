@@ -120,11 +120,13 @@ def runner(config, qin, qout, timeout=None,
         server.clear_socket()
         server.create_server()
         logger.debug('SERVER CREATED')
+        logger.debug('SERVER CONFIG: %s', config)
         if ZEO4_SERVER:
-            qout.put(server.server.addr)
+            addr = server.server.addr
         else:
-            qout.put(server.server.acceptor.addr)
-        logger.debug('ADDRESS SENT')
+            addr = server.server.acceptor.addr
+        qout.put(addr)
+        logger.debug('ADDRESS SENT: %s', addr)
         thread = threading.Thread(
             target=server.server.loop, kwargs=dict(timeout=.2),
             name=(None if name is None else name + '-server'),

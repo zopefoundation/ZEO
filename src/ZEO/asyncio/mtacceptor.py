@@ -65,7 +65,7 @@ else:
         _has_dualstack = True
     s.close()
     del s
-
+print(">>> HAS DUALSTACK:", _has_dualstack)
 import logging
 
 logger = logging.getLogger(__name__)
