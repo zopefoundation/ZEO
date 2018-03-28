@@ -42,25 +42,18 @@ def encoder(protocol, server=False):
     else:
         assert protocol[:1] == b'Z'
 
-    if PY3 or PYPY:
-        f = BytesIO()
-        getvalue = f.getvalue
-        seek = f.seek
-        truncate = f.truncate
-        pickler = Pickler(f, 3 if PY3 else 1)
-        pickler.fast = 1
-        dump = pickler.dump
-        def encode(*args):
-            seek(0)
-            truncate()
-            dump(args)
-            return getvalue()
-    else:
-        pickler = Pickler(1)
-        pickler.fast = 1
-        dump = pickler.dump
-        def encode(*args):
-            return dump(args, 2)
+    f = BytesIO()
+    getvalue = f.getvalue
+    seek = f.seek
+    truncate = f.truncate
+    pickler = Pickler(f, 3)
+    pickler.fast = 1
+    dump = pickler.dump
+    def encode(*args):
+        seek(0)
+        truncate()
+        dump(args)
+        return getvalue()
 
     return encode
 
