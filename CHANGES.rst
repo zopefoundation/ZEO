@@ -4,7 +4,8 @@ Changelog
 5.1.3 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Fix ``ZEO.server`` relying on test dependencies. See `issue 105
+  <https://github.com/zopefoundation/ZEO/issues/105>`_.
 
 
 5.1.2 (2018-03-27)
