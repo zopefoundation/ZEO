@@ -487,7 +487,9 @@ class ClientConflictResolutionTests(
         return '<mappingstorage>\n</mappingstorage>\n'
 
     def getZEOConfig(self):
-        return forker.ZEOConfig(('', 0), client_conflict_resolution=True)
+        # Using '' can result in binding to :: and cause problems
+        # connecting to the MTAcceptor on Travis CI
+        return forker.ZEOConfig(('127.0.0.1', 0), client_conflict_resolution=True)
 
 class MappingStorageTests(GenericTests):
     """ZEO backed by a Mapping storage."""

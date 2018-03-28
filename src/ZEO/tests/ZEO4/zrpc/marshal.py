@@ -32,24 +32,13 @@ def encode(*args): # args: (msgid, flags, name, args)
     # being represented by \xij escapes in proto 0).
     # Undocumented:  cPickle.Pickler accepts a lone protocol argument;
     # pickle.py does not.
-    if PY3:
-        # XXX: Py3: Needs optimization.
-        f = BytesIO()
-        pickler = Pickler(f, 3)
-        pickler.fast = 1
-        pickler.dump(args)
-        res = f.getvalue()
-        return res
-    else:
-        pickler = Pickler(1)
-        pickler.fast = 1
-        # Only CPython's cPickle supports dumping
-        # and returning in one operation:
-        #   return pickler.dump(args, 1)
-        # For PyPy we must return the value; fortunately this
-        # works the same on CPython and is no more expensive
-        pickler.dump(args)
-        return pickler.getvalue()
+    # XXX: Py3: Needs optimization.
+    f = BytesIO()
+    pickler = Pickler(f, 3)
+    pickler.fast = 1
+    pickler.dump(args)
+    res = f.getvalue()
+    return res
 
 
 
