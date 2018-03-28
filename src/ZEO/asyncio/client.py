@@ -756,7 +756,7 @@ class ClientRunner(object):
             return future.result(timeout)
         except concurrent.futures.TimeoutError:
             if not self.client.ready:
-                raise ClientDisconnected("timed out waiting for connection")
+                raise ClientDisconnected("timed out waiting for connection", self.__args, self.__kwargs)
             else:
                 raise
 

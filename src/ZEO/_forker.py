@@ -186,7 +186,7 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
                      path='Data.fs', protocol=None, blob_dir=None,
                      suicide=True, debug=False,
                      threaded=False, start_timeout=33, name=None, log=None,
-                     show_config=False):
+                     show_config=True):
     """Start a ZEO server in a separate process.
 
     Takes two positional arguments a string containing the storage conf
