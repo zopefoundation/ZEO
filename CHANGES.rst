@@ -16,6 +16,10 @@ Changelog
   with Python 3.7. See `issue 104
   <https://github.com/zopefoundation/ZEO/issues/104>`_.
 
+- Fix: Client-side updates for ZODB 5.4.0 or databases that already
+  had ``zodbpickle.binary`` OIDs. See `issue 113
+  <https://github.com/zopefoundation/ZEO/issues/113>`_.
+
 5.1.2 (2018-03-27)
 ------------------
 

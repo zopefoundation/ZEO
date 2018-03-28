@@ -965,13 +965,14 @@ class TimeoutTests(CommonSetupTearDown):
             self.assertRaises(ClientDisconnected, storage.tpc_finish, txn)
 
         # Make sure it's logged as CRITICAL
-        for line in open("server.log"):
-            if (('Transaction timeout after' in line) and
-                ('CRITICAL ZEO.StorageServer' in line)
+        with open("server.log") as f:
+            for line in f:
+                if (('Transaction timeout after' in line) and
+                    ('CRITICAL ZEO.StorageServer' in line)
                 ):
-                break
-        else:
-            self.assertTrue(False, 'bad logging')
+                    break
+            else:
+                self.fail('bad logging')
 
         storage.close()
 

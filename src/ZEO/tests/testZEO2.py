@@ -500,8 +500,8 @@ def test_suite():
         doctest.DocTestSuite(
             setUp=ZODB.tests.util.setUp, tearDown=setupstack.tearDown,
             checker=renormalizing.RENormalizing([
-                (re.compile('\d+/test-addr'), ''),
-                (re.compile("'lock_time': \d+.\d+"), 'lock_time'),
+                (re.compile(r'\d+/test-addr'), ''),
+                (re.compile(r"'lock_time': \d+.\d+"), 'lock_time'),
                 (re.compile(r"'start': '[^\n]+'"), 'start'),
                 (re.compile('ZODB.POSException.StorageTransactionError'),
                  'StorageTransactionError'),

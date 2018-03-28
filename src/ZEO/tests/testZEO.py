@@ -1353,10 +1353,11 @@ You can specify the client label via a configuration file as well:
     >>> db.close()
     >>> @wait_until
     ... def check_for_test_label_2():
-    ...     for line in open('server.log'):
-    ...         if 'test-label-2' in line:
-    ...             print(line.split()[1:4])
-    ...             return True
+    ...     with open('server.log') as f:
+    ...         for line in f:
+    ...             if 'test-label-2' in line:
+    ...                 print(line.split()[1:4])
+    ...                 return True
     ['INFO', 'ZEO.StorageServer', '(test-label-2']
 
     """
