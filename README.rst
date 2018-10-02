@@ -347,7 +347,7 @@ password-function
 
 authenticate
   The path to a file or directory containing client certificates
-  to authenticate.  ((See the ``cafile`` and ``capath``
+  to authenticate.  (See the ``cafile`` and ``capath``
   parameters in the Python documentation for
   ``ssl.SSLContext.load_verify_locations``.)
 
@@ -657,7 +657,7 @@ password-function
 
 authenticate
   The path to a file or directory containing server certificates
-  to authenticate.  ((See the ``cafile`` and ``capath``
+  to authenticate.  (See the ``cafile`` and ``capath``
   parameters in the Python documentation for
   ``ssl.SSLContext.load_verify_locations``.)
 
