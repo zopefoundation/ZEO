@@ -53,6 +53,6 @@ cache:
   directories:
     - eggs
 script:
-    - bin/test -vv -j99
+    - bin/test -vv
 notifications:
     email: false
