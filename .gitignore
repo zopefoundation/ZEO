@@ -10,3 +10,5 @@ parts
 testing.log
 .dir-locals.el
 data.fs*
+ZEO_forker*.conf
+.eggs/
