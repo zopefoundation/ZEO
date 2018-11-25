@@ -156,7 +156,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         # When the client is reconnecting, it's ready flag is set to False and
         # it queues calls:
         client.ready = False
-        f1 = self.call('foo', 1, 2)
+        f1 = self.call(u'foo', 1, 2)
         self.assertFalse(f1.done())
 
         # If we try to make an async call, we get an immediate error:
@@ -182,7 +182,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         # queued message has been sent:
         self.assertTrue(client.connected.done())
         self.assertEqual(cache.getLastTid(), 'a'*8)
-        self.assertEqual(self.pop(), (4, False, 'foo', (1, 2)))
+        self.assertEqual(self.pop(), (4, False, u'foo', (1, 2)))
 
         # The wrapper object (ClientStorage) has been notified:
         wrapper.notify_connected.assert_called_with(client, {'length': 42})
@@ -268,13 +268,13 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         # If the protocol is disconnected, it will reconnect and will
         # resolve outstanding requests with exceptions:
         loaded = self.load_before(b'1'*8, maxtid)
-        f1 = self.call('foo', 1, 2)
+        f1 = self.call(u'foo', 1, 2)
         self.assertFalse(loaded.done() or f1.done())
         self.assertEqual(
             self.pop(),
             [((b'11111111', b'\x7f\xff\xff\xff\xff\xff\xff\xff'),
               False, 'loadBefore', (b'1'*8, maxtid)),
-             (6, False, 'foo', (1, 2))],
+             (6, False, u'foo', (1, 2))],
             )
         exc = TypeError(43)
 

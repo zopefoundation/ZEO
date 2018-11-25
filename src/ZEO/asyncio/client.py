@@ -183,14 +183,14 @@ class Protocol(base.Protocol):
         try:
             try:
                 server_tid = yield self.fut(
-                    'register', self.storage_key,
+                    u'register', self.storage_key,
                     self.read_only if self.read_only is not Fallback else False,
                     *credentials)
             except ZODB.POSException.ReadOnlyError:
                 if self.read_only is Fallback:
                     self.read_only = True
                     server_tid = yield self.fut(
-                        'register', self.storage_key, True, *credentials)
+                        u'register', self.storage_key, True, *credentials)
                 else:
                     raise
             else:
@@ -239,6 +239,11 @@ class Protocol(base.Protocol):
 
     message_id = 0
     def call(self, future, method, args):
+        # Uncomment below to debug cases where we're using non-text method names:
+        # if isinstance(method, bytes):
+        #     import sys, traceback
+        #     traceback.print_stack(file=sys.stderr)
+        #     sys.stderr.write("Bad method %r\n" % method)
         self.message_id += 1
         self.futures[self.message_id] = future
         self._write(self.encode(self.message_id, False, method, args))
@@ -255,7 +260,7 @@ class Protocol(base.Protocol):
             future = asyncio.Future(loop=self.loop)
             self.futures[message_id] = future
             self._write(
-                self.encode(message_id, False, 'loadBefore', (oid, tid)))
+                self.encode(message_id, False, u'loadBefore', (oid, tid)))
         return future
 
     # Methods called by the server.
@@ -474,7 +479,7 @@ class Client(object):
 
         protocol = self.protocol
         if server_tid is None:
-            server_tid = yield protocol.fut('lastTransaction')
+            server_tid = yield protocol.fut(u'lastTransaction')
 
         try:
             cache = self.cache
@@ -494,7 +499,7 @@ class Client(object):
                 elif cache_tid == server_tid:
                     self.verify_result = "Cache up to date"
                 else:
-                    vdata = yield protocol.fut('getInvalidations', cache_tid)
+                    vdata = yield protocol.fut(u'getInvalidations', cache_tid)
                     if vdata:
                         self.verify_result = "quick verification"
                         server_tid, oids = vdata
@@ -535,7 +540,7 @@ class Client(object):
             self.verify_invalidation_queue = []
 
             try:
-                info = yield protocol.fut('get_info')
+                info = yield protocol.fut(u'get_info')
             except Exception as exc:
                 # This is weird. We were connected and verified our cache, but
                 # Now we errored getting info.
@@ -641,7 +646,7 @@ class Client(object):
     def tpc_finish_threadsafe(self, future, wait_ready, tid, updates, f):
         if self.ready:
             try:
-                tid = yield self.protocol.fut('tpc_finish', tid)
+                tid = yield self.protocol.fut(u'tpc_finish', tid)
                 cache = self.cache
                 for oid, data, resolved in updates:
                     cache.invalidate(oid, tid)

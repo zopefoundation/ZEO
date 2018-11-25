@@ -186,7 +186,7 @@ This tests tries to provoke this bug by:
     ...            def _():
     ...                if (db.storage.is_connected()
     ...                        and db.storage.lastTransaction()
-    ...                            == db.storage._call('lastTransaction')
+    ...                            == db.storage._call(u'lastTransaction')
     ...                        ):
     ...                    #logging.getLogger('ZEO').debug(
     ...                    #   'Connected %r' % db.storage.lastTransaction())

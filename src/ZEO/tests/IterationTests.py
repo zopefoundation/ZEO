@@ -86,7 +86,7 @@ class IterationTests(object):
         self.assertEqual(0, len(self._storage._iterator_ids))
 
         # The iterator has run through, so the server has already disposed it.
-        self.assertRaises(KeyError, self._storage._call, 'iterator_next', iid)
+        self.assertRaises(KeyError, self._storage._call, u'iterator_next', iid)
 
     def checkIteratorGCSpanTransactions(self):
         # Keep a hard reference to the iterator so it won't be automatically
@@ -119,7 +119,7 @@ class IterationTests(object):
         self._storage._iterators._last_gc = -1
         self._dostore()
         self._assertIteratorIdsEmpty()
-        self.assertRaises(KeyError, self._storage._call, 'iterator_next', iid)
+        self.assertRaises(KeyError, self._storage._call, u'iterator_next', iid)
 
     def checkIteratorGCStorageTPCAborting(self):
         # The odd little jig we do below arises from the fact that the
@@ -136,7 +136,7 @@ class IterationTests(object):
         self._storage.tpc_begin(t)
         self._storage.tpc_abort(t)
         self._assertIteratorIdsEmpty()
-        self.assertRaises(KeyError, self._storage._call, 'iterator_next', iid)
+        self.assertRaises(KeyError, self._storage._call, u'iterator_next', iid)
 
     def checkIteratorGCStorageDisconnect(self):
 

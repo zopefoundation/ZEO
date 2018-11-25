@@ -1562,7 +1562,7 @@ Now we'll try to use the connection, mainly to wait for everything to
 get processed. Before we fixed this by making tpc_finish a synchronous
 call to the server. we'd get some sort of error here.
 
-    >>> _ = client._call('loadBefore', b'\0'*8, maxtid)
+    >>> _ = client._call(u'loadBefore', b'\0'*8, maxtid)
 
     >>> c.close()
 

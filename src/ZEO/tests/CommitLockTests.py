@@ -64,7 +64,7 @@ class WorkerThread(TestThread):
         # event saying vote was called, then waits for the vote
         # response.
 
-        future = self.storage._server.call_future('vote', id(self.trans))
+        future = self.storage._server.call_future(u'vote', id(self.trans))
         self.ready.set()
         future.result(9)
 

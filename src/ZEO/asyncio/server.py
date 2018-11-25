@@ -13,6 +13,9 @@ from . import base
 from .compat import asyncio, new_event_loop
 from .marshal import server_decoder, encoder, reduce_exception
 
+# Set to True in test runner to make sure client sends unicode
+check_unicode_methods = False
+
 class ServerProtocol(base.Protocol):
     """asyncio low-level ZEO server interface
     """
@@ -71,7 +74,19 @@ class ServerProtocol(base.Protocol):
                             str(protocol_version.decode('ascii')))
                 self.protocol_version = protocol_version
                 self.encode = encoder(protocol_version, True)
-                self.decode = server_decoder(protocol_version)
+                decode = server_decoder(protocol_version)
+                if check_unicode_methods:
+                    def check_unicode_methods_decode(message):
+                        message_id, async_, name, args = decode(message)
+                        if isinstance(name, bytes):
+                            with open('/tmp/bad-method', 'a') as f:
+                                f.write("%s Bad method %r\n"
+                                        % (protocol_version, name))
+                            raise TypeError("Should be unicode", name)
+                        return message_id, async_, name, args
+                    self.decode = check_unicode_methods_decode
+                else:
+                    self.decode = decode
                 self.zeo_storage.notify_connected(self)
             else:
                 logger.error("bad handshake %s" % short_repr(protocol_version))

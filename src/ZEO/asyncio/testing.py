@@ -146,6 +146,8 @@ class AsyncRPC(object):
         self.api = api
 
     def __getattr__(self, name):
+        if isinstance(name, bytes):
+            name = name.decode('ascii')
         return lambda *a, **kw: self.api.call(name, *a, **kw)
 
 class ClientRunner(object):

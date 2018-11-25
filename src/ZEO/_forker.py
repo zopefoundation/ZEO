@@ -23,6 +23,7 @@ import tempfile
 from six.moves.queue import Empty
 import six
 
+import ZEO.asyncio.server
 from ZEO._compat import StringIO
 
 logger = logging.getLogger('ZEO.tests.forker')
@@ -94,7 +95,6 @@ def runner(config, qin, qout, timeout=None,
 
     old_protocol = None
     if protocol:
-        import ZEO.asyncio.server
         old_protocol = ZEO.asyncio.server.best_protocol_version
         ZEO.asyncio.server.best_protocol_version = protocol
         old_protocols = ZEO.asyncio.server.ServerProtocol.protocols
@@ -111,6 +111,9 @@ def runner(config, qin, qout, timeout=None,
             from ZEO.tests.ZEO4 import runzeo
         else:
             from . import runzeo
+
+            # Cause unicode method check:
+            ZEO.asyncio.server.check_unicode_methods = True
 
         options = runzeo.ZEOOptions()
         options.realize(['-C', config])

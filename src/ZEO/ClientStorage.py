@@ -370,7 +370,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
 
         if self._client_label:
             conn.call_async_from_same_thread(
-                'set_client_label', self._client_label)
+                u'set_client_label', self._client_label)
 
         self._info.update(info)
 
@@ -387,9 +387,9 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                 zope.interface.alsoProvides(self, iface)
 
         if self.protocol_version[1:] >= b'5':
-            self.ping = lambda : self._call('ping')
+            self.ping = lambda : self._call(u'ping')
         else:
-            self.ping = lambda : self._call('lastTransaction')
+            self.ping = lambda : self._call(u'lastTransaction')
 
         if self.server_sync:
             self.sync = self.ping
@@ -494,22 +494,22 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
     def history(self, oid, size=1):
         """Storage API: return a sequence of HistoryEntry objects.
         """
-        return self._call('history', oid, size)
+        return self._call(u'history', oid, size)
 
     def record_iternext(self, next=None):
         """Storage API: get the next database record.
 
         This is part of the conversion-support API.
         """
-        return self._call('record_iternext', next)
+        return self._call(u'record_iternext', next)
 
     def getTid(self, oid):
         # XXX deprecated: but ZODB tests use this. They shouldn't
-        return self._call('getTid', oid)
+        return self._call(u'getTid', oid)
 
     def loadSerial(self, oid, serial):
         """Storage API: load a historical revision of an object."""
-        return self._call('loadSerial', oid, serial)
+        return self._call(u'loadSerial', oid, serial)
 
     def load(self, oid, version=''):
         result = self.loadBefore(oid, utils.maxtid)
@@ -539,7 +539,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             except IndexError:
                 pass # We ran out. We need to get some more.
 
-            self._oids[:0] = reversed(self._call('new_oids'))
+            self._oids[:0] = reversed(self._call(u'new_oids'))
 
     def pack(self, t=None, referencesf=None, wait=1, days=0):
         """Storage API: pack the storage.
@@ -560,20 +560,20 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         if t is None:
             t = time.time()
         t = t - (days * 86400)
-        return self._call('pack', t, wait)
+        return self._call(u'pack', t, wait)
 
     def store(self, oid, serial, data, version, txn):
         """Storage API: store data for an object."""
         assert not version
 
         tbuf = self._check_trans(txn, 'store')
-        self._async('storea', oid, serial, data, id(txn))
+        self._async(u'storea', oid, serial, data, id(txn))
         tbuf.store(oid, data)
 
     def checkCurrentSerialInTransaction(self, oid, serial, transaction):
         self._check_trans(transaction, 'checkCurrentSerialInTransaction')
         self._async(
-            'checkCurrentSerialInTransaction', oid, serial, id(transaction))
+            u'checkCurrentSerialInTransaction', oid, serial, id(transaction))
 
     def storeBlob(self, oid, serial, data, blobfilename, version, txn):
         """Storage API: store a blob object."""
@@ -597,7 +597,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         serials = self.store(oid, serial, data, '', txn)
         if self.shared_blob_dir:
             self._async(
-                'storeBlobShared',
+                u'storeBlobShared',
                 oid, serial, data, os.path.basename(target), id(txn))
         else:
 
@@ -606,15 +606,15 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             # allows us to read the blob data as needed.
 
             def store():
-                yield ('storeBlobStart', ())
+                yield (u'storeBlobStart', ())
                 f = open(target, 'rb')
                 while 1:
                     chunk = f.read(59000)
                     if not chunk:
                         break
-                    yield ('storeBlobChunk', (chunk, ))
+                    yield (u'storeBlobChunk', (chunk, ))
                 f.close()
-                yield ('storeBlobEnd', (oid, serial, data, id(txn)))
+                yield (u'storeBlobEnd', (oid, serial, data, id(txn)))
 
             self._async_iter(store())
             tbuf.storeBlob(oid, target)
@@ -648,7 +648,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
 
     def deleteObject(self, oid, serial, txn):
         tbuf = self._check_trans(txn, 'deleteObject')
-        self._async('deleteObject', oid, serial, id(txn))
+        self._async(u'deleteObject', oid, serial, id(txn))
         tbuf.store(oid, None)
 
     def loadBlob(self, oid, serial):
@@ -694,7 +694,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             # returns, it will have been sent. (The recieving will
             # have been handled by the asyncore thread.)
 
-            self._call('sendBlob', oid, serial)
+            self._call(u'sendBlob', oid, serial)
 
             if os.path.exists(blob_filename):
                 return _accessed(blob_filename)
@@ -724,7 +724,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                     # We're using a server shared cache.  If the file isn't
                     # here, it's not anywhere.
                     raise POSException.POSKeyError("No blob file", oid, serial)
-                self._call('sendBlob', oid, serial)
+                self._call(u'sendBlob', oid, serial)
                 if not os.path.exists(blob_filename):
                     raise POSException.POSKeyError("No blob file", oid, serial)
 
@@ -750,7 +750,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             vote_attempts = 0
             while conflicts and vote_attempts < 9: # 9? Mainly avoid inf. loop
                 conflicts = False
-                for oid in self._call('vote', id(txn)) or ():
+                for oid in self._call(u'vote', id(txn)) or ():
                     if isinstance(oid, dict):
                         # Conflict, let's try to resolve it
                         conflicts = True
@@ -759,7 +759,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                         committed, read = conflict['serials']
                         data = self.tryToResolveConflict(
                             oid, committed, read, conflict['data'])
-                        self._async('storea', oid, committed, data, id(txn))
+                        self._async(u'storea', oid, committed, data, id(txn))
                         tbuf.resolve(oid, data)
                     else:
                         tbuf.server_resolve(oid)
@@ -825,7 +825,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
 
         try:
             self._async(
-                'tpc_begin', id(txn),
+                u'tpc_begin', id(txn),
                 txn.user, txn.description, txn.extension, tid, status)
         except ClientDisconnected:
             self.tpc_end(txn)
@@ -864,7 +864,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                 # wait a little while in hopes of reconnecting.  If
                 # we're able to reconnect and retry the transaction,
                 # ten it might succeed!
-                self._call('tpc_abort', id(txn), timeout=timeout)
+                self._call(u'tpc_abort', id(txn), timeout=timeout)
             except ClientDisconnected:
                 logger.debug("%s ClientDisconnected in tpc_abort() ignored",
                              self.__name__)
@@ -926,11 +926,11 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
 
         """
         self._check_trans(txn, 'undo')
-        self._async('undoa', trans_id, id(txn))
+        self._async(u'undoa', trans_id, id(txn))
 
     def undoInfo(self, first=0, last=-20, specification=None):
         """Storage API: return undo information."""
-        return self._call('undoInfo', first, last, specification)
+        return self._call(u'undoInfo', first, last, specification)
 
     def undoLog(self, first=0, last=-20, filter=None):
         """Storage API: return a sequence of TransactionDescription objects.
@@ -943,7 +943,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         """
         if filter is not None:
             return []
-        return self._call('undoLog', first, last)
+        return self._call(u'undoLog', first, last)
 
     # Recovery support
 
@@ -959,7 +959,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         """Write data already committed in a separate database."""
         assert not version
         self._check_trans(transaction, 'restore')
-        self._async('restorea', oid, serial, data, prev_txn, id(transaction))
+        self._async(u'restorea', oid, serial, data, prev_txn, id(transaction))
 
     # Below are methods invoked by the StorageServer
 
@@ -987,7 +987,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         """Return an IStorageTransactionInformation iterator."""
         # iids are "iterator IDs" that can be used to query an iterator whose
         # status is held on the server.
-        iid = self._call('iterator_start', start, stop)
+        iid = self._call(u'iterator_start', start, stop)
         return self._setup_iterator(TransactionIterator, iid)
 
     def _setup_iterator(self, factory, iid, *args):
@@ -1028,7 +1028,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         self._iterators._last_gc = time.time()
         if iids:
             try:
-                self._async('iterator_gc', list(iids))
+                self._async(u'iterator_gc', list(iids))
             except ClientDisconnected:
                 # If we get disconnected, all of the iterators on the
                 # server are thrown away.  We should clear ours too:
@@ -1036,7 +1036,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             self._iterator_ids -= iids
 
     def server_status(self):
-        return self._call('server_status')
+        return self._call(u'server_status')
 
 class TransactionIterator(object):
 
@@ -1055,7 +1055,7 @@ class TransactionIterator(object):
         if self._iid < 0:
             raise ClientDisconnected("Disconnected iterator")
 
-        tx_data = self._storage._call('iterator_next', self._iid)
+        tx_data = self._storage._call(u'iterator_next', self._iid)
         if tx_data is None:
             # The iterator is exhausted, and the server has already
             # disposed it.
@@ -1085,7 +1085,7 @@ class ClientStorageTransactionInformation(ZODB.BaseStorage.TransactionRecord):
         self.extension = extension
 
     def __iter__(self):
-        riid = self._storage._call('iterator_record_start',
+        riid = self._storage._call(u'iterator_record_start',
                                    self._txiter._iid, self.tid)
         return self._storage._setup_iterator(RecordIterator, riid)
 
@@ -1105,7 +1105,7 @@ class RecordIterator(object):
             # We finished iteration once already and the server can't know
             # about the iteration anymore.
             raise StopIteration()
-        item = self._storage._call('iterator_record_next', self._riid)
+        item = self._storage._call(u'iterator_record_next', self._riid)
         if item is None:
             # The iterator is exhausted, and the server has already
             # disposed it.

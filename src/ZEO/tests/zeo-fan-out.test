@@ -123,7 +123,7 @@ Now, let's see if we can break it. :)
     ...         ZODB.blob.remove_committed(path)
     ...     _ = s2.fshelper.createPathForOID(blob_id[0])
     ...     blob_lock = _lock_blob(path)
-    ...     s2._call('sendBlob', *blob_id, timeout=9999)
+    ...     s2._call(u'sendBlob', *blob_id, timeout=9999)
     ...     blob_lock.close()
     ... else: print('Dang')
 
