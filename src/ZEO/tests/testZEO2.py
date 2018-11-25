@@ -20,6 +20,7 @@ import re
 import sys
 import transaction
 import unittest
+import ZEO.ClientStorage
 import ZEO.StorageServer
 import ZEO.tests.servertesting
 import ZODB.blob
@@ -495,8 +496,27 @@ ZEOStorage as closed and see if trying to get a lock cleans it up:
     >>> server.close()
     """
 
+class TestClientStorage(unittest.TestCase):
+
+    def test_unicode_storage_name_if_possible(self):
+        # Convert to text if we can:
+        storage = ZEO.ClientStorage.ClientStorage(
+            'foo.sock', storage='one', wait=False)
+        self.assertEqual(u'one', storage._storage)
+        self.assertTrue(not isinstance(storage._storage, bytes))
+        storage.close()
+
+        # But don't error if we can't:
+        storage = ZEO.ClientStorage.ClientStorage(
+            'foo.sock', storage='\201', wait=False)
+        self.assertEqual('\201', storage._storage)
+        self.assertTrue(isinstance(storage._storage, bytes))
+        storage.close()
+
+
 def test_suite():
     return unittest.TestSuite((
+        unittest.makeSuite(TestClientStorage),
         doctest.DocTestSuite(
             setUp=ZODB.tests.util.setUp, tearDown=setupstack.tearDown,
             checker=renormalizing.RENormalizing([

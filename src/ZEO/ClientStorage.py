@@ -82,7 +82,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
 
     """
 
-    def __init__(self, addr, storage='1', cache_size=20 * MB,
+    def __init__(self, addr, storage=u'1', cache_size=20 * MB,
                  name='', wait_timeout=None,
                  disconnect_poll=None,
                  read_only=0, read_only_fallback=0,
@@ -198,6 +198,14 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         elif (isinstance(addr, tuple) and len(addr) == 2 and
               isinstance(addr[0], six.string_types) and isinstance(addr[1], int)):
             addr = [addr]
+
+        if isinstance(storage, bytes):
+            # Try to convert to text.
+            try:
+                storage = storage.decode()
+            except Exception:
+                pass
+
 
         logger.info(
             "%s %s (pid=%d) created %s/%s for storage: %r",
