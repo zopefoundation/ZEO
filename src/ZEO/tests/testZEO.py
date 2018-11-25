@@ -355,6 +355,29 @@ class FullGenericTests(
     ):
     """Extend GenericTests with tests that MappingStorage can't pass."""
 
+    def checkPackUndoLog(self):
+        # PackableStorage.PackableUndoStorage wants to adjust
+        # time.sleep and time.time to cooperate and pretend for time
+        # to pass. That doesn't work for the spawned server, and this
+        # test case is very sensitive to times matching.
+        super_meth = super(FullGenericTests, self).checkPackUndoLog
+        # Find the underlying function, not the decorated method.
+        # If it doesn't exist, the implementation has changed and we
+        # need to revisit this...
+        try:
+            underlying_func = super_meth.__wrapped__
+        except AttributeError:
+            # ...unless we're on Python 2, which doesn't have the __wrapped__
+            # attribute.
+            if bytes is not str: # pragma: no cover Python 3
+                raise
+            unbound_func = PackableStorage.PackableUndoStorage.checkPackUndoLog
+            wrapper_func = unbound_func.__func__
+            underlying_func = wrapper_func.func_closure[0].cell_contents
+
+        underlying_func(self)
+
+
 class FileStorageRecoveryTests(StorageTestBase.StorageTestBase,
                                RecoveryStorage.RecoveryStorage):
 
@@ -431,6 +454,7 @@ class FileStorageTests(FullGenericTests):
         self.assertEqual(self._expected_interfaces,
             self._storage._info['interfaces']
             )
+
 
 class FileStorageSSLTests(FileStorageTests):
 
