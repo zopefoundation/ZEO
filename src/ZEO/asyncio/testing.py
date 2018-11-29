@@ -24,7 +24,10 @@ class Loop(object):
         self.later = []
         self.exceptions = []
 
-    def call_soon(self, func, *args):
+    def call_soon(self, func, *args, **kw):
+        # Python 3.7+ calls us with a `context` keyword-only argument:
+        kw.pop('context', None)
+        assert not kw
         func(*args)
 
     def _connect(self, future, protocol_factory):
