@@ -4,7 +4,7 @@ Changelog
 5.2.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Add support for Python 3.7.
 
 
 5.2.0 (2018-03-28)
