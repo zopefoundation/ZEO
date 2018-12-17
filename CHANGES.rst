@@ -6,6 +6,9 @@ Changelog
 
 - Add support for Python 3.7.
 
+- Switch from `msgpack-python` to `msgpack`. Currently a version < 0.6
+  is required.
+
 
 5.2.0 (2018-03-28)
 ------------------
