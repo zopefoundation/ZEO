@@ -249,7 +249,6 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                 self.fshelper = ZODB.blob.FilesystemHelper(
                     blob_dir, layout_name='zeocache')
                 self.fshelper.create()
-            self.fshelper.checkSecure()
         else:
             self.fshelper = None
 

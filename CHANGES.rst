@@ -6,9 +6,15 @@ Changelog
 
 - Add support for Python 3.7.
 
-- Switch from `msgpack-python` to `msgpack`. Currently a version < 0.6
+- Switch from ``msgpack-python`` to ``msgpack``. Currently a version < 0.6
   is required.
 
+- Stop calling the deprecated ``checkSecure`` method when creating a
+  ``ClientStorage``. With ZODB 5.2.2 and above, this issued a warning.
+  With older versions, this *could* issue a log message, but this was
+  considered `a misfeature
+  <https://github.com/zopefoundation/ZODB/issues/155>`_. See `issue
+  134 <https://github.com/zopefoundation/ZEO/issues/134>`_.
 
 5.2.0 (2018-03-28)
 ------------------
