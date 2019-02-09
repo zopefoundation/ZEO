@@ -1,7 +1,7 @@
 Changelog
 =========
 
-5.2.1 (unreleased)
+5.2.1 (2019-02-09)
 ------------------
 
 - Add support for Python 3.7.
