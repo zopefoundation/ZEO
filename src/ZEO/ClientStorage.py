@@ -485,7 +485,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                 "Transaction not committing", meth, trans)
 
         if buf.connection_generation != self._connection_generation:
-            # We were disconneected, so this one is poisoned
+            # We were disconnected, so this one is poisoned
             raise ClientDisconnected(meth, 'on a disconnected transaction')
 
         return buf
