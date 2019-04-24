@@ -46,3 +46,7 @@ ZEO Client Cache
 
   For example, the cache file for client '8881' and storage 'spam' is named
   "8881-spam.zec".
+
+  If you ever see an error message like "ClientStorageError: Client
+  has seen newer transactions than server!", you can easily fix it by
+  deleting the zec file from above mentioned directory.
