@@ -1,10 +1,13 @@
+import os
+import shutil
+import tempfile
 import unittest
-import zope.testing.setupstack
 
+import zope.testing.setupstack
 from BTrees.Length import Length
 from ZODB import serialize
 from ZODB.DemoStorage import DemoStorage
-from ZODB.utils import p64, z64, maxtid
+from ZODB.utils import z64, maxtid
 from ZODB.broken import find_global
 
 import ZEO
@@ -111,7 +114,9 @@ class ClientSideConflictResolutionTests(zope.testing.setupstack.TestCase):
 
     def test_client_side(self):
         # First, traditional:
-        addr, stop = ZEO.server('data.fs', threaded=False)
+        path = tempfile.mkdtemp(prefix='zeo-test-')
+        self.addCleanup(shutil.rmtree, path)
+        addr, stop = ZEO.server(os.path.join(path, 'data.fs'), threaded=False)
         db = ZEO.DB(addr)
         with db.transaction() as conn:
             conn.root.l = Length(0)
