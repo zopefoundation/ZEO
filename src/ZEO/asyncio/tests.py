@@ -435,7 +435,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertEqual(sorted(loop.later[1:]), [])
 
     def test_bad_server_tid(self):
-        # If in verification we get a server_tid behing the cache's, make sure
+        # If in verification we get a server_tid behind the cache's, make sure
         # we retry the connection later.
         wrapper, cache, loop, client, protocol, transport = self.start()
         cache.store(b'4'*8, b'a'*8, None, '4 data')
