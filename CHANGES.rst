@@ -4,7 +4,7 @@ Changelog
 5.2.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Provide proper CA test certificates to allow the SSL tests succeed for Py3
 
 
 5.2.1 (2019-02-09)
