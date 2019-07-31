@@ -600,7 +600,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                 oid, serial, data, os.path.basename(target), id(txn))
         else:
 
-            # Store a blob to the server.  We don't want to real all of
+            # Store a blob to the server.  We don't want to read all of
             # the data into memory, so we use a message iterator.  This
             # allows us to read the blob data as needed.
 
