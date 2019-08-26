@@ -151,7 +151,7 @@ Running the server
 Typically, the ZEO server is run using the ``runzeo`` script that's
 installed as part of a ZEO installation.  The ``runzeo`` script
 accepts command line options, the most important of which is the
-``-C`` (``--configuration``) option.  ZEO servers are best configured
+``-C`` (``--configure``) option.  ZEO servers are best configured
 via configuration files.  The ``runzeo`` script also accepts some
 command-line arguments for ad-hoc configurations, but there's an
 easier way to run an ad-hoc server described below.  For more on
