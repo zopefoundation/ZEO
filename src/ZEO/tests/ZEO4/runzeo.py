@@ -16,7 +16,7 @@
 Usage: %s [-C URL] [-a ADDRESS] [-f FILENAME] [-h]
 
 Options:
--C/--configuration URL -- configuration file or URL
+-C/--configure URL -- configuration file or URL
 -a/--address ADDRESS -- server address of the form PORT, HOST:PORT, or PATH
                         (a PATH must contain at least one "/")
 -f/--filename FILENAME -- filename for FileStorage
