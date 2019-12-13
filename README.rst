@@ -171,17 +171,17 @@ storage.
 We can then create a ZEO client connection using the address
 returned::
 
-  connection = ZEO.connection(addr)
+  connection = ZEO.connection(address)
 
 This is a ZODB connection for a database opened on a client storage
 instance created on the fly.  This is a shorthand for::
 
-  db = ZEO.DB(addr)
+  db = ZEO.DB(address)
   connection = db.open()
 
 Which is a short-hand for::
 
-  client_storage = ZEO.client(addr)
+  client_storage = ZEO.client(address)
 
   import ZODB
   db = ZODB.db(client_storage)
