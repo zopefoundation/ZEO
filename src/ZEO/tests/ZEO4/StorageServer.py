@@ -1307,7 +1307,7 @@ class StorageServer(object):
         status = self.stats[storage_id].__dict__.copy()
         status['connections'] = len(status['connections'])
         status['waiting'] = len(self._waiting[storage_id])
-        status['timeout-thread-is-alive'] = self.timeouts[storage_id].isAlive()
+        status['timeout-thread-is-alive'] = self.timeouts[storage_id].is_alive()
         last_transaction = self.storages[storage_id].lastTransaction()
         last_transaction_hex = codecs.encode(last_transaction, 'hex_codec')
         if PY3:
@@ -1336,7 +1336,7 @@ class StubTimeoutThread(object):
     def end(self, client):
         pass
 
-    isAlive = lambda self: 'stub'
+    is_alive = lambda self: 'stub'
 
 
 class TimeoutThread(threading.Thread):
