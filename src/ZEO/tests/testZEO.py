@@ -489,6 +489,8 @@ class FileStorageHexTests(FileStorageTests):
 
 class FileStorageClientHexTests(FileStorageHexTests):
 
+    use_extension_bytes = True
+
     def getConfig(self):
         return """\
         %import ZODB.tests
