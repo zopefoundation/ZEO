@@ -493,7 +493,7 @@ class ConnectionTests(CommonSetupTearDown):
             # Wait for all threads to finish
             for t in threads:
                 t.join(60)
-                self.assertFalse(t.isAlive(), "%s didn't die" % t.getName())
+                self.assertFalse(t.is_alive(), "%s didn't die" % t.getName())
         finally:
             for t in threads:
                 t.closeclients()

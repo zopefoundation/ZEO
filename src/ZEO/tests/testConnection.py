@@ -213,7 +213,7 @@ This tests tries to provoke this bug by:
     ...     stop = True
     ...     thread.join(10)
 
-    >>> thread.isAlive()
+    >>> thread.is_alive()
     False
 
     >>> for record in handler.records:

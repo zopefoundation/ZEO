@@ -34,7 +34,7 @@ class BasicThread(threading.Thread):
 
     def join(self):
         threading.Thread.join(self, 10)
-        assert not self.isAlive()
+        assert not self.is_alive()
 
 
 class GetsThroughVoteThread(BasicThread):
@@ -119,7 +119,7 @@ class ThreadTests(object):
         for t in threads:
             t.join(30)
         for i in threads:
-            self.assertFalse(t.isAlive())
+            self.assertFalse(t.is_alive())
 
     # Helper for checkMTStores
     def mtstorehelper(self):

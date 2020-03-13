@@ -53,5 +53,5 @@ class TestThread(threading.Thread):
         self.join(timeout)
         if self._exc_info:
             six.reraise(self._exc_info[0], self._exc_info[1], self._exc_info[2])
-        if self.isAlive():
+        if self.is_alive():
             self._testcase.fail("Thread did not finish: %s" % self)

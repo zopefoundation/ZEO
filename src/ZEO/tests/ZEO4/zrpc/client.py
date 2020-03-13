@@ -218,7 +218,7 @@ class ConnectionManager(object):
             log("CM.close(): stopping and joining thread")
             t.stop()
             t.join(30)
-            if t.isAlive():
+            if t.is_alive():
                 log("CM.close(): self.thread.join() timed out",
                     level=logging.WARNING)
 
@@ -288,7 +288,7 @@ class ConnectionManager(object):
                 t.setDaemon(1)
                 t.start()
             if sync:
-                while self.connection is None and t.isAlive():
+                while self.connection is None and t.is_alive():
                     self.cond.wait(self.sync_wait)
                     if self.connection is None:
                         log("CM.connect(sync=1): still waiting...")

@@ -939,7 +939,7 @@ class StorageServer(object):
         status['connections'] = len(status['connections'])
         lock_manager = self.lock_managers[storage_id]
         status['waiting'] = len(lock_manager.waiting)
-        status['timeout-thread-is-alive'] = lock_manager.timeout.isAlive()
+        status['timeout-thread-is-alive'] = lock_manager.timeout.is_alive()
         last_transaction = self.storages[storage_id].lastTransaction()
         last_transaction_hex = codecs.encode(last_transaction, 'hex_codec')
         if PY3:
@@ -960,7 +960,7 @@ class StubTimeoutThread(object):
     def end(self, client):
         pass
 
-    isAlive = lambda self: 'stub'
+    is_alive = lambda self: 'stub'
 
 
 class TimeoutThread(threading.Thread):
