@@ -6,6 +6,9 @@ Changelog
 
 - Provide proper CA test certificates to allow the SSL tests succeed for Py3
 
+- Replace deprecated occurences of ``Thread.isAlive()`` by ``Thread.is_alive()``
+  See `pull request 154 <https://github.com/zopefoundation/ZEO/pull/154>`_.
+
 
 5.2.1 (2019-02-09)
 ------------------
