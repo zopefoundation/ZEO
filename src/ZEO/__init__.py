@@ -22,10 +22,16 @@ ZEO is now part of ZODB; ZODB's home on the web is
 """
 
 def client(*args, **kw):
+    """
+    Shortcut for :class:`ZEO.ClientStorage.ClientStorage`.
+    """
     import ZEO.ClientStorage
     return ZEO.ClientStorage.ClientStorage(*args, **kw)
 
 def DB(*args, **kw):
+    """
+    Shortcut for creating a :class:`ZODB.DB` using a ZEO :func:`~ZEO.client`.
+    """
     s = client(*args, **kw)
     try:
         import ZODB

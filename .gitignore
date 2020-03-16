@@ -12,3 +12,4 @@ testing.log
 data.fs*
 ZEO_forker*.conf
 .eggs/
+doc/_build

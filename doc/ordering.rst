@@ -182,7 +182,7 @@ B3
   lastTransaction result in ``sync``.
 
 Implementation notes
-===================
+====================
 
 ZEO 4
 -----
@@ -195,12 +195,12 @@ and, fact that client requests, for a particular client, are
 handled by a single thread on the server, and that all output for a
 client goes through a thread-safe queue.
 
-Invalidations are sent from different threads than clients.  Outgoing
+Invalidations are sent from different threads than clients. Outgoing
 data is queued, however, using Python lists, which are protected by
 the GIL.  This means that the serialization provided though storage
 locks is preserved by the way that server outputs are queued.  **The
 queueing mechanism is in part a consequence of the way asyncore, used
-by ZEO4, works.
+by ZEO4, works.**
 
 In ZEO 4 clients, invalidations and loads are handled by separate
 threads. This means that even though data arive in order, they may not
