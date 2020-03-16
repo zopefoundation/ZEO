@@ -1,3 +1,4 @@
+========================
 ZEO Client Cache Tracing
 ========================
 
@@ -11,7 +12,7 @@ ZEO client cache is only used when an object is not in the Zope object
 cache; the ZEO client cache avoids roundtrips to the ZEO server.
 
 Enabling Cache Tracing
-----------------------
+======================
 
 To enable cache tracing, you must use a persistent cache (specify a ``client``
 name), and set the environment variable ZEO_CACHE_TRACE to a non-empty
@@ -32,7 +33,7 @@ transaction comments, access paths, or machine information (such as machine
 name or IP address) are logged.
 
 Analyzing a Cache Trace
------------------------
+=======================
 
 The cache_stats.py command-line tool (``python -m
 ZEO.scripts.cache_stats``) is the first-line tool to analyze a cache
@@ -55,7 +56,7 @@ extension.  It will be read from stdin (assuming uncompressed data) if the
 tracefile argument is '-'.
 
 Simulating Different Cache Sizes
---------------------------------
+================================
 
 Based on a cache trace file, you can make a prediction of how well the cache
 might do with a different cache size.  The cache_simul.py tool runs a simulation of
@@ -122,7 +123,7 @@ strategy's code has been updated to be aware of MVCC, these are not further
 documented here.
 
 Simulation Limitations
-----------------------
+======================
 
 The cache simulation is an approximation, and actual hit rate may be higher
 or lower than the simulated result.  These are some factors that inhibit

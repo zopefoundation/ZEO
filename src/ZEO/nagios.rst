@@ -1,3 +1,4 @@
+=================
 ZEO Nagios plugin
 =================
 
@@ -33,7 +34,7 @@ If we stop the server, we'll error:
     2
 
 Metrics
--------
+=======
 
 The monitor will optionally output server metric data. There are 2
 kinds of metrics it can output, level and rate metric. If we use the
@@ -103,7 +104,7 @@ other monitors (e.g. that get address data from ZooKeeper). It takes:
     >>> stop()
 
 Multi-storage servers
----------------------
+=====================
 
 A ZEO server can host multiple servers.  (This is a feature that will
 likely be dropped in the future.)  When this is the case, the monitor
