@@ -9,6 +9,7 @@ include log.ini
 
 recursive-include src *
 recursive-include doc *.txt
+recursive-include doc *.py
 recursive-include doc *.rst
 
 global-exclude *.pyc
