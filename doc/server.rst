@@ -218,7 +218,7 @@ In an operational setting, you will want to run the ZEO server as a
 daemon process that is restarted when it dies.  ``runzeo`` makes no
 attempt to implement a well behaved daemon. It expects that
 functionality to be provided by a wrapper like `zdaemon
-<https://pypi.python.org/pypi/zdaemon>`_ or `supervisord
+<https://pypi.org/project/zdaemon/>`_ or `supervisord
 <http://supervisord.org/>`_.
 
 Rotating log files
