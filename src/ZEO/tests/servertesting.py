@@ -70,6 +70,7 @@ class Connection:
         print(self.name, 'callAsync', meth, repr(args))
 
     callAsyncNoPoll = callAsync
+    callAsyncNoSend = callAsync
 
     def call_from_thread(self, *args):
         if args:

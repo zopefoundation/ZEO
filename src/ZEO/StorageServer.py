@@ -638,8 +638,7 @@ class ZEOStorage:
             self._op_error(oid, error, 'store')
             err = error
         else:
-            if serial != b"\0\0\0\0\0\0\0\0":
-                self.invalidated.append(oid)
+            self.invalidated.append(oid)
 
             if isinstance(newserial, bytes):
                 newserial = [(oid, newserial)]

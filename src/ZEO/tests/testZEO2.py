@@ -153,7 +153,9 @@ We can start another client and get the storage lock.
     >>> _ = zs1.vote('1') # doctest: +ELLIPSIS
     1 callAsync serialnos ...
 
-    >>> zs1.tpc_finish('1').set_sender(0, conn1)
+    >>> zs1.tpc_finish('1').set_sender(0, conn1) # doctest: +ELLIPSIS
+    1 callAsync invalidateTransaction ...
+    1 callAsync info ...
 
     >>> fs.close()
     """

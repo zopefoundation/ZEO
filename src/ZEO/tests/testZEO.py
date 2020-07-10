@@ -913,7 +913,7 @@ def multiple_storages_invalidation_queue_is_not_insane():
     >>> trans, oids = s1.getInvalidations(last)
     >>> from ZODB.utils import u64
     >>> sorted([int(u64(oid)) for oid in oids])
-    [10, 11, 12, 13, 14]
+    [10, 11, 12, 13, 14, 15]
 
     >>> server.close()
     """
@@ -970,15 +970,6 @@ structure using lastTransactions.
     >>> sorted([int(u64(oid)) for oid in oids])
     [0, 92, 93, 94, 95, 96, 97, 98, 99, 100]
 
-(Note that the fact that we get oids for 92-100 is actually an
-artifact of the fact that the FileStorage lastInvalidations method
-returns all OIDs written by transactions, even if the OIDs were
-created and not modified. FileStorages don't record whether objects
-were created rather than modified. Objects that are just created don't
-need to be invalidated.  This means we'll invalidate objects that
-dont' need to be invalidated, however, that's better than verifying
-caches.)
-
     >>> sv.close()
     >>> fs.close()
 
@@ -1016,7 +1007,10 @@ transaction, we'll get a result:
     True
 
     >>> sorted([int(u64(oid)) for oid in oids])
-    [0, 101, 102, 103, 104]
+    [0, 101, 102, 103, 104, 105]
+
+Note that in all cases invalidations include both modified objects and objects
+that were only created.
 
     >>> fs.close()
     """
