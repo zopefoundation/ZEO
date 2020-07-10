@@ -537,8 +537,7 @@ class ZEOStorage(object):
             if oid in self.conflicts:
                 del self.conflicts[oid]
 
-            if serial != b"\0\0\0\0\0\0\0\0":
-                self.invalidated.append(oid)
+            self.invalidated.append(oid)
 
     def _restore(self, oid, serial, data, prev_txn):
         self.storage.restore(oid, serial, data, '', prev_txn,
