@@ -7,9 +7,12 @@ bin
 develop-eggs
 eggs
 parts
+pyvenv.cfg
 testing.log
 .dir-locals.el
 data.fs*
 ZEO_forker*.conf
 .eggs/
 doc/_build
+lib/
+lib64
