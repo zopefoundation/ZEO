@@ -4,6 +4,8 @@ Changelog
 5.2.2 (unreleased)
 ------------------
 
+- Remove support for Python 3.4
+
 - Provide proper CA test certificates to allow the SSL tests succeed for Py3
 
 - Replace deprecated occurences of ``Thread.isAlive()`` by ``Thread.is_alive()``
