@@ -35,7 +35,7 @@ tests_require = [
     'manuel',
     'random2',
     'mock',
-    'msgpack < 0.6',
+    'msgpack < 1',
     'zope.testrunner',
 ]
 
