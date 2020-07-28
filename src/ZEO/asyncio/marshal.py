@@ -66,7 +66,7 @@ def decoder(protocol):
         from msgpack import unpackb
         def msgpack_decode(data):
             """Decodes msg and returns its parts"""
-            return unpackb(data, encoding='utf-8', use_list=False)
+            return unpackb(data, raw=False, use_list=False)
         return msgpack_decode
     else:
         assert protocol[:1] == b'Z'
@@ -126,7 +126,10 @@ _silly = ('__doc__',)
 
 exception_type_type = type(Exception)
 
-_SAFE_MODULE_NAMES = ('ZopeUndo.Prefix', 'copy_reg', '__builtin__', 'zodbpickle')
+_SAFE_MODULE_NAMES = (
+    'ZopeUndo.Prefix', 'zodbpickle',
+    'builtins', 'copy_reg', '__builtin__',
+)
 
 def find_global(module, name):
     """Helper for message unpickler"""
