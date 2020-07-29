@@ -11,6 +11,9 @@ Changelog
 - Replace deprecated occurences of ``Thread.isAlive()`` by ``Thread.is_alive()``
   See `pull request 154 <https://github.com/zopefoundation/ZEO/pull/154>`_.
 
+- Include both modified and just created objects into invalidations.
+  See `pull request 160 <https://github.com/zopefoundation/ZEO/pull/160>`_.
+
 
 5.2.1 (2019-02-09)
 ------------------
