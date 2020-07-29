@@ -246,6 +246,21 @@ class ClientCache(object):
             self.f.truncate()
             self._initfile(ZEC_HEADER_SIZE)
 
+    # clearAllNonCurrent removes all non-current entries from the cache.
+    def clearAllNonCurrent(self):
+        with self._lock:
+            f = self.f
+            for oid, tidofs in self.noncurrent.items():
+                for (tid, ofs) in tidofs.items():
+                    f.seek(ofs)
+                    status = f.read(1)
+                    assert status == b'a', (ofs, f.tell(), oid, tid)
+                    f.seek(ofs)
+                    f.write(b'f')
+                    self._len -= 1
+
+            self.noncurrent.clear()
+
     ##
     # Scan the current contents of the cache file, calling `install`
     # for each object found in the cache.  This method should only

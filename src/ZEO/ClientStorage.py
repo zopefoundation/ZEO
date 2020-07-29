@@ -559,7 +559,16 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         if t is None:
             t = time.time()
         t = t - (days * 86400)
-        return self._call('pack', t, wait)
+        ret = self._call('pack', t, wait)
+        # remove all non-current entries from the cache.
+        # This way we make sure that loadBefore with before < packtime, won't
+        # return data from the cache, instead of returning "no data" if requested object
+        # has current revision >= packtime.
+        # By clearing all noncurrent entries we might remove more data from the
+        # cache than is strictly necessary, but since access to noncurrent data
+        # is seldom, that should not cause problems in practice.
+        self._cache.clearAllNonCurrent()
+        return ret
 
     def store(self, oid, serial, data, version, txn):
         """Storage API: store data for an object."""
