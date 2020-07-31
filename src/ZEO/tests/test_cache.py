@@ -255,31 +255,31 @@ class CacheTests(ZODB.tests.util.TestCase):
 
     def testClearAllNonCurrent(self):
         cache = self.cache
-        cache.store(p64(1), n1, n2,   b'1@1')
-        cache.store(p64(1), n2, n3,   b'1@2')
+        cache.store(p64(1), n1, n2, b'1@1')
+        cache.store(p64(1), n2, n3, b'1@2')
         cache.store(p64(1), n3, None, b'1')
-        cache.store(p64(2), n2, n3,   b'2@2')
+        cache.store(p64(2), n2, n3, b'2@2')
         cache.store(p64(2), n3, None, b'2')
 
         eq = self.assertEqual
         eq(len(cache), 5)
-        eq(cache.load(p64(1)),              (b'1',   n3))
-        eq(cache.loadBefore(p64(1), n3),    (b'1@2', n2, n3))
-        eq(cache.loadBefore(p64(1), n2),    (b'1@1', n1, n2))
-        eq(cache.loadBefore(p64(1), n1),    None)
-        eq(cache.load(p64(2)),              (b'2',   n3))
-        eq(cache.loadBefore(p64(2), n3),    (b'2@2', n2, n3))
-        eq(cache.loadBefore(p64(2), n2),    None)
+        eq(cache.load(p64(1)), (b'1',   n3))
+        eq(cache.loadBefore(p64(1), n3), (b'1@2', n2, n3))
+        eq(cache.loadBefore(p64(1), n2), (b'1@1', n1, n2))
+        eq(cache.loadBefore(p64(1), n1), None)
+        eq(cache.load(p64(2)), (b'2',   n3))
+        eq(cache.loadBefore(p64(2), n3), (b'2@2', n2, n3))
+        eq(cache.loadBefore(p64(2), n2), None)
 
         cache.clearAllNonCurrent()
         eq(len(cache), 2)
-        eq(cache.load(p64(1)),              (b'1',   n3))
-        eq(cache.loadBefore(p64(1), n3),    None)
-        eq(cache.loadBefore(p64(1), n2),    None)
-        eq(cache.loadBefore(p64(1), n1),    None)
-        eq(cache.load(p64(2)),              (b'2',   n3))
-        eq(cache.loadBefore(p64(2), n3),    None)
-        eq(cache.loadBefore(p64(2), n2),    None)
+        eq(cache.load(p64(1)), (b'1',   n3))
+        eq(cache.loadBefore(p64(1), n3), None)
+        eq(cache.loadBefore(p64(1), n2), None)
+        eq(cache.loadBefore(p64(1), n1), None)
+        eq(cache.load(p64(2)), (b'2',   n3))
+        eq(cache.loadBefore(p64(2), n3), None)
+        eq(cache.loadBefore(p64(2), n2), None)
 
     def testChangingCacheSize(self):
         # start with a small cache

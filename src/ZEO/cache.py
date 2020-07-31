@@ -250,7 +250,7 @@ class ClientCache(object):
     def clearAllNonCurrent(self):
         with self._lock:
             f = self.f
-            for oid, tidofs in self.noncurrent.items():
+            for (oid, tidofs) in self.noncurrent.items():
                 for (tid, ofs) in tidofs.items():
                     f.seek(ofs)
                     status = f.read(1)
