@@ -5,6 +5,7 @@ __pycache__
 .tox
 bin
 develop-eggs
+dist
 eggs
 parts
 pyvenv.cfg
