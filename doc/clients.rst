@@ -234,7 +234,7 @@ wait_timeout
      connection to be established before failing with a
      ``ZEO.Exceptions.ClientDisconnected`` exception.
 
-client_label
+client-label
    A short string to display in *server* logs for an event relating to
    this client. This can be helpful when debugging.
 
