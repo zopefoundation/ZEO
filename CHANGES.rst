@@ -4,6 +4,11 @@ Changelog
 5.2.3 (unreleased)
 ------------------
 
+- Fix race condition affecting ``DB.open`` by
+  moving the `setLastTID` call after invalidation processing as
+  required by ZODB>=5.6.0
+  `#166 <https://github.com/zopefoundation/ZEO/issues/166>`_.
+
 
 5.2.2 (2020-08-11)
 ------------------

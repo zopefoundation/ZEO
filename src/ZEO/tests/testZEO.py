@@ -22,6 +22,7 @@ from ZEO.tests import IterationTests
 from ZEO._compat import PY3
 from ZEO._compat import WIN
 
+from persistent import Persistent
 from ZODB.Connection import TransactionMetaData
 from ZODB.tests import StorageTestBase, BasicStorage,  \
      TransactionalUndoStorage,  \
@@ -1747,10 +1748,70 @@ class ServerManagingClientStorageForIExternalGCTest(
         self._cache.clear()
         ZEO.ClientStorage._check_blob_cache_size(self.blob_dir, 0)
 
+
+class PInt(Persistent):
+    """Auxiliary class for ``RaceConditionsTests``."""
+    i = 0
+
+
+class RaceConditionTests(unittest.TestCase):
+    def test_open(self):
+        from threading import Thread
+        from ZEO import server, DB
+        import transaction
+        # initialization
+        address, stop = server()
+        db = DB(address)
+        transaction.begin()
+        conn = db.open()
+        root = conn.root()
+        root[1] = PInt()
+        root[2] = PInt()
+        transaction.commit()
+        conn.close()
+        comm = [True, 0, 0]  # inter thread communication area
+        rounds = 1000  # mutation rounds
+        def mutate():
+            """increments objects 1 and 2 keeping them equal"""
+            i = 0
+            while i < rounds and comm[0]:
+                i += 1
+                transaction.begin()
+                conn = db.open()
+                root = conn.root()
+                root[1].i += 1
+                root[2].i += 1
+                transaction.commit()
+                conn.close()
+            comm[0] = False
+        def check():
+            """checks object 1 and 2 equality"""
+            while comm[0]:
+                transaction.begin()
+                conn = db.open()
+                root = conn.root()
+                root[1]._p_invalidate()  # force ZODB load
+                i1 = root[1].i
+                i2 = root[2].i  # from cache
+                transaction.abort()
+                conn.close()
+                if i1 != i2:
+                    comm[:] = [False, i1, i2]
+        t_mutate = Thread(target=mutate)
+        t_mutate.start()
+        t_check = Thread(target=check)
+        t_check.start()
+        t_mutate.join()
+        t_check.join()
+        stop()
+        self.assertEqual(comm[1], comm[2])
+
+
 def test_suite():
     suite = unittest.TestSuite((
         unittest.makeSuite(Test_convenience_functions),
     ))
+    suite.addTest(unittest.makeSuite(RaceConditionTests))
 
     zeo = unittest.TestSuite()
     zeo.addTest(unittest.makeSuite(ZODB.tests.util.AAAA_Test_Runner_Hack))

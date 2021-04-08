@@ -527,7 +527,6 @@ class Client(object):
             # We've been ignoring them up to this point.
             self.cache.setLastTid(server_tid)
             self.ready = True
-
             # Gaaaa, ZEO 4 work around. See comment in __init__. :(
             for tid, oids in self.verify_invalidation_queue:
                 if tid > server_tid:
@@ -647,7 +646,6 @@ class Client(object):
                     cache.invalidate(oid, tid)
                     if data and not resolved:
                         cache.store(oid, tid, None, data)
-                cache.setLastTid(tid)
             except Exception as exc:
                 future.set_exception(exc)
 
@@ -657,7 +655,11 @@ class Client(object):
                 self.protocol.close()
                 self.disconnected(self.protocol)
             else:
+                # typically performs connection cache invalidations
                 f(tid)
+                # ZODB>=5.6.0 requires that ``LastTid``
+                # is updated after connection cache invalidations
+                cache.setLastTid(tid)
                 future.set_result(tid)
         else:
             future.set_exception(ClientDisconnected())
