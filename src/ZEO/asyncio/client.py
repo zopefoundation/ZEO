@@ -657,10 +657,12 @@ class Client(object):
             else:
                 if getattr(f, "invalidateTransaction", False):
                     # ``f`` is set up to invalidate the transaction
+                    # this is the case for "normal" operations involving
+                    # the ``MVCCAdapter``
                     f(tid)
                     cache.setLastTid(tid)
                 else:
-                    # we must invalidate outself
+                    # called from tests
                     self.client.invalidateTransaction(
                         tid, [u[0] for u in updates])
                     cache.setLastTid(tid)
