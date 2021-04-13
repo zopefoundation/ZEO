@@ -655,11 +655,16 @@ class Client(object):
                 self.protocol.close()
                 self.disconnected(self.protocol)
             else:
-                # typically performs connection cache invalidations
-                f(tid)
-                # ZODB>=5.6.0 requires that ``LastTid``
-                # is updated after connection cache invalidations
-                cache.setLastTid(tid)
+                if getattr(f, "invalidateTransaction", False):
+                    # ``f`` is set up to invalidate the transaction
+                    f(tid)
+                    cache.setLastTid(tid)
+                else:
+                    # we must invalidate outself
+                    self.client.invalidateTransaction(
+                        tid, [u[0] for u in updates])
+                    cache.setLastTid(tid)
+                    f(tid)
                 future.set_result(tid)
         else:
             future.set_exception(ClientDisconnected())
