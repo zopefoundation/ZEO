@@ -657,14 +657,22 @@ class Client(object):
             else:
                 if getattr(f, "invalidateTransaction", False):
                     # ``f`` is set up to invalidate the transaction
-                    # this is the case for "normal" operations involving
-                    # the ``MVCCAdapter``
+                    # This is the case for "normal" operations involving
+                    # the ``MVCCAdapter``.
+                    # From ``ZODB>=5.6`` on, ``MVCCAdapter`` requires
+                    # that `lastTransaction` changes after invalidation
+                    # processing; therefore, `setLastTid` is called
+                    # after the callback
                     f(tid)
                     cache.setLastTid(tid)
-                else:
-                    # called from tests
-                    self.client.invalidateTransaction(
-                        tid, [u[0] for u in updates])
+                else:  # called from tests
+                    # the call below would deadlock for older ``ZODB``
+                    # versions; therefore, we avoid it
+                    #self.client.invalidateTransaction(
+                    #    tid, [u[0] for u in updates])
+                    # Some tests expect `lastTransaction` to change
+                    # before the callback; therefore, `setLastTid` is called
+                    # before the callback
                     cache.setLastTid(tid)
                     f(tid)
                 future.set_result(tid)
