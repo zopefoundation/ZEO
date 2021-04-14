@@ -252,7 +252,6 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
              (b'4'*8, 'committed 4', False),
              ],
             finished_cb)
-        finished_cb.invalidateTransaction = True
         self.assertFalse(committed.done() or
                          cache.load(b'2'*8) or
                          cache.load(b'4'*8))
