@@ -252,10 +252,19 @@ class Protocol(base.Protocol):
         message_id = (oid, tid)
         future = self.futures.get(message_id)
         if future is None:
-            future = asyncio.Future(loop=self.loop)
+            future = Fut()
             self.futures[message_id] = future
             self._write(
                 self.encode(message_id, False, 'loadBefore', (oid, tid)))
+            @future.add_done_callback
+            def _(future):
+                try:
+                    data = future.result()
+                except Exception:
+                    return
+                if data:
+                    data, start, end = data
+                    self.client.cache.store(oid, start, end, data)
         return future
 
     # Methods called by the server.
@@ -608,9 +617,6 @@ class Client(object):
                 future.set_exception(exc)
             else:
                 future.set_result(data)
-                if data:
-                    data, start, end = data
-                    self.cache.store(oid, start, end, data)
         elif wait_ready:
             self._when_ready(
                 self.load_before_threadsafe, future, wait_ready, oid, tid)
@@ -620,10 +626,7 @@ class Client(object):
     @future_generator
     def _prefetch(self, oid, tid):
         try:
-            data = yield self.protocol.load_before(oid, tid)
-            if data:
-                data, start, end = data
-                self.cache.store(oid, start, end, data)
+            yield self.protocol.load_before(oid, tid)
         except Exception:
             logger.exception("prefetch %r %r" % (oid, tid))
 
@@ -888,20 +891,27 @@ class ClientThread(ClientRunner):
                 raise self.exception
 
 class Fut(object):
-    """Lightweight future that calls it's callback immediately rather than soon
+    """Lightweight future that calls it's callbacks immediately rather than soon
     """
 
+    cbv = None
     def add_done_callback(self, cb):
-        self.cb = cb
+        if self.cbv is None:
+            self.cbv = []
+        self.cbv.append(cb)
 
     exc = None
     def set_exception(self, exc):
         self.exc = exc
-        self.cb(self)
+        if self.cbv:
+            for cb in self.cbv:
+                cb(self)
 
     def set_result(self, result):
         self._result = result
-        self.cb(self)
+        if self.cbv:
+            for cb in self.cbv:
+                cb(self)
 
     def result(self):
         if self.exc:
