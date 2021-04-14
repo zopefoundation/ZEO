@@ -527,6 +527,7 @@ class Client(object):
             # We've been ignoring them up to this point.
             self.cache.setLastTid(server_tid)
             self.ready = True
+
             # Gaaaa, ZEO 4 work around. See comment in __init__. :(
             for tid, oids in self.verify_invalidation_queue:
                 if tid > server_tid:
@@ -642,10 +643,25 @@ class Client(object):
             try:
                 tid = yield self.protocol.fut('tpc_finish', tid)
                 cache = self.cache
-                for oid, data, resolved in updates:
-                    cache.invalidate(oid, tid)
-                    if data and not resolved:
-                        cache.store(oid, tid, None, data)
+                # There is potential for a race condition here:
+                # the server will already deliver new data while
+                # the cache still has old data. This race may
+                # affect "load_current" but should not affect
+                # "normal" operations. Normal operations would
+                # only access state valid at ``cache.getLastTid()``
+                # and `LastTid` still reflects the old situation.
+                with cache._lock:
+                    # we acquire the lock here to ensure that
+                    # the effect of ``setLastTid`` becomes visible
+                    # by other threads only after the ``f`` callback
+                    # has run as required by ``ZODB>=5.6``.
+                    for oid, data, resolved in updates:
+                        cache.invalidate(oid, tid)
+                        if data and not resolved:
+                            cache.store(oid, tid, None, data)
+                    cache.setLastTid(tid)
+                    f(tid)
+                    future.set_result(tid)
             except Exception as exc:
                 future.set_exception(exc)
 
@@ -654,28 +670,6 @@ class Client(object):
                 # recovering to a consistent state.
                 self.protocol.close()
                 self.disconnected(self.protocol)
-            else:
-                if getattr(f, "invalidateTransaction", False):
-                    # ``f`` is set up to invalidate the transaction
-                    # This is the case for "normal" operations involving
-                    # the ``MVCCAdapter``.
-                    # From ``ZODB>=5.6`` on, ``MVCCAdapter`` requires
-                    # that `lastTransaction` changes after invalidation
-                    # processing; therefore, `setLastTid` is called
-                    # after the callback
-                    f(tid)
-                    cache.setLastTid(tid)
-                else:  # called from tests
-                    # the call below would deadlock for older ``ZODB``
-                    # versions; therefore, we avoid it
-                    #self.client.invalidateTransaction(
-                    #    tid, [u[0] for u in updates])
-                    # Some tests expect `lastTransaction` to change
-                    # before the callback; therefore, `setLastTid` is called
-                    # before the callback
-                    cache.setLastTid(tid)
-                    f(tid)
-                future.set_result(tid)
         else:
             future.set_exception(ClientDisconnected())
 
