@@ -894,24 +894,22 @@ class Fut(object):
     """Lightweight future that calls it's callbacks immediately rather than soon
     """
 
-    cbv = None
+    def __init__(self):
+        self.cbv = []
+
     def add_done_callback(self, cb):
-        if self.cbv is None:
-            self.cbv = []
         self.cbv.append(cb)
 
     exc = None
     def set_exception(self, exc):
         self.exc = exc
-        if self.cbv:
-            for cb in self.cbv:
-                cb(self)
+        for cb in self.cbv:
+            cb(self)
 
     def set_result(self, result):
         self._result = result
-        if self.cbv:
-            for cb in self.cbv:
-                cb(self)
+        for cb in self.cbv:
+            cb(self)
 
     def result(self):
         if self.exc:
