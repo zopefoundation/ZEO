@@ -1755,6 +1755,10 @@ class PInt(Persistent):
 
 
 class RaceConditionTests(unittest.TestCase):
+    ROUNDS = 1000
+
+    # a similar test is now part of ZODB
+    # the test below could therefore be deactivated
     def test_open(self):
         from threading import Thread
         from ZEO import server, DB
@@ -1770,7 +1774,7 @@ class RaceConditionTests(unittest.TestCase):
         transaction.commit()
         conn.close()
         comm = [True, 0, 0]  # inter thread communication area
-        rounds = 1000  # mutation rounds
+        rounds = self.ROUNDS  # mutation rounds
         def mutate():
             """increments objects 1 and 2 keeping them equal"""
             i = 0
@@ -1803,6 +1807,61 @@ class RaceConditionTests(unittest.TestCase):
         t_check.start()
         t_mutate.join()
         t_check.join()
+        db.close()
+        stop()
+        self.assertEqual(comm[1], comm[2])
+
+    def test_race_two_storages(self):
+        from threading import Thread
+        from ZEO import server, DB
+        import transaction
+        # initialization
+        address, stop = server()
+        db_m = DB(address)
+        db_c = DB(address)
+        transaction.begin()
+        conn = db_m.open()
+        root = conn.root()
+        root[1] = PInt()
+        root[2] = PInt()
+        transaction.commit()
+        conn.close()
+        comm = [True, 0, 0]  # inter thread communication area
+        rounds = self.ROUNDS  # mutation rounds
+        def mutate():
+            """increments objects 1 and 2 keeping them equal"""
+            conn = db_m.open()
+            i = 0
+            while i < rounds and comm[0]:
+                i += 1
+                transaction.begin()
+                root = conn.root()
+                root[1].i += 1
+                root[2].i += 1
+                transaction.commit()
+            conn.close()
+            comm[0] = False
+        def check():
+            """checks object 1 and 2 equality"""
+            conn = db_c.open()
+            while comm[0]:
+                transaction.begin()
+                root = conn.root()
+                root[1]._p_invalidate()  # force ZODB load
+                i1 = root[1].i
+                i2 = root[2].i  # from cache
+                transaction.abort()
+                if i1 != i2:
+                    comm[:] = [False, i1, i2]
+            conn.close()
+        t_m = Thread(target=mutate)
+        t_m.start()
+        t_c = Thread(target=check)
+        t_c.start()
+        t_m.join()
+        t_c.join()
+        db_m.close()
+        db_c.close()
         stop()
         self.assertEqual(comm[1], comm[2])
 
