@@ -26,12 +26,6 @@ from ZEO.tests.TestThread import TestThread
 
 ZERO = b'\0'*8
 
-class DummyDB(object):
-    def invalidate(self, *args, **kwargs):
-        pass
-
-    transform_record_data = untransform_record_data = lambda self, data: data
-
 class WorkerThread(TestThread):
 
     # run the entire test in a thread so that the blocking call for
@@ -103,7 +97,7 @@ class CommitLockTests(object):
         self._threads = []
 
         for i in range(self.NUM_CLIENTS):
-            storage = self._duplicate_client()
+            storage = self._new_storage_client()
             txn = TransactionMetaData()
             tid = self._get_timestamp()
 
@@ -121,18 +115,6 @@ class CommitLockTests(object):
     def _finish_threads(self):
         for t in self._threads:
             t.cleanup()
-
-    def _duplicate_client(self):
-        "Open another ClientStorage to the same server."
-        # It's hard to find the actual address.
-        # The rpc mgr addr attribute is a list.  Each element in the
-        # list is a socket domain (AF_INET, AF_UNIX, etc.) and an
-        # address.
-        addr = self._storage._addr
-        new = ZEO.ClientStorage.ClientStorage(
-            addr, wait=1, **self._client_options())
-        new.registerDB(DummyDB())
-        return new
 
     def _get_timestamp(self):
         t = time.time()
