@@ -60,6 +60,7 @@ import ZODB.utils
 import zope.testing.setupstack
 
 from . import testssl
+from .utils import HighContextSwitchFrequencyLayer
 
 logger = logging.getLogger('ZEO.tests.testZEO')
 
@@ -1755,6 +1756,8 @@ class PInt(Persistent):
 
 
 class RaceConditionTests(unittest.TestCase):
+    layer = HighContextSwitchFrequencyLayer
+
     ROUNDS = 1000
 
     # a similar test is now part of ZODB

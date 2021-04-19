@@ -1,5 +1,7 @@
 """Testing helpers
 """
+import sys
+
 import ZEO.StorageServer
 from ..asyncio.server import best_protocol_version
 
@@ -62,3 +64,36 @@ class StorageServer(object):
         result, callback = result.args
         callback()
         return result
+
+
+class HighContextSwitchFrequencyLayer(object):
+    """layer ensuring a high context switch frequency
+    
+    Race condition probability depends on context switch frequency.
+    For race condition tests it is therefore important to ensure
+    a high switch frequency.
+
+    By default, Python 2 switches every 100 interpreter instructions
+    (fast enough) while Python 3 switches every 5 ms (usually too slow).
+    """
+    @classmethod
+    def setUp(cls):
+        if hasattr(sys, "getswitchinterval"):
+            # PY3
+            cls.restore = sys.setswitchinterval, sys.getswitchinterval()
+            # estimate interpreter instruction time
+            from time import time
+            c = compile("i = 1\n" * 50, "-str-", "exec")  # 100 instrs
+            s = time()
+            exec(c, {})
+            t = time() - s  # approx. time for 100 interpreter instructions
+            # change frequency
+            sys.setswitchinterval(t)
+        else:
+            # PY2
+            cls.restore = sys.setcheckinterval, sys.getcheckinterval()
+            sys.setcheckinterval(100)
+
+    @classmethod
+    def tearDown(cls):
+        cls.restore[0](cls.restore[1])
