@@ -192,9 +192,7 @@ class MiscZEOTests(object):
         self._dostore(data=obj)
 
     def checkZEOInvalidation(self):
-        addr = self._storage._addr
-        storage2 = self._wrap_client(
-            ClientStorage(addr, wait=1, **self._client_options()))
+        storage2 = self._new_storage_client()
         try:
             oid = self._storage.new_oid()
             ob = MinPO('first')
@@ -222,14 +220,13 @@ class MiscZEOTests(object):
     def checkVolatileCacheWithImmediateLastTransaction(self):
         # Earlier, a ClientStorage would not have the last transaction id
         # available right after successful connection, this is required now.
-        addr = self._storage._addr
-        storage2 = ClientStorage(addr, **self._client_options())
+        storage2 = self._new_storage_client()
         self.assertTrue(storage2.is_connected())
         self.assertEqual(ZODB.utils.z64, storage2.lastTransaction())
         storage2.close()
 
         self._dostore()
-        storage3 = ClientStorage(addr, **self._client_options())
+        storage3 = self._new_storage_client()
         self.assertTrue(storage3.is_connected())
         self.assertEqual(8, len(storage3.lastTransaction()))
         self.assertNotEqual(ZODB.utils.z64, storage3.lastTransaction())
@@ -263,6 +260,15 @@ class GenericTestBase(
                 **self._client_options()),
             )
         self._storage.registerDB(DummyDB())
+
+    # _new_storage_client opens another ClientStorage to the same storage server
+    # self._storage is connected to. It is used by both ZEO and ZODB tests.
+    def _new_storage_client(self):
+        client = ZEO.ClientStorage.ClientStorage(
+            self._storage._addr, wait=1, **self._client_options())
+        client = self._wrap_client(client)
+        client.registerDB(DummyDB())
+        return client
 
     def getZEOConfig(self):
         return forker.ZEOConfig(('127.0.0.1', 0))
@@ -322,8 +328,7 @@ class GenericTests(
     def _do_store_in_separate_thread(self, oid, revid, voted):
 
         def do_store():
-            store = ZEO.ClientStorage.ClientStorage(
-                self._storage._addr, **self._client_options())
+            store = self._new_storage_client()
             try:
                 t = transaction.get()
                 store.tpc_begin(t)

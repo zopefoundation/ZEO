@@ -7,6 +7,8 @@ Changelog
 - Fix race condition affecting ``DB.open``
   `#166 <https://github.com/zopefoundation/ZEO/issues/166>`_.
 
+- Fix data corruption due to race between load and external invalidations.
+  See `issue 155 <https://github.com/zopefoundation/ZEO/issues/155>`_.
 
 5.2.2 (2020-08-11)
 ------------------
