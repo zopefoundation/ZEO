@@ -4,6 +4,12 @@ Changelog
 5.2.3 (unreleased)
 ------------------
 
+- Ensure ``ZEO`` satisfies the ``ZODB >= 5.6`` requirement that
+  ``lastTransaction()`` changes only after invalidation processing.
+  Violating this requirement can lead to race conditions and
+  associated data corruption
+  `#166 <https://github.com/zopefoundation/ZEO/issues/166>`_.
+
 - Fix data corruption due to race between load and external invalidations.
   See `issue 155 <https://github.com/zopefoundation/ZEO/issues/155>`_.
 
