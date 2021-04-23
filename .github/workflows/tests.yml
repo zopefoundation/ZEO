@@ -1,0 +1,60 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 12 * * 0'  # run once a week on Sunday
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        config:
+        # [Python version, tox env]
+        - ["2.7",   "py27"]
+        - ["2.7",   "py27-msgpack1"]
+        - ["2.7",   "py27-zeo4"]
+        - ["3.5",   "py35"]
+        - ["3.5",   "py35-zeo4"]
+        - ["3.6",   "py36"]
+        - ["3.6",   "py36-mtacceptor"]
+        - ["3.6",   "py36-mtacceptor-msgpack1"]
+        - ["3.7",   "py37"]
+        - ["3.7",   "py37-mtacceptor"]
+        - ["3.7",   "py37-mtacceptor-msgpack1"]
+        - ["3.7",   "py37-uvloop"]
+        - ["pypy"   "pypy"]
+        - ["pypy3"  "pypy3"]
+        - ["pypy3"  "pypy3-mtacceptor"]
+        - ["pypy3"  "pypy3-mtacceptor-msgpack1"]
+
+    runs-on: ubuntu-latest
+    name: ${{ matrix.config[1] }}
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.config[0] }}
+    - name: Pip cache
+      uses: actions/cache@v2
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ matrix.config[0] }}-${{ hashFiles('setup.*', 'tox.ini') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-${{ matrix.config[0] }}-
+          ${{ runner.os }}-pip-
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install tox
+    - name: Test
+      run: tox -e ${{ matrix.config[1] }}
+    - name: Coverage
+      if: matrix.config[1] == 'coverage'
+      run: |
+        pip install coveralls coverage-python-version
+        coveralls --service=github
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
