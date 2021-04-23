@@ -9,7 +9,7 @@ from zope.testing import setupstack
 from concurrent.futures import Future
 import mock
 from ZODB.POSException import ReadOnlyError
-from ZODB.utils import maxtid
+from ZODB.utils import maxtid, RLock
 
 import collections
 import logging
@@ -699,6 +699,7 @@ class MemoryCache(object):
         # { oid -> [(start, end, data)] }
         self.data = collections.defaultdict(list)
         self.last_tid = None
+        self._lock = RLock()
 
     clear = __init__
 
