@@ -14,7 +14,7 @@ Changelog
 
 - Provide proper CA test certificates to allow the SSL tests succeed for Py3
 
-- Replace deprecated occurences of ``Thread.isAlive()`` by ``Thread.is_alive()``
+- Replace deprecated occurrences of ``Thread.isAlive()`` by ``Thread.is_alive()``
   See `pull request 154 <https://github.com/zopefoundation/ZEO/pull/154>`_.
 
 - Include both modified and just created objects into invalidations.
