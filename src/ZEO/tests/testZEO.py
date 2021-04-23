@@ -1147,7 +1147,7 @@ def client_has_newer_data_than_server():
     >>> wait_until('got enough errors', lambda:
     ...    len([x for x in handler.records
     ...         if x.levelname == 'CRITICAL' and
-    ...            'Client has seen newer transactions than server!' in x.msg
+    ...            'Client cache is out of sync with the server.' in x.msg
     ...         ]) >= 2)
 
     Note that the errors repeat because the client keeps on trying to connect.
