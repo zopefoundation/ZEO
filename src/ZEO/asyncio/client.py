@@ -410,7 +410,10 @@ class Client(object):
     def _clear_protocols(self, protocol=None):
         for p in self.protocols:
             if p is not protocol:
-                p.close()
+                try:
+                    p.close()
+                except asyncio.CancelledError:
+                    continue
         self.protocols = ()
 
     def disconnected(self, protocol=None):
@@ -483,7 +486,14 @@ class Client(object):
 
         protocol = self.protocol
         if server_tid is None:
-            server_tid = yield protocol.fut('lastTransaction')
+            try:
+                server_tid = yield protocol.fut('lastTransaction')
+            except ClientDisconnected as exc:
+                # If needed, after consideration more exceptions can be
+                # caught here. Possibly you want to include this into the
+                # following try clause.
+                del self.protocol
+                self.register_failed(protocol, exc)
 
         try:
             cache = self.cache

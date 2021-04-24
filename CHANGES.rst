@@ -10,6 +10,12 @@ Changelog
 - Improve log message when client cache is out of sync with server.
   See `issue 142 <https://github.com/zopefoundation/ZEO/issues/142>`_.
 
+- Add support for Python 3.8 and Python 3.9.
+
+- Add more accurate error handling for ``asyncio.CancelledError``.
+  See `issue 165 <https://github.com/zopefoundation/ZEO/issues/165>`_.
+
+
 5.2.2 (2020-08-11)
 ------------------
 
