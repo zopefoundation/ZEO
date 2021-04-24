@@ -4,6 +4,9 @@ Changelog
 5.2.3 (unreleased)
 ------------------
 
+- Add automated tests against the ZODB ``master`` branch
+  see `issue 177 <https://github.com/zopefoundation/ZEO/issues/177>`_.
+
 - Fix data corruption due to race between load and external invalidations.
   See `issue 155 <https://github.com/zopefoundation/ZEO/issues/155>`_.
 

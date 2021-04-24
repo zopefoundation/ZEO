@@ -3,8 +3,10 @@
 __pycache__
 *.egg-info
 .installed.cfg
+.mr.developer.cfg
 .tox
 bin
+develop
 develop-eggs
 dist
 eggs
