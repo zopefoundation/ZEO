@@ -354,7 +354,7 @@ class ClientCache(object):
                 seek(maxsize)
                 f.truncate()
 
-        # We use the first_free_offset because it is most likelyt the
+        # We use the first_free_offset because it is most likely the
         # place where we last wrote.
         self.currentofs = first_free_offset or ZEC_HEADER_SIZE
         self._len = l
