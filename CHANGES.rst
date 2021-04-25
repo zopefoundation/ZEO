@@ -1,7 +1,7 @@
 Changelog
 =========
 
-5.2.3 (unreleased)
+5.3.0 (unreleased)
 ------------------
 
 - Add automated tests against the ZODB ``master`` branch
