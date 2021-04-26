@@ -497,7 +497,10 @@ class Client(object):
                 elif cache_tid > server_tid:
                     self.verify_result = "Cache newer than server"
                     logger.critical(
-                        'Client has seen newer transactions than server!')
+                        'Client cache is out of sync with the server. '
+                        'Verify that this is expected and then remove '
+                        'the cache file (usually a .zec file) '
+                        'before restarting the server.')
                     raise AssertionError("Server behind client, %r < %r, %s",
                                          server_tid, cache_tid, protocol)
                 elif cache_tid == server_tid:

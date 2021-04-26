@@ -10,8 +10,14 @@ Changelog
   associated data corruption
   `#166 <https://github.com/zopefoundation/ZEO/issues/166>`_.
 
+- Add automated tests against the ZODB ``master`` branch
+  see `issue 177 <https://github.com/zopefoundation/ZEO/issues/177>`_.
+
 - Fix data corruption due to race between load and external invalidations.
   See `issue 155 <https://github.com/zopefoundation/ZEO/issues/155>`_.
+
+- Improve log message when client cache is out of sync with server.
+  See `issue 142 <https://github.com/zopefoundation/ZEO/issues/142>`_.
 
 5.2.2 (2020-08-11)
 ------------------
@@ -20,7 +26,7 @@ Changelog
 
 - Provide proper CA test certificates to allow the SSL tests succeed for Py3
 
-- Replace deprecated occurences of ``Thread.isAlive()`` by ``Thread.is_alive()``
+- Replace deprecated occurrences of ``Thread.isAlive()`` by ``Thread.is_alive()``
   See `pull request 154 <https://github.com/zopefoundation/ZEO/pull/154>`_.
 
 - Include both modified and just created objects into invalidations.
