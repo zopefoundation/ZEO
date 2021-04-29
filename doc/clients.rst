@@ -219,7 +219,7 @@ read-only-fallback
 server-sync
    Sets the ``server_sync`` option described above.
 
-wait_timeout
+wait-timeout
    How long to wait for an initial connection, defaulting to 30
    seconds.  If an initial connection can't be made within this time
    limit, then creation of the client storage will fail with a
@@ -238,9 +238,6 @@ client-label
    A short string to display in *server* logs for an event relating to
    this client. This can be helpful when debugging.
 
-disconnect_poll
-   The delay in seconds between attempts to connect to the
-   server, in seconds.  Defaults to 1 second.
 
 Client SSL configuration
 ------------------------
