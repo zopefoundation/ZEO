@@ -1,7 +1,7 @@
 Changelog
 =========
 
-5.2.3 (unreleased)
+5.2.3 (2021-08-09)
 ------------------
 
 - Ensure ``ZEO`` satisfies the ``ZODB >= 5.6`` requirement that
@@ -18,6 +18,7 @@ Changelog
 
 - Improve log message when client cache is out of sync with server.
   See `issue 142 <https://github.com/zopefoundation/ZEO/issues/142>`_.
+
 
 5.2.2 (2020-08-11)
 ------------------

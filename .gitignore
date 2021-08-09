@@ -5,6 +5,7 @@ __pycache__
 .installed.cfg
 .tox
 bin
+default.profraw
 develop-eggs
 dist
 eggs
