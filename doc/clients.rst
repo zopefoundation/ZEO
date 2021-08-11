@@ -140,7 +140,7 @@ An application that used ZODB might configure it's database using a
 string like::
 
   <zodb>
-     cache-size-bytes 1000MB
+     cache-size 1000MB
 
      <filestorage>
        path /var/lib/Data.fs
@@ -158,7 +158,7 @@ but first you have to import it's definition, because ZEO isn't built
 into ZODB.  Here's an example::
 
   <zodb>
-     cache-size-bytes 1000MB
+     cache-size 1000MB
 
      %import ZEO
 
