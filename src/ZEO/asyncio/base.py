@@ -77,6 +77,9 @@ class Protocol(asyncio.Protocol):
             # will be used with blobs, in which case, the individual
             # messages will be big to begin with.
             data = iter(data)
+            if paused:
+                append(data)
+                return
             for message in data:
                 writelines((pack(">I", len(message)), message))
                 if paused:
