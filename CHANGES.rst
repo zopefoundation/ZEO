@@ -4,6 +4,9 @@ Changelog
 5.2.4 (unreleased)
 ------------------
 
+- Fix bug related to blobs stored by ``ZEO``
+  `#150 <https://github.com/zopefoundation/ZEO/issues/150>`_.
+
 
 5.2.3 (2021-08-09)
 ------------------
