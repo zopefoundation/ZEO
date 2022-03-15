@@ -659,11 +659,31 @@ class Client(object):
             try:
                 tid = yield self.protocol.fut('tpc_finish', tid)
                 cache = self.cache
+                # The cache invalidation here and that in
+                # ``invalidateTransaction`` are both performed
+                # in the IO thread. Thus there is no interference.
+                # Other threads might observe a partially invalidated
+                # cache. However, regular loads will access
+                # object state before ``tid``; therefore,
+                # partial invalidation for ``tid`` should not harm.
                 for oid, data, resolved in updates:
                     cache.invalidate(oid, tid)
                     if data and not resolved:
                         cache.store(oid, tid, None, data)
-                cache.setLastTid(tid)
+                # ZODB >= 5.6 requires that ``lastTransaction`` changes
+                # only after invalidation processing (performed in
+                # the ``f`` call below) (for ``ZEO``, ``lastTransaction``
+                # is implemented as ``cache.getLastTid()``).
+                # Some tests involve ``f`` in the verification that
+                # ``tpc_finish`` modifies ``lastTransaction`` and require
+                # that ``cache.setLastTid`` is called before ``f``.
+                # We use locking below to ensure that the
+                # effect of ``setLastTid`` is observable by other
+                # threads only after ``f`` has been called.
+                with cache._lock:
+                    cache.setLastTid(tid)
+                    f(tid)
+                future.set_result(tid)
             except Exception as exc:
                 future.set_exception(exc)
 
@@ -672,9 +692,6 @@ class Client(object):
                 # recovering to a consistent state.
                 self.protocol.close()
                 self.disconnected(self.protocol)
-            else:
-                f(tid)
-                future.set_result(tid)
         else:
             future.set_exception(ClientDisconnected())
 
@@ -684,6 +701,8 @@ class Client(object):
 
     def invalidateTransaction(self, tid, oids):
         if self.ready:
+            # see the cache related comment in ``tpc_finish_threadsafe``
+            # why we think that locking is not necessary at this place
             for oid in oids:
                 self.cache.invalidate(oid, tid)
             self.client.invalidateTransaction(tid, oids)

@@ -4,6 +4,21 @@ Changelog
 5.3.0 (unreleased)
 ------------------
 
+- Add support for Python 3.8 and Python 3.9.
+
+- Add more accurate error handling for ``asyncio.CancelledError``.
+  See `issue 165 <https://github.com/zopefoundation/ZEO/issues/165>`_.
+
+
+5.2.3 (2021-08-09)
+------------------
+
+- Ensure ``ZEO`` satisfies the ``ZODB >= 5.6`` requirement that
+  ``lastTransaction()`` changes only after invalidation processing.
+  Violating this requirement can lead to race conditions and
+  associated data corruption
+  `#166 <https://github.com/zopefoundation/ZEO/issues/166>`_.
+
 - Add automated tests against the ZODB ``master`` branch
   see `issue 177 <https://github.com/zopefoundation/ZEO/issues/177>`_.
 
@@ -12,12 +27,6 @@ Changelog
 
 - Improve log message when client cache is out of sync with server.
   See `issue 142 <https://github.com/zopefoundation/ZEO/issues/142>`_.
-
-- Add support for Python 3.8 and Python 3.9.
-
-- Add more accurate error handling for ``asyncio.CancelledError``.
-  See `issue 165 <https://github.com/zopefoundation/ZEO/issues/165>`_.
-
 
 5.2.2 (2020-08-11)
 ------------------
@@ -47,6 +56,7 @@ Changelog
   considered `a misfeature
   <https://github.com/zopefoundation/ZODB/issues/155>`_. See `issue
   134 <https://github.com/zopefoundation/ZEO/issues/134>`_.
+
 
 5.2.0 (2018-03-28)
 ------------------
