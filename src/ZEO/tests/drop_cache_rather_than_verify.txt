@@ -75,6 +75,10 @@ Now, we'll restart the server on the original address:
 
     >>> wait_connected(db.storage)
 
+##### debugging only ########
+    >>> print(db.storage._server.client.verify_result)
+    cache too old, clearing
+
 Now, let's verify our assertions above:
 
 - Publishes a stale-cache event.
@@ -141,7 +145,11 @@ another client:
 (When a database is created, it checks to make sure the root object is
 in the database, which is why we get 1, rather than 0 objects in the cache.)
 
-- Publishes a stake-cache event.
+##### debugging only ########
+    >>> print(db.storage._server.client.verify_result)
+    cache too old, clearing
+
+- Publishes a stale-cache event.
 
     >>> for e in events:
     ...     print(e)
