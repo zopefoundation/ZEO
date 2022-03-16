@@ -59,7 +59,7 @@ logging and event data:
     >>> def event_handler(e):
     ...   if hasattr(e, 'storage'):
     ...     events.append((
-    ...       len(e.storage._server.client.cache), str(handler), e.__class__.__name__))
+    ...       len(e.storage._cache), str(handler), e.__class__.__name__))
 
     >>> old_notify = ZODB.event.notify
     >>> ZODB.event.notify = event_handler
@@ -74,10 +74,6 @@ Now, we'll restart the server on the original address:
     ...                         addr=addr, keep=1)
 
     >>> wait_connected(db.storage)
-
-##### debugging only ########
-    >>> print(db.storage._server.client.verify_result)
-    cache too old, clearing
 
 Now, let's verify our assertions above:
 
@@ -144,10 +140,6 @@ another client:
 
 (When a database is created, it checks to make sure the root object is
 in the database, which is why we get 1, rather than 0 objects in the cache.)
-
-##### debugging only ########
-    >>> print(db.storage._server.client.verify_result)
-    cache too old, clearing
 
 - Publishes a stale-cache event.
 
