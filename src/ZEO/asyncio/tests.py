@@ -2,8 +2,12 @@ from .._compat import PY3
 
 if PY3:
     import asyncio
+    def to_byte(i):
+        return bytes([i])
 else:
     import trollius as asyncio
+    def to_byte(b):
+        return b
 
 from zope.testing import setupstack
 from concurrent.futures import Future
@@ -18,6 +22,7 @@ import unittest
 
 from ..Exceptions import ClientDisconnected, ProtocolError
 
+from .base import Protocol
 from .testing import Loop
 from .client import ClientRunner, Fallback
 from .server import new_connection, best_protocol_version
@@ -869,10 +874,33 @@ class Logging(object):
         logging.getLogger().setLevel(logging.NOTSET)
 
 
+class ProtocolTests(setupstack.TestCase):
+
+    def setUp(self):
+        self.loop = loop = Loop()
+        loop.create_connection(lambda: Protocol(loop, None), sock=True)
+
+    def test_writeit(self):
+        """test https://github.com/zopefoundation/ZEO/issues/150."""
+        loop = self.loop
+        protocol, transport = loop.protocol, loop.transport
+        transport.capacity = 1  # single message
+        def it(tag):
+            yield tag
+            yield tag
+        protocol._writeit(it(b"0"))
+        protocol._writeit(it(b"1"))
+        for b in b"0011":
+            l, t = transport.pop(2)
+            self.assertEqual(l, b"\x00\x00\x00\x01")
+            self.assertEqual(t, to_byte(b))
+
+
 def test_suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(ClientTests))
     suite.addTest(unittest.makeSuite(ServerTests))
     suite.addTest(unittest.makeSuite(MsgpackClientTests))
     suite.addTest(unittest.makeSuite(MsgpackServerTests))
+    suite.addTest(unittest.makeSuite(ProtocolTests))
     return suite

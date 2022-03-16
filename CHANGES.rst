@@ -9,6 +9,9 @@ Changelog
 - Add more accurate error handling for ``asyncio.CancelledError``.
   See `issue 165 <https://github.com/zopefoundation/ZEO/issues/165>`_.
 
+- Fix bug related to blobs stored by ``ZEO``
+  `#150 <https://github.com/zopefoundation/ZEO/issues/150>`_.
+
 
 5.2.3 (2021-08-09)
 ------------------
