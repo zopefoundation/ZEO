@@ -78,6 +78,8 @@ Now, we'll restart the server on the original address:
 ##### debugging only ########
     >>> print(db.storage._server.client.verify_result)
     cache too old, clearing
+    >>> print(len(handler.records) > 1 and handler)
+    False
 
 Now, let's verify our assertions above:
 
@@ -148,6 +150,8 @@ in the database, which is why we get 1, rather than 0 objects in the cache.)
 ##### debugging only ########
     >>> print(db.storage._server.client.verify_result)
     cache too old, clearing
+    >>> print(len(handler.records) > 1 and handler)
+    False
 
 - Publishes a stale-cache event.
 
