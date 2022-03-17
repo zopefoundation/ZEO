@@ -258,7 +258,7 @@ class ZEOServer(object):
     def close_server(self):
         if self.server is not None:
             self.server.close()
-            if self.options.testing_exit_immediately:
+            if getattr(self.options, "testing_exit_immediately", False):
                 # usually, this happens automatically - but not for testing
                 self.server.acceptor.event_loop.close()
 
