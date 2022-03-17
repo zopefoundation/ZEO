@@ -258,6 +258,9 @@ class ZEOServer(object):
     def close_server(self):
         if self.server is not None:
             self.server.close()
+            if self.options.testing_exit_immediately:
+                # usually, this happens automatically - but not for testing
+                self.server.acceptor.event_loop.close()
 
     def handle_sigterm(self):
         log("terminated by SIGTERM")
