@@ -122,15 +122,18 @@ class Protocol(base.Protocol):
             cr = self.loop.create_unix_connection(
                 self.protocol_factory, self.addr, ssl=self.ssl)
 
+        # an ``asyncio.Future``
         self._connecting = cr = asyncio.ensure_future(cr, loop=self.loop)
 
         @cr.add_done_callback
         def done_connecting(future):
-            if future.exception() is not None:
-                logger.info("Connection to %r failed, retrying, %s",
-                            self.addr, future.exception())
+            try:
+                future.exception()
+            except Exception:
+                logger.exception("Connection to %r failed", self.addr)
                 # keep trying
                 if not self.closed:
+                    logger.info("retry connecting %r", self.addr)
                     self.loop.call_later(
                         self.connect_poll + local_random.random(),
                         self.connect,
@@ -410,10 +413,7 @@ class Client(object):
     def _clear_protocols(self, protocol=None):
         for p in self.protocols:
             if p is not protocol:
-                try:
-                    p.close()
-                except asyncio.CancelledError:
-                    continue
+                p.close()
         self.protocols = ()
 
     def disconnected(self, protocol=None):
