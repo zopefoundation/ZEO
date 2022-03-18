@@ -485,17 +485,10 @@ class Client(object):
         self.verify_invalidation_queue = [] # See comment in init :(
 
         protocol = self.protocol
-        if server_tid is None:
-            try:
-                server_tid = yield protocol.fut('lastTransaction')
-            except ClientDisconnected as exc:
-                # If needed, after consideration more exceptions can be
-                # caught here. Possibly you want to include this into the
-                # following try clause.
-                del self.protocol
-                self.register_failed(protocol, exc)
-
         try:
+            if server_tid is None:
+                server_tid = yield protocol.fut('lastTransaction')
+
             cache = self.cache
             if cache:
                 cache_tid = cache.getLastTid()
