@@ -127,17 +127,20 @@ class Protocol(base.Protocol):
 
         @cr.add_done_callback
         def done_connecting(future):
-            try:
-                future.exception()
-            except Exception:
-                logger.exception("Connection to %r failed", self.addr)
-                # keep trying
-                if not self.closed:
-                    logger.info("retry connecting %r", self.addr)
-                    self.loop.call_later(
-                        self.connect_poll + local_random.random(),
-                        self.connect,
-                        )
+            if future.cancelled():
+                logger.info("Connection to %r cancelled", self.addr)
+            elif future.exception() is not None:
+                logger.info("Connection to %r failed, %s",
+                            (self.addr, future.exception()))
+            else: return
+            # keep trying
+            if not self.closed:
+                logger.info("retry connecting %r", self.addr)
+                self.loop.call_later(
+                    self.connect_poll + local_random.random(),
+                    self.connect,
+                    )
+
 
     def connection_made(self, transport):
         super(Protocol, self).connection_made(transport)
