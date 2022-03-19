@@ -13,6 +13,8 @@
 ##############################################################################
 """Multi-threaded server connectin acceptor
 
+BBB this module is unused and will be removed in ZEO version 6
+
 Each connection is run in it's own thread. Testing serveral years ago
 suggsted that this was a win, but ZODB shootout and another
 lower-level tests suggest otherwise.  It's really unclear, which is
