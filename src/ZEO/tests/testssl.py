@@ -133,14 +133,17 @@ class SSLConfigTestMockiavellian(ZEOConfigTestBase):
         server.close()
 
     def assert_context(
-        self, factory, context,
+        self,
+        server,
+        factory, context,
         cert=(server_cert, server_key, None),
         verify_mode=ssl.CERT_REQUIRED,
         check_hostname=False,
         cafile=None, capath=None,
         ):
         factory.assert_called_with(
-            ssl.Purpose.SERVER_AUTH, cafile=cafile, capath=capath)
+            ssl.Purpose.CLIENT_AUTH if server else ssl.Purpose.SERVER_AUTH,
+            cafile=cafile, capath=capath)
         context.load_cert_chain.assert_called_with(*cert)
         self.assertEqual(context, factory.return_value)
         self.assertEqual(context.verify_mode, verify_mode)
@@ -157,7 +160,7 @@ class SSLConfigTestMockiavellian(ZEOConfigTestBase):
         server = create_server(
             certificate=server_cert, key=server_key, authenticate=__file__)
         context = server.acceptor.ssl_context
-        self.assert_context(factory, context, cafile=__file__)
+        self.assert_context(True, factory, context, cafile=__file__)
         server.close()
 
     @mock.patch('ssl.create_default_context')
@@ -165,7 +168,7 @@ class SSLConfigTestMockiavellian(ZEOConfigTestBase):
         server = create_server(
             certificate=server_cert, key=server_key, authenticate=here)
         context = server.acceptor.ssl_context
-        self.assert_context(factory, context, capath=here)
+        self.assert_context(True, factory, context, capath=here)
         server.close()
 
     @mock.patch('ssl.create_default_context')
@@ -177,7 +180,7 @@ class SSLConfigTestMockiavellian(ZEOConfigTestBase):
             authenticate=here,
             )
         context = server.acceptor.ssl_context
-        self.assert_context(
+        self.assert_context(True, 
             factory, context, (server_cert, server_key, pwfunc), capath=here)
         server.close()
 
@@ -197,7 +200,7 @@ class SSLConfigTestMockiavellian(ZEOConfigTestBase):
         context = ClientStorage.call_args[1]['ssl']
         self.assertEqual(ClientStorage.call_args[1]['ssl_server_hostname'],
                          None)
-        self.assert_context(
+        self.assert_context(False,
             factory, context, (client_cert, client_key, None),
             check_hostname=True)
 
@@ -213,7 +216,7 @@ class SSLConfigTestMockiavellian(ZEOConfigTestBase):
         context = ClientStorage.call_args[1]['ssl']
         self.assertEqual(ClientStorage.call_args[1]['ssl_server_hostname'],
                          None)
-        self.assert_context(
+        self.assert_context(False,
             factory, context, (client_cert, client_key, None),
             capath=here,
             check_hostname=True,
@@ -230,7 +233,7 @@ class SSLConfigTestMockiavellian(ZEOConfigTestBase):
         context = ClientStorage.call_args[1]['ssl']
         self.assertEqual(ClientStorage.call_args[1]['ssl_server_hostname'],
                          None)
-        self.assert_context(
+        self.assert_context(False,
             factory, context, (client_cert, client_key, None),
             cafile=server_cert,
             check_hostname=True,
@@ -249,7 +252,7 @@ class SSLConfigTestMockiavellian(ZEOConfigTestBase):
         context = ClientStorage.call_args[1]['ssl']
         self.assertEqual(ClientStorage.call_args[1]['ssl_server_hostname'],
                          None)
-        self.assert_context(
+        self.assert_context(False,
             factory, context, (client_cert, client_key, pwfunc),
             cafile=server_cert,
             check_hostname=True,
@@ -266,7 +269,7 @@ class SSLConfigTestMockiavellian(ZEOConfigTestBase):
         context = ClientStorage.call_args[1]['ssl']
         self.assertEqual(ClientStorage.call_args[1]['ssl_server_hostname'],
                          'example.com')
-        self.assert_context(
+        self.assert_context(False,
             factory, context, (client_cert, client_key, None),
             cafile=server_cert,
             check_hostname=True,
@@ -283,7 +286,7 @@ class SSLConfigTestMockiavellian(ZEOConfigTestBase):
         context = ClientStorage.call_args[1]['ssl']
         self.assertEqual(ClientStorage.call_args[1]['ssl_server_hostname'],
                          None)
-        self.assert_context(
+        self.assert_context(False,
             factory, context, (client_cert, client_key, None),
             cafile=server_cert,
             check_hostname=False,
