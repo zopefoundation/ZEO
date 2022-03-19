@@ -122,19 +122,25 @@ class Protocol(base.Protocol):
             cr = self.loop.create_unix_connection(
                 self.protocol_factory, self.addr, ssl=self.ssl)
 
+        # an ``asyncio.Future``
         self._connecting = cr = asyncio.ensure_future(cr, loop=self.loop)
 
         @cr.add_done_callback
         def done_connecting(future):
-            if future.exception() is not None:
-                logger.info("Connection to %r failed, retrying, %s",
-                            self.addr, future.exception())
-                # keep trying
-                if not self.closed:
-                    self.loop.call_later(
-                        self.connect_poll + local_random.random(),
-                        self.connect,
-                        )
+            if future.cancelled():
+                logger.info("Connection to %r cancelled", self.addr)
+            elif future.exception() is not None:
+                logger.info("Connection to %r failed, %s",
+                            (self.addr, future.exception()))
+            else: return
+            # keep trying
+            if not self.closed:
+                logger.info("retry connecting %r", self.addr)
+                self.loop.call_later(
+                    self.connect_poll + local_random.random(),
+                    self.connect,
+                    )
+
 
     def connection_made(self, transport):
         super(Protocol, self).connection_made(transport)
@@ -482,10 +488,10 @@ class Client(object):
         self.verify_invalidation_queue = [] # See comment in init :(
 
         protocol = self.protocol
-        if server_tid is None:
-            server_tid = yield protocol.fut('lastTransaction')
-
         try:
+            if server_tid is None:
+                server_tid = yield protocol.fut('lastTransaction')
+
             cache = self.cache
             if cache:
                 cache_tid = cache.getLastTid()

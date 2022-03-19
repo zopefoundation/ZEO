@@ -1,8 +1,13 @@
 Changelog
 =========
 
-5.2.4 (unreleased)
+5.3.0 (unreleased)
 ------------------
+
+- Add support for Python 3.8 and Python 3.9.
+
+- Add more accurate error handling for ``asyncio.CancelledError``.
+  See `issue 165 <https://github.com/zopefoundation/ZEO/issues/165>`_.
 
 - Fix bug related to blobs stored by ``ZEO``
   `#150 <https://github.com/zopefoundation/ZEO/issues/150>`_.
@@ -25,7 +30,6 @@ Changelog
 
 - Improve log message when client cache is out of sync with server.
   See `issue 142 <https://github.com/zopefoundation/ZEO/issues/142>`_.
-
 
 5.2.2 (2020-08-11)
 ------------------

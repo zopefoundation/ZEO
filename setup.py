@@ -11,7 +11,7 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-version = '5.2.4.dev0'
+version = '5.3.0.dev0'
 
 from setuptools import setup, find_packages
 import os
@@ -48,6 +48,8 @@ Programming Language :: Python :: 3
 Programming Language :: Python :: 3.5
 Programming Language :: Python :: 3.6
 Programming Language :: Python :: 3.7
+Programming Language :: Python :: 3.8
+Programming Language :: Python :: 3.9
 Programming Language :: Python :: Implementation :: CPython
 Programming Language :: Python :: Implementation :: PyPy
 Topic :: Database
