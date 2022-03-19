@@ -140,7 +140,7 @@ class SSLConfigTestMockiavellian(ZEOConfigTestBase):
         cafile=None, capath=None,
         ):
         factory.assert_called_with(
-            ssl.Purpose.CLIENT_AUTH, cafile=cafile, capath=capath)
+            ssl.Purpose.SERVER_AUTH, cafile=cafile, capath=capath)
         context.load_cert_chain.assert_called_with(*cert)
         self.assertEqual(context, factory.return_value)
         self.assertEqual(context.verify_mode, verify_mode)
@@ -362,7 +362,7 @@ def client_ssl(cafile=server_key,
                client_key=client_key,
                ):
     context = ssl.create_default_context(
-        ssl.Purpose.CLIENT_AUTH, cafile=server_cert)
+        ssl.Purpose.SERVER_AUTH, cafile=server_cert)
 
     context.load_cert_chain(client_cert, client_key)
     context.verify_mode = ssl.CERT_REQUIRED
