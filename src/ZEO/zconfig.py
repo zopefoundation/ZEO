@@ -15,7 +15,8 @@ def ssl_config(section, server):
             cafile=auth
 
     context = ssl.create_default_context(
-        ssl.Purpose.CLIENT_AUTH, cafile=cafile, capath=capath)
+        ssl.Purpose.CLIENT_AUTH if server else ssl.Purpose.SERVER_AUTH,
+        cafile=cafile, capath=capath)
 
     if not auth:
         assert not server
