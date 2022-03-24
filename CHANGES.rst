@@ -1,7 +1,7 @@
 Changelog
 =========
 
-5.3.0 (unreleased)
+5.3.0 (2022-03-24)
 ------------------
 
 - Remove tests for the `asyncio/mtacceptor` module, it appears unused
