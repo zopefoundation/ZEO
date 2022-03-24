@@ -1,10 +1,22 @@
 Changelog
 =========
 
-5.3.0 (unreleased)
+5.4.0 (unreleased)
 ------------------
 
-- Add support for Python 3.8, 3.9 and 3.10.
+- Add support for Python 3.10.
+
+
+5.3.0 (2022-03-24)
+------------------
+
+- Remove tests for the `asyncio/mtacceptor` module, it appears unused
+  and presents a maintenance burden. The module will be removed in
+  ZEO version 6.
+
+- Remove GitHub Actions testing for Python 3.5, it has reached end of life.
+
+- Add support for Python 3.8 and Python 3.9.
 
 - Add more accurate error handling for ``asyncio.CancelledError``.
   See `issue 165 <https://github.com/zopefoundation/ZEO/issues/165>`_.
