@@ -48,7 +48,10 @@ from ZODB.POSException import TransactionError, ReadOnlyError, ConflictError
 from ZODB.serialize import referencesf
 from ZODB.utils import oid_repr, p64, u64, z64, Lock, RLock
 
+# BBB mtacceptor is unused and will be removed in ZEO version 6
 if os.environ.get("ZEO_MTACCEPTOR"): # mainly for tests
+    warnings.warn('The mtacceptor module is deprecated and will be removed '
+                  'in ZEO version 6.', DeprecationWarning)
     from .asyncio.mtacceptor import Acceptor
 else:
     from .asyncio.server import Acceptor

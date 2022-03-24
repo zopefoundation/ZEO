@@ -4,6 +4,12 @@ Changelog
 5.3.0 (unreleased)
 ------------------
 
+- Remove tests for the `asyncio/mtacceptor` module, it appears unused
+  and presents a maintenance burden. The module will be removed in
+  ZEO version 6.
+
+- Remove GitHub Actions testing for Python 3.5, it has reached end of life.
+
 - Add support for Python 3.8 and Python 3.9.
 
 - Add more accurate error handling for ``asyncio.CancelledError``.
