@@ -24,6 +24,7 @@ class ServerProtocol(base.Protocol):
 
     unlogged_exception_types = (
         ZODB.POSException.POSKeyError,
+        ZODB.POSException.ConflictError,
         )
 
     def __init__(self, loop, addr, zeo_storage, msgpack):
@@ -104,7 +105,8 @@ class ServerProtocol(base.Protocol):
         except Exception as exc:
             if not isinstance(exc, self.unlogged_exception_types):
                 logger.exception(
-                    "Bad %srequest, %r", 'async ' if async_ else '', name)
+                    "%s`%r` raised exception:",
+                    'async ' if async_ else '', name)
             if async_:
                 return self.close() # No way to recover/cry for help
             else:
