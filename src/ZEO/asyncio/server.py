@@ -25,6 +25,7 @@ class ServerProtocol(base.Protocol):
     unlogged_exception_types = (
         ZODB.POSException.POSKeyError,
         ZODB.POSException.ConflictError,
+        ZODB.POSException.ReadConflictError,
         )
 
     def __init__(self, loop, addr, zeo_storage, msgpack):
