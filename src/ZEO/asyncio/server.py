@@ -166,6 +166,7 @@ class Delay(object):
     """
 
     msgid = protocol = sent = None
+    unlogged_exception_types = ServerProtocol.unlogged_exception_types
 
     def set_sender(self, msgid, protocol):
         self.msgid = msgid
@@ -178,7 +179,8 @@ class Delay(object):
 
     def error(self, exc_info):
         self.sent = 'error'
-        logger.error("Error raised in delayed method", exc_info=exc_info)
+        if exc_info[0] not in self.unlogged_exception_types:
+            logger.error("Error raised in delayed method", exc_info=exc_info)
         if self.protocol:
             self.protocol.send_error(self.msgid, exc_info[1])
 
