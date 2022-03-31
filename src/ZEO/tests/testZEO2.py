@@ -92,9 +92,6 @@ client will be restarted.  It will get a conflict error, that is
 raised to the client:
 
     >>> zs1.tpc_abort('0') # doctest: +ELLIPSIS
-    Error raised in delayed method
-    Traceback (most recent call last):
-    ...ConflictError: ...
     error 1 database conflict error ...
 
 The transaction is aborted by the server:

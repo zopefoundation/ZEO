@@ -182,17 +182,22 @@ class ZEOStorage(object):
             raise ReadOnlyError()
         if self.transaction is None:
             caller = sys._getframe().f_back.f_code.co_name
-            self.log("no current transaction: %s()" % caller,
-                     level=logging.WARNING)
+            # ``tpc_abort`` is allowed to be called with invalid transaction
+            # ``vote`` relies on this
+            if caller != "tpc_abort":
+                self.log("no current transaction: %s()" % caller,
+                         level=logging.WARNING)
             if exc is not None:
                 raise exc(None, tid)
             else:
                 return 0
         if self.transaction.id != tid:
             caller = sys._getframe().f_back.f_code.co_name
-            self.log("%s(%s) invalid; current transaction = %s" %
-                     (caller, repr(tid), repr(self.transaction.id)),
-                     logging.WARNING)
+            # ``tpc_abort`` is allowed to be called with invalid transaction
+            if caller != "tpc_abort":
+                self.log("%s(%s) invalid; current transaction = %s" %
+                         (caller, repr(tid), repr(self.transaction.id)),
+                         logging.WARNING)
             if exc is not None:
                 raise exc(self.transaction.id, tid)
             else:
