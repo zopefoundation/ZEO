@@ -131,7 +131,7 @@ class Protocol(base.Protocol):
                 logger.info("Connection to %r cancelled", self.addr)
             elif future.exception() is not None:
                 logger.info("Connection to %r failed, %s",
-                            (self.addr, future.exception()))
+                            self.addr, future.exception())
             else: return
             # keep trying
             if not self.closed:
