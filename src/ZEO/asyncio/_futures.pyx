@@ -4,7 +4,6 @@ from .compat import asyncio
 cdef object CancelledError = asyncio.CancelledError
 cdef object InvalidStateError = asyncio.InvalidStateError
 cdef object get_event_loop = asyncio.get_event_loop
-import inspect
 from threading import Event, Lock
 from time import sleep
 from ZEO._compat import get_ident
@@ -252,7 +251,7 @@ cdef class CoroutineExecutor:
             # we are done
             task = self.task
             self.task = None  # break reference cycle
-            if isinstance(e, (StopIteration, _GenReturn)):
+            if isinstance(e, StopIteration):
                 task.set_result(e.value)
             elif isinstance(e, CancelledError):
                 if len(e.args) == 0:
@@ -273,11 +272,6 @@ cdef class CoroutineExecutor:
             if blocking is not None:
                 result._asyncio_future_blocking = False
                 await_next = result
-
-            # `yield coro` - handle as if it was `yield from coro`
-            elif _iscoroutine(result):
-                # NOTE - always AsyncTask even if we are originally under ConcurrentTask
-                await_next = AsyncTask(result, self.task.get_loop())
 
             else:
                 # object with __await__ - e.g. @cython.iterable_coroutine used by uvloop
@@ -424,29 +418,6 @@ cdef class ConcurrentTask(ConcurrentFuture):
 
 
 # @coroutine - only py implementtion
-
-cdef _iscoroutine(obj):
-    """_iscoroutine checks whether obj is coroutine object."""
-    if inspect.isgenerator(obj) or asyncio.iscoroutine(obj):
-        return True
-    else:
-        return False
-
-cpdef return_(x):
-    """return_(x) should be used instead of ``return x`` in coroutine functions.
-
-    It exists to support Python2 where ``return x`` is rejected inside generators.
-    """
-    # py3:     disallows to explicitly raise StopIteration from inside generator
-    # py2/py3: StopIteration inherits from Exception (not from BaseException)
-    # -> use our own exception type, that mimics StopIteration, but that can be
-    #    raised from inside generator and that is not caught by `except Exception`.
-    e = _GenReturn(x)
-    e.value = x
-    raise e
-
-class _GenReturn(BaseException):  # note: base != Exception to prevent catching
-    __slots__ = "value"           # returns inside `except Exception` in the same function
 
 
 run_coroutine_threadsafe = ConcurrentTask

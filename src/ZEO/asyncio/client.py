@@ -40,7 +40,7 @@ from .base import loop_run_forever, loop_run_until_complete
 from .compat import asyncio, new_event_loop
 from .marshal import encoder, decoder
 from .futures import Future, AsyncTask as Task, \
-     coroutine, return_, run_coroutine_threadsafe, switch_thread
+     run_coroutine_threadsafe, switch_thread
 
 logger = logging.getLogger(__name__)
 
@@ -154,19 +154,17 @@ class Protocol(base.ZEOBaseProtocol):
             cr = lambda: self.loop.create_unix_connection(  # noqa: E731
                 self.protocol_factory, self.addr, ssl=self.ssl)
 
-        @coroutine
-        def connect():
+        async def connect():
             while not self.closed:
                 try:
-                    yield cr()
-                    return
+                    return await cr()
                 except asyncio.CancelledError:
                     logger.info("Connection to %r cancelled", self.addr)
                     raise
                 except Exception as exc:
                     logger.info("Connection to %r failed, %s",
                                 self.addr, exc)
-                yield asyncio.sleep(self.connect_poll + local_random.random())
+                await asyncio.sleep(self.connect_poll + local_random.random())
                 logger.info("retry connecting %r", self.addr)
 
         self._connecting = Task(connect(), self.loop)
@@ -220,8 +218,7 @@ class Protocol(base.ZEOBaseProtocol):
         self.write_message(self.protocol_version)
         self.verify_task = Task(self.verify_connection(), self.loop)
 
-    @coroutine
-    def verify_connection(self):
+    async def verify_connection(self):
         """verify the connection -- run as task.
 
         We try to register with the server; if this succeeds with
@@ -231,12 +228,10 @@ class Protocol(base.ZEOBaseProtocol):
 
         # we do not want that several servers concurrently
         # update the cache -- lock
-        register_lock = self.client.register_lock
-        yield register_lock.acquire()
-        try:
+        async with self.client.register_lock:
             try:
                 try:
-                    server_tid = yield self.server_call(
+                    server_tid = await self.server_call(
                         'register', self.storage_key,
                         (self.read_only if self.read_only is not Fallback
                          else False),
@@ -244,7 +239,7 @@ class Protocol(base.ZEOBaseProtocol):
                 except ZODB.POSException.ReadOnlyError:
                     if self.read_only is Fallback:
                         self.read_only = True
-                        server_tid = yield self.server_call(
+                        server_tid = await self.server_call(
                             'register', self.storage_key, True, *credentials)
                     else:
                         raise
@@ -255,9 +250,7 @@ class Protocol(base.ZEOBaseProtocol):
                 self.client.register_failed(self, exc)
             else:
                 # from now on invalidation messages can arrive
-                yield self.client.register(self, server_tid)
-        finally:
-            register_lock.release()
+                await self.client.register(self, server_tid)
 
     exception_type_type = type(Exception)
 
@@ -550,8 +543,7 @@ class ClientIO(object):
                 for addr in self.addrs
                 ]
 
-    @coroutine
-    def register(self, protocol, server_tid):
+    async def register(self, protocol, server_tid):
         """register *protocol* -- run as task."""
         if self.protocol is None:
             self.protocol = protocol
@@ -559,11 +551,11 @@ class ClientIO(object):
                 # We're happy with this protocol. Tell the others to
                 # stop trying.
                 self._clear_protocols(protocol)
-            yield self.verify(server_tid)
+            await self.verify(server_tid)
         elif (self.read_only is Fallback and not protocol.read_only and
               self.protocol.read_only):
             self.upgrade(protocol)
-            yield self.verify(server_tid)
+            await self.verify(server_tid)
         else:
             protocol.close()  # too late, we went home with another
 
@@ -580,14 +572,13 @@ class ClientIO(object):
 
     verify_result = None  # for tests
 
-    @coroutine
-    def verify(self, server_tid):
+    async def verify(self, server_tid):
         """cache verification and invalidation -- run as task."""
         protocol = self.protocol
         call = protocol.server_call
         try:
             if server_tid is None:
-                server_tid = yield call('lastTransaction')
+                server_tid = await call('lastTransaction')
 
             cache = self.cache
             if cache:
@@ -609,7 +600,7 @@ class ClientIO(object):
                 elif cache_tid == server_tid:
                     self.verify_result = "Cache up to date"
                 else:
-                    vdata = yield call('getInvalidations', cache_tid)
+                    vdata = await call('getInvalidations', cache_tid)
                     if vdata:
                         self.verify_result = "quick verification"
                         server_tid, oids = vdata
@@ -655,7 +646,7 @@ class ClientIO(object):
             self.ready = True
 
             try:
-                info = yield call('get_info')
+                info = await call('get_info')
             except Exception as exc:
                 # This is weird. We were connected and verified our cache, but
                 # Now we errored getting info.
@@ -689,8 +680,7 @@ class ClientIO(object):
     def call_async_iter(self, it):
         return self.protocol.call_async_iter(it)
 
-    @coroutine
-    def await_operational_co(self, timeout, init_ok=False):
+    async def await_operational_co(self, timeout, init_ok=False):
         """Wait *timeout* for operational.
 
         Fail immediately if ``ready is None`` unless ``init_ok``.
@@ -700,37 +690,34 @@ class ClientIO(object):
             raise ClientDisconnected("never connected")
         if not self.operational:
             try:
-                yield asyncio.wait_for(asyncio.shield(self.connected), timeout)
+                await asyncio.wait_for(asyncio.shield(self.connected), timeout)
             except asyncio.TimeoutError:
                 raise ClientDisconnected("timed out waiting for connection")
             except asyncio.CancelledError:
                 raise ClientDisconnected()
         # should be connected now
 
-    @coroutine
-    def call_sync_co(self, method, args, timeout):
+    async def call_sync_co(self, method, args, timeout):
         """call method named *method* with *args* and *task* when ready.
 
         Wait at most *timeout* for readyness.
         """
         if not self.operational:
-            yield self.await_operational_co(timeout)
+            await self.await_operational_co(timeout)
         # race condition potential:
         # We have been operational but may meanwhile have lost the connection.
         # This will result in an exception propagated to the caller
-        _ = yield self.protocol.call_sync(method, args)
-        return_(_)
+        return await self.protocol.call_sync(method, args)
 
-    @coroutine
-    def close_co(self):
+    async def close_co(self):
         # The following ``close`` deadlock''ked in isolated tests.
         # Prevent this with a timeout and log information
         # to understand the bug.
-        # yield self.close()
+        # await self.close()
         closing = self.close()
         try:
             # the ``shield`` is necessary to keep the state unchanged
-            yield asyncio.wait_for(asyncio.shield(closing), 10)
+            await asyncio.wait_for(asyncio.shield(closing), 10)
         except asyncio.TimeoutError:
             from pprint import pformat
             info = {"client": pformat(vars(self))}
@@ -751,27 +738,23 @@ class ClientIO(object):
 
     # Special methods because they update the cache.
 
-    @coroutine
-    def load_before_co(self, oid, tid, timeout):
+    async def load_before_co(self, oid, tid, timeout):
         data = self.cache.loadBefore(oid, tid)
         if data is not None:
-            return_(data)
+            return data
         if not self.operational:
-            yield self.await_operational_co(timeout)
+            await self.await_operational_co(timeout)
         # Race condition potential
         # -- see comment in ``call_sync_co``
-        data = yield self.protocol.load_before(oid, tid)
-        return_(data)
+        return await self.protocol.load_before(oid, tid)
 
-    @coroutine
-    def _prefetch_co(self, oid, tid):
+    async def _prefetch_co(self, oid, tid):
         try:
-            yield self.protocol.load_before(oid, tid)
+            await self.protocol.load_before(oid, tid)
         except Exception:
             logger.exception("Exception for prefetch `%r` `%r`", oid, tid)
 
-    @coroutine
-    def prefetch_co(self, oids, tid):
+    async def prefetch_co(self, oids, tid):
         if not self.operational:
             raise ClientDisconnected()
         oids_tofetch = []
@@ -779,15 +762,14 @@ class ClientIO(object):
             if self.cache.loadBefore(oid, tid) is None:
                 oids_tofetch.append(oid)
         if oids_tofetch:
-            yield asyncio.gather(*(Task(self._prefetch_co(oid, tid), loop=self.loop)
+            await asyncio.gather(*(Task(self._prefetch_co(oid, tid), loop=self.loop)
                                    for oid in oids_tofetch))
 
-    @coroutine
-    def tpc_finish_co(self, tid, updates, f):
+    async def tpc_finish_co(self, tid, updates, f):
         if not self.operational:
             raise ClientDisconnected()
         try:
-            tid = yield self.protocol.server_call('tpc_finish', tid)
+            tid = await self.protocol.server_call('tpc_finish', tid)
             cache = self.cache
             # The cache invalidation here and that in
             # ``invalidateTransaction`` are both performed
@@ -813,7 +795,7 @@ class ClientIO(object):
             with cache._lock:
                 cache.setLastTid(tid)
                 f(tid)
-            return_(tid)
+            return tid
         except Exception:
             # At this point, our cache is in an inconsistent
             # state.  We need to reconnect in hopes of
@@ -985,10 +967,8 @@ class ClientRunner(object):
         raise ClientDisconnected('closed')
 
     @staticmethod
-    @coroutine
-    def apply_co(func, *args):
-        return_(func(*args))
-        yield
+    async def apply_co(func, *args):
+        return func(*args)
 
     def new_addrs(self, addrs):
         # This usually doesn't have an immediate effect, since the

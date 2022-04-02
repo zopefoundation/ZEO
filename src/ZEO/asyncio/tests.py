@@ -20,7 +20,7 @@ from .base import ZEOBaseProtocol, SizedMessageProtocol, \
         loop_run_forever, loop_run_until_complete
 from .testing import Loop, FaithfulLoop
 from .client import ClientThread, Fallback
-from .futures import Future, ConcurrentFuture, AsyncTask, ConcurrentTask, coroutine, return_
+from .futures import Future, ConcurrentFuture, AsyncTask, ConcurrentTask
 from .server import new_connection, best_protocol_version
 from .marshal import encoder, decoder
 
@@ -1486,10 +1486,8 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
 
     def test_noop(self):
 
-        @coroutine
-        def noop():
-            return
-            yield
+        async def noop():
+            pass
 
         t = self.make_task(noop)
         self.assertTrue(t.done())
@@ -1500,10 +1498,8 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
 
     def test_repr(self):
 
-        @coroutine
-        def noop():
-            return
-            yield
+        async def noop():
+            pass
 
         t = self.make_task(noop)
         repr(t)  # satisfied if no exception
@@ -1513,10 +1509,8 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
 
     def check_future(self, fut, run_loop=False):
 
-        @coroutine
-        def wait():
-            _ = yield fut
-            return_(_)
+        async def wait():
+            return await fut
 
         t = self.make_task(wait)
         self.assertFalse(t.done())
@@ -1529,9 +1523,8 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
     def test_exception(self):
         fut = Future(loop=self.loop)
 
-        @coroutine
-        def exc():
-            yield fut
+        async def exc():
+            await fut
 
         t = self.make_task(exc)
         exc = Exception()
@@ -1544,12 +1537,11 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
 
         fut = Future(loop=self.loop)
 
-        @coroutine
-        def exc():
+        async def exc():
             try:
-                yield fut
+                await fut
             except Exception:
-                return_(1)
+                return 1
 
         t = self.make_task(exc)
         exc = Exception()
@@ -1561,9 +1553,8 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
     def test_cancel_future(self):
         fut = Future(loop=self.loop)
 
-        @coroutine
-        def exc():
-            yield fut
+        async def exc():
+            await fut
 
         t = self.make_task(exc)
         fut.cancel('zzz')
@@ -1585,13 +1576,12 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
         waitready = Future(loop=self.loop)
         waiting = blocked_on
 
-        @coroutine
-        def f():
-            yield go  # wait for loop to start
+        async def f():
+            await go  # wait for loop to start
             l.append(1)
             l.append(2)
             waitready.set_result(None)
-            yield waiting
+            await waiting
             l.append(3)
 
         t = self.make_task(f)
@@ -1622,14 +1612,13 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
         go = Future(loop=self.loop)
         waiting = Future(loop=self.loop)
 
-        @coroutine
-        def f():
-            yield go
+        async def f():
+            await go
             l.append(1)
             l.append(2)
             t.cancel('zzz')
             l.append(3)
-            yield waiting
+            await waiting
             l.append(4)
 
         t = self.make_task(f)
@@ -1648,22 +1637,18 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
     def test_nested_coro(self):
         l = []
 
-        @coroutine
-        def f():
-            yield g('a')
-            yield g('b')
+        async def f():
+            await g('a')
+            await g('b')
 
-        @coroutine
-        def g(s):
-            yield h(s, 1)
-            yield h(s, 2)
-            yield h(s, 3)
+        async def g(s):
+            await h(s, 1)
+            await h(s, 2)
+            await h(s, 3)
 
-        @coroutine
-        def h(s, n):
+        async def h(s, n):
             for i in range(1,n+1):
                 l.append(s*i)
-                yield
 
         t = self.make_task(f)
         self.assertTrue(t.done())
@@ -1672,11 +1657,10 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
     def test_nest_to_async_coro(self):
         go = Future(loop=self.loop)
 
-        @coroutine
-        def f():
-            yield go  # wait for loop to start before running into asyncio.sleep
-            _ = yield asyncio.sleep(1, 'zzz')
-            return_(_)
+        async def f():
+            await go  # wait for loop to start before running into asyncio.sleep
+            _ = await asyncio.sleep(1, 'zzz')
+            return _
 
         tstart = time()
         t = self.make_task(f)
@@ -1688,24 +1672,20 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
         self.assertEqual(t.result(), 'zzz')
         self.assertGreaterEqual(tend - tstart, 1)
 
-    def test_return_(self):
+    def test_return(self):
 
         # plain return
-        @coroutine
-        def f():
-            return_(123)
-            yield
+        async def f():
+            return 123
 
         t = self.make_task(f)
         self.assertTrue(t.done())
         self.assertEqual(t.result(), 123)
 
         # nested returns
-        @coroutine
-        def g():
-            x = yield f()
-            return_(1000 + x)
-            yield
+        async def g():
+            x = await f()
+            return 1000 + x
 
         t = self.make_task(g)
         self.assertTrue(t.done())
@@ -1713,14 +1693,12 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
 
         # verify that return can go through `except Exception`
         # (but not through `except BaseException`)
-        @coroutine
-        def h():
+        async def h():
             try:
-                return_(456)
+                return 456
                 raise Exception('aaa')
             except Exception:
                 raise
-            yield
 
         t = self.make_task(h)
         self.assertTrue(t.done())
@@ -1744,12 +1722,11 @@ class ConcurrentTaskTests(CoroutineExecutorTestsBase, TestCase):
         waitready = threading.Event()
         waiting = Future(loop=self.loop)
 
-        @coroutine
-        def f():
+        async def f():
             l.append(1)
             l.append(2)
             waitready.set()
-            yield waiting
+            await waiting
             l.append(3)
 
         t = self.make_task(f)
