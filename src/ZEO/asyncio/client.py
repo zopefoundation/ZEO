@@ -87,6 +87,8 @@ class Protocol(base.ZEOBaseProtocol):
         self.ssl = ssl
         self.ssl_server_hostname = ssl_server_hostname
         self.credentials = credentials
+        # received invalidations while the protocol is not yet registered with client
+        self.invalidations = []
 
         self.connect()
 
@@ -252,6 +254,7 @@ class Protocol(base.ZEOBaseProtocol):
             except Exception as exc:
                 self.client.register_failed(self, exc)
             else:
+                # from now on invalidation messages can arrive
                 yield self.client.register(self, server_tid)
         finally:
             register_lock.release()
@@ -288,10 +291,14 @@ class Protocol(base.ZEOBaseProtocol):
                 future.set_result(args)
         else:
             assert async_  # clients only get async calls
-            if name in self.client_methods:
-                getattr(self.client, name)(*args)
-            else:
+            if name not in self.client_methods:
                 raise AttributeError(name)
+            elif name == "invalidateTransaction" and not self.client.ready:
+                # the client is not yet ready to process invalidations
+                # queue them
+                self.invalidations.append(args)
+            else:
+                getattr(self.client, name)(*args)
 
     message_id = 0
 
@@ -463,12 +470,6 @@ class ClientIO(object):
         self.closing_protocol_futures = set()  # closing futures
         self.disconnected(None)
 
-        # Protection against potentially odd behavior of a ZEO server: if it
-        # may send invalidations for transactions later than the result of
-        # getInvalidations, without queueing, client's cache might get out of
-        # sync wrt data on the server.
-        self.verify_invalidation_queue = []
-
     def new_addrs(self, addrs):
         self.addrs = addrs
         if self.trying_to_connect():
@@ -583,8 +584,6 @@ class ClientIO(object):
     @coroutine
     def verify(self, server_tid):
         """cache verification and invalidation -- run as task."""
-        self.verify_invalidation_queue = []  # See comment in init :(
-
         protocol = self.protocol
         call = protocol.server_call
         try:
@@ -642,16 +641,15 @@ class ClientIO(object):
             # The cache is validated wrt the last tid we got from the server.
             self.cache.setLastTid(server_tid)
 
-            # See comment in __init__. :(
             # Process queued invalidations
             # Note: new invalidations will only be seen
             # after the coroutine gives up control, i.e. surely
             # after the following loop and the ``ready = True``.
             # Thus, we do no lose invalidations.
-            for tid, oids in self.verify_invalidation_queue:
+            for tid, oids in protocol.invalidations:
                 if tid > server_tid:
-                    self._invalidateTransaction(tid, oids)
-            self.verify_invalidation_queue = []
+                    self.invalidateTransaction(tid, oids)
+            protocol.invalidations = []
 
             # Set ready so arriving invalidations are no longer queued.
             # Note: we are not yet fully ready.
@@ -827,14 +825,6 @@ class ClientIO(object):
 
     # server callbacks
     def invalidateTransaction(self, tid, oids):
-        if not self.ready:
-            # the client is not yet ready to process invalidations
-            # queue them
-            self.verify_invalidation_queue.append((tid, oids))
-        else:
-            self._invalidateTransaction(tid, oids)
-
-    def _invalidateTransaction(self, tid, oids):
         # see the cache related comment in ``tpc_finish_co``
         # why we think that locking is not necessary at this place
         for oid in oids:
