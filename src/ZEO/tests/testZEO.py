@@ -1249,8 +1249,7 @@ def runzeo_without_configfile():
     ------
     --T INFO ZEO.runzeo () opening storage '1' using FileStorage
     ------
-    --T INFO ZEO.StorageServer StorageServer created RW with storages 1RWt
-    ...
+    --T INFO ZEO.StorageServer StorageServer created RW with storages 1RWt...
     ------
     --T INFO ZEO.asyncio... listening on ...
     testing exit immediately
