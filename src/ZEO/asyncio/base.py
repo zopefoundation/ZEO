@@ -46,13 +46,6 @@ INET_FAMILIES = socket.AF_INET, socket.AF_INET6
 class ZEOBaseProtocol(asyncio.Protocol):
     """ZEO protocol base class for the common features."""
 
-    # All of the code in this class runs in a single dedicated
-    # thread. Thus, we can mostly avoid worrying about interleaved
-    # operations.
-
-    # One place where special care was required was in cache setup on
-    # connect. See finish_connection below.
-
     protocol_version = None
 
     def __init__(self, loop, name):
