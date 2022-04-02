@@ -77,7 +77,7 @@ def parse_time(line):
     return int(time.mktime(date_l + time_l + [0, 0, 0]))
 
 
-class Txn(object):
+class Txn:
     """Track status of single transaction."""
     def __init__(self, tid):
         self.tid = tid
@@ -95,7 +95,7 @@ class Txn(object):
             return False
 
 
-class Status(object):
+class Status:
     """Track status of ZEO server by replaying log records.
 
     We want to keep track of several events:

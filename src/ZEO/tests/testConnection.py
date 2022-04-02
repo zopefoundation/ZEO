@@ -32,7 +32,7 @@ import ZODB.tests.util
 from . import forker
 
 
-class FileStorageConfig(object):
+class FileStorageConfig:
     def getConfig(self, path, create, read_only):
         return """\
         <filestorage 1>
@@ -44,7 +44,7 @@ class FileStorageConfig(object):
                              read_only and 'yes' or 'no')
 
 
-class MappingStorageConfig(object):
+class MappingStorageConfig:
     def getConfig(self, path, create, read_only):
         return """<mappingstorage 1/>"""
 

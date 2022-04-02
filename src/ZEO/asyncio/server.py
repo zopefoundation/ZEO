@@ -168,7 +168,7 @@ def new_connection(loop, addr, socket, zeo_storage, msgpack):
     asyncio.ensure_future(cr, loop=loop)
 
 
-class Delay(object):
+class Delay:
     """Used to delay response to client for synchronous calls.
 
     When a synchronous call is made and the original handler returns
@@ -234,7 +234,7 @@ class MTDelay(Delay):
         self.protocol.call_soon_threadsafe(Delay.error, self, exc_info)
 
 
-class Acceptor(object):
+class Acceptor:
 
     def __init__(self, storage_server, addr, ssl, msgpack):
         self.storage_server = storage_server

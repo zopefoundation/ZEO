@@ -76,7 +76,7 @@ will conflict. It will be blocked at the vote call.
     >>> zs2.storeBlobEnd(oid, serial, data, '1')
     >>> delay = zs2.vote('1')
 
-    >>> class Sender(object):
+    >>> class Sender:
     ...     def send_reply(self, id, reply):
     ...         print('reply', id, reply)
     ...     def send_error(self, id, err):

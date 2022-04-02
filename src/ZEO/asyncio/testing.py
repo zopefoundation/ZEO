@@ -9,7 +9,7 @@ except NameError:
         pass
 
 
-class Loop(object):
+class Loop:
     """Simple loop for testing purposes.
 
     It calls callbacks directly (instead of in the next round);
@@ -199,7 +199,7 @@ class _ProtocolWrapper:
         return getattr(self._protocol, attr)
 
 
-class Handle(object):
+class Handle:
 
     _cancelled = False
 
@@ -207,7 +207,7 @@ class Handle(object):
         self._cancelled = True
 
 
-class Transport(object):
+class Transport:
 
     capacity = 1 << 64
     paused = False
@@ -262,7 +262,7 @@ class Transport(object):
         return self.extra[name]
 
 
-class AsyncRPC(object):
+class AsyncRPC:
     """Adapt an asyncio API to an RPC to help hysterical tests
     """
     def __init__(self, api):
@@ -272,7 +272,7 @@ class AsyncRPC(object):
         return lambda *a, **kw: self.api.call(name, *a, **kw)
 
 
-class ClientRunner(object):
+class ClientRunner:
 
     def __init__(self, addr, client, cache, storage, read_only, timeout,
                  **kw):

@@ -60,7 +60,7 @@ class FailableThread(TestThread):
             raise
 
 
-class StressTask(object):
+class StressTask:
     # Append integers startnum, startnum + step, startnum + 2*step, ...
     # to 'tree'.  If sleep is given, sleep
     # that long after each append.  At the end, instance var .added_keys
@@ -239,7 +239,7 @@ class LargeUpdatesThread(FailableThread):
         cn.close()
 
 
-class InvalidationTests(object):
+class InvalidationTests:
 
     # Minimum # of seconds the main thread lets the workers run.  The
     # test stops as soon as this much time has elapsed, and all threads

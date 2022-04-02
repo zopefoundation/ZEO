@@ -60,7 +60,7 @@ class TestClientStorage(ClientStorage):
         self.verify_result = conn.verify_result
 
 
-class DummyDB(object):
+class DummyDB:
     def invalidate(self, *args, **kwargs):
         pass
 
@@ -427,7 +427,7 @@ class ConnectionTests(CommonSetupTearDown):
         # just like a real message, but with an unpicklable argument
         global Hack
 
-        class Hack(object):
+        class Hack:
             pass
 
         msg = encode(1, 0, "foo", (Hack(),))
@@ -1132,7 +1132,7 @@ try:
 except (socket.error, AttributeError):
     pass
 else:
-    class V6Setup(object):
+    class V6Setup:
         def _getAddr(self):
             return '::1', forker.get_port(self)
 

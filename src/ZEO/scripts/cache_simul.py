@@ -117,7 +117,7 @@ def main(args=None):
     sim.finish()
 
 
-class Simulation(object):
+class Simulation:
     """Base class for simulations.
 
     The driver program calls: event(), printheader(), finish().
@@ -252,7 +252,7 @@ class Simulation(object):
 
 
 # For use in CircularCacheSimulation.
-class CircularCacheEntry(object):
+class CircularCacheEntry:
     __slots__ = (
         # object key: an (oid, start_tid) pair, where start_tid is the
         # tid of the transaction that created this revision of oid

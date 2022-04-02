@@ -15,7 +15,7 @@
 import zope.interface
 
 
-class StaleCache(object):
+class StaleCache:
     """A ZEO cache is stale and requires verification.
     """
 

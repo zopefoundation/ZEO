@@ -29,7 +29,7 @@ logger = logging.getLogger('ZEO.tests.forker')
 DEBUG = os.environ.get('ZEO_TEST_SERVER_DEBUG')
 
 
-class ZEOConfig(object):
+class ZEOConfig:
     """Class to generate ZEO configuration file. """
 
     def __init__(self, addr, log=None, **options):
@@ -286,7 +286,7 @@ def whine(*message):
     sys.stderr.flush()
 
 
-class ThreadlessQueue(object):
+class ThreadlessQueue:
 
     def __init__(self):
         self.cin, self.cout = multiprocessing.Pipe(False)

@@ -94,7 +94,7 @@ def parse_line(line):
     return t, m, c
 
 
-class StoreStat(object):
+class StoreStat:
     def __init__(self, when, oid, size):
         self.when = when
         self.oid = oid
@@ -109,7 +109,7 @@ class StoreStat(object):
         raise IndexError
 
 
-class TxnStat(object):
+class TxnStat:
     def __init__(self):
         self._begintime = None
         self._finishtime = None
@@ -172,7 +172,7 @@ class ReplayTxn(TxnStat):
         self._replaydelta = t1 - t0 - origdelta
 
 
-class ZEOParser(object):
+class ZEOParser:
     def __init__(self, maxtxns=-1, report=1, storage=None):
         self.__txns = []
         self.__curtxn = {}

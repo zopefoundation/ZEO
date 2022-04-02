@@ -138,7 +138,7 @@ _noncurrent_index_type = BTrees.LOBTree.LOBTree if not PYPY else dict
 _noncurrent_bucket_type = BTrees.LLBTree.LLBucket
 
 
-class ClientCache(object):
+class ClientCache:
     """A simple in-memory cache."""
 
     # The default size of 200MB makes a lot more sense than the traditional

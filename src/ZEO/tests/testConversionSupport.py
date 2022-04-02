@@ -15,7 +15,7 @@ import doctest
 import unittest
 
 
-class FakeStorageBase(object):
+class FakeStorageBase:
 
     def __getattr__(self, name):
         if name in ('getTid', 'history', 'load', 'loadSerial',
@@ -44,7 +44,7 @@ class FakeStorage(FakeStorageBase):
         return oid, oid*8, 'data ' + oid, next
 
 
-class FakeServer(object):
+class FakeServer:
     storages = {
         '1': FakeStorage(),
         '2': FakeStorageBase(),
@@ -57,7 +57,7 @@ class FakeServer(object):
     client_conflict_resolution = False
 
 
-class FakeConnection(object):
+class FakeConnection:
     protocol_version = b'Z5'
     addr = 'test'
 

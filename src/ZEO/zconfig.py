@@ -54,7 +54,7 @@ def client_ssl(section):
     return ssl_config(section, False)
 
 
-class ClientStorageConfig(object):
+class ClientStorageConfig:
 
     def __init__(self, config):
         self.config = config

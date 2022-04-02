@@ -26,7 +26,7 @@ from .marshal import encoder, decoder
 logger = logging.getLogger(__name__)
 
 
-class Base(object):
+class Base:
     enc = b'Z'
     seq_type = list
 
@@ -1030,7 +1030,7 @@ class MsgpackClientTests(ClientTests):
     seq_type = tuple
 
 
-class MemoryCache(object):
+class MemoryCache:
 
     def __init__(self):
         # { oid -> [(start, end, data)] }
@@ -1196,7 +1196,7 @@ def sized(message):
     return struct.pack(">I", len(message)) + message
 
 
-class Logging(object):
+class Logging:
 
     def __init__(self, level=logging.ERROR):
         self.level = level
@@ -1343,7 +1343,7 @@ def _break_mock_cycles(m):
         _break_mock_cycles(m._mock_return_value)
 
 
-class OptimizeTestsBase(object):
+class OptimizeTestsBase:
     def setUp(self):
         self.loop = FaithfulLoop()
         asyncio.set_event_loop(self.loop)

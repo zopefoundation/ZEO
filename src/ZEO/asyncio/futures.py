@@ -20,7 +20,7 @@ EXCEPTION = 2
 CANCELLED = 3
 
 
-class Future(object):
+class Future:
     """Minimal mostly ``asyncio`` compatible future.
 
     In contrast to an ``asyncio`` future,

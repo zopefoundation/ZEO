@@ -15,7 +15,7 @@ import ZEO
 from .utils import StorageServer
 
 
-class Var(object):
+class Var:
     def __eq__(self, other):
         self.value = other
         return True

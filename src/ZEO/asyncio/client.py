@@ -410,7 +410,7 @@ unlogged_exceptions = (ZODB.POSException.POSKeyError,
                        ZODB.POSException.ConflictError)
 
 
-class ClientIO(object):
+class ClientIO:
     """asyncio low-level ZEO client interface."""
 
     # All of the code in this class runs in a single dedicated
@@ -823,7 +823,7 @@ class ClientIO(object):
         return self.read_only if protocol is None else protocol.read_only
 
 
-class ClientRunner(object):
+class ClientRunner:
 
     def set_options(self, addrs, wrapper, cache, storage_key, read_only,
                     timeout=30, disconnect_poll=1,

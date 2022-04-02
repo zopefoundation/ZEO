@@ -52,7 +52,7 @@ def parse_line(line):
     return t, m
 
 
-class TStats(object):
+class TStats:
 
     counter = 1
 
@@ -78,7 +78,7 @@ class TStats(object):
                           self.user, self.url))
 
 
-class TransactionParser(object):
+class TransactionParser:
 
     def __init__(self):
         self.txns = {}

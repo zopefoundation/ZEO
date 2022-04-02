@@ -30,7 +30,7 @@ import time
 # See e.g. https://github.com/zopefoundation/ZEO/issues/209 for example where
 # injecting such delays was effective to catch bugs that were otherwise hard to
 # reproduce.
-class LoadDelayedStorage(object):
+class LoadDelayedStorage:
 
     def __init__(self, base, tdelay=0.01):
         self.base = base
@@ -62,7 +62,7 @@ class LoadDelayedStorage(object):
         return _
 
 
-class ZConfigLoadDelayed(object):
+class ZConfigLoadDelayed:
 
     _factory = LoadDelayedStorage
 

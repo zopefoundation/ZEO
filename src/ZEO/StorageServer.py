@@ -80,7 +80,7 @@ registered_methods = set(
      'iterator_gc', 'server_status', 'set_client_label', 'ping'))
 
 
-class ZEOStorage(object):
+class ZEOStorage:
     """Proxy to underlying storage for a single remote client."""
 
     connected = connection = stats = storage = storage_id = transaction = None
@@ -629,7 +629,7 @@ class ZEOStorage(object):
         pass
 
 
-class StorageServerDB(object):
+class StorageServerDB:
     """Adapts (StorageServer, storage_id) to ZODB.interfaces.IStorageWrapper.
 
     The class is used as ``DB`` emulation in a ``registerDB`` call;
@@ -660,7 +660,7 @@ class StorageServerDB(object):
     transform_record_data = untransform_record_data = lambda self, data: data
 
 
-class StorageServer(object):
+class StorageServer:
 
     """The server side implementation of ZEO.
 
@@ -973,7 +973,7 @@ class StorageServer(object):
                     for storage_id in self.storages)
 
 
-class StubTimeoutThread(object):
+class StubTimeoutThread:
 
     def begin(self, client):
         pass
@@ -1090,7 +1090,7 @@ def _addr_label(addr):
         return str(host) + ":" + str(port)
 
 
-class CommitLog(object):
+class CommitLog:
 
     def __init__(self):
         self.file = tempfile.TemporaryFile(suffix=".comit-log")
@@ -1133,7 +1133,7 @@ class CommitLog(object):
             self.file = None
 
 
-class ServerEvent(object):
+class ServerEvent:
 
     def __init__(self, server, **kw):
         self.__dict__.update(kw)
@@ -1154,7 +1154,7 @@ def never_resolve_conflict(oid, committedSerial, oldSerial, newpickle,
                         data=newpickle)
 
 
-class LockManager(object):
+class LockManager:
 
     def __init__(self, storage_id, stats, timeout):
         self.storage_id = storage_id

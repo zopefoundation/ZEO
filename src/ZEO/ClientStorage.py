@@ -1130,7 +1130,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         return self._call('server_status', timeout=timeout)
 
 
-class TransactionIterator(object):
+class TransactionIterator:
 
     def __init__(self, storage, iid, *args):
         self._storage = storage
@@ -1182,7 +1182,7 @@ class ClientStorageTransactionInformation(ZODB.BaseStorage.TransactionRecord):
         return self._storage._setup_iterator(RecordIterator, riid)
 
 
-class RecordIterator(object):
+class RecordIterator:
 
     def __init__(self, storage, riid):
         self._riid = riid
@@ -1208,7 +1208,7 @@ class RecordIterator(object):
     next = __next__
 
 
-class BlobCacheLayout(object):
+class BlobCacheLayout:
 
     size = 997
 

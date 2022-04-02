@@ -18,7 +18,7 @@ from ZODB.tests.MinPO import MinPO
 from ZODB.tests.StorageTestBase import zodb_unpickle
 
 
-class TransUndoStorageWithCache(object):
+class TransUndoStorageWithCache:
 
     def checkUndoInvalidation(self):
         oid = self._storage.new_oid()
