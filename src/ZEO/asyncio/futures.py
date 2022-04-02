@@ -9,9 +9,8 @@ This module defines variants which run callbacks immediately.
 
 import asyncio
 from asyncio import CancelledError, InvalidStateError, get_event_loop
-from threading import Event, Lock
+from threading import Event, Lock, get_ident
 from time import sleep
-from ZEO._compat import get_ident
 
 
 # ``Future`` states -- inlined below for speed

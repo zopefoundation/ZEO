@@ -15,8 +15,6 @@
 """
 import sys
 import platform
-import _thread as thread
-from threading import get_ident
 from io import StringIO
 
 from ZODB._compat import BytesIO  # NOQA: F401 unused import

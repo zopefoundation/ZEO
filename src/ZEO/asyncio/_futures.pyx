@@ -4,9 +4,8 @@ import asyncio
 cdef object CancelledError = asyncio.CancelledError
 cdef object InvalidStateError = asyncio.InvalidStateError
 cdef object get_event_loop = asyncio.get_event_loop
-from threading import Event, Lock
+from threading import Event, Lock, get_ident
 from time import sleep
-from ZEO._compat import get_ident
 
 
 cdef enum State:

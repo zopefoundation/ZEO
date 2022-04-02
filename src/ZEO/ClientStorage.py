@@ -25,6 +25,7 @@ import socket
 import stat
 import sys
 import threading
+from threading import get_ident
 import time
 import weakref
 from binascii import hexlify
@@ -39,7 +40,6 @@ import ZODB.interfaces
 import zope.interface
 
 from persistent.TimeStamp import TimeStamp
-from ZEO._compat import get_ident
 from ZEO._compat import WIN
 from ZEO.Exceptions import ClientDisconnected
 from ZEO.TransactionBuffer import TransactionBuffer

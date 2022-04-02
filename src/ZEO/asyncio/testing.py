@@ -1,4 +1,4 @@
-from ZEO._compat import thread
+from _thread import allocate_lock
 import asyncio
 from time import sleep
 
@@ -143,7 +143,7 @@ class FaithfulLoop(Loop, AsyncioLoop):
             Loop.close(self)
 
     _inactivity_checker_scheduled = False
-    _inactivity_lock = thread.allocate_lock()
+    _inactivity_lock = allocate_lock()
 
     def run_until_inactive(self):
         """return when the loop becomes inactive."""
