@@ -31,15 +31,15 @@ The ZEO protocol sits on top of a sized message protocol.
 
 The ZEO protocol has client and server variants.
 """
+from asyncio import Protocol
 import logging
 
-from .compat import asyncio
 from .smp import SizedMessageProtocol
 
 logger = logging.getLogger(__name__)
 
 
-class ZEOBaseProtocol(asyncio.Protocol):
+class ZEOBaseProtocol(Protocol):
     """ZEO protocol base class for the common features."""
 
     protocol_version = None

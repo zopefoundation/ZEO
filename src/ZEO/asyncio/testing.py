@@ -1,5 +1,5 @@
-from .compat import asyncio
 from ZEO._compat import thread
+import asyncio
 from time import sleep
 
 try:

@@ -1,4 +1,3 @@
-import asyncio
 try:
     from uvloop import new_event_loop
 except ImportError:

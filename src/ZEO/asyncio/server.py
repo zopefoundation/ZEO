@@ -1,5 +1,6 @@
 """ZEO server interface implementation."""
 
+import asyncio
 import json
 import logging
 import os
@@ -9,7 +10,7 @@ import ZODB.POSException
 from ..shortrepr import short_repr
 
 from . import base
-from .compat import asyncio, new_event_loop
+from .compat import new_event_loop
 from .marshal import server_decoder, encoder, reduce_exception
 
 

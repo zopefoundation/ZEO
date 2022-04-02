@@ -1,6 +1,6 @@
 # cython: language_level=3
 
-from .compat import asyncio
+import asyncio
 cdef object CancelledError = asyncio.CancelledError
 cdef object InvalidStateError = asyncio.InvalidStateError
 cdef object get_event_loop = asyncio.get_event_loop

@@ -7,10 +7,8 @@ latency (+ 27% in some benchmarks).
 This module defines variants which run callbacks immediately.
 """
 
-from .compat import asyncio
-CancelledError = asyncio.CancelledError
-InvalidStateError = asyncio.InvalidStateError
-get_event_loop = asyncio.get_event_loop
+import asyncio
+from asyncio import CancelledError, InvalidStateError, get_event_loop
 from threading import Event, Lock
 from time import sleep
 from ZEO._compat import get_ident

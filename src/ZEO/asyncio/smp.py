@@ -5,14 +5,14 @@ On the wire, a message is represented by a 4 bytes length followed
 by the message's bytes.
 """
 
-from .compat import asyncio
+from asyncio import Protocol
 from logging import getLogger
 import struct
 
 logger = getLogger(__name__)
 
 
-class SizedMessageProtocol(asyncio.Protocol):
+class SizedMessageProtocol(Protocol):
     """asyncio protocol for the exchange of sized messages.
 
     A protocol object can be used as a connection.

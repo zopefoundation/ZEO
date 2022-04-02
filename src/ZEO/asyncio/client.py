@@ -23,6 +23,8 @@ The ``asyncio`` loop must be run in a separate thread.
 The loop management is the responsibility of ``ClientThread``,
 a tiny wrapper around ``ClientRunner``.
 """
+
+import asyncio
 import logging
 import random
 import sys
@@ -36,7 +38,7 @@ from ZEO.Exceptions import ClientDisconnected, ServerException
 import ZEO.interfaces
 
 from . import base
-from .compat import asyncio, new_event_loop
+from .compat import new_event_loop
 from .marshal import encoder, decoder
 from .futures import Future, AsyncTask as Task, \
      run_coroutine_threadsafe, switch_thread

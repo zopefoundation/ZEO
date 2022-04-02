@@ -1,4 +1,4 @@
-from .compat import asyncio
+import asyncio
 
 from zope.testing import setupstack
 from unittest import TestCase, mock
