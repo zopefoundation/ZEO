@@ -663,7 +663,7 @@ class ClientIO(object):
 
                 # XXX Need a test for this. The lone before is what we
                 # had, but it's wrong.
-                self.register_failed(self, exc)
+                self.register_failed(protocol, exc)
 
             else:
                 # Note: it is important that we first inform
