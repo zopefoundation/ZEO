@@ -411,7 +411,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
 
         The storage isn't really ready to use until after this call.
         """
-        super(ClientStorage, self).registerDB(db)
+        super().registerDB(db)
         self._db = db
 
     def is_connected(self, test=False):

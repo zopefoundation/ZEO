@@ -38,5 +38,5 @@ class Unpickler(_Unpickler):
 
     def find_class(self, modulename, name):
         if self.find_global is None:
-            return super(Unpickler, self).find_class(modulename, name)
+            return super().find_class(modulename, name)
         return self.find_global(modulename, name)

@@ -33,7 +33,7 @@ class ServerProtocol(base.ZEOBaseProtocol):
     def __init__(self, loop, addr, zeo_storage, msgpack):
         """Create a server's client interface
         """
-        super(ServerProtocol, self).__init__(loop, repr(addr))
+        super().__init__(loop, repr(addr))
         self.addr = addr
         self.zeo_storage = zeo_storage
 
@@ -46,18 +46,18 @@ class ServerProtocol(base.ZEOBaseProtocol):
     def close(self):
         logger.debug("Closing server protocol")
         if not self.closed:
-            super(ServerProtocol, self).close()  # will set ``closed``
+            super().close()  # will set ``closed``
             self.zeo_storage = None  # break reference cycle
 
     connected = None  # for tests
 
     def connection_made(self, transport):
         self.connected = True
-        super(ServerProtocol, self).connection_made(transport)
+        super().connection_made(transport)
         self.write_message(self.announce_protocol)
 
     def connection_lost(self, exc):
-        super(ServerProtocol, self).connection_lost(exc)
+        super().connection_lost(exc)
         self.connected = False
         if exc:
             logger.error("Disconnected %s:%s", exc.__class__.__name__, exc)

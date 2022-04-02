@@ -73,10 +73,10 @@ def add_tracefile_argument(parser):
 
     class GzipFileType(argparse.FileType):
         def __init__(self):
-            super(GzipFileType, self).__init__(mode='rb')
+            super().__init__(mode='rb')
 
         def __call__(self, s):
-            f = super(GzipFileType, self).__call__(s)
+            f = super().__call__(s)
             if s.endswith(".gz"):
                 f = gzip.GzipFile(filename=s, fileobj=f)
             return f

@@ -49,8 +49,8 @@ class StorageServer(ZEO.StorageServer.StorageServer):
         # normal ``close`` does not work.
         loop = self.get_loop()
         if loop.is_running():
-            return super(StorageServer, self).close()
-        loop.call_soon_threadsafe(super(StorageServer, self).close)
+            return super().close()
+        loop.call_soon_threadsafe(super().close)
         loop.run_forever()  # will stop automatically
         loop.close()
 

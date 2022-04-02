@@ -75,7 +75,7 @@ class DummyDB(object):
 class CreativeGetState(persistent.Persistent):
     def __getstate__(self):
         self.name = 'me'
-        return super(CreativeGetState, self).__getstate__()
+        return super().__getstate__()
 
 
 class Test_convenience_functions(unittest.TestCase):
@@ -370,7 +370,7 @@ class FullGenericTests(
         # time.sleep and time.time to cooperate and pretend for time
         # to pass. That doesn't work for the spawned server, and this
         # test case is very sensitive to times matching.
-        super_meth = super(FullGenericTests, self).checkPackUndoLog
+        super_meth = super().checkPackUndoLog
         # Find the underlying function, not the decorated method.
         # If it doesn't exist, the implementation has changed and we
         # need to revisit this...

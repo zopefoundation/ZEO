@@ -73,7 +73,7 @@ class Protocol(base.ZEOBaseProtocol):
 
         client is a `ClientIO`.
         """
-        super(Protocol, self).__init__(
+        super().__init__(
             loop,
             "%r, %r, %r" % (addr, storage_key, read_only))
         self.addr = addr
@@ -116,7 +116,7 @@ class Protocol(base.ZEOBaseProtocol):
             # will call ``connection_lost`` but without the ``exc``
             # information -- therefore, the futures would get the wrong
             # exception
-            closing = super(Protocol, self).close()
+            closing = super().close()
             cfs = self.client.closing_protocol_futures
             cfs.add(closing)
             closing.add_done_callback(cfs.remove)
@@ -170,12 +170,12 @@ class Protocol(base.ZEOBaseProtocol):
 
     def connection_made(self, transport):
         logger.debug('connection_made %s', self)
-        super(Protocol, self).connection_made(transport)
+        super().connection_made(transport)
         self.heartbeat(write=False)
 
     def connection_lost(self, exc):
         logger.debug('connection_lost %s: %r', self, exc)
-        super(Protocol, self).connection_lost(exc)
+        super().connection_lost(exc)
         assert self.closing.done()
         self.heartbeat_handle.cancel()
         if self.closed:  # ``connection_lost`` was expected
@@ -1023,7 +1023,7 @@ class ClientThread(ClientRunner):
             self.started.set()
         finally:
             if not self.__closed:
-                super(ClientThread, self).close()
+                super().close()
                 logger.critical("Client loop stopped unexpectedly")
             loop.close()
             logger.debug('Stopping client thread')
@@ -1044,7 +1044,7 @@ class ClientThread(ClientRunner):
             if loop is None:  # pragma no cover
                 # we have never been connected
                 return
-            super(ClientThread, self).close()
+            super().close()
             if loop.is_running():
                 loop.call_soon_threadsafe(loop.stop)
                 # ``loop`` will be closed in the IO thread

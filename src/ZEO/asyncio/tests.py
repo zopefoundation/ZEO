@@ -31,7 +31,7 @@ class Base(object):
     seq_type = list
 
     def setUp(self):
-        super(Base, self).setUp()
+        super().setUp()
         self.encode = encoder(self.enc)
         self.decode = decoder(self.enc)
 
@@ -95,7 +95,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
     def tearDown(self):
         self.exit_future_mode()
         self.close()
-        super(ClientTests, self).tearDown()
+        super().tearDown()
         loop = self.loop
         if loop is not None:
             self.assertEqual(loop.exceptions, [])
@@ -166,7 +166,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
 
     def pop(self, *args, **kw):
         self.loop.run_until_inactive()
-        return super(ClientTests, self).pop(*args, **kw)
+        return super().pop(*args, **kw)
 
     def respond(self, message_id, result, async_=False,
                 check_exc=True, return_msg=False, protocol=None):
@@ -1356,7 +1356,7 @@ class OptimizeTestsBase(object):
 
 class FutureTestsBase(OptimizeTestsBase):
     def setUp(self):
-        super(FutureTestsBase, self).setUp()
+        super().setUp()
         self.fut = fut = self.make_future(self.loop)
         self.callback = cb = mock.Mock()
         fut.add_done_callback(cb)
@@ -1366,7 +1366,7 @@ class FutureTestsBase(OptimizeTestsBase):
         fut.cancel()
         self.assertEqual(self.loop.exceptions, [])
         _break_mock_cycles(self.callback)
-        super(FutureTestsBase, self).tearDown()
+        super().tearDown()
 
     def test_set_result(self):
         self.fut.set_result(1)
