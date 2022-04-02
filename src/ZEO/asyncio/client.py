@@ -929,13 +929,6 @@ class ClientRunner(object):
         """
         return self.io_call(self.call_threadsafe, method, args, **kw)
 
-    def call_future(self, method, *args):
-        # for tests
-        result = concurrent.futures.Future()
-        self.loop.call_soon_threadsafe(
-            self.call_threadsafe, result, True, method, args)
-        return result
-
     def async_(self, method, *args):
         """call method named *method* with *args* asynchronously."""
         return self.io_call(self.call_async_threadsafe, method, args)
