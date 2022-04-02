@@ -5,7 +5,15 @@ Changelog
 ----------------
 
 - Drop Python 2 and 3.5 support
+
 - Switch to using `async/await` directly instead of `@coroutine/yield`
+
+- Drop credentials support: the corresponding ``ClientStorage.__init__``
+  parameters (i.e. ``credentials``, ``username``, ``password``)
+  are retained but ignored.
+  Note: the ZEO 5 server never supported credentials; the feature
+  has previously been retained for the use case
+  "ZEO 5 client with ZEO 4 server".
 
 
 5.4.0 (unreleased)
