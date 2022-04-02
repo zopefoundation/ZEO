@@ -11,7 +11,8 @@ import ZEO.StorageServer
 from . import forker
 from .threaded import threaded_server_tests
 
-@unittest.skipIf(forker.ZEO4_SERVER, "ZEO4 servers don't support SSL")
+#@unittest.skipIf(forker.ZEO4_SERVER, "ZEO4 servers don't support SSL")
+@unittest.skipIf(True, "credentials support has been dropped")
 class ClientAuthTests(setupstack.TestCase):
 
     def setUp(self):
@@ -46,10 +47,10 @@ class ClientAuthTests(setupstack.TestCase):
         client.close()
         creds_log.pop()
 
-        # But if we pass credentials, they'll be passed to register:
+        # Even if we pass credentials, they'll be ignored
         creds = dict(user='me', password='123')
         client = ZEO.client(addr, credentials=creds)
-        self.assertEqual(creds_log, [creds])
+        self.assertEqual(creds_log, [self])
         client.close()
 
         stop()

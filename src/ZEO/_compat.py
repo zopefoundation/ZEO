@@ -16,50 +16,26 @@
 import sys
 import platform
 
-PY3 = sys.version_info[0] >= 3
-PY32 = sys.version_info[:2] == (3, 2)
 PYPY = getattr(platform, 'python_implementation', lambda: None)() == 'PyPy'
 WIN = sys.platform.startswith('win')
 
-if PY3:
-    from zodbpickle.pickle import Pickler, Unpickler as _Unpickler, dump, dumps, loads
-    class Unpickler(_Unpickler):
-        # Py3: Python 3 doesn't allow assignments to find_global,
-        # instead, find_class can be overridden
+from zodbpickle.pickle import Pickler, Unpickler as _Unpickler, dump, dumps, loads
+class Unpickler(_Unpickler):
+    # Python 3 doesn't allow assignments to find_global,
+    # instead, find_class can be overridden
 
-        find_global = None
+    find_global = None
 
-        def find_class(self, modulename, name):
-            if self.find_global is None:
-                return super(Unpickler, self).find_class(modulename, name)
-            return self.find_global(modulename, name)
-else:
-    try:
-        import zodbpickle.fastpickle as cPickle
-    except ImportError:
-        import zodbpickle.pickle as cPickle
-    Pickler = cPickle.Pickler
-    Unpickler = cPickle.Unpickler
-    dump = cPickle.dump
-    dumps = cPickle.dumps
-    loads = cPickle.loads
+    def find_class(self, modulename, name):
+        if self.find_global is None:
+            return super(Unpickler, self).find_class(modulename, name)
+        return self.find_global(modulename, name)
 
 # String and Bytes IO
 from ZODB._compat import BytesIO
 
-if PY3:
-
-    import _thread as thread
-    if PY32:
-        from threading import _get_ident as get_ident
-    else:
-        from threading import get_ident
-
-
-else:
-
-    import thread
-    from thread import get_ident
+import _thread as thread
+from threading import get_ident
 
 try:
     from cStringIO import StringIO

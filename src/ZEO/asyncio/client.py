@@ -1,6 +1,30 @@
+"""ZEO client interface implementation.
+
+The client interface implementation is split into two parts:
+``ClientRunner`` and ``ClientIo``.
+``ClientRunner`` methods are executed in the calling thread,
+``ClientIo`` methods in an ``asyncio`` context.
+
+``ClientRunner`` calls ``ClientIo`` methods indirectly via
+``asyncio.run_coroutine_threadsafe``; methods designed for such
+calls have suffix ``_co``.
+``ClientIo`` does not call ``ClientRunner`` methods; however, it
+can call ``ClientStorage`` and ``ClientCache`` methods.
+Those methods must be thread safe.
+
+Logically, ``ClientIo`` represents a connection to one ZEO
+server. However, initially, it can open connections to serveral
+servers and choose one of them depending on availability
+and required/provided capabilities (read_only/writable).
+A server connection is represented by a ``Protocol`` instance.
+
+The ``asyncio`` loop must be run in a separate thread.
+The loop management is the responsibility of ``ClientThread``,
+a tiny wrapper arount `ClientRunner``.
+"""
+
 from ZEO.Exceptions import ClientDisconnected, ServerException
 import concurrent.futures
-import functools
 import logging
 import random
 import threading
@@ -21,39 +45,9 @@ Fallback = object()
 
 local_random = random.Random() # use separate generator to facilitate tests
 
-def future_generator(func):
-    """Decorates a generator that generates futures
-    """
 
-    @functools.wraps(func)
-    def call_generator(*args, **kw):
-        gen = func(*args, **kw)
-        try:
-            f = next(gen)
-        except StopIteration:
-            gen.close()
-        else:
-            def store(gen, future):
-                @future.add_done_callback
-                def _(future):
-                    try:
-                        try:
-                            result = future.result()
-                        except Exception as exc:
-                            f = gen.throw(exc)
-                        else:
-                            f = gen.send(result)
-                    except StopIteration:
-                        gen.close()
-                    else:
-                        store(gen, f)
-
-            store(gen, f)
-
-    return call_generator
-
-class Protocol(base.Protocol):
-    """asyncio low-level ZEO client interface
+class Protocol(base.ZEOBaseProtocol):
+    """asyncio connection to a single ZEO server.
     """
 
     # All of the code in this class runs in a single dedicated
@@ -68,38 +62,38 @@ class Protocol(base.Protocol):
     def __init__(self, loop,
                  addr, client, storage_key, read_only, connect_poll=1,
                  heartbeat_interval=60, ssl=None, ssl_server_hostname=None,
-                 credentials=None):
-        """Create a client interface
+                 ):
+        """Create a server connection
 
         addr is either a host,port tuple or a string file name.
 
-        client is a ClientStorage. It must be thread safe.
-
-        cache is a ZEO.interfaces.IClientCache.
+        client is a `ClientIo`
         """
-        super(Protocol, self).__init__(loop, addr)
+        super().__init__(
+            loop,
+            "%r, %r, %r" % (addr, storage_key, read_only))
+        self.addr = addr
         self.storage_key = storage_key
         self.read_only = read_only
-        self.name = "%s(%r, %r, %r)" % (
-            self.__class__.__name__, addr, storage_key, read_only)
         self.client = client
         self.connect_poll = connect_poll
         self.heartbeat_interval = heartbeat_interval
         self.futures = {} # { message_id -> future }
         self.ssl = ssl
         self.ssl_server_hostname = ssl_server_hostname
-        self.credentials = credentials
+        self.invalidations = []
 
         self.connect()
 
-    def close(self):
+    def close(self, exc=None):
         if not self.closed:
-            self.closed = True
+            super().close() # will set ``closed``
             self._connecting.cancel()
-            if self.transport is not None:
-                self.transport.close()
+            if self.verify_task is not None:
+                self.verify_task.cancel()
             for future in self.pop_futures():
-                future.set_exception(ClientDisconnected("Closed"))
+                if not future.done():
+                    future.set_exception(ClientDisconnected(exc or "Closed"))
 
     def pop_futures(self):
         # Remove and return futures from self.futures.  The caller
@@ -108,9 +102,6 @@ class Protocol(base.Protocol):
         futures = list(self.futures.values())
         self.futures.clear()
         return futures
-
-    def protocol_factory(self):
-        return self
 
     def connect(self):
         if isinstance(self.addr, tuple):
@@ -124,7 +115,6 @@ class Protocol(base.Protocol):
 
         # an ``asyncio.Future``
         self._connecting = cr = asyncio.ensure_future(cr, loop=self.loop)
-
         @cr.add_done_callback
         def done_connecting(future):
             if future.cancelled():
@@ -141,36 +131,26 @@ class Protocol(base.Protocol):
                     self.connect,
                     )
 
-
     def connection_made(self, transport):
-        super(Protocol, self).connection_made(transport)
+        super().connection_made(transport)
         self.heartbeat(write=False)
 
     def connection_lost(self, exc):
         logger.debug('connection_lost %r', exc)
+        super().connection_lost(exc)
         self.heartbeat_handle.cancel()
         if self.closed:
             for f in self.pop_futures():
                 f.cancel()
         else:
-            # We have to be careful processing the futures, because
-            # exception callbacks might modufy them.
-            for f in self.pop_futures():
-                f.set_exception(ClientDisconnected(exc or 'connection lost'))
-            self.closed = True
+            self.close(exc or "Connection lost")
             self.client.disconnected(self)
 
-    @future_generator
-    def finish_connect(self, protocol_version):
-        # The future implementation we use differs from
-        # asyncio.Future in that callbacks are called immediately,
-        # rather than using the loops call_soon.  We want to avoid a
-        # race between invalidations and cache initialization. In
-        # particular, after getting a response from lastTransaction or
-        # getInvalidations, we want to make sure we set the cache's
-        # lastTid before processing (and possibly missing) subsequent
-        # invalidations.
-
+    verify_task = None
+    def finish_connection(self, protocol_version):
+        """setup for *protocol_version* and verify the connection."""
+        # the first byte of ``protocol_version`` specifies the coding type
+        # the remaining bytes the version proper
         version = min(protocol_version[1:], self.protocols[-1])
         if version not in self.protocols:
             self.client.register_failed(
@@ -181,31 +161,39 @@ class Protocol(base.Protocol):
         self.encode = encoder(protocol_version)
         self.decode = decoder(protocol_version)
         self.heartbeat_bytes = self.encode(-1, 0, '.reply', None)
+        self.write_message(self.protocol_version)
+        self.verify_task = self.loop.create_task(self.verify_connection())
 
-        self._write(self.protocol_version)
+    async def verify_connection(self):
+        """verify the connection -- run as task.
 
-        credentials = (self.credentials,) if self.credentials else ()
-
-        try:
+        We try to register with the server; if this succeeds with
+        the client.
+        """
+        # we do not want that serveral servers concurrently
+        # update the cache -- lock
+        async with self.client.register_lock:
             try:
-                server_tid = yield self.fut(
-                    'register', self.storage_key,
-                    self.read_only if self.read_only is not Fallback else False,
-                    *credentials)
-            except ZODB.POSException.ReadOnlyError:
-                if self.read_only is Fallback:
-                    self.read_only = True
-                    server_tid = yield self.fut(
-                        'register', self.storage_key, True, *credentials)
+                try:
+                    server_tid = await self.call_sync(
+                        'register', self.storage_key,
+                        self.read_only if self.read_only is not Fallback else False,
+                        )
+                except ZODB.POSException.ReadOnlyError:
+                    if self.read_only is Fallback:
+                        self.read_only = True
+                        server_tid = await self.call_sync(
+                            'register', self.storage_key, True)
+                    else:
+                        raise
                 else:
-                    raise
+                    if self.read_only is Fallback:
+                        self.read_only = False
+            except Exception as exc:
+                self.client.register_failed(self, exc)
             else:
-                if self.read_only is Fallback:
-                    self.read_only = False
-        except Exception as exc:
-            self.client.register_failed(self, exc)
-        else:
-            self.client.registered(self, server_tid)
+                # from now on invalidation messages can arrive
+                await self.client.register(self, server_tid)
 
     exception_type_type = type(Exception)
     def message_received(self, data):
@@ -238,39 +226,41 @@ class Protocol(base.Protocol):
                 future.set_result(args)
         else:
             assert async_ # clients only get async calls
-            if name in self.client_methods:
-                getattr(self.client, name)(*args)
-            else:
+            if name not in self.client_methods:
                 raise AttributeError(name)
+            # it is important to not directly execute the call
+            # to avoid that the call becomes effective
+            # before a previously received reply
+            self.loop.call_soon(self.process_async, name, args)
+
+    def process_async(self, name, args):
+        """process the asynchronous call *name*(*args*)."""
+        if name == "invalidateTransaction" and not self.client.ready:
+            # the client is not yet ready to process invalidations
+            # queue them
+            self.invalidations.append(args)
+        else:
+            getattr(self.client, name)(*args)
 
     message_id = 0
-    def call(self, future, method, args):
-        self.message_id += 1
-        self.futures[self.message_id] = future
-        self._write(self.encode(self.message_id, False, method, args))
+    def call(self, future, method, args, message_id=None):
+        if message_id is None:
+            self.message_id += 1
+            message_id = self.message_id
+        self.futures[message_id] = future
+        self.write_message(self.encode(message_id, False, method, args))
         return future
 
-    def fut(self, method, *args):
-        return self.call(Fut(), method, args)
+    def call_sync(self, method, *args, message_id=None):
+        return self.call(self.loop.create_future(), method, args, message_id)
 
     def load_before(self, oid, tid):
         # Special-case loadBefore, so we collapse outstanding requests
         message_id = (oid, tid)
         future = self.futures.get(message_id)
         if future is None:
-            future = Fut()
-            self.futures[message_id] = future
-            self._write(
-                self.encode(message_id, False, 'loadBefore', (oid, tid)))
-            @future.add_done_callback
-            def _(future):
-                try:
-                    data = future.result()
-                except Exception:
-                    return
-                if data:
-                    data, start, end = data
-                    self.client.cache.store(oid, start, end, data)
+            future = self.futures[message_id] = self.call_sync(
+               'loadBefore', oid, tid, message_id=message_id)
         return future
 
     # Methods called by the server.
@@ -286,7 +276,7 @@ class Protocol(base.Protocol):
 
     def heartbeat(self, write=True):
         if write:
-            self._write(self.heartbeat_bytes)
+            self.write_message(self.heartbeat_bytes)
         self.heartbeat_handle = self.loop.call_later(
             self.heartbeat_interval, self.heartbeat)
 
@@ -340,7 +330,9 @@ exc_factories = {
     }
 unlogged_exceptions = (ZODB.POSException.POSKeyError,
                        ZODB.POSException.ConflictError)
-class Client(object):
+
+
+class ClientIo(object):
     """asyncio low-level ZEO client interface
     """
 
@@ -354,14 +346,20 @@ class Client(object):
     protocol = None
     ready = None # Tri-value: None=Never connected, True=connected,
                  # False=Disconnected
+    protocols = ()
+    client_label = None  # for some log messages
 
     def __init__(self, loop,
                  addrs, client, cache, storage_key, read_only, connect_poll,
                  register_failed_poll=9,
-                 ssl=None, ssl_server_hostname=None, credentials=None):
+                 ssl=None, ssl_server_hostname=None):
         """Create a client interface
 
-        addr is either a host,port tuple or a string file name.
+        *addrs* specifies addresses of a set of servers which
+        (essentially) serve the same data.
+        Each address is either a host,port tuple or a string file name.
+        The object tries to connect to each of them and
+        chooses the first appropriate one.
 
         client is a ClientStorage. It must be thread safe.
 
@@ -376,23 +374,12 @@ class Client(object):
         self.client = client
         self.ssl = ssl
         self.ssl_server_hostname = ssl_server_hostname
-        self.credentials = credentials
         for name in Protocol.client_delegated:
             setattr(self, name, getattr(client, name))
         self.cache = cache
-        self.protocols = ()
+        self.register_lock = asyncio.Lock()
         self.disconnected(None)
 
-        # Work around odd behavior of ZEO4 server. It may send
-        # invalidations for transactions later than the result of
-        # getInvalidations.  While we support ZEO 4 servers, we'll
-        # need to keep an invalidation queue. :(
-        self.verify_invalidation_queue = []
-
-    def new_addrs(self, addrs):
-        self.addrs = addrs
-        if self.trying_to_connect():
-            self.disconnected(None)
 
     def trying_to_connect(self):
         """Return whether we're trying to connect
@@ -419,6 +406,16 @@ class Client(object):
                 p.close()
         self.protocols = ()
 
+    connected = None
+    def manage_connected(self):
+        """manage the future ``connected``.
+
+        It is used to implement the connection timeout.
+        """
+        if self.connected is not None:
+            self.connected.cancel()  # cancel waiters
+        self.connected = self.loop.create_future()
+
     def disconnected(self, protocol=None):
         logger.debug('disconnected %r %r', self, protocol)
         if protocol is None or protocol is self.protocol:
@@ -426,7 +423,7 @@ class Client(object):
                 self.client.notify_disconnected()
             if self.ready:
                 self.ready = False
-            self.connected = concurrent.futures.Future()
+            self.manage_connected()
             self.protocol = None
             self._clear_protocols()
 
@@ -435,7 +432,7 @@ class Client(object):
 
     def upgrade(self, protocol):
         self.ready = False
-        self.connected = concurrent.futures.Future()
+        self.manage_connected()
         self.protocol.close()
         self.protocol = protocol
         self._clear_protocols(protocol)
@@ -448,31 +445,30 @@ class Client(object):
                          self.storage_key, self.read_only, self.connect_poll,
                          ssl=self.ssl,
                          ssl_server_hostname=self.ssl_server_hostname,
-                         credentials=self.credentials,
                          )
                 for addr in self.addrs
                 ]
 
-    def registered(self, protocol, server_tid):
+    async def register(self, protocol, server_tid):
+        """register *protocol* -- run as task."""
         if self.protocol is None:
             self.protocol = protocol
             if not (self.read_only is Fallback and protocol.read_only):
                 # We're happy with this protocol. Tell the others to
                 # stop trying.
                 self._clear_protocols(protocol)
-            self.verify(server_tid)
+            await self.verify(server_tid)
         elif (self.read_only is Fallback and not protocol.read_only and
               self.protocol.read_only):
             self.upgrade(protocol)
-            self.verify(server_tid)
+            await self.verify(server_tid)
         else:
             protocol.close() # too late, we went home with another
 
     def register_failed(self, protocol, exc):
         # A protocol failed registration. That's weird.  If they've all
         # failed, we should try again in a bit.
-        if protocol is not self:
-            protocol.close()
+        protocol.close()
         logger.exception("Registration or cache validation failed, %s", exc)
         if (self.protocol is None and not
             any(not p.closed for p in self.protocols)
@@ -482,15 +478,13 @@ class Client(object):
                 self.try_connecting)
 
     verify_result = None # for tests
-
-    @future_generator
-    def verify(self, server_tid):
-        self.verify_invalidation_queue = [] # See comment in init :(
-
+    async def verify(self, server_tid):
+        """cache verification and invalidation -- run as task."""
         protocol = self.protocol
+        call = protocol.call_sync
         try:
             if server_tid is None:
-                server_tid = yield protocol.fut('lastTransaction')
+                server_tid = await call('lastTransaction')
 
             cache = self.cache
             if cache:
@@ -512,7 +506,7 @@ class Client(object):
                 elif cache_tid == server_tid:
                     self.verify_result = "Cache up to date"
                 else:
-                    vdata = yield protocol.fut('getInvalidations', cache_tid)
+                    vdata = await call('getInvalidations', cache_tid)
                     if vdata:
                         self.verify_result = "quick verification"
                         server_tid, oids = vdata
@@ -546,165 +540,146 @@ class Client(object):
             self.cache.setLastTid(server_tid)
             self.ready = True
 
-            # Gaaaa, ZEO 4 work around. See comment in __init__. :(
-            for tid, oids in self.verify_invalidation_queue:
+            for tid, oids in protocol.invalidations:
                 if tid > server_tid:
                     self.invalidateTransaction(tid, oids)
-            self.verify_invalidation_queue = []
 
             try:
-                info = yield protocol.fut('get_info')
+                info = await call('get_info')
             except Exception as exc:
                 # This is weird. We were connected and verified our cache, but
                 # Now we errored getting info.
 
                 # XXX Need a test fpr this. The lone before is what we
                 # had, but it's wrong.
-                self.register_failed(self, exc)
+                self.register_failed(protocol, exc)
 
             else:
-                self.client.notify_connected(self, info)
                 self.connected.set_result(None)
+                self.client.notify_connected(self, info)
 
     def get_peername(self):
         return self.protocol.get_peername()
 
-    def call_async_threadsafe(self, future, wait_ready, method, args):
-        if self.ready:
-            self.protocol.call_async(method, args)
-            future.set_result(None)
-        else:
-            future.set_exception(ClientDisconnected())
+    def call_sync(self, method, *args):
+        return self.protocol.call_sync(method, *args)
 
-    def call_async_from_same_thread(self, method, *args):
+    def call_async(self, method, *args):
         return self.protocol.call_async(method, args)
 
-    def call_async_iter_threadsafe(self, future, wait_ready, it):
+    def call_async_iter(self, it):
+        return self.protocol.call_async_iter(it)
+
+    # methods called with ``run_coroutine_threadsafe``
+    # recognizable by their ``_co`` suffix
+    async def call_with_timeout_co(self, timeout, method, args,
+                                   init_ok=False):
+        """call coroutine function *method* with *args* when ready.
+
+        Wait at most *timeout* for readyness.
+        Usually, we do not wait for the initial readyness
+        unless *init_ok*.
+        """
         if self.ready:
-            self.protocol.call_async_iter(it)
-            future.set_result(None)
+            result = method(*args)
+        elif timeout and (init_ok or self.ready is not None):
+            try:
+                await asyncio.wait_for(asyncio.shield(self.connected), timeout)
+            except (asyncio.TimeoutError, asyncio.CancelledError):
+                raise ClientDisconnected
+            result = method(*args)
         else:
-            future.set_exception(ClientDisconnected())
+            raise ClientDisconnected
+        return await result if asyncio.isfuture(result) else result
 
-    def _when_ready(self, func, result_future, *args):
+    async def close_co(self):
+        self.close()
 
-        if self.ready is None:
-            # We started without waiting for a connection. (prob tests :( )
-            result_future.set_exception(ClientDisconnected("never connected"))
-        else:
-            @self.connected.add_done_callback
-            def done(future):
-                e = future.exception()
-                if e is not None:
-                    future.set_exception(e)
-                else:
-                    if self.ready:
-                        func(result_future, *args)
-                    else:
-                        self._when_ready(func, result_future, *args)
+    async def new_addrs_co(self, addrs):
+        self.addrs = addrs
+        if self.trying_to_connect():
+            self.disconnected(None)
 
-    def call_threadsafe(self, future, wait_ready, method, args):
-        if self.ready:
-            self.protocol.call(future, method, args)
-        elif wait_ready:
-            self._when_ready(
-                self.call_threadsafe, future, wait_ready, method, args)
-        else:
-            future.set_exception(ClientDisconnected())
 
     # Special methods because they update the cache.
 
-    @future_generator
-    def load_before_threadsafe(self, future, wait_ready, oid, tid):
+    def _load_before(self, oid, tid):
+        """helper to delay protocol access until readyness."""
+        return self.protocol.load_before(oid, tid)
+
+    async def load_before_co(self, timeout, oid, tid):
         data = self.cache.loadBefore(oid, tid)
         if data is not None:
-            future.set_result(data)
+            return data
         elif self.ready:
-            try:
-                data = yield self.protocol.load_before(oid, tid)
-            except Exception as exc:
-                future.set_exception(exc)
-            else:
-                future.set_result(data)
-        elif wait_ready:
-            self._when_ready(
-                self.load_before_threadsafe, future, wait_ready, oid, tid)
+            future = self.protocol.load_before(oid, tid)
+        elif timeout:
+            future = self.call_with_timeout_co(timeout,
+                self._load_before, (oid, tid))
         else:
-            future.set_exception(ClientDisconnected())
+            raise ClientDisconnected
+        data = await future
+        if data:
+            state, start, end = data
+            self.cache.store(oid, start, end, state)
+        return data
 
-    @future_generator
-    def _prefetch(self, oid, tid):
+    async def prefetch_co(self, oids, tid):
+        for oid in oids:
+            try:
+                await self.load_before_co(0, oid, tid)
+            except ClientDisconnected:
+                return
+            except Exception:
+                logger.exception("Exception for prefetch `%r` `%r`", oid, tid)
+
+    async def tpc_finish_co(self, tid, updates, f):
+        if not self.ready:
+            raise ClientDisconnected
         try:
-            yield self.protocol.load_before(oid, tid)
-        except Exception:
-            logger.exception("prefetch %r %r" % (oid, tid))
+            tid = await self.protocol.call_sync('tpc_finish', tid)
+            cache = self.cache
+            # The cache invalidation here and that in
+            # ``invalidateTransaction`` are both performed
+            # in the IO thread. Thus there is no interference.
+            # Other threads might observe a partially invalidated
+            # cache. However, regular loads will access
+            # object state before ``tid``; therefore,
+            # partial invalidation for ``tid`` should not harm.
+            for oid, data, resolved in updates:
+                cache.invalidate(oid, tid)
+                if data and not resolved:
+                    cache.store(oid, tid, None, data)
+            # ZODB >= 5.6 requires that ``lastTransaction`` changes
+            # only after invalidation processing (performed in
+            # the ``f`` call below) (for ``ZEO``, ``lastTransaction``
+            # is implemented as ``cache.getLastTid()``).
+            # Some tests involve ``f`` in the verification that
+            # ``tpc_finish`` modifies ``lastTransaction`` and require
+            # that ``cache.setLastTid`` is called before ``f``.
+            # We use locking below to ensure that the
+            # effect of ``setLastTid`` is observable by other
+            # threads only after ``f`` has been called.
+            with cache._lock:
+                cache.setLastTid(tid)
+                f(tid)
+            return tid
+        except Exception as exc:
+            # At this point, our cache is in an inconsistent
+            # state.  We need to reconnect in hopes of
+            # recovering to a consistent state.
+            self.protocol.close()
+            self.disconnected(self.protocol)
+            raise
 
-    def prefetch(self, future, wait_ready, oids, tid):
-        if self.ready:
-            for oid in oids:
-                if self.cache.loadBefore(oid, tid) is None:
-                    self._prefetch(oid, tid)
-
-            future.set_result(None)
-        else:
-            future.set_exception(ClientDisconnected())
-
-    @future_generator
-    def tpc_finish_threadsafe(self, future, wait_ready, tid, updates, f):
-        if self.ready:
-            try:
-                tid = yield self.protocol.fut('tpc_finish', tid)
-                cache = self.cache
-                # The cache invalidation here and that in
-                # ``invalidateTransaction`` are both performed
-                # in the IO thread. Thus there is no interference.
-                # Other threads might observe a partially invalidated
-                # cache. However, regular loads will access
-                # object state before ``tid``; therefore,
-                # partial invalidation for ``tid`` should not harm.
-                for oid, data, resolved in updates:
-                    cache.invalidate(oid, tid)
-                    if data and not resolved:
-                        cache.store(oid, tid, None, data)
-                # ZODB >= 5.6 requires that ``lastTransaction`` changes
-                # only after invalidation processing (performed in
-                # the ``f`` call below) (for ``ZEO``, ``lastTransaction``
-                # is implemented as ``cache.getLastTid()``).
-                # Some tests involve ``f`` in the verification that
-                # ``tpc_finish`` modifies ``lastTransaction`` and require
-                # that ``cache.setLastTid`` is called before ``f``.
-                # We use locking below to ensure that the
-                # effect of ``setLastTid`` is observable by other
-                # threads only after ``f`` has been called.
-                with cache._lock:
-                    cache.setLastTid(tid)
-                    f(tid)
-                future.set_result(tid)
-            except Exception as exc:
-                future.set_exception(exc)
-
-                # At this point, our cache is in an inconsistent
-                # state.  We need to reconnect in hopes of
-                # recovering to a consistent state.
-                self.protocol.close()
-                self.disconnected(self.protocol)
-        else:
-            future.set_exception(ClientDisconnected())
-
-    def close_threadsafe(self, future, _):
-        self.close()
-        future.set_result(None)
-
+    # server callbacks
     def invalidateTransaction(self, tid, oids):
-        if self.ready:
-            # see the cache related comment in ``tpc_finish_threadsafe``
-            # why we think that locking is not necessary at this place
-            for oid in oids:
-                self.cache.invalidate(oid, tid)
-            self.client.invalidateTransaction(tid, oids)
-            self.cache.setLastTid(tid)
-        else:
-            self.verify_invalidation_queue.append((tid, oids))
+        # see the cache related comment in ``tpc_finish_threadsafe``
+        # why we think that locking is not necessary at this place
+        for oid in oids:
+            self.cache.invalidate(oid, tid)
+        self.client.invalidateTransaction(tid, oids)
+        self.cache.setLastTid(tid)
 
     def serialnos(self, serials):
         # Method called by ZEO4 storage servers.
@@ -729,15 +704,9 @@ class Client(object):
         return self.protocol.protocol_version
 
     def is_read_only(self):
-        try:
-            protocol = self.protocol
-        except AttributeError:
-            return self.read_only
-        else:
-            if protocol is None:
-                return self.read_only
-            else:
-                return protocol.read_only
+        protocol = self.protocol
+        return self.read_only if protocol is None else protocol.read_only
+
 
 class ClientRunner(object):
 
@@ -751,109 +720,93 @@ class ClientRunner(object):
 
     def setup_delegation(self, loop):
         self.loop = loop
-        self.client = Client(loop, *self.__args, **self.__kwargs)
-        self.call_threadsafe = self.client.call_threadsafe
-        self.call_async_threadsafe = self.client.call_async_threadsafe
+        self.client = client = ClientIo(loop, *self.__args, **self.__kwargs)
+        self.call_with_timeout = call_with_timeout = client.call_with_timeout_co
+        self.call_sync = client.call_sync
+        self.call_async = client.call_async
+        self.call_async_iter = client.call_async_iter
+        run_coroutine = asyncio.run_coroutine_threadsafe
 
-        from concurrent.futures import Future
-        call_soon_threadsafe = loop.call_soon_threadsafe
+        def call(meth, *args,
+                 timeout=self.timeout, indirect=True, wait=True):
+            """call coroutine function *meth* with arguments *args*.
 
-        def call(meth, *args, **kw):
-            timeout = kw.pop('timeout', None)
-            assert not kw
+            If *indirect*, make the call indirectly via ``call_with_timeout``.
+            If *wait*, return the result otherwise the future.
+            """
+            if indirect:
+                args = timeout, meth, args
+                meth = call_with_timeout
+            future = run_coroutine(meth(*args), loop)
+            return future.result() if wait else future
 
-            # Some explanation of the code below.
-            # Timeouts on Python 2 are expensive, so we try to avoid
-            # them if we're connected.  The 3rd argument below is a
-            # wait flag.  If false, and we're disconnected, we fail
-            # immediately. If that happens, then we try again with the
-            # wait flag set to True and wait with the default timeout.
-            result = Future()
-            call_soon_threadsafe(meth, result, timeout is not None, *args)
-            try:
-                return self.wait_for_result(result, timeout)
-            except ClientDisconnected:
-                if timeout is None:
-                    result = Future()
-                    call_soon_threadsafe(meth, result, True, *args)
-                    return self.wait_for_result(result, self.timeout)
-                else:
-                    raise
-
-        self.__call = call
-
-    def wait_for_result(self, future, timeout):
-        try:
-            return future.result(timeout)
-        except concurrent.futures.TimeoutError:
-            if not self.client.ready:
-                raise ClientDisconnected("timed out waiting for connection")
-            else:
-                raise
+        self._call_ = call  # creates reference cycle
 
     def call(self, method, *args, **kw):
-        return self.__call(self.call_threadsafe, method, args, **kw)
+        """call method named *method* with *args*.
 
-    def call_future(self, method, *args):
-        # for tests
-        result = concurrent.futures.Future()
-        self.loop.call_soon_threadsafe(
-            self.call_threadsafe, result, True, method, args)
-        return result
+        Supported keywords:
+
+          wait
+             false means return future rather than wait for result
+             default: ``True``
+
+          timeout
+             wait at most this long for readyness
+             ``None`` is replaced by ``self.timeout`` (usually 30s)
+             default: ``None``
+        """
+        return self._call_(self.call_sync, method, *args, **kw)
 
     def async_(self, method, *args):
-        return self.__call(self.call_async_threadsafe, method, args)
+        """call method named *method* with *args* asynchronously."""
+        return self._call_(self.call_async, method, *args, timeout=0)
 
     def async_iter(self, it):
-        return self.__call(self.client.call_async_iter_threadsafe, it)
+        return self._call_(self.call_async_iter, it, timeout=0)
 
     def prefetch(self, oids, tid):
-        return self.__call(self.client.prefetch, oids, tid)
+        return self._call_(self.client.prefetch_co, oids, tid,
+                           indirect=False, wait=False)
 
     def load_before(self, oid, tid):
-        return self.__call(self.client.load_before_threadsafe, oid, tid)
+        return self._call_(self.client.load_before_co, self.timeout, oid, tid, indirect=False)
 
-    def tpc_finish(self, tid, updates, f):
-        return self.__call(self.client.tpc_finish_threadsafe, tid, updates, f)
+    def tpc_finish(self, tid, updates, f, **kw):
+        # ``kw`` for test only; supported ``wait``
+        return self._call_(self.client.tpc_finish_co, tid, updates, f,
+                           indirect=False, **kw)
 
     def is_connected(self):
         return self.client.ready
 
     def is_read_only(self):
-        try:
-            protocol = self.client.protocol
-        except AttributeError:
+        protocol = self.client.protocol
+        if protocol is None:
             return True
-        else:
-            if protocol is None:
-                return True
-            else:
-                return protocol.read_only
+        return protocol.read_only
 
     def close(self):
-        self.__call(self.client.close_threadsafe)
+        self._call_(self.client.close_co, indirect=False, wait=True)
+        self._call_ = self._call_after_closure  # break cycle
 
-        # Short circuit from now on. We're closed.
-        def call_closed(*a, **k):
-            raise ClientDisconnected('closed')
-
-        self.__call = call_closed
-
-    def apply_threadsafe(self, future, wait_ready, func, *args):
-        try:
-            future.set_result(func(*args))
-        except Exception as exc:
-            future.set_exception(exc)
+    def _call_after_closure(*args, **kw):
+        """auxiliary method to be used as `_call_` after closure."""
+        raise ClientDisconnected('closed')
 
     def new_addrs(self, addrs):
         # This usually doesn't have an immediate effect, since the
         # addrs aren't used until the client disconnects.xs
-        self.__call(self.apply_threadsafe, self.client.new_addrs, addrs)
+        return self._call_(self.client.new_addrs_co, addrs, indirect=False)
 
     def wait(self, timeout=None):
-        if timeout is None:
-            timeout = self.timeout
-        self.wait_for_result(self.client.connected, timeout)
+        """wait for readyness"""
+        def noop():
+            return
+        return self._call_(self.client.call_with_timeout_co,
+                           timeout or self.timeout, noop, (), True,
+                           indirect=False)
+
 
 class ClientThread(ClientRunner):
     """Thread wrapper for client interface
@@ -866,16 +819,16 @@ class ClientThread(ClientRunner):
     def __init__(self, addrs, client, cache,
                  storage_key='1', read_only=False, timeout=30,
                  disconnect_poll=1, ssl=None, ssl_server_hostname=None,
-                 credentials=None):
+                ):
         self.set_options(addrs, client, cache, storage_key, read_only,
                          timeout, disconnect_poll,
                          ssl=ssl, ssl_server_hostname=ssl_server_hostname,
-                         credentials=credentials)
+                         )
         self.thread = threading.Thread(
-            target=self.run,
+            target=self.run_io_thread,
             name="%s zeo client networking thread" % client.__name__,
             )
-        self.thread.setDaemon(True)
+        self.thread.daemon = True
         self.started = threading.Event()
         self.thread.start()
         self.started.wait()
@@ -883,23 +836,30 @@ class ClientThread(ClientRunner):
             raise self.exception
 
     exception = None
-    def run(self):
+    def run_io_thread(self):
         loop = None
         try:
             loop = new_event_loop()
+            asyncio.set_event_loop(loop)
             self.setup_delegation(loop)
             self.started.set()
             loop.run_forever()
         except Exception as exc:
-            raise
             logger.exception("Client thread")
             self.exception = exc
+            self.started.set()
         finally:
             if not self.closed:
                 self.closed = True
+                # we would like to close the lower
+                # layers - but for this a running loop
+                # is necessary
+                # Therefore, we just patch up the state a bit
+                # to prevent deadlocks and notify the storage.
+                self._call_ = self._call_after_closure  # break cycle
                 try:
                     if self.client.ready:
-                        self.client.ready = False
+                        self.client.ready = None
                         self.client.client.notify_disconnected()
                 except AttributeError:
                     pass
@@ -912,35 +872,8 @@ class ClientThread(ClientRunner):
     def close(self):
         if not self.closed:
             self.closed = True
-            super(ClientThread, self).close()
+            super().close()
             self.loop.call_soon_threadsafe(self.loop.stop)
             self.thread.join(9)
             if self.exception:
                 raise self.exception
-
-class Fut(object):
-    """Lightweight future that calls it's callbacks immediately rather than soon
-    """
-
-    def __init__(self):
-        self.cbv = []
-
-    def add_done_callback(self, cb):
-        self.cbv.append(cb)
-
-    exc = None
-    def set_exception(self, exc):
-        self.exc = exc
-        for cb in self.cbv:
-            cb(self)
-
-    def set_result(self, result):
-        self._result = result
-        for cb in self.cbv:
-            cb(self)
-
-    def result(self):
-        if self.exc:
-            raise self.exc
-        else:
-            return self._result

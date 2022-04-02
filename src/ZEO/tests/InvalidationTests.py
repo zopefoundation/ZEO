@@ -323,9 +323,9 @@ class InvalidationTests(object):
             t.cleanup(10)
 
     def checkConcurrentUpdates2Storages_emulated(self):
-        self._storage = storage1 = self.openClientStorage()
+        self._storage = storage1 = self.openClientStorage(client_label="1")
         db1 = DB(storage1)
-        storage2 = self.openClientStorage()
+        storage2 = self.openClientStorage(client_label="2")
         db2 = DB(storage2)
 
         cn = db1.open()

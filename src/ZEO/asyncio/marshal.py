@@ -21,10 +21,9 @@ Python-independent format, or possibly a minimal pickle subset.
 
 import logging
 
-from .._compat import Unpickler, Pickler, BytesIO, PY3, PYPY
+from .._compat import Unpickler, Pickler, BytesIO, PYPY
 from ..shortrepr import short_repr
 
-PY2 = not PY3
 logger = logging.getLogger(__name__)
 
 def encoder(protocol, server=False):
@@ -143,7 +142,7 @@ def find_global(module, name):
     except AttributeError:
         raise ImportError("module %s has no global %s" % (module, name))
 
-    safe = getattr(r, '__no_side_effects__', 0) or (PY2 and module in _SAFE_MODULE_NAMES)
+    safe = getattr(r, '__no_side_effects__', 0)
     if safe:
         return r
 

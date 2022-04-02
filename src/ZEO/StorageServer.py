@@ -37,7 +37,7 @@ import ZODB.TimeStamp
 import zope.interface
 import six
 
-from ZEO._compat import Pickler, Unpickler, PY3, BytesIO
+from ZEO._compat import Pickler, Unpickler, BytesIO
 from ZEO.Exceptions import AuthError
 from ZEO.monitor import StorageStats
 from ZEO.asyncio.server import Delay, MTDelay, Result
@@ -623,6 +623,7 @@ class ZEOStorage(object):
     def ping(self):
         pass
 
+
 class StorageServerDB(object):
     """Adapter from StorageServerDB to ZODB.interfaces.IStorageWrapper
 
@@ -949,9 +950,8 @@ class StorageServer(object):
         status['timeout-thread-is-alive'] = lock_manager.timeout.is_alive()
         last_transaction = self.storages[storage_id].lastTransaction()
         last_transaction_hex = codecs.encode(last_transaction, 'hex_codec')
-        if PY3:
-            # doctests and maybe clients expect a str, not bytes
-            last_transaction_hex = str(last_transaction_hex, 'ascii')
+        # doctests and maybe clients expect a str, not bytes
+        last_transaction_hex = str(last_transaction_hex, 'ascii')
         status['last-transaction'] = last_transaction_hex
         return status
 

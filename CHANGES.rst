@@ -1,7 +1,47 @@
 Changelog
 =========
 
+6.0 (unreleased)
+----------------
+
+- Drop Python 2 support
+
+- Reimplement and streamline the ``asyncio`` part of the ``ClientStorage``
+  implementation:
+   - switch from futures with explicit callbacks to `async/await` style
+   - use standard ``asyncio`` features to implement timeouts
+   - redesign the API of the class implementing the ZEO client protocol
+   - significantly improve source documentation
+
+- Drop credentials support: the corresponding ``ClientStorage.__init__``
+  parameters (i.e. ``credentials``, ``username``, ``password``)
+  are retained but ignored.
+  Note: the ZEO 5 server never supported credentials; the feature
+  has previously been retained for the use case
+  "ZEO 5 client with ZEO 4 server".
+
+
 5.3.1 (unreleased)
+------------------
+
+- Add ``ConflictError`` to the list of unlogged server exceptions
+  (the client/its application should determine whether it wants
+  them logged).
+
+  Prevent ``no current transaction: tpc_abort()`` server log entries.
+  The storage API allows ``tpc_abort`` to be called with an
+  invalid transaction (the call should be ignored in this case)
+  and the server's ``tpc_vote`` relies on this.
+
+  Change the server's log message label for request exceptions
+  from ``Bad request ...`` to ``... raised exception:``,
+  hinting towards a server rather than client problem.
+
+  See `issue 156 <https://github.com/zopefoundation/ZEO/issues/156>`_.
+
+
+
+5.3.0 (2022-03-24)
 ------------------
 
 - Add ``ConflictError`` to the list of unlogged server exceptions
@@ -105,7 +145,7 @@ Changelog
 
 - Fixed to work with some changes made in ZODB 5.4.0.
 
-  Client-side updates are incuded for ZODB 5.4.0 or databases that
+  Client-side updates are included for ZODB 5.4.0 or databases that
   already had ``zodbpickle.binary`` OIDs. See `issue 113
   <https://github.com/zopefoundation/ZEO/issues/113>`_.
 

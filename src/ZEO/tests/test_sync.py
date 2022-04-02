@@ -39,11 +39,11 @@ class SyncTests(setupstack.TestCase):
         self.assertEqual(self.__ping_calls, 0)
         c.close()
 
-        # But if we pass server_sync:
+        # If we pass ``server_sync:``, it is ignored
         c = client(addr, server_sync=True)
         self.instrument()
         c.sync()
-        self.assertEqual(self.__ping_calls, 1)
+        self.assertEqual(self.__ping_calls, 0)
         c.close()
 
         stop()

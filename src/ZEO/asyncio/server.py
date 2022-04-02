@@ -1,3 +1,5 @@
+"""ZEO server interface implementation."""
+
 import json
 import logging
 import os
@@ -13,13 +15,12 @@ from . import base
 from .compat import asyncio, new_event_loop
 from .marshal import server_decoder, encoder, reduce_exception
 
-class ServerProtocol(base.Protocol):
+class ServerProtocol(base.ZEOBaseProtocol):
     """asyncio low-level ZEO server interface
     """
 
     protocols = (b'5', )
 
-    name = 'server protocol'
     methods = set(('register', ))
 
     unlogged_exception_types = (
@@ -31,7 +32,8 @@ class ServerProtocol(base.Protocol):
     def __init__(self, loop, addr, zeo_storage, msgpack):
         """Create a server's client interface
         """
-        super(ServerProtocol, self).__init__(loop, addr)
+        self.addr = addr
+        super(ServerProtocol, self).__init__(loop, repr(addr))
         self.zeo_storage = zeo_storage
 
         self.announce_protocol = (
@@ -50,9 +52,10 @@ class ServerProtocol(base.Protocol):
     def connection_made(self, transport):
         self.connected = True
         super(ServerProtocol, self).connection_made(transport)
-        self._write(self.announce_protocol)
+        self.write_message(self.announce_protocol)
 
     def connection_lost(self, exc):
+        super().connection_lost(exc)
         self.connected = False
         if exc:
             logger.error("Disconnected %s:%s", exc.__class__.__name__, exc)
@@ -62,9 +65,9 @@ class ServerProtocol(base.Protocol):
     def stop(self):
         pass # Might be replaced when running a thread per client
 
-    def finish_connect(self, protocol_version):
+    def finish_connection(self, protocol_version):
         if protocol_version == b'ruok':
-            self._write(json.dumps(self.zeo_storage.ruok()).encode("ascii"))
+            self.write_message(json.dumps(self.zeo_storage.ruok()).encode("ascii"))
             self.close()
         else:
             version = protocol_version[1:]
@@ -131,7 +134,7 @@ class ServerProtocol(base.Protocol):
                         ValueError("Couldn't pickle response"),
                         True)
 
-        self._write(result)
+        self.write_message(result)
 
     def send_reply_threadsafe(self, message_id, result):
         self.loop.call_soon_threadsafe(self.reply, message_id, result)
@@ -154,7 +157,7 @@ assert best_protocol_version in ServerProtocol.protocols
 
 def new_connection(loop, addr, socket, zeo_storage, msgpack):
     protocol = ServerProtocol(loop, addr, zeo_storage, msgpack)
-    cr = loop.create_connection((lambda : protocol), sock=socket)
+    cr = loop.create_connection(lambda: protocol, sock=socket)
     asyncio.ensure_future(cr, loop=loop)
 
 class Delay(object):

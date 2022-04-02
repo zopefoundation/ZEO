@@ -17,9 +17,9 @@ import multiprocessing
 import re
 
 from ZEO.ClientStorage import ClientStorage
+from ZEO.Exceptions import ClientDisconnected
 from ZEO.tests import forker, Cache, CommitLockTests, ThreadTests
 from ZEO.tests import IterationTests
-from ZEO._compat import PY3
 from ZEO._compat import WIN
 
 from ZODB.Connection import TransactionMetaData
@@ -587,6 +587,7 @@ class ZRPCConnectionTests(ZEO.tests.ConnectionTests.CommonSetupTearDown):
         log = str(handler)
         handler.uninstall()
         self.assertTrue("Client loop stopped unexpectedly" in log)
+        self.assertRaises(ClientDisconnected, self._storage.ping)
 
     def checkExceptionLogsAtError(self):
         # Test the exceptions are logged at error
@@ -1102,7 +1103,7 @@ def test_prefetch(self):
     But it is filled eventually:
 
     >>> from zope.testing.wait import wait
-    >>> wait(lambda : len(storage._cache) > count)
+    >>> wait((lambda : len(storage._cache) >= count), 2)
 
     >>> loads = storage.server_status()['loads']
 
@@ -1237,17 +1238,26 @@ def runzeo_without_configfile():
     ...     )
     >>> proc.wait()
     0
-    >>> print(re.sub(br'\d\d+|[:]', b'', proc.stdout.read()).decode('ascii'))
-    ... # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+
+    # Note: the heuristic to determine the "instance home" can fail
+    # causing an initial error message in the process output.
+    # We check for this and remove it in this case.
+    >>> output = re.sub(br'\d\d+|[:]', b'', proc.stdout.read()).decode('ascii')
+    >>> if "ERROR" in output.splitlines()[1]:
+    ...    output = "\n".join(output.splitlines()[2:])
+    >>> print(output) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     ------
     --T INFO ZEO.runzeo () opening storage '1' using FileStorage
     ------
     --T INFO ZEO.StorageServer StorageServer created RW with storages 1RWt
+    ...
     ------
     --T INFO ZEO.asyncio... listening on ...
     testing exit immediately
     ------
     --T INFO ZEO.StorageServer closing storage '1'
+    <BLANKLINE>
+    
     >>> proc.stdout.close()
     """
 
@@ -1776,9 +1786,8 @@ def test_suite():
         (re.compile("u('.*?')"), r"\1"),
         (re.compile('u(".*?")'), r"\1")
         ]
-    if not PY3:
-        patterns.append((re.compile("^'(blob[^']*)'"), r"b'\1'"))
-        patterns.append((re.compile("^'Z308'"), "b'Z308'"))
+    patterns.append((re.compile("^'(blob[^']*)'"), r"b'\1'"))
+    patterns.append((re.compile("^'Z308'"), "b'Z308'"))
     zeo.addTest(doctest.DocTestSuite(
         setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
         checker=renormalizing.RENormalizing(patterns),

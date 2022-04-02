@@ -1,17 +1,6 @@
-from .._compat import PY3
-
-if PY3:
-    import asyncio
-    def to_byte(i):
-        return bytes([i])
-else:
-    import trollius as asyncio
-    def to_byte(b):
-        return b
-
+import asyncio
 from zope.testing import setupstack
-from concurrent.futures import Future
-import mock
+from unittest import mock
 from ZODB.POSException import ReadOnlyError
 from ZODB.utils import maxtid, RLock
 
@@ -19,16 +8,23 @@ import collections
 import logging
 import struct
 import unittest
+from functools import partial
+from time import sleep
 
 from ..Exceptions import ClientDisconnected, ProtocolError
 
-from .base import Protocol
-from .testing import Loop
-from .client import ClientRunner, Fallback
+from .base import ZEOBaseProtocol, SizedMessageProtocol
+from .testing import Loop, FaithfulLoop
+from .client import ClientThread, Fallback
 from .server import new_connection, best_protocol_version
 from .marshal import encoder, decoder
 
+
+logger = logging.getLogger(__name__)
+
+
 class Base(object):
+    DELAY = 0.01  # time (s) to allow the loop to execute
 
     enc = b'Z'
     seq_type = list
@@ -74,34 +70,107 @@ class Base(object):
         if no_output:
             self.assertFalse(self.loop.transport.pop())
 
+    def wait_loop(self):
+        """give the loop the chance to run."""
+        sleep(self.DELAY)
+
     def pop(self, count=None, parse=True):
+        self.wait_loop()
+        self.assertEqual(self.loop.exceptions, [])
         return self.unsized(self.loop.transport.pop(count), parse)
 
-class ClientTests(Base, setupstack.TestCase, ClientRunner):
+
+class TestClientThread(ClientThread):
+    """For the ``async/await`` client implementation we need
+    a (mostly) standard ``asyncio`` event loop and it must be run
+    in a sepearte thread (because this implementation is no longer
+    based on callbacks but uses true coroutines).
+
+    We use a ``ClientThread`` variant which allows to specify
+    the loop to be used.
+    """
+
+    def run_io_thread(self):
+        loop = self.loop
+        try:
+            asyncio.set_event_loop(loop)
+            self.setup_delegation(loop)
+            self.started.set()
+            loop.run_forever()
+        except Exception as exc:
+            raise
+            logger.exception("Client thread")
+            self.exception = exc
+        finally:
+            if not self.closed:
+                self.closed = True
+                try:
+                    if self.client.ready:
+                        self.client.ready = False
+                        self.client.client.notify_disconnected()
+                    super().close()
+                except AttributeError:
+                    pass
+                logger.critical("Client loop stopped unexpectedly")
+            if loop is not None:
+                loop.close()
+            logger.debug('Stopping client thread')
+        
+
+class ClientTests(Base, setupstack.TestCase, TestClientThread):
 
     maxDiff = None
 
     def tearDown(self):
-        self.client.close()
-        super(ClientTests, self)
+        self.close()
+        self.future_mode = None
+        super(ClientTests, self).tearDown()
+
+    # For normal operation all (server) interface calls are synchronous:
+    # they wait for the result.
+    # However, we want to perform our tests without a real server;
+    # instead we emulate server responses (via ``respond``)
+    # and asynchronous server calls to us via ``send``.
+    # For this to work, interface calls must not wait for a result
+    # (which we ourselves often must produce).
+    # We achieve this by switching to "future mode":
+    # in this mode, the interface calls return futures representing
+    # the final result. We can call their ``result`` method to
+    # wait for their result
+    future_mode = None
+    def enter_future_mode(self):
+        if self.future_mode is None:
+            self.future_mode = self._call_
+            # switch for most interface calls to future mode
+            # exceptions are those that explicitly use ``wait=True`.
+            self._call_ = partial(self._call_, wait=False)
+
+    def exit_future_mode(self):
+        if self.future_mode is not None:
+            self._call_ = self.future_mode # back to synchronous mode
+            del self.future_mode
+
 
     def start(self,
               addrs=(('127.0.0.1', 8200), ), loop_addrs=None,
               read_only=False,
               finish_start=False,
+              future_mode = True,
               ):
         # To create a client, we need to specify an address, a client
         # object and a cache.
 
-        wrapper = mock.Mock()
+        wrapper = mock.Mock(__name__="__name__")
         self.target = wrapper
         cache = MemoryCache()
-        self.set_options(addrs, wrapper, cache, 'TEST', read_only, timeout=1)
-
         # We can also provide an event loop.  We'll use a testing loop
         # so we don't have to actually make any network connection.
-        loop = Loop(addrs if loop_addrs is None else loop_addrs)
-        self.setup_delegation(loop)
+        self.loop = loop = FaithfulLoop(
+            addrs if loop_addrs is None else loop_addrs,
+            wait=self.wait_loop)
+        TestClientThread.__init__(self,
+                                  addrs, wrapper, cache, 'TEST',
+                                  read_only, timeout=1)
         self.assertFalse(wrapper.notify_disconnected.called)
         protocol = loop.protocol
         transport = loop.transport
@@ -115,16 +184,34 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
             self.assertEqual(self.pop(), (3, False, 'get_info', ()))
             self.respond(3, dict(length=42))
 
+        if future_mode:
+            self.enter_future_mode()
         return (wrapper, cache, self.loop, self.client, protocol, transport)
 
-    def respond(self, message_id, result, async_=False):
-        self.loop.protocol.data_received(
-            sized(self.encode(message_id, async_, '.reply', result)))
+    def respond(self, message_id, result, async_=False,
+                check_exc=True, return_msg=False, protocol=None):
+        """emulate a server response."""
+        msg = sized(self.encode(message_id, async_, '.reply', result))
+        if return_msg:
+            return msg
+        if protocol is None:
+            protocol = self.loop.protocol
+        protocol.data_received(msg)
+        if check_exc:
+            self.assertEqual(self.loop.exceptions, [])
 
-    def wait_for_result(self, future, timeout):
-        if future.done() and future.exception() is not None:
-            raise future.exception()
-        return future
+    def server_async_call(self, method, *args,
+                          check_exc=True, return_msg=False):
+        msg = sized(self.encode(0, True, method, args))
+        if return_msg:
+            return msg
+        self.loop.protocol.data_received(msg)
+        if check_exc:
+            self.assertEqual(self.loop.exceptions, [])
+
+    def sync_call(self, meth, *args):
+        """call future returning *meth* with *args* and wait for result."""
+        return meth(*args).result(2)
 
     def testClientBasics(self):
 
@@ -156,7 +243,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         # connecting, we get an error. This is because some dufus
         # decided to create a client storage without waiting for it to
         # connect.
-        self.assertRaises(ClientDisconnected, self.call, 'foo', 1, 2)
+        self.assertRaises(ClientDisconnected, self.sync_call,
+                          self.call, 'foo', 1, 2)
 
         # When the client is reconnecting, it's ready flag is set to False and
         # it queues calls:
@@ -165,7 +253,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertFalse(f1.done())
 
         # If we try to make an async call, we get an immediate error:
-        self.assertRaises(ClientDisconnected, self.async_, 'bar', 3, 4)
+        self.assertRaises(ClientDisconnected, self.sync_call,
+                          self.async_, 'bar', 3, 4)
 
         # The wrapper object (ClientStorage) hasn't been notified:
         self.assertFalse(wrapper.notify_connected.called)
@@ -177,7 +266,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertEqual(self.pop(), (2, False, 'lastTransaction', ()))
 
         # We respond
-        self.respond(2, 'a'*8)
+        self.respond(2, b'a'*8)
 
         # After verification, the client requests info:
         self.assertEqual(self.pop(), (3, False, 'get_info', ()))
@@ -186,7 +275,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         # Now we're connected, the cache was initialized, and the
         # queued message has been sent:
         self.assertTrue(client.connected.done())
-        self.assertEqual(cache.getLastTid(), 'a'*8)
+        self.assertEqual(cache.getLastTid(), b'a'*8)
         self.assertEqual(self.pop(), (4, False, 'foo', (1, 2)))
 
         # The wrapper object (ClientStorage) has been notified:
@@ -196,8 +285,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertEqual(f1.result(), 42)
 
         # Now we can make async calls:
-        f2 = self.async_('bar', 3, 4)
-        self.assertTrue(f2.done() and f2.exception() is None)
+        self.async_('bar', 3, 4)
         self.assertEqual(self.pop(), (0, True, 'bar', (3, 4)))
 
         # Loading objects gets special handling to leverage the cache.
@@ -413,17 +501,18 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertEqual(sorted(loop.connecting), addrs)
 
         # We cause the first one to fail:
-        loop.fail_connecting(addrs[0])
+        loop.call_soon_threadsafe(loop.fail_connecting, addrs[0])
         self.assertEqual(sorted(loop.connecting), addrs[1:])
 
         # The failed connection is attempted in the future:
-        delay, func, args, _ = loop.later.pop(0)
+        delay, func, args, handle = loop.later.pop(0)
         self.assertTrue(1 <= delay <= 2)
-        func(*args)
+        handle.cancel()
+        loop.call_soon_threadsafe(func, *args)
         self.assertEqual(sorted(loop.connecting), addrs)
 
         # Let's connect the second address
-        loop.connect_connecting(addrs[1])
+        loop.call_soon_threadsafe(loop.connect_connecting, addrs[1])
         self.assertEqual(sorted(loop.connecting), addrs[:1])
         protocol = loop.protocol
         transport = loop.transport
@@ -435,7 +524,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         # because we're already connected.
         # (first in later is heartbeat)
         self.assertEqual(sorted(loop.later[1:]), [])
-        loop.fail_connecting(addrs[0])
+        loop.call_soon_threadsafe(loop.fail_connecting, addrs[0])
         self.assertEqual(sorted(loop.connecting), [])
         self.assertEqual(sorted(loop.later[1:]), [])
 
@@ -454,7 +543,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         delay, func, args, _ = loop.later.pop(1) # first in later is heartbeat
         self.assertTrue(8 < delay < 10)
         self.assertEqual(len(loop.later), 1) # first in later is heartbeat
-        func(*args) # connect again
+        self.loop.call_soon_threadsafe(func, *args) # connect again
         self.assertFalse(protocol is loop.protocol)
         self.assertFalse(transport is loop.transport)
         protocol = loop.protocol
@@ -477,7 +566,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertTrue(self.is_read_only())
 
         # We'll treat the first address as read-only and we'll let it connect:
-        loop.connect_connecting(addrs[0])
+        loop.call_soon_threadsafe(loop.connect_connecting, addrs[0])
         protocol, transport = loop.protocol, loop.transport
         protocol.data_received(sized(self.enc + b'3101'))
         self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'3101')
@@ -499,7 +588,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         # At this point, the client is ready and using the protocol,
         # and the protocol is read-only:
         self.assertTrue(client.ready)
-        self.assertEqual(client.protocol, protocol)
+        self.assertEqual(client.protocol, protocol._protocol)
         self.assertEqual(protocol.read_only, True)
         connected = client.connected
 
@@ -510,7 +599,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertTrue(connected.done())
 
         # We connect the second address:
-        loop.connect_connecting(addrs[1])
+        loop.call_soon_threadsafe(loop.connect_connecting, addrs[1])
         loop.protocol.data_received(sized(self.enc + b'3101'))
         self.assertEqual(self.unsized(loop.transport.pop(2)), self.enc + b'3101')
         self.assertEqual(self.parse(loop.transport.pop()),
@@ -529,8 +618,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         # Now, the original protocol is closed, and the client is
         # no-longer ready:
         self.assertFalse(client.ready)
-        self.assertFalse(client.protocol is protocol)
-        self.assertEqual(client.protocol, loop.protocol)
+        self.assertFalse(client.protocol is protocol._protocol)
+        self.assertEqual(client.protocol, loop.protocol._protocol)
         self.assertEqual(protocol.closed, True)
         self.assertTrue(client.connected is not connected)
         self.assertFalse(client.connected.done())
@@ -619,25 +708,15 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
             finish_start=True)
         self.assertEqual(client.get_peername(), '1.2.3.4')
 
-    def test_call_async_from_same_thread(self):
-        # There are a few (1?) cases where we call into client storage
-        # where it needs to call back asyncronously. Because we're
-        # calling from the same thread, we don't need to use a futurte.
-        wrapper, cache, loop, client, protocol, transport = self.start(
-            finish_start=True)
-
-        client.call_async_from_same_thread('foo', 1)
-        self.assertEqual(self.pop(), (0, True, 'foo', (1, )))
 
     def test_ClientDisconnected_on_call_timeout(self):
-        wrapper, cache, loop, client, protocol, transport = self.start()
-        self.wait_for_result = super(ClientTests, self).wait_for_result
+        wrapper, cache, loop, client, protocol, transport = self.start(future_mode=False)
         self.assertRaises(ClientDisconnected, self.call, 'foo')
         client.ready = False
         self.assertRaises(ClientDisconnected, self.call, 'foo')
 
     def test_errors_in_data_received(self):
-        # There was a bug in ZEO.async.client.Protocol.data_recieved
+        # There was a bug in ZEO.async.client.ZEOBaseProtocol.data_recieved
         # that caused it to fail badly if errors were raised while
         # handling data.
 
@@ -666,7 +745,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         wrapper.receiveBlobStop.assert_called_with('oid', 'serial')
 
     def test_heartbeat(self):
-        # Protocols run heartbeats on a configurable (sort of)
+        # ZEOBaseProtocols run heartbeats on a configurable (sort of)
         # heartbeat interval, which defaults to every 60 seconds.
         wrapper, cache, loop, client, protocol, transport = self.start(
             finish_start=True)
@@ -676,10 +755,10 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
             (delay, func, args, handle),
             (60, protocol.heartbeat, (), protocol.heartbeat_handle),
             )
-        self.assertFalse(loop.later or handle.cancelled)
+        self.assertFalse(loop.later or handle._cancelled)
 
         # The heartbeat function sends heartbeat data and reschedules itself.
-        func()
+        self.loop.call_soon_threadsafe(func)
         self.assertEqual(self.pop(), (-1, 0, '.reply', None))
         self.assertTrue(protocol.heartbeat_handle != handle)
 
@@ -688,15 +767,70 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
             (delay, func, args, handle),
             (60, protocol.heartbeat, (), protocol.heartbeat_handle),
             )
-        self.assertFalse(loop.later or handle.cancelled)
+        self.assertFalse(loop.later or handle._cancelled)
 
         # The heartbeat is cancelled when the protocol connection is lost:
         protocol.connection_lost(None)
-        self.assertTrue(handle.cancelled)
+        self.assertTrue(handle._cancelled)
+
+    def test_asyncall_doesnt_overtake_reply(self):
+        """verify that an asynchronous call after a reply does not
+        become effective before the reply."""
+        storage_mock, cache, loop, io, protocol, transport = self.start(
+            finish_start=True)
+        # our syncchronous call
+        f = self.tpc_finish(None, (), lambda *args: None, wait=False)
+        self.assertEqual(self.pop(), (4, False, "tpc_finish", (None,)))
+        # emulate the reply, followed by an asynchronous call
+        # of ``invalidateTransaction``.
+        # It is important that the two messages are delivered together
+        msg = self.respond(4, "b"*8, return_msg=True) + \
+              self.server_async_call("invalidateTransaction", "c"*8, (),
+                                     return_msg=True)
+        protocol.data_received(msg)
+        self.assertEqual(loop.exceptions, [])
+        f.result()  # no exception
+        self.assertEqual(cache.getLastTid(), "c"*8)
+
+    def test_serialized_registration(self):
+        addrs = [('1.2.3.4', 8200), ('2.2.3.4', 8200)]
+        wrapper, cache, loop, io, protocol, transport = self.start(
+            addrs, ())
+        # connect to the first address
+        loop.call_soon_threadsafe(loop.connect_connecting, addrs[0])
+        protocol_1 = loop.protocol
+        transport_1 = loop.transport
+        # connect to the second address
+        loop.call_soon_threadsafe(loop.connect_connecting, addrs[1])
+        protocol_2 = loop.protocol
+        transport_2 = loop.transport
+        # verify not locked
+        self.assertFalse(io.register_lock.locked())
+        # start the first protocol
+        protocol_1.data_received(sized(self.enc + b'3101'))
+        self.assertTrue(io.register_lock.locked())
+        self.assertEqual(self.unsized(transport_1.pop(2)), self.enc + b'3101')
+        self.assertEqual(len(transport_1.data), 2) # register call
+        # start the second protocol
+        protocol_2.data_received(sized(self.enc + b'3101'))
+        self.assertEqual(self.unsized(transport_2.pop(2)), self.enc + b'3101')
+        self.assertEqual(len(transport_2.data), 0)  # waits for lock
+        # finish first protocol connection
+        self.respond(1, None, protocol=protocol_1)  # register
+        self.respond(2, b"a"*8, protocol=protocol_1)  # lastTransaction
+        self.respond(3, {}, protocol=protocol_1)  # get_info
+        # the second protocol has got the lock but released it immediately
+        # because it was closed due to the accepted protocol 1
+        self.assertFalse(io.register_lock.locked())
+        self.assertTrue(protocol_2._protocol.closed)
+        self.assertTrue(io.ready)
+
 
 class MsgpackClientTests(ClientTests):
     enc = b'M'
     seq_type = tuple
+
+
 
 class MemoryCache(object):
 
@@ -750,6 +884,8 @@ class MemoryCache(object):
         return self.last_tid
 
     def setLastTid(self, tid):
+        if self.last_tid is not None and tid < self.last_tid:
+            raise ValueError("tids must increase")
         self.last_tid = tid
 
 
@@ -815,6 +951,9 @@ class ServerTests(Base, setupstack.TestCase):
         self.call('register', False, expect=None)
 
         # It does other things, like, send hearbeats:
+        # Note: the call below causes an internal exception in the ``msgpack``
+        # test because the message is not ``msgpack`` encoded.
+        # This will result in a log entry.
         protocol.data_received(sized(b'(J\xff\xff\xff\xffK\x00U\x06.replyNt.'))
 
         # The client can make async calls:
@@ -859,6 +998,7 @@ def response(*data):
 def sized(message):
     return struct.pack(">I", len(message)) + message
 
+
 class Logging(object):
 
     def __init__(self, level=logging.ERROR):
@@ -874,13 +1014,13 @@ class Logging(object):
         logging.getLogger().setLevel(logging.NOTSET)
 
 
-class ProtocolTests(setupstack.TestCase):
+class ZEOBaseProtocolTests(setupstack.TestCase):
 
     def setUp(self):
         self.loop = loop = Loop()
-        loop.create_connection(lambda: Protocol(loop, None), sock=True)
+        loop.create_connection(lambda: ZEOBaseProtocol(loop, "proto"), sock=True)
 
-    def test_writeit(self):
+    def test_write_message_iter(self):
         """test https://github.com/zopefoundation/ZEO/issues/150."""
         loop = self.loop
         protocol, transport = loop.protocol, loop.transport
@@ -888,19 +1028,51 @@ class ProtocolTests(setupstack.TestCase):
         def it(tag):
             yield tag
             yield tag
-        protocol._writeit(it(b"0"))
-        protocol._writeit(it(b"1"))
+        protocol.write_message_iter(it(b"0"))
+        protocol.write_message_iter(it(b"1"))
         for b in b"0011":
             l, t = transport.pop(2)
             self.assertEqual(l, b"\x00\x00\x00\x01")
             self.assertEqual(t, to_byte(b))
 
 
-def test_suite():
-    suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(ClientTests))
-    suite.addTest(unittest.makeSuite(ServerTests))
-    suite.addTest(unittest.makeSuite(MsgpackClientTests))
-    suite.addTest(unittest.makeSuite(MsgpackServerTests))
-    suite.addTest(unittest.makeSuite(ProtocolTests))
-    return suite
+class SizedMessageProtocolTests(setupstack.TestCase):
+    def setUp(self):
+        self.loop = loop = Loop()
+        self.received = received = []
+        loop.create_connection(
+            lambda: SizedMessageProtocol(loop, received.append), sock=True)
+        self.transport = loop.transport
+        self.protocol = loop.protocol
+
+    def test_sm_write_message(self):
+        protocol, transport = self.protocol, self.transport
+        for i in range(2):
+            protocol.write_message(to_byte(i))
+        for i in range(2):
+            l, b = transport.pop(2)
+            self.assertEqual(l, b"\x00\x00\x00\x01")
+            self.assertEqual(b, to_byte(i))
+        protocol.write_message(b"12")
+        l, m = transport.pop(2)
+        self.assertEqual(l, b"\x00\x00\x00\x02")
+        self.assertEqual(m, b"12")
+
+    def test_sm_write_iter(self):
+        protocol, transport = self.protocol, self.transport
+        protocol.write_message_iter(to_byte(b) for b in b"0123")
+        for b in b"0123":
+            l, t = transport.pop(2)
+            self.assertEqual(l, b"\x00\x00\x00\x01")
+            self.assertEqual(t, to_byte(b))
+
+    def test_sm_receive(self):
+        protocol = self.protocol
+        msgs = b"0 11 222".split()
+        for msg in msgs:
+            protocol.data_received(sized(msg))
+        self.assertEqual(self.received, msgs)
+
+
+def to_byte(i):
+    return bytes([i])

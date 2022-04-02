@@ -42,6 +42,14 @@ ZERO = '\0'*8
 
 class TestClientStorage(ClientStorage):
 
+    # most operations will wait for reconnection with
+    # ``wait_timeout`` (default: ``30``).
+    # This is bad for our tests: they will eventually succeed, but
+    # take a very long time. Use a timeout more adapted to tests.
+    __init__ = lambda *args, **kw: \
+        ClientStorage.__init__(*args,
+                               **(kw.update(dict(wait_timeout=0.5)) or kw))
+
     test_connection = False
 
     connection_count_for_tests = 0
@@ -79,7 +87,7 @@ class CommonSetupTearDown(StorageTestBase):
         for i in 1, 2, ...
         """
         self.__super_setUp()
-        logging.info("setUp() %s", self.id())
+        logger.info("setUp() %s", self.id())
         self.file = 'storage_conf'
         self._servers = []
         self.caches = []
@@ -92,7 +100,7 @@ class CommonSetupTearDown(StorageTestBase):
         if getattr(self, '_storage', None) is not None:
             self._storage.close()
             if hasattr(self._storage, 'cleanup'):
-                logging.debug("cleanup storage %s" %
+                logger.debug("cleanup storage %s" %
                          self._storage.__name__)
                 self._storage.cleanup()
         for stop in self._servers:
@@ -135,7 +143,8 @@ class CommonSetupTearDown(StorageTestBase):
 
     def openClientStorage(self, cache=None, cache_size=200000, wait=1,
                           read_only=0, read_only_fallback=0,
-                          username=None, password=None, realm=None):
+                          username=None, password=None, realm=None,
+                          client_label=None):
         if cache is None:
             cache = str(self.__class__.cache_id)
             self.__class__.cache_id += 1
@@ -148,6 +157,7 @@ class CommonSetupTearDown(StorageTestBase):
                                     min_disconnect_poll=0.1,
                                     read_only=read_only,
                                     read_only_fallback=read_only_fallback,
+                                    client_label=client_label,
                                     **self._client_options())
         storage.registerDB(DummyDB())
         return storage
@@ -168,7 +178,7 @@ class CommonSetupTearDown(StorageTestBase):
     def startServer(self, create=1, index=0, read_only=0, ro_svr=0, keep=None,
                     path=None, **kw):
         addr = self.addr[index]
-        logging.info("startServer(create=%d, index=%d, read_only=%d) @ %s" %
+        logger.info("startServer(create=%d, index=%d, read_only=%d) @ %s" %
                      (create, index, read_only, addr))
         if path is None:
             path = "%s.%d" % (self.file, index)
@@ -183,7 +193,7 @@ class CommonSetupTearDown(StorageTestBase):
             self.addr[index] = zeoport
 
     def shutdownServer(self, index=0):
-        logging.info("shutdownServer(index=%d) @ %s" %
+        logger.info("shutdownServer(index=%d) @ %s" %
                      (index, self._servers[index]))
         stop = self._servers[index]
         if stop is not None:
@@ -193,7 +203,7 @@ class CommonSetupTearDown(StorageTestBase):
     def pollUp(self, timeout=30.0, storage=None):
         if storage is None:
             storage = self._storage
-        storage.server_status()
+        storage.server_status(timeout=timeout)
 
     def pollDown(self, timeout=30.0):
         # Poll until we're disconnected.
@@ -437,7 +447,7 @@ class ConnectionTests(CommonSetupTearDown):
 
         def write():
             try:
-                self._storage._server.client.protocol._write(msg)
+                self._storage._server.client.protocol.write_message(msg)
             except Exception as exc:
                 future.set_exception(exc)
             else:
@@ -848,7 +858,7 @@ class ReconnectionTests(CommonSetupTearDown):
         self.pollDown()
         self._storage.verify_result = None
         perstorage.verify_result = None
-        logging.info('2ALLBEEF')
+        logger.info('2ALLBEEF')
         self.startServer(create=0, keep=0)
         self.pollUp()
         self.pollUp(storage=perstorage)
@@ -872,8 +882,16 @@ class ReconnectionTests(CommonSetupTearDown):
         with short_timeout(self):
             self.assertRaises(ClientDisconnected, self._storage.tpc_vote, txn)
         self.startServer(create=0)
+        # if we do not wait for reconnection,
+        # small timing variations in the reconnection process
+        # can cause occational ``ClientDisconnected`` exceptions
+        # making the test prone to race conditions.
+        # Of course, in real life the followup operations
+        # could happen while reconnecting but ``ClientDisconnected``
+        # would be a good in those cases
+        self.pollUp(2)  # await reconnection
         self._storage.tpc_abort(txn)
-        self._dostore()
+        self._dostore()  # stores in a new transaction
 
         # This test is supposed to cover the following error, although
         # I don't have much confidence that it does.  The likely
@@ -902,9 +920,9 @@ class ReconnectionTests(CommonSetupTearDown):
         oid = self._storage.new_oid()
         obj = MinPO(12)
         self._dostore(oid, data=obj)
-        logging.info("checkReconnection(): About to shutdown server")
+        logger.info("checkReconnection(): About to shutdown server")
         self.shutdownServer()
-        logging.info("checkReconnection(): About to restart server")
+        logger.info("checkReconnection(): About to restart server")
         self.startServer(create=0)
         forker.wait_until('reconnect', self._storage.is_connected)
         oid = self._storage.new_oid()
@@ -915,12 +933,12 @@ class ReconnectionTests(CommonSetupTearDown):
                 break
             except ClientDisconnected:
                 # Maybe the exception mess is better now
-                logging.info("checkReconnection(): Error after"
+                logger.info("checkReconnection(): Error after"
                              " server restart; retrying.", exc_info=True)
                 transaction.abort()
             # Give the other thread a chance to run.
             time.sleep(0.1)
-        logging.info("checkReconnection(): finished")
+        logger.info("checkReconnection(): finished")
         self._storage.close()
 
     def checkMultipleServers(self):

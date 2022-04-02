@@ -108,6 +108,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         This is typically invoked from a custom_zodb.py file.
 
         All arguments except addr should be keyword arguments.
+
         Arguments:
 
         addr
@@ -117,6 +118,20 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             a pathname string to signify a Unix domain socket
             connection.  A hostname may be a DNS name or a dotted IP
             address.  Required.
+
+            All addresses are assumed to serve (essentially)
+            the same (potentially replicated) storage.
+            A connection tries to connect to those addresses;
+            the first successful connection establishment with
+            the called for ("read_only" or "writable") capabilities
+            is selected and used for storage interaction until
+            the connection is lost. In that case, a
+            reconnection is tried.
+            If ``ClientStorage`` calls for the "writable" capability
+            but allows for a "read only" fallback,,
+            a read only connection can be used as a fallback;
+            if a writable connection becomes available later, a
+            switch to this connection is performed.
 
         storage
             The server storage name, defaulting to '1'.  The name must
@@ -132,14 +147,12 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             address and the server storage name.  This is used to
             construct the response to getName()
 
-        cache
-            A cache object or a name, relative to the current working
-            directory, used to construct persistent cache filenames.
-            Defaults to None, in which case the cache is not
-            persistent.  See ClientCache for more info.
-
         wait_timeout
-            Maximum time to wait for results, including connecting.
+            Maximum time (seconds) to wait for connections,
+            defaulting to 30.
+            Note: the timeout applies only to [re]connect.
+            Normal operations can take arbitrary long. This
+            is important for long running operations, such as ``pack``.
 
         read_only
             A flag indicating whether this should be a
@@ -160,7 +173,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         shared_blob_dir
             Flag whether the blob_dir is a server-shared filesystem
             that should be used instead of transferring blob data over
-            ZEO protocol.
+            the ZEO protocol.
 
         blob_cache_size
             Maximum size of the ZEO blob cache, in bytes.  If not set, then
@@ -170,7 +183,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             This option is ignored if shared_blob_dir is true.
 
         blob_cache_size_check
-            ZEO check size as percent of blob_cache_size.  The ZEO
+            Cache check size as percent of blob_cache_size.  The ZEO
             cache size will be checked when this many bytes have been
             loaded into the cache. Defaults to 10% of the blob cache
             size.   This option is ignored if shared_blob_dir is true.
@@ -178,13 +191,40 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         client_label
             A label to include in server log messages for the client.
 
-        Note that the authentication protocol is defined by the server
-        and is detected by the ClientStorage upon connecting (see
-        testConnection() and doAuth() for details).
+        cache
+            A cache object or a file path (relative or absolute).
+            Defaults to None, in which case the cache is determined
+            from client and var.
 
+        ssl
+            An ssl client context (i.e. with purpose "ServerAuth")
+            to call for SSL connections.
+
+        ssl_server_hostname
+            The server hostname - used during the SSL authentication check
+
+        client
+        var
+            If cache is None, client determines the cache:
+            if it is None, then a non persisent cache is used;
+            otherwie, client is used together with var (defaults
+            to the current working directory) to construct the
+            file path for the persistent cache file
+
+        wait
+            Wait for server connection, defaulting to true.
+
+        credentials
+        username
+        password
+        realm
+        disconnect_poll
+        min_disconnect_poll
+        max_disconnect_poll
+        drop_cache_rather_verify
+        server_sync
+            ignored; retained (as parameters) for compatibility
         """
-
-        assert not username or password or realm
 
         if isinstance(addr, int):
             addr = ('127.0.0.1', addr)
@@ -260,14 +300,11 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                 blob_cache_size * blob_cache_size_check // 100)
             self._check_blob_size()
 
-        self.server_sync = server_sync
-
         self._server = _client_factory(
             addr, self, cache, storage,
             ZEO.asyncio.client.Fallback if read_only_fallback else read_only,
             wait_timeout or 30,
             ssl = ssl, ssl_server_hostname=ssl_server_hostname,
-            credentials=credentials,
             )
         self._call = self._server.call
         self._async = self._server.async_
@@ -280,7 +317,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             try:
                 self._wait()
             except Exception:
-                # No point in keeping the server going of the storage
+                # No point in keeping the server going if the storage
                 # creation fails
                 self._server.close()
                 raise
@@ -368,8 +405,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         self._connection_generation += 1
 
         if self._client_label:
-            conn.call_async_from_same_thread(
-                'set_client_label', self._client_label)
+            conn.call_async('set_client_label', self._client_label)
 
         self._info.update(info)
 
@@ -386,12 +422,10 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                 zope.interface.alsoProvides(self, iface)
 
         if self.protocol_version[1:] >= b'5':
-            self.ping = lambda : self._call('ping')
+            self.ping = lambda : self._call('ping', timeout=0)
         else:
-            self.ping = lambda : self._call('lastTransaction')
+            self.ping = lambda : self._call('lastTransaction', timeout=0)
 
-        if self.server_sync:
-            self.sync = self.ping
 
     def set_server_addr(self, addr):
         # Normalize server address and convert to string
@@ -863,7 +897,10 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                 # wait a little while in hopes of reconnecting.  If
                 # we're able to reconnect and retry the transaction,
                 # ten it might succeed!
-                self._call('tpc_abort', id(txn), timeout=timeout)
+                if timeout is not None:
+                    self._call('tpc_abort', id(txn), timeout=timeout)
+                else:
+                    self._call('tpc_abort', id(txn))
             except ClientDisconnected:
                 logger.debug("%s ClientDisconnected in tpc_abort() ignored",
                              self.__name__)
@@ -1034,8 +1071,9 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                 return self._iterator_gc(True)
             self._iterator_ids -= iids
 
-    def server_status(self):
-        return self._call('server_status')
+    def server_status(self, **kw):
+        """supported keywords: ``timeout``."""
+        return self._call('server_status', **kw)
 
 class TransactionIterator(object):
 
