@@ -427,6 +427,7 @@ class ClientIO(object):
     # connect.
 
     protocol = None
+    protocols = ()
     # ready can have three values:
     #   None=Never connected
     #   True=connected
@@ -465,7 +466,6 @@ class ClientIO(object):
         for name in Protocol.client_delegated:
             setattr(self, name, getattr(client, name))
         self.cache = cache
-        self.protocols = ()
         self.register_lock = asyncio.Lock()
         self.closing_protocol_futures = set()  # closing futures
         self.disconnected(None)
