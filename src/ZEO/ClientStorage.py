@@ -255,10 +255,6 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         max_disconnect_poll
         drop_cache_rather_verify
             ignored; retained (as parameters) for compatibility
-
-        Note that the authentication protocol is defined by the server
-        and is detected by the ClientStorage upon connecting (see
-        testConnection() and doAuth() for details).
         """
 
         if isinstance(addr, int):
