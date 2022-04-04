@@ -11,7 +11,7 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-version = '5.3.1.dev0'
+version = '6.0.0.dev0'
 
 from setuptools import setup, find_packages
 import os
@@ -133,10 +133,6 @@ setup(name="ZEO",
           ],
           'msgpack': [
               'msgpack-python'
-          ],
-          ':python_version == "2.7"': [
-              'futures',
-              'trollius',
           ],
           'docs': [
               'Sphinx',
