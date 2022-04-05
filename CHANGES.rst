@@ -6,11 +6,26 @@ Changelog
 
 - Add support for Python 3.10.
 
+- Add ``ConflictError`` to the list of unlogged server exceptions
+  (the client/its application should determine whether it wants
+  them logged).
+
+  Prevent ``no current transaction: tpc_abort()`` server log entries.
+  The storage API allows ``tpc_abort`` to be called with an
+  invalid transaction (the call should be ignored in this case)
+  and the server's ``tpc_vote`` relies on this.
+
+  Change the server's log message label for request exceptions
+  from ``Bad request ...`` to ``... raised exception:``,
+  hinting towards a server rather than client problem.
+
+  See `issue 156 <https://github.com/zopefoundation/ZEO/issues/156>`_.
+
 
 5.3.0 (2022-03-24)
 ------------------
 
-- Remove tests for the `asyncio/mtacceptor` module, it appears unused
+- Remove tests for the ``asyncio/mtacceptor`` module, it appears unused
   and presents a maintenance burden. The module will be removed in
   ZEO version 6.
 
