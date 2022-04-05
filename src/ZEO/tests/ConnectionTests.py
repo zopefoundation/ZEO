@@ -884,7 +884,7 @@ class ReconnectionTests(CommonSetupTearDown):
         self.startServer(create=0)
         # if we do not wait for reconnection,
         # small timing variations in the reconnection process
-        # can cause occational ``ClientDisconnected`` exceptions
+        # can cause occasional ``ClientDisconnected`` exceptions
         # making the test prone to race conditions.
         # Of course, in real life the followup operations
         # could happen while reconnecting but ``ClientDisconnected``
