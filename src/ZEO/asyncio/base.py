@@ -122,3 +122,12 @@ class ZEOBaseProtocol(asyncio.Protocol):
     def _first_message(self, protocol_version):
         self.sm_protocol.set_receive(self.message_received)
         self.finish_connection(protocol_version)
+
+    # ``uvloop`` workaround
+    # We define ``data_received`` in ``connection_made``.
+    # ``uvloop``, however, caches ``protocol.data_received`` before
+    # it calls ``connection_made`` - at a consequence, data is not
+    # received
+    # The method below is overridden in ``connection_made``.
+    def data_received(self, data):
+        self.data_received(data)  # not an infinite loop, because overridden

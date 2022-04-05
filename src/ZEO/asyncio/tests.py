@@ -154,6 +154,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         # The client sends back a handshake, and registers the
         # storage, and requests the last transaction.
         self.assertEqual(self.pop(2, False), self.enc + b'5')
+        self.assertEqual(loop.exceptions, [])
         self.assertEqual(self.pop(), (1, False, 'register', ('TEST', False)))
 
         # The client isn't connected until it initializes it's cache:
