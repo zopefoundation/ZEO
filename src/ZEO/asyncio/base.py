@@ -113,6 +113,15 @@ class ZEOBaseProtocol(Protocol):
         self.sm_protocol.set_receive(self.message_received)
         self.finish_connection(protocol_version)
 
+    # ``uvloop`` workaround
+    # We define ``data_reveived`` in ``connection_made``.
+    # ``uvloop``, however, caches ``protocol.data_received`` before
+    # it calls ``connection_made`` - at a consequence, data is not
+    # received
+    # The method below is overridden in ``connection_made``.
+    def data_received(self, data):
+        self.data_received(data)  # not an infinite loop, because overridden
+
 
 class SizedMessageProtocol(Protocol):
     """asyncio protocol for the exchange of sized messages.
