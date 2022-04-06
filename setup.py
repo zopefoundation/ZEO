@@ -30,12 +30,16 @@ install_requires = [
 tests_require = [
     # We rely on implementation details of
     # test mocks. See https://github.com/zopefoundation/ZODB/pull/222
+    'ZConfig',
     'ZODB >= 5.5.1',
+    'ZopeUndo',
     'zope.testing',
     'manuel',
     'random2',
+    'transaction',
     'mock',
     'msgpack < 1',
+    'zdaemon',
     'zope.testrunner',
 ]
 
