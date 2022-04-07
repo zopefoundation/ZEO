@@ -433,7 +433,6 @@ class CircularCacheSimulation(Simulation):
             # Storing current revision.
             if oid in self.current:  # we already have it in cache
                 if evhit:
-                    import pdb; pdb.set_trace()
                     raise ValueError('WTF')
                 return
             self.current[oid] = start_tid
@@ -442,7 +441,6 @@ class CircularCacheSimulation(Simulation):
             self.add(oid, size, start_tid)
             return
         if evhit:
-            import pdb; pdb.set_trace()
             raise ValueError('WTF')
         # Storing non-current revision.
         L = self.noncurrent.setdefault(oid, [])
