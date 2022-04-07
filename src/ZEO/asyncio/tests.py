@@ -1,13 +1,9 @@
 from .._compat import PY3
 
 if PY3:
-    import asyncio
-
     def to_byte(i):
         return bytes([i])
 else:
-    import trollius as asyncio  # NOQA: F401 unused import
-
     def to_byte(b):
         return b
 

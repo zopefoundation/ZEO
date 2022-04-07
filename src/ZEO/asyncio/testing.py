@@ -1,9 +1,5 @@
-from .._compat import PY3
+from .compat import asyncio
 
-if PY3:
-    import asyncio
-else:
-    import trollius as asyncio
 
 try:
     ConnectionRefusedError
