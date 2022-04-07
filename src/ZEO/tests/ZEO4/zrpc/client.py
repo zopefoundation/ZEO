@@ -34,6 +34,7 @@ from six.moves import map
 def client_timeout():
     return 30.0
 
+
 def client_loop(map):
     read = asyncore.read
     write = asyncore.write
@@ -52,7 +53,7 @@ def client_loop(map):
                 r, w, e = select.select(r, w, e, client_timeout())
             except (select.error, RuntimeError) as err:
                 # Python >= 3.3 makes select.error an alias of OSError,
-                # which is not subscriptable but does have the 'errno' attribute
+                # which is not subscriptable but does have a 'errno' attribute
                 err_errno = getattr(err, 'errno', None) or err[0]
                 if err_errno != errno.EINTR:
                     if err_errno == errno.EBADF:
@@ -114,14 +115,13 @@ def client_loop(map):
                     continue
                 _exception(obj)
 
-        except:
+        except:  # NOQA: E722 bare except
             if map:
                 try:
                     logging.getLogger(__name__+'.client_loop').critical(
                         'A ZEO client loop failed.',
                         exc_info=sys.exc_info())
-                except:
-
+                except:  # NOQA: E722 bare except
                     pass
 
                 for fd, obj in map.items():
@@ -129,14 +129,14 @@ def client_loop(map):
                         continue
                     try:
                         obj.mgr.client.close()
-                    except:
+                    except:  # NOQA: E722 bare except
                         map.pop(fd, None)
                         try:
                             logging.getLogger(__name__+'.client_loop'
                                               ).critical(
                                 "Couldn't close a dispatcher.",
                                 exc_info=sys.exc_info())
-                        except:
+                        except:  # NOQA: E722 bare except
                             pass
 
 
@@ -152,11 +152,11 @@ class ConnectionManager(object):
         self.tmin = min(tmin, tmax)
         self.tmax = tmax
         self.cond = threading.Condition(threading.Lock())
-        self.connection = None # Protected by self.cond
+        self.connection = None  # Protected by self.cond
         self.closed = 0
         # If thread is not None, then there is a helper thread
         # attempting to connect.
-        self.thread = None # Protected by self.cond
+        self.thread = None  # Protected by self.cond
 
     def new_addrs(self, addrs):
         self.addrlist = self._parse_addrs(addrs)
@@ -189,7 +189,8 @@ class ConnectionManager(object):
             for addr in addrs:
                 addr_type = self._guess_type(addr)
                 if addr_type is None:
-                    raise ValueError("unknown address in list: %s" % repr(addr))
+                    raise ValueError(
+                            "unknown address in list: %s" % repr(addr))
                 addrlist.append((addr_type, addr))
             return addrlist
 
@@ -197,10 +198,10 @@ class ConnectionManager(object):
         if isinstance(addr, str):
             return socket.AF_UNIX
 
-        if (len(addr) == 2
-            and isinstance(addr[0], str)
-            and isinstance(addr[1], int)):
-            return socket.AF_INET # also denotes IPv6
+        if len(addr) == 2 and \
+           isinstance(addr[0], str) and \
+           isinstance(addr[1], int):
+            return socket.AF_INET  # also denotes IPv6
 
         # not anything I know about
         return None
@@ -226,7 +227,7 @@ class ConnectionManager(object):
             if obj is not self.trigger:
                 try:
                     obj.close()
-                except:
+                except:  # NOQA: E722 bare except
                     logging.getLogger(__name__+'.'+self.__class__.__name__
                                       ).critical(
                         "Couldn't close a dispatcher.",
@@ -237,7 +238,7 @@ class ConnectionManager(object):
         try:
             self.loop_thread.join(9)
         except RuntimeError:
-            pass # we are the thread :)
+            pass  # we are the thread :)
         self.trigger.close()
 
     def attempt_connect(self):
@@ -304,7 +305,7 @@ class ConnectionManager(object):
             self.connection = conn
             if preferred:
                 self.thread = None
-            self.cond.notifyAll() # Wake up connect(sync=1)
+            self.cond.notifyAll()  # Wake up connect(sync=1)
         finally:
             self.cond.release()
 
@@ -331,6 +332,7 @@ class ConnectionManager(object):
         finally:
             self.cond.release()
 
+
 # When trying to do a connect on a non-blocking socket, some outcomes
 # are expected.  Set _CONNECT_IN_PROGRESS to the errno value(s) expected
 # when an initial connect can't complete immediately.  Set _CONNECT_OK
@@ -342,10 +344,11 @@ if hasattr(errno, "WSAEWOULDBLOCK"):    # Windows
     # seen this.
     _CONNECT_IN_PROGRESS = (errno.WSAEWOULDBLOCK,)
     # Win98: WSAEISCONN; Win2K: WSAEINVAL
-    _CONNECT_OK          = (0, errno.WSAEISCONN, errno.WSAEINVAL)
+    _CONNECT_OK = (0, errno.WSAEISCONN, errno.WSAEINVAL)
 else:                                   # Unix
     _CONNECT_IN_PROGRESS = (errno.EINPROGRESS,)
-    _CONNECT_OK          = (0, errno.EISCONN)
+    _CONNECT_OK = (0, errno.EISCONN)
+
 
 class ConnectThread(threading.Thread):
     """Thread that tries to connect to server given one or more addresses.
@@ -455,7 +458,7 @@ class ConnectThread(threading.Thread):
                      ) in socket.getaddrinfo(host or 'localhost', port,
                                              socket.AF_INET,
                                              socket.SOCK_STREAM
-                                            ): # prune non-TCP results
+                                             ):  # prune non-TCP results
                     # for IPv6, drop flowinfo, and restrict addresses
                     # to [host]:port
                     yield family, sockaddr[:2]
@@ -495,7 +498,7 @@ class ConnectThread(threading.Thread):
                 break
             try:
                 r, w, x = select.select([], connecting, connecting, 1.0)
-                log("CT: select() %d, %d, %d" % tuple(map(len, (r,w,x))))
+                log("CT: select() %d, %d, %d" % tuple(map(len, (r, w, x))))
             except select.error as msg:
                 log("CT: select failed; msg=%s" % str(msg),
                     level=logging.WARNING)
@@ -509,7 +512,7 @@ class ConnectThread(threading.Thread):
             for wrap in w:
                 wrap.connect_procedure()
                 if wrap.state == "notified":
-                    del wrappers[wrap] # Don't close this one
+                    del wrappers[wrap]  # Don't close this one
                     for wrap in wrappers.keys():
                         wrap.close()
                     return 1
@@ -526,7 +529,7 @@ class ConnectThread(threading.Thread):
             else:
                 wrap.notify_client()
                 if wrap.state == "notified":
-                    del wrappers[wrap] # Don't close this one
+                    del wrappers[wrap]  # Don't close this one
                     for wrap in wrappers.keys():
                         wrap.close()
                     return -1
@@ -602,7 +605,7 @@ class ConnectWrapper(object):
         to do app-level check of the connection.
         """
         self.conn = ManagedClientConnection(self.sock, self.addr, self.mgr)
-        self.sock = None # The socket is now owned by the connection
+        self.sock = None  # The socket is now owned by the connection
         try:
             self.preferred = self.client.testConnection(self.conn)
             self.state = "tested"
@@ -610,7 +613,7 @@ class ConnectWrapper(object):
             log("CW: ReadOnlyError in testConnection (%s)" % repr(self.addr))
             self.close()
             return
-        except:
+        except:  # NOQA: E722 bare except
             log("CW: error in testConnection (%s)" % repr(self.addr),
                 level=logging.ERROR, exc_info=True)
             self.close()
@@ -629,7 +632,7 @@ class ConnectWrapper(object):
         """
         try:
             self.client.notifyConnected(self.conn)
-        except:
+        except:  # NOQA: E722 bare except
             log("CW: error in notifyConnected (%s)" % repr(self.addr),
                 level=logging.ERROR, exc_info=True)
             self.close()

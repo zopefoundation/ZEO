@@ -14,12 +14,14 @@
 
 import zope.interface
 
+
 class StaleCache(object):
     """A ZEO cache is stale and requires verification.
     """
 
     def __init__(self, storage):
         self.storage = storage
+
 
 class IClientCache(zope.interface.Interface):
     """Client cache interface.
@@ -85,6 +87,7 @@ class IClientCache(zope.interface.Interface):
     def clear():
         """Clear/empty the cache
         """
+
 
 class IServeable(zope.interface.Interface):
     """Interface provided by storages that can be served by ZEO

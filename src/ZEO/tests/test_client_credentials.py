@@ -11,6 +11,7 @@ import ZEO.StorageServer
 from . import forker
 from .threaded import threaded_server_tests
 
+
 @unittest.skipIf(forker.ZEO4_SERVER, "ZEO4 servers don't support SSL")
 class ClientAuthTests(setupstack.TestCase):
 
@@ -54,8 +55,8 @@ class ClientAuthTests(setupstack.TestCase):
 
         stop()
 
+
 def test_suite():
     suite = unittest.makeSuite(ClientAuthTests)
     suite.layer = threaded_server_tests
     return suite
-

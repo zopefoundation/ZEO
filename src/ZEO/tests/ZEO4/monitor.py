@@ -47,6 +47,7 @@ else:
     if zeo_dist is not None:
         zeo_version = zeo_dist.version
 
+
 class StorageStats(object):
     """Per-storage usage statistics."""
 
@@ -113,6 +114,7 @@ class StorageStats(object):
         print("Conflicts:", self.conflicts, file=f)
         print("Conflicts resolved:", self.conflicts_resolved, file=f)
 
+
 class StatsClient(asyncore.dispatcher):
 
     def __init__(self, sock, addr):
@@ -143,6 +145,7 @@ class StatsClient(asyncore.dispatcher):
 
         if self.closed and not self.buf:
             asyncore.dispatcher.close(self)
+
 
 class StatsServer(asyncore.dispatcher):
 

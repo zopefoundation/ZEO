@@ -16,7 +16,6 @@ from __future__ import print_function
 
 
 import random
-import sys
 import time
 
 
@@ -56,8 +55,8 @@ def encode_format(fmt):
         fmt = fmt.replace(*xform)
     return fmt
 
-runner = _forker.runner
 
+runner = _forker.runner
 stop_runner = _forker.stop_runner
 start_zeo_server = _forker.start_zeo_server
 
@@ -69,6 +68,7 @@ else:
         return s
 
 shutdown_zeo_server = _forker.shutdown_zeo_server
+
 
 def get_port(ignored=None):
     """Return a port that is not in use.
@@ -107,6 +107,7 @@ def get_port(ignored=None):
             s1.close()
     raise RuntimeError("Can't find port")
 
+
 def can_connect(port):
     c = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
@@ -118,6 +119,7 @@ def can_connect(port):
             return True
     finally:
         c.close()
+
 
 def setUp(test):
     ZODB.tests.util.setUp(test)
@@ -194,8 +196,10 @@ def wait_until(label=None, func=None, timeout=30, onfail=None):
                 return onfail()
         time.sleep(0.01)
 
+
 def wait_connected(storage):
     wait_until("storage is connected", storage.is_connected)
+
 
 def wait_disconnected(storage):
     wait_until("storage is disconnected",

@@ -11,7 +11,6 @@ except NameError:
     class ConnectionRefusedError(OSError):
         pass
 
-import pprint
 
 class Loop(object):
 
@@ -19,7 +18,7 @@ class Loop(object):
 
     def __init__(self, addrs=(), debug=True):
         self.addrs = addrs
-        self.get_debug = lambda : debug
+        self.get_debug = lambda: debug
         self.connecting = {}
         self.later = []
         self.exceptions = []
@@ -31,7 +30,7 @@ class Loop(object):
         func(*args)
 
     def _connect(self, future, protocol_factory):
-        self.protocol  = protocol  = protocol_factory()
+        self.protocol = protocol = protocol_factory()
         self.transport = transport = Transport(protocol)
         protocol.connection_made(transport)
         future.set_result((transport, protocol))
@@ -45,10 +44,8 @@ class Loop(object):
         if not future.cancelled():
             future.set_exception(ConnectionRefusedError())
 
-    def create_connection(
-        self, protocol_factory, host=None, port=None, sock=None,
-        ssl=None, server_hostname=None
-        ):
+    def create_connection(self, protocol_factory, host=None, port=None,
+                          sock=None, ssl=None, server_hostname=None):
         future = asyncio.Future(loop=self)
         if sock is None:
             addr = host, port
@@ -83,12 +80,15 @@ class Loop(object):
         self.exceptions.append(context)
 
     closed = False
+
     def close(self):
         self.closed = True
 
     stopped = False
+
     def stop(self):
         self.stopped = True
+
 
 class Handle(object):
 
@@ -96,6 +96,7 @@ class Handle(object):
 
     def cancel(self):
         self.cancelled = True
+
 
 class Transport(object):
 
@@ -136,11 +137,13 @@ class Transport(object):
             self.protocol.resume_writing()
 
     closed = False
+
     def close(self):
         self.closed = True
 
     def get_extra_info(self, name):
         return self.extra[name]
+
 
 class AsyncRPC(object):
     """Adapt an asyncio API to an RPC to help hysterical tests
@@ -150,6 +153,7 @@ class AsyncRPC(object):
 
     def __getattr__(self, name):
         return lambda *a, **kw: self.api.call(name, *a, **kw)
+
 
 class ClientRunner(object):
 

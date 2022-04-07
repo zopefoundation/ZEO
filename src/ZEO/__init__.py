@@ -21,12 +21,14 @@ ZEO is now part of ZODB; ZODB's home on the web is
 
 """
 
+
 def client(*args, **kw):
     """
     Shortcut for :class:`ZEO.ClientStorage.ClientStorage`.
     """
     import ZEO.ClientStorage
     return ZEO.ClientStorage.ClientStorage(*args, **kw)
+
 
 def DB(*args, **kw):
     """
@@ -40,6 +42,7 @@ def DB(*args, **kw):
         s.close()
         raise
 
+
 def connection(*args, **kw):
     db = DB(*args, **kw)
     try:
@@ -47,6 +50,7 @@ def connection(*args, **kw):
     except Exception:
         db.close()
         raise
+
 
 def server(path=None, blob_dir=None, storage_conf=None, zeo_conf=None,
            port=0, threaded=True, **kw):

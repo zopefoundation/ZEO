@@ -17,26 +17,32 @@ import transaction.interfaces
 
 from ZODB.POSException import StorageError
 
+
 class ClientStorageError(StorageError):
     """An error occurred in the ZEO Client Storage.
     """
 
+
 class UnrecognizedResult(ClientStorageError):
     """A server call returned an unrecognized result.
     """
+
 
 class ClientDisconnected(ClientStorageError,
                          transaction.interfaces.TransientError):
     """The database storage is disconnected from the storage.
     """
 
+
 class AuthError(StorageError):
     """The client provided invalid authentication credentials.
     """
 
+
 class ProtocolError(ClientStorageError):
     """A client contacted a server with an incomparible protocol
     """
+
 
 class ServerException(ClientStorageError):
     """

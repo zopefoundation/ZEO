@@ -86,7 +86,7 @@ ZEC_HEADER_SIZE = 12
 # need to write a free block that is almost twice as big.  If we die
 # in the middle of a store, then we need to split the large free records
 # while opening.
-max_block_size = (1<<31) - 1
+max_block_size = (1 << 31) - 1
 
 
 # After the header, the file contains a contiguous sequence of blocks.  All
@@ -132,11 +132,12 @@ allocated_record_overhead = 43
 
 # Under PyPy, the available dict specializations perform significantly
 # better (faster) than the pure-Python BTree implementation. They may
-# use less memory too. And we don't require any of the special BTree features...
+# use less memory too. And we don't require any of the special BTree features.
 _current_index_type = ZODB.fsIndex.fsIndex if not PYPY else dict
 _noncurrent_index_type = BTrees.LOBTree.LOBTree if not PYPY else dict
 # ...except at this leaf level
 _noncurrent_bucket_type = BTrees.LLBTree.LLBucket
+
 
 class ClientCache(object):
     """A simple in-memory cache."""
@@ -193,7 +194,7 @@ class ClientCache(object):
         if path:
             self._lock_file = zc.lockfile.LockFile(path + '.lock')
             if not os.path.exists(path):
-                # Create a small empty file.  We'll make it bigger in _initfile.
+                # Create a small empty file. We'll make it bigger in _initfile.
                 self.f = open(path, 'wb+')
                 self.f.write(magic+z64)
                 logger.info("created persistent cache file %r", path)
@@ -209,10 +210,10 @@ class ClientCache(object):
 
         try:
             self._initfile(fsize)
-        except:
+        except:  # NOQA: E722 bare except
             self.f.close()
             if not path:
-                raise # unrecoverable temp file error :(
+                raise  # unrecoverable temp file error :(
             badpath = path+'.bad'
             if os.path.exists(badpath):
                 logger.critical(
@@ -271,7 +272,7 @@ class ClientCache(object):
 
         self.current = _current_index_type()
         self.noncurrent = _noncurrent_index_type()
-        l = 0
+        length = 0
         last = ofs = ZEC_HEADER_SIZE
         first_free_offset = 0
         current = self.current
@@ -290,7 +291,7 @@ class ClientCache(object):
                         assert start_tid < end_tid, (ofs, f.tell())
                         self._set_noncurrent(oid, start_tid, ofs)
                     assert lver == 0, "Versions aren't supported"
-                    l += 1
+                    length += 1
             else:
                 # free block
                 if first_free_offset == 0:
@@ -331,7 +332,7 @@ class ClientCache(object):
                 break
 
         if fsize < maxsize:
-            assert ofs==fsize
+            assert ofs == fsize
             # Make sure the OS really saves enough bytes for the file.
             seek(self.maxsize - 1)
             write(b'x')
@@ -349,7 +350,7 @@ class ClientCache(object):
             assert last and (status in b' f1234')
             first_free_offset = last
         else:
-            assert ofs==maxsize
+            assert ofs == maxsize
             if maxsize < fsize:
                 seek(maxsize)
                 f.truncate()
@@ -357,7 +358,7 @@ class ClientCache(object):
         # We use the first_free_offset because it is most likely the
         # place where we last wrote.
         self.currentofs = first_free_offset or ZEC_HEADER_SIZE
-        self._len = l
+        self._len = length
 
     def _set_noncurrent(self, oid, tid, ofs):
         noncurrent_for_oid = self.noncurrent.get(u64(oid))
@@ -375,7 +376,6 @@ class ClientCache(object):
         except KeyError:
             logger.error("Couldn't find non-current %r", (oid, tid))
 
-
     def clearStats(self):
         self._n_adds = self._n_added_bytes = 0
         self._n_evicts = self._n_evicted_bytes = 0
@@ -384,8 +384,7 @@ class ClientCache(object):
     def getStats(self):
         return (self._n_adds, self._n_added_bytes,
                 self._n_evicts, self._n_evicted_bytes,
-                self._n_accesses
-               )
+                self._n_accesses)
 
     ##
     # The number of objects currently in the cache.
@@ -403,7 +402,7 @@ class ClientCache(object):
             sync(f)
             f.close()
 
-        if hasattr(self,'_lock_file'):
+        if hasattr(self, '_lock_file'):
             self._lock_file.close()
 
     ##
@@ -517,9 +516,9 @@ class ClientCache(object):
             if ofsofs < 0:
                 ofsofs += self.maxsize
 
-            if (ofsofs > self.rearrange and
-                self.maxsize > 10*len(data) and
-                size > 4):
+            if ofsofs > self.rearrange and \
+               self.maxsize > 10*len(data) and \
+               size > 4:
                 # The record is far back and might get evicted, but it's
                 # valuable, so move it forward.
 
@@ -619,8 +618,8 @@ class ClientCache(object):
                     raise ValueError("already have current data for oid")
             else:
                 noncurrent_for_oid = self.noncurrent.get(u64(oid))
-                if noncurrent_for_oid and (
-                    u64(start_tid) in noncurrent_for_oid):
+                if noncurrent_for_oid and \
+                   u64(start_tid) in noncurrent_for_oid:
                     return
 
             size = allocated_record_overhead + len(data)
@@ -691,7 +690,6 @@ class ClientCache(object):
             self.current[oid] = ofs
 
         self.currentofs += size
-
 
     ##
     # If `tid` is None,
@@ -765,8 +763,7 @@ class ClientCache(object):
         for oid, tid in L:
             print(oid_repr(oid), oid_repr(tid))
         print("dll contents")
-        L = list(self)
-        L.sort(lambda x, y: cmp(x.key, y.key))
+        L = sorted(list(self), key=lambda x: x.key)
         for x in L:
             end_tid = x.end_tid or z64
             print(oid_repr(x.key[0]), oid_repr(x.key[1]), oid_repr(end_tid))
@@ -779,6 +776,7 @@ class ClientCache(object):
     # tracing by setting self._trace to a dummy function, and set
     # self._tracefile to None.
     _tracefile = None
+
     def _trace(self, *a, **kw):
         pass
 
@@ -797,6 +795,7 @@ class ClientCache(object):
             return
 
         now = time.time
+
         def _trace(code, oid=b"", tid=z64, end_tid=z64, dlen=0):
             # The code argument is two hex digits; bits 0 and 7 must be zero.
             # The first hex digit shows the operation, the second the outcome.
@@ -812,7 +811,7 @@ class ClientCache(object):
                     pack(">iiH8s8s",
                          int(now()), encoded, len(oid), tid, end_tid) + oid,
                     )
-            except:
+            except:  # NOQA: E722 bare except
                 print(repr(tid), repr(end_tid))
                 raise
 
@@ -826,10 +825,7 @@ class ClientCache(object):
             self._tracefile.close()
             del self._tracefile
 
+
 def sync(f):
     f.flush()
-
-if hasattr(os, 'fsync'):
-    def sync(f):
-        f.flush()
-        os.fsync(f.fileno())
+    os.fsync(f.fileno())

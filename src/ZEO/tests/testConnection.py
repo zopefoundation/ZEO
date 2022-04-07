@@ -29,9 +29,8 @@ else:
 import unittest
 import ZODB.tests.util
 
-import ZEO
-
 from . import forker
+
 
 class FileStorageConfig(object):
     def getConfig(self, path, create, read_only):
@@ -44,57 +43,56 @@ class FileStorageConfig(object):
                              create and 'yes' or 'no',
                              read_only and 'yes' or 'no')
 
+
 class MappingStorageConfig(object):
     def getConfig(self, path, create, read_only):
         return """<mappingstorage 1/>"""
 
 
 class FileStorageConnectionTests(
-    FileStorageConfig,
-    ConnectionTests.ConnectionTests,
-    InvalidationTests.InvalidationTests
-    ):
+        FileStorageConfig,
+        ConnectionTests.ConnectionTests,
+        InvalidationTests.InvalidationTests):
     """FileStorage-specific connection tests."""
 
+
 class FileStorageReconnectionTests(
-    FileStorageConfig,
-    ConnectionTests.ReconnectionTests,
-    ):
+        FileStorageConfig,
+        ConnectionTests.ReconnectionTests):
     """FileStorage-specific re-connection tests."""
     # Run this at level 1 because MappingStorage can't do reconnection tests
 
+
 class FileStorageInvqTests(
-    FileStorageConfig,
-    ConnectionTests.InvqTests
-    ):
+        FileStorageConfig,
+        ConnectionTests.InvqTests):
     """FileStorage-specific invalidation queue tests."""
 
+
 class FileStorageTimeoutTests(
-    FileStorageConfig,
-    ConnectionTests.TimeoutTests
-    ):
+        FileStorageConfig,
+        ConnectionTests.TimeoutTests):
     pass
 
 
 class MappingStorageConnectionTests(
-    MappingStorageConfig,
-    ConnectionTests.ConnectionTests
-    ):
+        MappingStorageConfig,
+        ConnectionTests.ConnectionTests):
     """Mapping storage connection tests."""
 
 # The ReconnectionTests can't work with MappingStorage because it's only an
 # in-memory storage and has no persistent state.
 
+
 class MappingStorageTimeoutTests(
-    MappingStorageConfig,
-    ConnectionTests.TimeoutTests
-    ):
+        MappingStorageConfig,
+        ConnectionTests.TimeoutTests):
     pass
 
+
 class SSLConnectionTests(
-    MappingStorageConfig,
-    ConnectionTests.SSLConnectionTests,
-    ):
+        MappingStorageConfig,
+        ConnectionTests.SSLConnectionTests):
     pass
 
 
@@ -107,6 +105,7 @@ test_classes = [FileStorageConnectionTests,
                 ]
 if not forker.ZEO4_SERVER:
     test_classes.append(SSLConnectionTests)
+
 
 def invalidations_while_connecting():
     r"""
@@ -122,7 +121,7 @@ This tests tries to provoke this bug by:
 
 - starting a server
 
-    >>> addr, _ = start_server()
+    >>> addr, _ = start_server()  # NOQA: F821 undefined name
 
 - opening a client to the server that writes some objects, filling
   it's cache at the same time,
@@ -182,7 +181,9 @@ This tests tries to provoke this bug by:
     ...        db = ZODB.DB(ZEO.ClientStorage.ClientStorage(addr, client='x'))
     ...        with lock:
     ...            #logging.getLogger('ZEO').debug('Locked %s' % c)
-    ...            @wait_until("connected and we have caught up", timeout=199)
+    ...            msg = "connected and we have caught up"
+    ...
+    ...            @wait_until(msg, timeout=199)  # NOQA: F821 undefined var
     ...            def _():
     ...                if (db.storage.is_connected()
     ...                        and db.storage.lastTransaction()
@@ -227,6 +228,7 @@ This tests tries to provoke this bug by:
     >>> db.close()
     >>> db2.close()
     """
+
 
 def test_suite():
     suite = unittest.TestSuite()

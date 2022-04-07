@@ -14,6 +14,7 @@
 
 _auth_modules = {}
 
+
 def get_module(name):
     if name == 'sha':
         from auth_sha import StorageClass, SHAClient, Database
@@ -23,6 +24,7 @@ def get_module(name):
         return StorageClass, DigestClient, DigestDatabase
     else:
         return _auth_modules.get(name)
+
 
 def register_module(name, storage_class, client, db):
     if name in _auth_modules:

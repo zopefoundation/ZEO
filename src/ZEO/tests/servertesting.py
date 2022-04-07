@@ -34,12 +34,14 @@ import ZEO.asyncio.tests
 import ZEO.StorageServer
 import ZODB.MappingStorage
 
+
 class StorageServer(ZEO.StorageServer.StorageServer):
 
     def __init__(self, addr='test_addr', storages=None, **kw):
         if storages is None:
             storages = {'1': ZODB.MappingStorage.MappingStorage()}
         ZEO.StorageServer.StorageServer.__init__(self, addr, storages, **kw)
+
 
 def client(server, name='client'):
     zs = ZEO.StorageServer.ZEOStorage(server)

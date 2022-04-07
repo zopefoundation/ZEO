@@ -55,6 +55,7 @@ import gzip
 from time import ctime
 import six
 
+
 def add_interval_argument(parser):
     def _interval(a):
         interval = int(60 * float(a))
@@ -63,9 +64,11 @@ def add_interval_argument(parser):
         elif interval > 3600:
             interval = 3600
         return interval
-    parser.add_argument("--interval", "-i",
-                        default=15*60, type=_interval,
-                        help="summarizing interval in minutes (default 15; max 60)")
+    parser.add_argument(
+        "--interval", "-i",
+        default=15*60, type=_interval,
+        help="summarizing interval in minutes (default 15; max 60)")
+
 
 def add_tracefile_argument(parser):
 
@@ -82,15 +85,17 @@ def add_tracefile_argument(parser):
     parser.add_argument("tracefile", type=GzipFileType(),
                         help="The trace to read; may be gzipped")
 
+
 def main(args=None):
     if args is None:
         args = sys.argv[1:]
     # Parse options
-    parser = argparse.ArgumentParser(description="Trace file statistics analyzer",
-                                     # Our -h, short for --load-histogram
-                                     # conflicts with default for help, so we handle
-                                     # manually.
-                                     add_help=False)
+    parser = argparse.ArgumentParser(
+                description="Trace file statistics analyzer",
+                # Our -h, short for --load-histogram
+                # conflicts with default for help, so we handle
+                # manually.
+                add_help=False)
     verbose_group = parser.add_mutually_exclusive_group()
     verbose_group.add_argument('--verbose', '-v',
                                default=False, action='store_true',
@@ -99,18 +104,22 @@ def main(args=None):
                                default=False, action='store_true',
                                help="Reduce output; don't print summaries")
     parser.add_argument("--sizes", '-s',
-                        default=False, action="store_true", dest="print_size_histogram",
+                        default=False, action="store_true",
+                        dest="print_size_histogram",
                         help="print histogram of object sizes")
     parser.add_argument("--no-stats", '-S',
                         default=True, action="store_false", dest="dostats",
                         help="don't print statistics")
     parser.add_argument("--load-histogram", "-h",
-                        default=False, action="store_true", dest="print_histogram",
+                        default=False, action="store_true",
+                        dest="print_histogram",
                         help="print histogram of object load frequencies")
     parser.add_argument("--check", "-X",
                         default=False, action="store_true", dest="heuristic",
-                        help=" enable heuristic checking for misaligned records: oids > 2**32"
-                        " will be rejected; this requires the tracefile to be seekable")
+                        help=" enable heuristic checking for misaligned "
+                             "records: oids > 2**32"
+                             " will be rejected; this requires the tracefile "
+                             "to be seekable")
     add_interval_argument(parser)
     add_tracefile_argument(parser)
 
@@ -123,20 +132,20 @@ def main(args=None):
     f = options.tracefile
 
     rt0 = time.time()
-    bycode = {}     # map code to count of occurrences
-    byinterval = {} # map code to count in current interval
-    records = 0     # number of trace records read
-    versions = 0    # number of trace records with versions
-    datarecords = 0 # number of records with dlen set
-    datasize = 0   # sum of dlen across records with dlen set
-    oids = {}       # map oid to number of times it was loaded
-    bysize = {}     # map data size to number of loads
-    bysizew = {}    # map data size to number of writes
+    bycode = {}      # map code to count of occurrences
+    byinterval = {}  # map code to count in current interval
+    records = 0      # number of trace records read
+    versions = 0     # number of trace records with versions
+    datarecords = 0  # number of records with dlen set
+    datasize = 0     # sum of dlen across records with dlen set
+    oids = {}        # map oid to number of times it was loaded
+    bysize = {}      # map data size to number of loads
+    bysizew = {}     # map data size to number of writes
     total_loads = 0
-    t0 = None       # first timestamp seen
-    te = None       # most recent timestamp seen
-    h0 = None       # timestamp at start of current interval
-    he = None       # timestamp at end of current interval
+    t0 = None        # first timestamp seen
+    te = None        # most recent timestamp seen
+    h0 = None        # timestamp at start of current interval
+    he = None        # timestamp at end of current interval
     thisinterval = None  # generally te//interval
     f_read = f.read
     unpack = struct.unpack
@@ -144,7 +153,8 @@ def main(args=None):
     FMT_SIZE = struct.calcsize(FMT)
     assert FMT_SIZE == 26
     # Read file, gathering statistics, and printing each record if verbose.
-    print(' '*16, "%7s %7s %7s %7s" % ('loads', 'hits', 'inv(h)', 'writes'), end=' ')
+    print(' '*16, "%7s %7s %7s %7s" % (
+            'loads', 'hits', 'inv(h)', 'writes'), end=' ')
     print('hitrate')
     try:
         while 1:
@@ -187,10 +197,10 @@ def main(args=None):
             bycode[code] = bycode.get(code, 0) + 1
             byinterval[code] = byinterval.get(code, 0) + 1
             if dlen:
-                if code & 0x70 == 0x20: # All loads
+                if code & 0x70 == 0x20:  # All loads
                     bysize[dlen] = d = bysize.get(dlen) or {}
                     d[oid] = d.get(oid, 0) + 1
-                elif code & 0x70 == 0x50: # All stores
+                elif code & 0x70 == 0x50:  # All stores
                     bysizew[dlen] = d = bysizew.get(dlen) or {}
                     d[oid] = d.get(oid, 0) + 1
             if options.verbose:
@@ -205,7 +215,7 @@ def main(args=None):
             if code & 0x70 == 0x20:
                 oids[oid] = oids.get(oid, 0) + 1
                 total_loads += 1
-            elif code == 0x00:    # restart
+            elif code == 0x00:  # restart
                 if not options.quiet:
                     dumpbyinterval(byinterval, h0, he)
                 byinterval = {}
@@ -279,6 +289,7 @@ def main(args=None):
         dumpbysize(bysizew, "written", "writes")
         dumpbysize(bysize, "loaded", "loads")
 
+
 def dumpbysize(bysize, how, how2):
     print()
     print("Unique sizes %s: %s" % (how, addcommas(len(bysize))))
@@ -292,6 +303,7 @@ def dumpbysize(bysize, how, how2):
                                 len(bysize.get(size, "")),
                                 loads))
 
+
 def dumpbyinterval(byinterval, h0, he):
     loads = hits = invals = writes = 0
     for code in byinterval:
@@ -301,7 +313,7 @@ def dumpbyinterval(byinterval, h0, he):
             if code in (0x22, 0x26):
                 hits += n
         elif code & 0x40:
-            writes +=  byinterval[code]
+            writes += byinterval[code]
         elif code & 0x10:
             if code != 0x10:
                 invals += byinterval[code]
@@ -314,6 +326,7 @@ def dumpbyinterval(byinterval, h0, he):
     print("%s-%s %7s %7s %7s %7s %7s" % (
         ctime(h0)[4:-8], ctime(he)[14:-8],
         loads, hits, invals, writes, hr))
+
 
 def hitrate(bycode):
     loads = hits = 0
@@ -328,6 +341,7 @@ def hitrate(bycode):
     else:
         return 0.0
 
+
 def histogram(d):
     bins = {}
     for v in six.itervalues(d):
@@ -335,14 +349,17 @@ def histogram(d):
     L = sorted(bins.items())
     return L
 
+
 def U64(s):
     return struct.unpack(">Q", s)[0]
+
 
 def oid_repr(oid):
     if isinstance(oid, six.binary_type) and len(oid) == 8:
         return '%16x' % U64(oid)
     else:
         return repr(oid)
+
 
 def addcommas(n):
     sign, s = '', str(n)
@@ -353,6 +370,7 @@ def addcommas(n):
         s = s[:i] + ',' + s[i:]
         i -= 3
     return sign + s
+
 
 explain = {
     # The first hex digit shows the operation, the second the outcome.

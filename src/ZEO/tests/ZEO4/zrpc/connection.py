@@ -26,11 +26,12 @@ from .log import short_repr, log
 from ZODB.loglevels import BLATHER, TRACE
 import ZODB.POSException
 
-REPLY = ".reply" # message name used for replies
+REPLY = ".reply"  # message name used for replies
 
 exception_type_type = type(Exception)
 
 debug_zrpc = False
+
 
 class Delay(object):
     """Used to delay response to client for synchronous calls.
@@ -57,7 +58,9 @@ class Delay(object):
 
     def __repr__(self):
         return "%s[%s, %r, %r, %r]" % (
-            self.__class__.__name__, id(self), self.msgid, self.conn, self.sent)
+            self.__class__.__name__, id(self), self.msgid,
+            self.conn, self.sent)
+
 
 class Result(Delay):
 
@@ -68,6 +71,7 @@ class Result(Delay):
         reply, callback = self.args
         conn.send_reply(msgid, reply, False)
         callback()
+
 
 class MTDelay(Delay):
 
@@ -146,6 +150,7 @@ class MTDelay(Delay):
 # and ManagedClientConnection are the concrete subclasses.  They need to
 # supply a handshake() method appropriate for their role in protocol
 # negotiation.
+
 
 class Connection(smac.SizedMessageAsyncConnection, object):
     """Dispatcher for RPC on object on both sides of socket.
@@ -294,7 +299,7 @@ class Connection(smac.SizedMessageAsyncConnection, object):
         self.fast_encode = marshal.fast_encode
 
         self.closed = False
-        self.peer_protocol_version = None # set in recv_handshake()
+        self.peer_protocol_version = None  # set in recv_handshake()
 
         assert tag in b"CS"
         self.tag = tag
@@ -359,7 +364,7 @@ class Connection(smac.SizedMessageAsyncConnection, object):
     def __repr__(self):
         return "<%s %s>" % (self.__class__.__name__, self.addr)
 
-    __str__ = __repr__ # Defeat asyncore's dreaded __getattr__
+    __str__ = __repr__  # Defeat asyncore's dreaded __getattr__
 
     def log(self, message, level=BLATHER, exc_info=False):
         self.logger.log(level, self.log_label + message, exc_info=exc_info)
@@ -441,7 +446,7 @@ class Connection(smac.SizedMessageAsyncConnection, object):
                 try:
                     self.message_output(self.fast_encode(msgid, 0, REPLY, ret))
                     self.poll()
-                except:
+                except:  # NOQA: E722 bare except
                     # Fall back to normal version for better error handling
                     self.send_reply(msgid, ret)
 
@@ -520,10 +525,10 @@ class Connection(smac.SizedMessageAsyncConnection, object):
         # cPickle may raise.
         try:
             msg = self.encode(msgid, 0, REPLY, (err_type, err_value))
-        except: # see above
+        except:  # NOQA: E722 bare except; see above
             try:
                 r = short_repr(err_value)
-            except:
+            except:  # NOQA: E722 bare except
                 r = "<unreprable>"
             err = ZRPCError("Couldn't pickle error %.100s" % r)
             msg = self.encode(msgid, 0, REPLY, (ZRPCError, err))
@@ -656,10 +661,10 @@ class ManagedServerConnection(Connection):
         # cPickle may raise.
         try:
             msg = self.encode(msgid, 0, REPLY, ret)
-        except: # see above
+        except:  # NOQA: E722 bare except; see above
             try:
                 r = short_repr(ret)
-            except:
+            except:  # NOQA: E722 bare except
                 r = "<unreprable>"
             err = ZRPCError("Couldn't pickle return %.100s" % r)
             msg = self.encode(msgid, 0, REPLY, (ZRPCError, err))
@@ -668,6 +673,7 @@ class ManagedServerConnection(Connection):
             self.poll()
 
     poll = smac.SizedMessageAsyncConnection.handle_write
+
 
 def server_loop(map):
     while len(map) > 1:
@@ -679,6 +685,7 @@ def server_loop(map):
 
     for o in tuple(map.values()):
         o.close()
+
 
 class ManagedClientConnection(Connection):
     """Client-side Connection subclass."""
@@ -740,7 +747,7 @@ class ManagedClientConnection(Connection):
         # are queued for the duration.  The client will send its own
         # handshake after the server's handshake is seen, in recv_handshake()
         # below.  It will then send any messages queued while waiting.
-        assert self.queue_output # the constructor already set this
+        assert self.queue_output  # the constructor already set this
 
     def recv_handshake(self, proto):
         # The protocol to use is the older of our and the server's preferred
@@ -778,11 +785,11 @@ class ManagedClientConnection(Connection):
             raise DisconnectedError()
         msgid = self.send_call(method, args)
         r_args = self.wait(msgid)
-        if (isinstance(r_args, tuple) and len(r_args) > 1
-            and type(r_args[0]) == exception_type_type
-            and issubclass(r_args[0], Exception)):
+        if isinstance(r_args, tuple) and len(r_args) > 1 and \
+           type(r_args[0]) == exception_type_type and \
+           issubclass(r_args[0], Exception):
             inst = r_args[1]
-            raise inst # error raised by server
+            raise inst  # error raised by server
         else:
             return r_args
 
@@ -821,11 +828,11 @@ class ManagedClientConnection(Connection):
 
     def _deferred_wait(self, msgid):
         r_args = self.wait(msgid)
-        if (isinstance(r_args, tuple)
-            and type(r_args[0]) == exception_type_type
-            and issubclass(r_args[0], Exception)):
+        if isinstance(r_args, tuple) and \
+           type(r_args[0]) == exception_type_type and \
+           issubclass(r_args[0], Exception):
             inst = r_args[1]
-            raise inst # error raised by server
+            raise inst  # error raised by server
         else:
             return r_args
 

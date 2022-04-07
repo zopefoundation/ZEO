@@ -4,6 +4,8 @@ Changelog
 5.4.0 (unreleased)
 ------------------
 
+- linted the code with flake8
+
 - Add support for Python 3.10.
 
 - Add ``ConflictError`` to the list of unlogged server exceptions

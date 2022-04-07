@@ -13,6 +13,7 @@
 ##############################################################################
 import asyncore
 import socket
+import time
 
 # _has_dualstack: True if the dual-stack sockets are supported
 try:
@@ -38,6 +39,7 @@ import logging
 
 # Export the main asyncore loop
 loop = asyncore.loop
+
 
 class Dispatcher(asyncore.dispatcher):
     """A server that accepts incoming RPC connections"""
@@ -74,7 +76,7 @@ class Dispatcher(asyncore.dispatcher):
         for i in range(25):
             try:
                 self.bind(self.addr)
-            except Exception as exc:
+            except Exception:
                 log("bind failed %s waiting", i)
                 if i == 24:
                     raise
@@ -98,7 +100,6 @@ class Dispatcher(asyncore.dispatcher):
             log("accepted failed: %s" % msg)
             return
 
-
         # We could short-circuit the attempt below in some edge cases
         # and avoid a log message by checking for addr being None.
         # Unfortunately, our test for the code below,
@@ -111,12 +112,12 @@ class Dispatcher(asyncore.dispatcher):
         # closed, but I don't see a way to do that. :(
 
         # Drop flow-info from IPv6 addresses
-        if addr: # Sometimes None on Mac. See above.
+        if addr:  # Sometimes None on Mac. See above.
             addr = addr[:2]
 
         try:
             c = self.factory(sock, addr)
-        except:
+        except:  # NOQA: E722 bare except
             if sock.fileno() in asyncore.socket_map:
                 del asyncore.socket_map[sock.fileno()]
             logger.exception("Error in handle_accept")

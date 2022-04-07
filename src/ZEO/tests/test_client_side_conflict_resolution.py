@@ -15,10 +15,12 @@ import ZEO
 from . import forker
 from .utils import StorageServer
 
+
 class Var(object):
     def __eq__(self, other):
         self.value = other
         return True
+
 
 @unittest.skipIf(forker.ZEO4_SERVER, "ZEO4 servers don't support SSL")
 class ClientSideConflictResolutionTests(zope.testing.setupstack.TestCase):
@@ -62,7 +64,6 @@ class ClientSideConflictResolutionTests(zope.testing.setupstack.TestCase):
         self.assertEqual(reader.getClassName(p), 'BTrees.Length.Length')
         self.assertEqual(reader.getState(p), 2)
 
-
         # Now, we'll create a server that expects the client to
         # resolve conflicts:
 
@@ -93,9 +94,9 @@ class ClientSideConflictResolutionTests(zope.testing.setupstack.TestCase):
         self.assertEqual(
             zs.vote(3),
             [dict(oid=ob._p_oid,
-                 serials=(tid2, tid1),
-                 data=writer.serialize(ob),
-                 )],
+                  serials=(tid2, tid1),
+                  data=writer.serialize(ob),
+                  )],
             )
 
         # Now, it's up to the client to resolve the conflict. It can
@@ -119,17 +120,18 @@ class ClientSideConflictResolutionTests(zope.testing.setupstack.TestCase):
         addr, stop = ZEO.server(os.path.join(path, 'data.fs'), threaded=False)
         db = ZEO.DB(addr)
         with db.transaction() as conn:
-            conn.root.l = Length(0)
+            conn.root.len = Length(0)
         conn2 = db.open()
-        conn2.root.l.change(1)
+        conn2.root.len.change(1)
         with db.transaction() as conn:
-            conn.root.l.change(1)
+            conn.root.len.change(1)
 
         conn2.transaction_manager.commit()
 
-        self.assertEqual(conn2.root.l.value, 2)
+        self.assertEqual(conn2.root.len.value, 2)
 
-        db.close(); stop()
+        db.close()
+        stop()
 
         # Now, do conflict resolution on the client.
         addr2, stop = ZEO.server(
@@ -140,18 +142,20 @@ class ClientSideConflictResolutionTests(zope.testing.setupstack.TestCase):
 
         db = ZEO.DB(addr2)
         with db.transaction() as conn:
-            conn.root.l = Length(0)
+            conn.root.len = Length(0)
         conn2 = db.open()
-        conn2.root.l.change(1)
+        conn2.root.len.change(1)
         with db.transaction() as conn:
-            conn.root.l.change(1)
+            conn.root.len.change(1)
 
-        self.assertEqual(conn2.root.l.value, 1)
+        self.assertEqual(conn2.root.len.value, 1)
         conn2.transaction_manager.commit()
 
-        self.assertEqual(conn2.root.l.value, 2)
+        self.assertEqual(conn2.root.len.value, 2)
 
-        db.close(); stop()
+        db.close()
+        stop()
+
 
 def test_suite():
     return unittest.makeSuite(ClientSideConflictResolutionTests)

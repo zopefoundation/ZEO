@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 INET_FAMILIES = socket.AF_INET, socket.AF_INET6
 
+
 class Protocol(asyncio.Protocol):
     """asyncio low-level ZEO base interface
     """
@@ -30,9 +31,9 @@ class Protocol(asyncio.Protocol):
     def __init__(self, loop, addr):
         self.loop = loop
         self.addr = addr
-        self.input  = [] # Input buffer when assembling messages
-        self.output = [] # Output buffer when paused
-        self.paused = [] # Paused indicator, mutable to avoid attr lookup
+        self.input = []  # Input buffer when assembling messages
+        self.output = []  # Output buffer when paused
+        self.paused = []  # Paused indicator, mutable to avoid attr lookup
 
         # Handle the first message, the protocol handshake, differently
         self.message_received = self.first_message_received
@@ -41,6 +42,7 @@ class Protocol(asyncio.Protocol):
         return self.name
 
     closed = False
+
     def close(self):
         if not self.closed:
             self.closed = True
@@ -49,7 +51,6 @@ class Protocol(asyncio.Protocol):
 
     def connection_made(self, transport):
         logger.info("Connected %s", self)
-
 
         if sys.version_info < (3, 6):
             sock = transport.get_extra_info('socket')
@@ -91,6 +92,7 @@ class Protocol(asyncio.Protocol):
     got = 0
     want = 4
     getting_size = True
+
     def data_received(self, data):
 
         # Low-level input handler collects data into sized messages.
@@ -135,7 +137,7 @@ class Protocol(asyncio.Protocol):
 
     def first_message_received(self, protocol_version):
         # Handler for first/handshake message, set up in __init__
-        del self.message_received # use default handler from here on
+        del self.message_received  # use default handler from here on
         self.finish_connect(protocol_version)
 
     def call_async(self, method, args):
@@ -162,7 +164,7 @@ class Protocol(asyncio.Protocol):
                 data = message
                 for message in data:
                     writelines((pack(">I", len(message)), message))
-                    if paused: # paused again. Put iter back.
+                    if paused:  # paused again. Put iter back.
                         output.insert(0, data)
                         break
 

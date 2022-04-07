@@ -16,14 +16,17 @@ import unittest
 
 from ZEO.TransactionBuffer import TransactionBuffer
 
+
 def random_string(size):
     """Return a random string of size size."""
-    l = [chr(random.randrange(256)) for i in range(size)]
-    return "".join(l)
+    lst = [chr(random.randrange(256)) for i in range(size)]
+    return "".join(lst)
+
 
 def new_store_data():
     """Return arbitrary data to use as argument to store() method."""
     return random_string(8), random_string(random.randrange(1000))
+
 
 def store(tbuf, resolved=False):
     data = new_store_data()
@@ -31,6 +34,7 @@ def store(tbuf, resolved=False):
     if resolved:
         tbuf.server_resolve(data[0])
     return data
+
 
 class TransBufTests(unittest.TestCase):
 
@@ -53,6 +57,7 @@ class TransBufTests(unittest.TestCase):
             self.assertEqual((oid, d), data[i][0])
             self.assertEqual(resolved, data[i][1])
         tbuf.close()
+
 
 def test_suite():
     return unittest.makeSuite(TransBufTests, 'check')

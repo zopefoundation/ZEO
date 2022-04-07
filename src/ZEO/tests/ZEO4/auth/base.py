@@ -22,6 +22,7 @@ from __future__ import print_function
 import os
 from ..hash import sha1
 
+
 class Client(object):
     # Subclass should override to list the names of methods that
     # will be called on the server.
@@ -32,10 +33,12 @@ class Client(object):
         for m in self.extensions:
             setattr(self.stub, m, self.stub.extensionMethod(m))
 
+
 def sort(L):
     """Sort a list in-place and return it."""
     L.sort()
     return L
+
 
 class Database(object):
     """Abstracts a password database.
@@ -49,6 +52,7 @@ class Database(object):
     produced from the password string.
     """
     realm = None
+
     def __init__(self, filename, realm=None):
         """Creates a new Database
 

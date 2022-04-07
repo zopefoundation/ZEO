@@ -21,6 +21,7 @@ from ZODB.config import storageFromString
 from .forker import start_zeo_server
 from .threaded import threaded_server_tests
 
+
 class ZEOConfigTestBase(setupstack.TestCase):
 
     setUp = setupstack.setUpDirectory
@@ -52,23 +53,21 @@ class ZEOConfigTestBase(setupstack.TestCase):
             </clientstorage>
             """.format(settings))
 
-    def _client_assertions(
-        self, client, addr,
-        connected=True,
-        cache_size=20 * (1<<20),
-        cache_path=None,
-        blob_dir=None,
-        shared_blob_dir=False,
-        blob_cache_size=None,
-        blob_cache_size_check=10,
-        read_only=False,
-        read_only_fallback=False,
-        server_sync=False,
-        wait_timeout=30,
-        client_label=None,
-        storage='1',
-        name=None,
-        ):
+    def _client_assertions(self, client, addr,
+                           connected=True,
+                           cache_size=20 * (1 << 20),
+                           cache_path=None,
+                           blob_dir=None,
+                           shared_blob_dir=False,
+                           blob_cache_size=None,
+                           blob_cache_size_check=10,
+                           read_only=False,
+                           read_only_fallback=False,
+                           server_sync=False,
+                           wait_timeout=30,
+                           client_label=None,
+                           storage='1',
+                           name=None):
         self.assertEqual(client.is_connected(), connected)
         self.assertEqual(client._addr, [addr])
         self.assertEqual(client._cache.maxsize, cache_size)
@@ -88,6 +87,7 @@ class ZEOConfigTestBase(setupstack.TestCase):
         self.assertEqual(client.__name__,
                          name if name is not None else str(client._addr))
 
+
 class ZEOConfigTest(ZEOConfigTestBase):
 
     def test_default_zeo_config(self, **client_settings):
@@ -101,24 +101,24 @@ class ZEOConfigTest(ZEOConfigTestBase):
 
     def test_client_variations(self):
 
-        for name, value in dict(
-            cache_size=4200,
-            cache_path='test',
-            blob_dir='blobs',
-            blob_cache_size=424242,
-            read_only=True,
-            read_only_fallback=True,
-            server_sync=True,
-            wait_timeout=33,
-            client_label='test_client',
-            name='Test'
-            ).items():
+        for name, value in dict(cache_size=4200,
+                                cache_path='test',
+                                blob_dir='blobs',
+                                blob_cache_size=424242,
+                                read_only=True,
+                                read_only_fallback=True,
+                                server_sync=True,
+                                wait_timeout=33,
+                                client_label='test_client',
+                                name='Test',
+                                ).items():
             params = {name: value}
             self.test_default_zeo_config(**params)
 
     def test_blob_cache_size_check(self):
         self.test_default_zeo_config(blob_cache_size=424242,
                                      blob_cache_size_check=50)
+
 
 def test_suite():
     suite = unittest.makeSuite(ZEOConfigTest)

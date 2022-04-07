@@ -41,6 +41,7 @@ from ZODB.POSException import ReadConflictError, ConflictError
 # thought they added (i.e., the keys for which transaction.commit()
 # did not raise any exception).
 
+
 class FailableThread(TestThread):
 
     # mixin class
@@ -52,7 +53,7 @@ class FailableThread(TestThread):
     def testrun(self):
         try:
             self._testrun()
-        except:
+        except:  # NOQA: E722 bare except
             # Report the failure here to all the other threads, so
             # that they stop quickly.
             self.stop.set()
@@ -81,12 +82,11 @@ class StressTask(object):
         tree[key] = self.threadnum
 
     def commit(self):
-        cn = self.cn
         key = self.startnum
         self.tm.get().note(u"add key %s" % key)
         try:
             self.tm.get().commit()
-        except ConflictError as msg:
+        except ConflictError:
             self.tm.abort()
         else:
             if self.sleep:
@@ -98,15 +98,18 @@ class StressTask(object):
         self.tm.get().abort()
         self.cn.close()
 
+
 def _runTasks(rounds, *tasks):
     '''run *task* interleaved for *rounds* rounds.'''
+
     def commit(run, actions):
         actions.append(':')
         for t in run:
             t.commit()
         del run[:]
+
     r = Random()
-    r.seed(1064589285) # make it deterministic
+    r.seed(1064589285)  # make it deterministic
     run = []
     actions = []
     try:
@@ -117,7 +120,7 @@ def _runTasks(rounds, *tasks):
             run.append(t)
             t.doStep()
             actions.append(repr(t.startnum))
-        commit(run,actions)
+        commit(run, actions)
         # stderr.write(' '.join(actions)+'\n')
     finally:
         for t in tasks:
@@ -160,12 +163,13 @@ class StressThread(FailableThread):
                 self.commitdict[self] = 1
                 if self.sleep:
                     time.sleep(self.sleep)
-            except (ReadConflictError, ConflictError) as msg:
+            except (ReadConflictError, ConflictError):
                 tm.abort()
             else:
                 self.added_keys.append(key)
             key += self.step
         cn.close()
+
 
 class LargeUpdatesThread(FailableThread):
 
@@ -195,7 +199,7 @@ class LargeUpdatesThread(FailableThread):
                 # print("%d getting tree abort" % self.threadnum)
                 transaction.abort()
 
-        keys_added = {} # set of keys we commit
+        keys_added = {}  # set of keys we commit
         tkeys = []
         while not self.stop.isSet():
 
@@ -212,7 +216,7 @@ class LargeUpdatesThread(FailableThread):
             for key in keys:
                 try:
                     tree[key] = self.threadnum
-                except (ReadConflictError, ConflictError) as msg:
+                except (ReadConflictError, ConflictError):  # as msg:
                     # print("%d setting key %s" % (self.threadnum, msg))
                     transaction.abort()
                     break
@@ -224,7 +228,7 @@ class LargeUpdatesThread(FailableThread):
                     self.commitdict[self] = 1
                     if self.sleep:
                         time.sleep(self.sleep)
-                except ConflictError as msg:
+                except ConflictError:  # as msg
                     # print("%d commit %s" % (self.threadnum, msg))
                     transaction.abort()
                     continue
@@ -233,6 +237,7 @@ class LargeUpdatesThread(FailableThread):
                     keys_added[k] = 1
         self.added_keys = keys_added.keys()
         cn.close()
+
 
 class InvalidationTests(object):
 
@@ -261,7 +266,7 @@ class InvalidationTests(object):
                     transaction.abort()
                 else:
                     raise
-            except:
+            except:  # NOQA: E722 bare except
                 display(tree)
                 raise
 

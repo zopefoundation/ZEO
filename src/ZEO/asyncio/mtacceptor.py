@@ -72,6 +72,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class Acceptor(asyncore.dispatcher):
     """A server that accepts incoming RPC connections
 
@@ -115,13 +116,13 @@ class Acceptor(asyncore.dispatcher):
         for i in range(25):
             try:
                 self.bind(addr)
-            except Exception as exc:
+            except Exception:
                 logger.info("bind on %s failed %s waiting", addr, i)
                 if i == 24:
                     raise
                 else:
                     time.sleep(5)
-            except:
+            except:  # NOQA: E722 bare except
                 logger.exception('binding')
                 raise
             else:
@@ -146,7 +147,6 @@ class Acceptor(asyncore.dispatcher):
             logger.info("accepted failed: %s", msg)
             return
 
-
         # We could short-circuit the attempt below in some edge cases
         # and avoid a log message by checking for addr being None.
         # Unfortunately, our test for the code below,
@@ -159,7 +159,7 @@ class Acceptor(asyncore.dispatcher):
         # closed, but I don't see a way to do that. :(
 
         # Drop flow-info from IPv6 addresses
-        if addr: # Sometimes None on Mac. See above.
+        if addr:  # Sometimes None on Mac. See above.
             addr = addr[:2]
 
         try:
@@ -172,23 +172,25 @@ class Acceptor(asyncore.dispatcher):
                 protocol.stop = loop.stop
 
                 if self.ssl_context is None:
-                    cr = loop.create_connection((lambda : protocol), sock=sock)
+                    cr = loop.create_connection((lambda: protocol), sock=sock)
                 else:
                     if hasattr(loop, 'connect_accepted_socket'):
                         cr = loop.connect_accepted_socket(
-                            (lambda : protocol), sock, ssl=self.ssl_context)
+                            (lambda: protocol), sock, ssl=self.ssl_context)
                     else:
                         #######################################################
                         # XXX See http://bugs.python.org/issue27392 :(
                         _make_ssl_transport = loop._make_ssl_transport
+
                         def make_ssl_transport(*a, **kw):
                             kw['server_side'] = True
                             return _make_ssl_transport(*a, **kw)
+
                         loop._make_ssl_transport = make_ssl_transport
                         #
                         #######################################################
                         cr = loop.create_connection(
-                            (lambda : protocol), sock=sock,
+                            (lambda: protocol), sock=sock,
                             ssl=self.ssl_context,
                             server_hostname=''
                             )
@@ -212,11 +214,12 @@ class Acceptor(asyncore.dispatcher):
             asyncore.loop(map=self.__socket_map, timeout=timeout)
         except Exception:
             if not self.__closed:
-                raise # Unexpected exc
+                raise  # Unexpected exc
 
         logger.debug('acceptor %s loop stopped', self.addr)
 
     __closed = False
+
     def close(self):
         if not self.__closed:
             self.__closed = True
