@@ -27,6 +27,7 @@ from __future__ import print_function, absolute_import
 
 import bisect
 import struct
+import random
 import re
 import sys
 import ZEO.cache
@@ -34,6 +35,7 @@ import argparse
 
 from ZODB.utils import z64
 
+from ..cache import ZEC_HEADER_SIZE
 from .cache_stats import add_interval_argument
 from .cache_stats import add_tracefile_argument
 
@@ -46,7 +48,7 @@ def main(args=None):
     if args is None:
         args = sys.argv[1:]
     # Parse options.
-    MB = 1<<20
+    MB = 1 << 20
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--size", "-s",
                         default=20*MB, dest="cachelimit",
@@ -114,6 +116,7 @@ def main(args=None):
     # Finish simulation.
     interval_sim.report()
     sim.finish()
+
 
 class Simulation(object):
     """Base class for simulations.
@@ -270,7 +273,6 @@ class CircularCacheEntry(object):
         self.end_tid = end_tid
         self.offset = offset
 
-from ZEO.cache import ZEC_HEADER_SIZE
 
 class CircularCacheSimulation(Simulation):
     """Simulate the ZEO 3.0 cache."""
@@ -285,8 +287,6 @@ class CircularCacheSimulation(Simulation):
     evicts = 0
 
     def __init__(self, cachelimit, rearrange):
-        from ZEO import cache
-
         Simulation.__init__(self, cachelimit, rearrange)
         self.total_evicts = 0  # number of cache evictions
 
@@ -296,7 +296,7 @@ class CircularCacheSimulation(Simulation):
         # Map offset in file to (size, CircularCacheEntry) pair, or to
         # (size, None) if the offset starts a free block.
         self.filemap = {ZEC_HEADER_SIZE: (self.cachelimit - ZEC_HEADER_SIZE,
-                                           None)}
+                                          None)}
         # Map key to CircularCacheEntry.  A key is an (oid, tid) pair.
         self.key2entry = {}
 
@@ -322,10 +322,11 @@ class CircularCacheSimulation(Simulation):
         self.evicted_hit = self.evicted_miss = 0
 
     evicted_hit = evicted_miss = 0
+
     def load(self, oid, size, tid, code):
         if (code == 0x20) or (code == 0x22):
             # Trying to load current revision.
-            if oid in self.current: # else it's a cache miss
+            if oid in self.current:  # else it's a cache miss
                 self.hits += 1
                 self.total_hits += 1
 
@@ -512,7 +513,7 @@ class CircularCacheSimulation(Simulation):
         self.inuse = round(100.0 * used / total, 1)
         self.total_inuse = self.inuse
         Simulation.report(self)
-        #print self.evicted_hit, self.evicted_miss
+        # print self.evicted_hit, self.evicted_miss
 
     def check(self):
         oidcount = 0
@@ -536,15 +537,17 @@ class CircularCacheSimulation(Simulation):
 
 
 def roundup(size):
-    k = MINSIZE
+    k = MINSIZE  # NOQA: F821 undefined name
     while k < size:
         k += k
     return k
+
 
 def hitrate(loads, hits):
     if loads < 1:
         return 'n/a'
     return "%5.1f%%" % (100.0 * hits / loads)
+
 
 def duration(secs):
     mm, ss = divmod(secs, 60)
@@ -555,7 +558,10 @@ def duration(secs):
         return "%d:%02d" % (mm, ss)
     return "%d" % ss
 
-nre = re.compile('([=-]?)(\d+)([.]\d*)?').match
+
+nre = re.compile(r'([=-]?)(\d+)([.]\d*)?').match
+
+
 def addcommas(n):
     sign, s, d = nre(str(n)).group(1, 2, 3)
     if d == '.0':
@@ -569,11 +575,11 @@ def addcommas(n):
 
     return (sign or '') + result + (d or '')
 
-import random
 
 def maybe(f, p=0.5):
     if random.random() < p:
         f()
+
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -19,7 +19,8 @@ logger = logging.getLogger(__name__)
 
 Fallback = object()
 
-local_random = random.Random() # use separate generator to facilitate tests
+local_random = random.Random()  # use separate generator to facilitate tests
+
 
 def future_generator(func):
     """Decorates a generator that generates futures
@@ -51,6 +52,7 @@ def future_generator(func):
             store(gen, f)
 
     return call_generator
+
 
 class Protocol(base.Protocol):
     """asyncio low-level ZEO client interface
@@ -85,7 +87,7 @@ class Protocol(base.Protocol):
         self.client = client
         self.connect_poll = connect_poll
         self.heartbeat_interval = heartbeat_interval
-        self.futures = {} # { message_id -> future }
+        self.futures = {}  # { message_id -> future }
         self.ssl = ssl
         self.ssl_server_hostname = ssl_server_hostname
         self.credentials = credentials
@@ -132,7 +134,9 @@ class Protocol(base.Protocol):
             elif future.exception() is not None:
                 logger.info("Connection to %r failed, %s",
                             self.addr, future.exception())
-            else: return
+            else:
+                return
+
             # keep trying
             if not self.closed:
                 logger.info("retry connecting %r", self.addr)
@@ -140,7 +144,6 @@ class Protocol(base.Protocol):
                     self.connect_poll + local_random.random(),
                     self.connect,
                     )
-
 
     def connection_made(self, transport):
         super(Protocol, self).connection_made(transport)
@@ -190,7 +193,8 @@ class Protocol(base.Protocol):
             try:
                 server_tid = yield self.fut(
                     'register', self.storage_key,
-                    self.read_only if self.read_only is not Fallback else False,
+                    (self.read_only if self.read_only is not Fallback
+                     else False),
                     *credentials)
             except ZODB.POSException.ReadOnlyError:
                 if self.read_only is Fallback:
@@ -208,11 +212,12 @@ class Protocol(base.Protocol):
             self.client.registered(self, server_tid)
 
     exception_type_type = type(Exception)
+
     def message_received(self, data):
         msgid, async_, name, args = self.decode(data)
         if name == '.reply':
             future = self.futures.pop(msgid)
-            if async_: # ZEO 5 exception
+            if async_:  # ZEO 5 exception
                 class_, args = args
                 factory = exc_factories.get(class_)
                 if factory:
@@ -237,13 +242,14 @@ class Protocol(base.Protocol):
             else:
                 future.set_result(args)
         else:
-            assert async_ # clients only get async calls
+            assert async_  # clients only get async calls
             if name in self.client_methods:
                 getattr(self.client, name)(*args)
             else:
                 raise AttributeError(name)
 
     message_id = 0
+
     def call(self, future, method, args):
         self.message_id += 1
         self.futures[self.message_id] = future
@@ -262,6 +268,7 @@ class Protocol(base.Protocol):
             self.futures[message_id] = future
             self._write(
                 self.encode(message_id, False, 'loadBefore', (oid, tid)))
+
             @future.add_done_callback
             def _(future):
                 try:
@@ -271,6 +278,7 @@ class Protocol(base.Protocol):
                 if data:
                     data, start, end = data
                     self.client.cache.store(oid, start, end, data)
+
         return future
 
     # Methods called by the server.
@@ -290,28 +298,33 @@ class Protocol(base.Protocol):
         self.heartbeat_handle = self.loop.call_later(
             self.heartbeat_interval, self.heartbeat)
 
+
 def create_Exception(class_, args):
     return exc_classes[class_](*args)
 
+
 def create_ConflictError(class_, args):
     exc = exc_classes[class_](
-        message = args['message'],
-        oid     = args['oid'],
-        serials = args['serials'],
+        message=args['message'],
+        oid=args['oid'],
+        serials=args['serials'],
         )
     exc.class_name = args.get('class_name')
     return exc
 
+
 def create_BTreesConflictError(class_, args):
     return ZODB.POSException.BTreesConflictError(
-        p1 = args['p1'],
-        p2 = args['p2'],
-        p3 = args['p3'],
-        reason = args['reason'],
+        p1=args['p1'],
+        p2=args['p2'],
+        p3=args['p3'],
+        reason=args['reason'],
         )
+
 
 def create_MultipleUndoErrors(class_, args):
     return ZODB.POSException.MultipleUndoErrors(args['_errs'])
+
 
 exc_classes = {
     'builtins.KeyError': KeyError,
@@ -340,6 +353,8 @@ exc_factories = {
     }
 unlogged_exceptions = (ZODB.POSException.POSKeyError,
                        ZODB.POSException.ConflictError)
+
+
 class Client(object):
     """asyncio low-level ZEO client interface
     """
@@ -352,8 +367,11 @@ class Client(object):
     # connect.
 
     protocol = None
-    ready = None # Tri-value: None=Never connected, True=connected,
-                 # False=Disconnected
+    # ready can have three values:
+    #   None=Never connected
+    #   True=connected
+    #   False=Disconnected
+    ready = None
 
     def __init__(self, loop,
                  addrs, client, cache, storage_key, read_only, connect_poll,
@@ -404,6 +422,7 @@ class Client(object):
                 self.is_read_only() and self.read_only is Fallback)
 
     closed = False
+
     def close(self):
         if not self.closed:
             self.closed = True
@@ -466,7 +485,7 @@ class Client(object):
             self.upgrade(protocol)
             self.verify(server_tid)
         else:
-            protocol.close() # too late, we went home with another
+            protocol.close()  # too late, we went home with another
 
     def register_failed(self, protocol, exc):
         # A protocol failed registration. That's weird.  If they've all
@@ -474,18 +493,17 @@ class Client(object):
         if protocol is not self:
             protocol.close()
         logger.exception("Registration or cache validation failed, %s", exc)
-        if (self.protocol is None and not
-            any(not p.closed for p in self.protocols)
-            ):
+        if self.protocol is None and \
+           not any(not p.closed for p in self.protocols):
             self.loop.call_later(
                 self.register_failed_poll + local_random.random(),
                 self.try_connecting)
 
-    verify_result = None # for tests
+    verify_result = None  # for tests
 
     @future_generator
     def verify(self, server_tid):
-        self.verify_invalidation_queue = [] # See comment in init :(
+        self.verify_invalidation_queue = []  # See comment in init :(
 
         protocol = self.protocol
         try:
@@ -739,6 +757,7 @@ class Client(object):
             else:
                 return protocol.read_only
 
+
 class ClientRunner(object):
 
     def set_options(self, addrs, wrapper, cache, storage_key, read_only,
@@ -855,6 +874,7 @@ class ClientRunner(object):
             timeout = self.timeout
         self.wait_for_result(self.client.connected, timeout)
 
+
 class ClientThread(ClientRunner):
     """Thread wrapper for client interface
 
@@ -883,6 +903,7 @@ class ClientThread(ClientRunner):
             raise self.exception
 
     exception = None
+
     def run(self):
         loop = None
         try:
@@ -909,6 +930,7 @@ class ClientThread(ClientRunner):
             logger.debug('Stopping client thread')
 
     closed = False
+
     def close(self):
         if not self.closed:
             self.closed = True
@@ -917,6 +939,7 @@ class ClientThread(ClientRunner):
             self.thread.join(9)
             if self.exception:
                 raise self.exception
+
 
 class Fut(object):
     """Lightweight future that calls it's callbacks immediately rather than soon
@@ -929,6 +952,7 @@ class Fut(object):
         self.cbv.append(cb)
 
     exc = None
+
     def set_exception(self, exc):
         self.exc = exc
         for cb in self.cbv:

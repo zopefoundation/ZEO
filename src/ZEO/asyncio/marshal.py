@@ -21,11 +21,12 @@ Python-independent format, or possibly a minimal pickle subset.
 
 import logging
 
-from .._compat import Unpickler, Pickler, BytesIO, PY3, PYPY
+from .._compat import Unpickler, Pickler, BytesIO, PY3
 from ..shortrepr import short_repr
 
 PY2 = not PY3
 logger = logging.getLogger(__name__)
+
 
 def encoder(protocol, server=False):
     """Return a non-thread-safe encoder
@@ -33,7 +34,9 @@ def encoder(protocol, server=False):
 
     if protocol[:1] == b'M':
         from msgpack import packb
+
         default = server_default if server else None
+
         def encode(*args):
             return packb(
                 args, use_bin_type=True, default=default)
@@ -49,6 +52,7 @@ def encoder(protocol, server=False):
     pickler = Pickler(f, 3)
     pickler.fast = 1
     dump = pickler.dump
+
     def encode(*args):
         seek(0)
         truncate()
@@ -57,20 +61,25 @@ def encoder(protocol, server=False):
 
     return encode
 
+
 def encode(*args):
 
     return encoder(b'Z')(*args)
 
+
 def decoder(protocol):
     if protocol[:1] == b'M':
         from msgpack import unpackb
+
         def msgpack_decode(data):
             """Decodes msg and returns its parts"""
             return unpackb(data, raw=False, use_list=False)
+
         return msgpack_decode
     else:
         assert protocol[:1] == b'Z'
         return pickle_decode
+
 
 def pickle_decode(msg):
     """Decodes msg and returns its parts"""
@@ -82,10 +91,11 @@ def pickle_decode(msg):
     except AttributeError:
         pass
     try:
-        return unpickler.load() # msgid, flags, name, args
-    except:
+        return unpickler.load()  # msgid, flags, name, args
+    except:  # NOQA: E722 bare except
         logger.error("can't decode message: %s" % short_repr(msg))
         raise
+
 
 def server_decoder(protocol):
     if protocol[:1] == b'M':
@@ -93,6 +103,7 @@ def server_decoder(protocol):
     else:
         assert protocol[:1] == b'Z'
         return pickle_server_decode
+
 
 def pickle_server_decode(msg):
     """Decodes msg and returns its parts"""
@@ -105,10 +116,11 @@ def pickle_server_decode(msg):
         pass
 
     try:
-        return unpickler.load() # msgid, flags, name, args
-    except:
+        return unpickler.load()  # msgid, flags, name, args
+    except:  # NOQA: E722 bare except
         logger.error("can't decode message: %s" % short_repr(msg))
         raise
+
 
 def server_default(obj):
     if isinstance(obj, Exception):
@@ -116,10 +128,12 @@ def server_default(obj):
     else:
         return obj
 
+
 def reduce_exception(exc):
     class_ = exc.__class__
     class_ = "%s.%s" % (class_.__module__, class_.__name__)
     return class_, exc.__dict__ or exc.args
+
 
 _globals = globals()
 _silly = ('__doc__',)
@@ -130,6 +144,7 @@ _SAFE_MODULE_NAMES = (
     'ZopeUndo.Prefix', 'zodbpickle',
     'builtins', 'copy_reg', '__builtin__',
 )
+
 
 def find_global(module, name):
     """Helper for message unpickler"""
@@ -143,7 +158,8 @@ def find_global(module, name):
     except AttributeError:
         raise ImportError("module %s has no global %s" % (module, name))
 
-    safe = getattr(r, '__no_side_effects__', 0) or (PY2 and module in _SAFE_MODULE_NAMES)
+    safe = (getattr(r, '__no_side_effects__', 0) or
+            (PY2 and module in _SAFE_MODULE_NAMES))
     if safe:
         return r
 
@@ -152,6 +168,7 @@ def find_global(module, name):
         return r
 
     raise ImportError("Unsafe global: %s.%s" % (module, name))
+
 
 def server_find_global(module, name):
     """Helper for message unpickler"""

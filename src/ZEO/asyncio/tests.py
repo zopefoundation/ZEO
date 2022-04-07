@@ -2,17 +2,17 @@ from .._compat import PY3
 
 if PY3:
     import asyncio
+
     def to_byte(i):
         return bytes([i])
 else:
-    import trollius as asyncio
+    import trollius as asyncio  # NOQA: F401 unused import
+
     def to_byte(b):
         return b
 
 from zope.testing import setupstack
-from concurrent.futures import Future
 import mock
-from ZODB.POSException import ReadOnlyError
 from ZODB.utils import maxtid, RLock
 
 import collections
@@ -27,6 +27,7 @@ from .testing import Loop
 from .client import ClientRunner, Fallback
 from .server import new_connection, best_protocol_version
 from .marshal import encoder, decoder
+
 
 class Base(object):
 
@@ -56,6 +57,7 @@ class Base(object):
         return self.unsized(data, True)
 
     target = None
+
     def send(self, method, *args, **kw):
         target = kw.pop('target', self.target)
         called = kw.pop('called', True)
@@ -76,6 +78,7 @@ class Base(object):
 
     def pop(self, count=None, parse=True):
         return self.unsized(self.loop.transport.pop(count), parse)
+
 
 class ClientTests(Base, setupstack.TestCase, ClientRunner):
 
@@ -204,7 +207,11 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         loaded = self.load_before(b'1'*8, maxtid)
 
         # The data wasn't in the cache, so we made a server call:
-        self.assertEqual(self.pop(), ((b'1'*8, maxtid), False, 'loadBefore', (b'1'*8, maxtid)))
+        self.assertEqual(self.pop(),
+                         ((b'1'*8, maxtid),
+                          False,
+                          'loadBefore',
+                          (b'1'*8, maxtid)))
         # Note load_before uses the oid as the message id.
         self.respond((b'1'*8, maxtid), (b'data', b'a'*8, None))
         self.assertEqual(loaded.result(), (b'data', b'a'*8, None))
@@ -224,7 +231,11 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         # the requests will be collapsed:
         loaded2 = self.load_before(b'1'*8, maxtid)
 
-        self.assertEqual(self.pop(), ((b'1'*8, maxtid), False, 'loadBefore', (b'1'*8, maxtid)))
+        self.assertEqual(self.pop(),
+                         ((b'1'*8, maxtid),
+                          False,
+                          'loadBefore',
+                          (b'1'*8, maxtid)))
         self.respond((b'1'*8, maxtid), (b'data2', b'b'*8, None))
         self.assertEqual(loaded.result(), (b'data2', b'b'*8, None))
         self.assertEqual(loaded2.result(), (b'data2', b'b'*8, None))
@@ -238,7 +249,11 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertFalse(transport.data)
         loaded = self.load_before(b'1'*8, b'_'*8)
 
-        self.assertEqual(self.pop(), ((b'1'*8, b'_'*8), False, 'loadBefore', (b'1'*8, b'_'*8)))
+        self.assertEqual(self.pop(),
+                         ((b'1'*8, b'_'*8),
+                          False,
+                          'loadBefore',
+                          (b'1'*8, b'_'*8)))
         self.respond((b'1'*8, b'_'*8), (b'data0', b'^'*8, b'_'*8))
         self.assertEqual(loaded.result(), (b'data0', b'^'*8, b'_'*8))
 
@@ -247,6 +262,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         # iteratable to tpc_finish_threadsafe.
 
         tids = []
+
         def finished_cb(tid):
             tids.append(tid)
 
@@ -349,7 +365,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
 
         # We have to verify the cache, so we're not done connecting:
         self.assertFalse(client.connected.done())
-        self.assertEqual(self.pop(), (3, False, 'getInvalidations', (b'a'*8, )))
+        self.assertEqual(self.pop(),
+                         (3, False, 'getInvalidations', (b'a'*8, )))
         self.respond(3, (b'e'*8, [b'4'*8]))
 
         self.assertEqual(self.pop(), (4, False, 'get_info', ()))
@@ -361,7 +378,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
 
         # And the cache has been updated:
         self.assertEqual(cache.load(b'2'*8),
-                         ('2 data', b'a'*8)) # unchanged
+                         ('2 data', b'a'*8))  # unchanged
         self.assertEqual(cache.load(b'4'*8), None)
 
         # Because we were able to update the cache, we didn't have to
@@ -384,7 +401,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
 
         # We have to verify the cache, so we're not done connecting:
         self.assertFalse(client.connected.done())
-        self.assertEqual(self.pop(), (3, False, 'getInvalidations', (b'a'*8, )))
+        self.assertEqual(self.pop(),
+                         (3, False, 'getInvalidations', (b'a'*8, )))
 
         # We respond None, indicating that we're too far out of date:
         self.respond(3, None)
@@ -451,10 +469,10 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.respond(2, 'a'*8)
         self.pop()
         self.assertFalse(client.connected.done() or transport.data)
-        delay, func, args, _ = loop.later.pop(1) # first in later is heartbeat
+        delay, func, args, _ = loop.later.pop(1)  # first in later is heartbeat
         self.assertTrue(8 < delay < 10)
-        self.assertEqual(len(loop.later), 1) # first in later is heartbeat
-        func(*args) # connect again
+        self.assertEqual(len(loop.later), 1)  # first in later is heartbeat
+        func(*args)  # connect again
         self.assertFalse(protocol is loop.protocol)
         self.assertFalse(transport is loop.transport)
         protocol = loop.protocol
@@ -512,7 +530,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         # We connect the second address:
         loop.connect_connecting(addrs[1])
         loop.protocol.data_received(sized(self.enc + b'3101'))
-        self.assertEqual(self.unsized(loop.transport.pop(2)), self.enc + b'3101')
+        self.assertEqual(self.unsized(loop.transport.pop(2)),
+                         self.enc + b'3101')
         self.assertEqual(self.parse(loop.transport.pop()),
                          (1, False, 'register', ('TEST', False)))
         self.assertTrue(self.is_read_only())
@@ -613,7 +632,6 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
             protocol.data_received(sized(self.enc + b'200'))
             self.assertTrue(isinstance(error.call_args[0][1], ProtocolError))
 
-
     def test_get_peername(self):
         wrapper, cache, loop, client, protocol, transport = self.start(
             finish_start=True)
@@ -641,7 +659,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         # that caused it to fail badly if errors were raised while
         # handling data.
 
-        wrapper, cache, loop, client, protocol, transport =self.start(
+        wrapper, cache, loop, client, protocol, transport = self.start(
             finish_start=True)
 
         wrapper.receiveBlobStart.side_effect = ValueError('test')
@@ -694,9 +712,11 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         protocol.connection_lost(None)
         self.assertTrue(handle.cancelled)
 
+
 class MsgpackClientTests(ClientTests):
     enc = b'M'
     seq_type = tuple
+
 
 class MemoryCache(object):
 
@@ -709,6 +729,7 @@ class MemoryCache(object):
     clear = __init__
 
     closed = False
+
     def close(self):
         self.closed = True
 
@@ -771,6 +792,7 @@ class ServerTests(Base, setupstack.TestCase):
 
     message_id = 0
     target = None
+
     def call(self, meth, *args, **kw):
         if kw:
             expect = kw.pop('expect', self)
@@ -835,9 +857,11 @@ class ServerTests(Base, setupstack.TestCase):
         self.call('foo', target=None)
         self.assertTrue(protocol.loop.transport.closed)
 
+
 class MsgpackServerTests(ServerTests):
     enc = b'M'
     seq_type = tuple
+
 
 def server_protocol(msgpack,
                     zeo_storage=None,
@@ -847,17 +871,16 @@ def server_protocol(msgpack,
     if zeo_storage is None:
         zeo_storage = mock.Mock()
     loop = Loop()
-    sock = () # anything not None
+    sock = ()  # anything not None
     new_connection(loop, addr, sock, zeo_storage, msgpack)
     if protocol_version:
         loop.protocol.data_received(sized(protocol_version))
     return loop.protocol
 
-def response(*data):
-    return sized(self.encode(*data))
 
 def sized(message):
     return struct.pack(">I", len(message)) + message
+
 
 class Logging(object):
 
@@ -885,9 +908,11 @@ class ProtocolTests(setupstack.TestCase):
         loop = self.loop
         protocol, transport = loop.protocol, loop.transport
         transport.capacity = 1  # single message
+
         def it(tag):
             yield tag
             yield tag
+
         protocol._writeit(it(b"0"))
         protocol._writeit(it(b"1"))
         for b in b"0011":

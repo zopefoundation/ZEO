@@ -25,6 +25,7 @@ from ZEO.ClientStorage import ClientStorage
 
 ZERO = '\0'*8
 
+
 def main():
     if len(sys.argv) not in (3, 4):
         sys.stderr.write("Usage: timeout.py address delay [storage-name]\n" %
@@ -67,6 +68,7 @@ def main():
     print("Voted; now sleeping %s..." % delay)
     time.sleep(delay)
     print("Done.")
+
 
 if __name__ == "__main__":
     main()

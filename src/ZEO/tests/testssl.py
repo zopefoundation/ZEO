@@ -15,11 +15,12 @@ from .threaded import threaded_server_tests
 
 here = os.path.dirname(__file__)
 server_cert = os.path.join(here, 'server.pem')
-server_key  = os.path.join(here, 'server_key.pem')
+server_key = os.path.join(here, 'server_key.pem')
 serverpw_cert = os.path.join(here, 'serverpw.pem')
-serverpw_key  = os.path.join(here, 'serverpw_key.pem')
+serverpw_key = os.path.join(here, 'serverpw_key.pem')
 client_cert = os.path.join(here, 'client.pem')
-client_key  = os.path.join(here, 'client_key.pem')
+client_key = os.path.join(here, 'client_key.pem')
+
 
 @unittest.skipIf(forker.ZEO4_SERVER, "ZEO4 servers don't support SSL")
 class SSLConfigTest(ZEOConfigTestBase):
@@ -117,6 +118,7 @@ class SSLConfigTest(ZEOConfigTestBase):
             )
         stop()
 
+
 @unittest.skipIf(forker.ZEO4_SERVER, "ZEO4 servers don't support SSL")
 @mock.patch(('asyncio' if PY3 else 'trollius') + '.ensure_future')
 @mock.patch(('asyncio' if PY3 else 'trollius') + '.set_event_loop')
@@ -133,14 +135,13 @@ class SSLConfigTestMockiavellian(ZEOConfigTestBase):
         server.close()
 
     def assert_context(
-        self,
-        server,
-        factory, context,
-        cert=(server_cert, server_key, None),
-        verify_mode=ssl.CERT_REQUIRED,
-        check_hostname=False,
-        cafile=None, capath=None,
-        ):
+            self,
+            server,
+            factory, context,
+            cert=(server_cert, server_key, None),
+            verify_mode=ssl.CERT_REQUIRED,
+            check_hostname=False,
+            cafile=None, capath=None):
         factory.assert_called_with(
             ssl.Purpose.CLIENT_AUTH if server else ssl.Purpose.SERVER_AUTH,
             cafile=cafile, capath=capath)
@@ -180,72 +181,75 @@ class SSLConfigTestMockiavellian(ZEOConfigTestBase):
             authenticate=here,
             )
         context = server.acceptor.ssl_context
-        self.assert_context(True, 
-            factory, context, (server_cert, server_key, pwfunc), capath=here)
+        self.assert_context(True,
+                            factory,
+                            context,
+                            (server_cert, server_key, pwfunc),
+                            capath=here)
         server.close()
 
     @mock.patch('ssl.create_default_context')
     @mock.patch('ZEO.ClientStorage.ClientStorage')
     def test_ssl_mockiavellian_client_no_ssl(self, ClientStorage, factory, *_):
-        client = ssl_client()
+        ssl_client()
         self.assertFalse('ssl' in ClientStorage.call_args[1])
         self.assertFalse('ssl_server_hostname' in ClientStorage.call_args[1])
 
     @mock.patch('ssl.create_default_context')
     @mock.patch('ZEO.ClientStorage.ClientStorage')
     def test_ssl_mockiavellian_client_server_signed(
-        self, ClientStorage, factory, *_
-        ):
-        client = ssl_client(certificate=client_cert, key=client_key)
+            self, ClientStorage, factory, *_):
+        ssl_client(certificate=client_cert, key=client_key)
         context = ClientStorage.call_args[1]['ssl']
         self.assertEqual(ClientStorage.call_args[1]['ssl_server_hostname'],
                          None)
         self.assert_context(False,
-            factory, context, (client_cert, client_key, None),
-            check_hostname=True)
+                            factory,
+                            context,
+                            (client_cert, client_key, None),
+                            check_hostname=True)
 
         context.load_default_certs.assert_called_with()
 
     @mock.patch('ssl.create_default_context')
     @mock.patch('ZEO.ClientStorage.ClientStorage')
     def test_ssl_mockiavellian_client_auth_dir(
-        self, ClientStorage, factory, *_
-        ):
-        client = ssl_client(
+            self, ClientStorage, factory, *_):
+        ssl_client(
             certificate=client_cert, key=client_key, authenticate=here)
         context = ClientStorage.call_args[1]['ssl']
         self.assertEqual(ClientStorage.call_args[1]['ssl_server_hostname'],
                          None)
         self.assert_context(False,
-            factory, context, (client_cert, client_key, None),
-            capath=here,
-            check_hostname=True,
-            )
+                            factory,
+                            context,
+                            (client_cert, client_key, None),
+                            capath=here,
+                            check_hostname=True)
         context.load_default_certs.assert_not_called()
 
     @mock.patch('ssl.create_default_context')
     @mock.patch('ZEO.ClientStorage.ClientStorage')
     def test_ssl_mockiavellian_client_auth_file(
-        self, ClientStorage, factory, *_
-        ):
-        client = ssl_client(
+            self, ClientStorage, factory, *_):
+        ssl_client(
             certificate=client_cert, key=client_key, authenticate=server_cert)
         context = ClientStorage.call_args[1]['ssl']
         self.assertEqual(ClientStorage.call_args[1]['ssl_server_hostname'],
                          None)
         self.assert_context(False,
-            factory, context, (client_cert, client_key, None),
-            cafile=server_cert,
-            check_hostname=True,
-            )
+                            factory,
+                            context,
+                            (client_cert, client_key, None),
+                            cafile=server_cert,
+                            check_hostname=True)
         context.load_default_certs.assert_not_called()
 
     @mock.patch('ssl.create_default_context')
     @mock.patch('ZEO.ClientStorage.ClientStorage')
     def test_ssl_mockiavellian_client_pw(
-        self, ClientStorage, factory, *_
-        ):
-        client = ssl_client(
+            self, ClientStorage, factory, *_):
+        ssl_client(
             certificate=client_cert, key=client_key,
             password_function='ZEO.tests.testssl.pwfunc',
             authenticate=server_cert)
@@ -253,47 +257,50 @@ class SSLConfigTestMockiavellian(ZEOConfigTestBase):
         self.assertEqual(ClientStorage.call_args[1]['ssl_server_hostname'],
                          None)
         self.assert_context(False,
-            factory, context, (client_cert, client_key, pwfunc),
-            cafile=server_cert,
-            check_hostname=True,
-            )
+                            factory,
+                            context,
+                            (client_cert, client_key, pwfunc),
+                            cafile=server_cert,
+                            check_hostname=True)
 
     @mock.patch('ssl.create_default_context')
     @mock.patch('ZEO.ClientStorage.ClientStorage')
     def test_ssl_mockiavellian_client_server_hostname(
-        self, ClientStorage, factory, *_
-        ):
-        client = ssl_client(
+            self, ClientStorage, factory, *_):
+        ssl_client(
             certificate=client_cert, key=client_key, authenticate=server_cert,
             server_hostname='example.com')
         context = ClientStorage.call_args[1]['ssl']
         self.assertEqual(ClientStorage.call_args[1]['ssl_server_hostname'],
                          'example.com')
         self.assert_context(False,
-            factory, context, (client_cert, client_key, None),
-            cafile=server_cert,
-            check_hostname=True,
-            )
+                            factory,
+                            context,
+                            (client_cert, client_key, None),
+                            cafile=server_cert,
+                            check_hostname=True)
 
     @mock.patch('ssl.create_default_context')
     @mock.patch('ZEO.ClientStorage.ClientStorage')
     def test_ssl_mockiavellian_client_check_hostname(
-        self, ClientStorage, factory, *_
-        ):
-        client = ssl_client(
+            self, ClientStorage, factory, *_):
+        ssl_client(
             certificate=client_cert, key=client_key, authenticate=server_cert,
             check_hostname=False)
         context = ClientStorage.call_args[1]['ssl']
         self.assertEqual(ClientStorage.call_args[1]['ssl_server_hostname'],
                          None)
         self.assert_context(False,
-            factory, context, (client_cert, client_key, None),
-            cafile=server_cert,
-            check_hostname=False,
-            )
+                            factory,
+                            context,
+                            (client_cert, client_key, None),
+                            cafile=server_cert,
+                            check_hostname=False)
+
 
 def args(*a, **kw):
     return a, kw
+
 
 def ssl_conf(**ssl_settings):
     if ssl_settings:
@@ -306,6 +313,7 @@ def ssl_conf(**ssl_settings):
 
     return ssl_conf
 
+
 def ssl_client(**ssl_settings):
     return storageFromString(
         """%import ZEO
@@ -316,6 +324,7 @@ def ssl_client(**ssl_settings):
         </clientstorage>
         """.format(ssl_conf(**ssl_settings))
         )
+
 
 def create_server(**ssl_settings):
     with open('conf', 'w') as f:
@@ -336,7 +345,9 @@ def create_server(**ssl_settings):
     s.create_server()
     return s.server
 
-pwfunc = lambda : '1234'
+
+def pwfunc():
+    return '1234'
 
 
 def test_suite():
@@ -347,8 +358,8 @@ def test_suite():
     suite.layer = threaded_server_tests
     return suite
 
-# Helpers for other tests:
 
+# Helpers for other tests:
 server_config = """
     <zeo>
       address 127.0.0.1:0
@@ -359,6 +370,7 @@ server_config = """
       </ssl>
     </zeo>
     """.format(server_cert, server_key, client_cert)
+
 
 def client_ssl(cafile=server_key,
                client_cert=client_cert,
@@ -373,11 +385,11 @@ def client_ssl(cafile=server_key,
     return context
 
 # See
-# https://discuss.pivotal.io/hc/en-us/articles/202653388-How-to-renew-an-expired-Apache-Web-Server-self-signed-certificate-using-the-OpenSSL-tool
+# https://discuss.pivotal.io/hc/en-us/articles/202653388-How-to-renew-an-expired-Apache-Web-Server-self-signed-certificate-using-the-OpenSSL-tool  # NOQA: E501
 # for instructions on updating the server.pem (the certificate) if
 # needed. server.pem.csr is the request.
 # This should do it:
-# openssl x509 -req -days 999999 -in src/ZEO/tests/server.pem.csr -signkey src/ZEO/tests/server_key.pem -out src/ZEO/tests/server.pem
+# openssl x509 -req -days 999999 -in src/ZEO/tests/server.pem.csr -signkey src/ZEO/tests/server_key.pem -out src/ZEO/tests/server.pem  # NOQA: E501
 # If you need to create a new key first:
 # openssl genrsa -out server_key.pem 2048
 # These two files should then be copied to client_key.pem and client.pem.

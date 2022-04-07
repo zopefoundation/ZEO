@@ -1,7 +1,6 @@
 import unittest
 
 import mock
-import os
 
 from ZEO._compat import PY3
 from ZEO.runzeo import ZEOServer
@@ -11,7 +10,8 @@ class TestStorageServer(object):
 
     def __init__(self, fail_create_server):
         self.called = []
-        if fail_create_server: raise RuntimeError()
+        if fail_create_server:
+            raise RuntimeError()
 
     def close(self):
         self.called.append("close")
@@ -49,7 +49,8 @@ class TestZEOServer(ZEOServer):
 
     def loop_forever(self):
         self.called.append("loop_forever")
-        if self.fail_loop_forever: raise RuntimeError()
+        if self.fail_loop_forever:
+            raise RuntimeError()
 
     def close_server(self):
         self.called.append("close_server")
@@ -87,7 +88,7 @@ class CloseServerTests(unittest.TestCase):
             "setup_signals",
             "create_server",
             "loop_forever",
-            "close_server", # New
+            "close_server",  # New
             "clear_socket",
             "remove_pidfile",
             ])
@@ -137,6 +138,7 @@ class CloseServerTests(unittest.TestCase):
         # The server attribute is present but None
         self.assertEqual(hasattr(zeo, "server"), True)
         self.assertEqual(zeo.server, None)
+
 
 @mock.patch('os.unlink')
 class TestZEOServerSocket(unittest.TestCase):

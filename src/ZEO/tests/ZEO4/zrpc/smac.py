@@ -67,19 +67,20 @@ MAC_BIT = 0x80000000
 
 _close_marker = object()
 
+
 class SizedMessageAsyncConnection(asyncore.dispatcher):
     __super_init = asyncore.dispatcher.__init__
     __super_close = asyncore.dispatcher.close
 
-    __closed = True # Marker indicating that we're closed
+    __closed = True  # Marker indicating that we're closed
 
-    socket = None # to outwit Sam's getattr
+    socket = None  # to outwit Sam's getattr
 
     def __init__(self, sock, addr, map=None):
         self.addr = addr
         # __input_lock protects __inp, __input_len, __state, __msg_size
         self.__input_lock = threading.Lock()
-        self.__inp = None # None, a single String, or a list
+        self.__inp = None  # None, a single String, or a list
         self.__input_len = 0
         # Instance variables __state, __msg_size and __has_mac work together:
         #   when __state == 0:
@@ -168,7 +169,7 @@ class SizedMessageAsyncConnection(asyncore.dispatcher):
                 d = self.recv(8192)
             except socket.error as err:
                 # Python >= 3.3 makes select.error an alias of OSError,
-                # which is not subscriptable but does have the 'errno' attribute
+                # which is not subscriptable but does have a 'errno' attribute
                 err_errno = getattr(err, 'errno', None) or err[0]
                 if err_errno in expected_socket_read_errors:
                     return
@@ -190,7 +191,7 @@ class SizedMessageAsyncConnection(asyncore.dispatcher):
                 else:
                     self.__inp.append(d)
                 self.__input_len = input_len
-                return # keep waiting for more input
+                return  # keep waiting for more input
 
             # load all previous input and d into single string inp
             if isinstance(inp, six.binary_type):
@@ -298,15 +299,15 @@ class SizedMessageAsyncConnection(asyncore.dispatcher):
                 #  ensure the above mentioned "output" invariant
                 output.insert(0, v)
                 # Python >= 3.3 makes select.error an alias of OSError,
-                # which is not subscriptable but does have the 'errno' attribute
+                # which is not subscriptable but does have a 'errno' attribute
                 err_errno = getattr(err, 'errno', None) or err[0]
                 if err_errno in expected_socket_write_errors:
-                    break # we couldn't write anything
+                    break  # we couldn't write anything
                 raise
 
             if n < len(v):
                 output.append(v[n:])
-                break # we can't write any more
+                break  # we can't write any more
 
     def handle_close(self):
         self.close()

@@ -6,5 +6,5 @@ if PY3:
     except ImportError:
         from asyncio import new_event_loop
 else:
-    import trollius as asyncio
-    from trollius import new_event_loop
+    import trollius as asyncio  # NOQA: F401 unused import
+    from trollius import new_event_loop  # NOQA: F401 unused import

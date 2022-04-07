@@ -3,6 +3,7 @@
 import ZEO.StorageServer
 from ..asyncio.server import best_protocol_version
 
+
 class ServerProtocol(object):
 
     method = ('register', )
@@ -17,6 +18,7 @@ class ServerProtocol(object):
         zs.notify_connected(self)
 
     closed = False
+
     def close(self):
         if not self.closed:
             self.closed = True
@@ -29,6 +31,7 @@ class ServerProtocol(object):
         self.calls.append(args)
 
     async_threadsafe = async_
+
 
 class StorageServer(object):
     """Create a client interface to a StorageServer.

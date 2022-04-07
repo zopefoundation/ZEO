@@ -9,4 +9,3 @@ import ZODB.tests.util
 
 threaded_server_tests = ZODB.tests.util.MininalTestLayer(
     'threaded_server_tests')
-

@@ -19,7 +19,8 @@ from .log import log, short_repr
 
 PY2 = not PY3
 
-def encode(*args): # args: (msgid, flags, name, args)
+
+def encode(*args):  # args: (msgid, flags, name, args)
     # (We used to have a global pickler, but that's not thread-safe. :-( )
 
     # It's not thread safe if, in the couse of pickling, we call the
@@ -41,7 +42,6 @@ def encode(*args): # args: (msgid, flags, name, args)
     return res
 
 
-
 if PY3:
     # XXX: Py3: Needs optimization.
     fast_encode = encode
@@ -50,47 +50,56 @@ elif PYPY:
     # every time, getvalue() only works once
     fast_encode = encode
 else:
+
     def fast_encode():
         # Only use in cases where you *know* the data contains only basic
         # Python objects
         pickler = Pickler(1)
         pickler.fast = 1
         dump = pickler.dump
+
         def fast_encode(*args):
             return dump(args, 1)
+
         return fast_encode
+
     fast_encode = fast_encode()
+
 
 def decode(msg):
     """Decodes msg and returns its parts"""
     unpickler = Unpickler(BytesIO(msg))
     unpickler.find_global = find_global
     try:
-        unpickler.find_class = find_global # PyPy, zodbpickle, the non-c-accelerated version
+        # PyPy, zodbpickle, the non-c-accelerated version
+        unpickler.find_class = find_global
     except AttributeError:
         pass
     try:
-        return unpickler.load() # msgid, flags, name, args
-    except:
+        return unpickler.load()  # msgid, flags, name, args
+    except:  # NOQA: E722 bare except
         log("can't decode message: %s" % short_repr(msg),
             level=logging.ERROR)
         raise
+
 
 def server_decode(msg):
     """Decodes msg and returns its parts"""
     unpickler = Unpickler(BytesIO(msg))
     unpickler.find_global = server_find_global
     try:
-        unpickler.find_class = server_find_global # PyPy, zodbpickle, the non-c-accelerated version
+        # PyPy, zodbpickle, the non-c-accelerated version
+        unpickler.find_class = server_find_global
     except AttributeError:
         pass
 
     try:
-        return unpickler.load() # msgid, flags, name, args
-    except:
+        return unpickler.load()  # msgid, flags, name, args
+    except:  # NOQA: E722 bare except
         log("can't decode message: %s" % short_repr(msg),
             level=logging.ERROR)
         raise
+
 
 _globals = globals()
 _silly = ('__doc__',)
@@ -101,6 +110,7 @@ _SAFE_MODULE_NAMES = (
     'ZopeUndo.Prefix', 'zodbpickle',
     'builtins', 'copy_reg', '__builtin__',
 )
+
 
 def find_global(module, name):
     """Helper for message unpickler"""
@@ -114,7 +124,8 @@ def find_global(module, name):
     except AttributeError:
         raise ZRPCError("module %s has no global %s" % (module, name))
 
-    safe = getattr(r, '__no_side_effects__', 0) or (PY2 and module in _SAFE_MODULE_NAMES)
+    safe = (getattr(r, '__no_side_effects__', 0) or
+            (PY2 and module in _SAFE_MODULE_NAMES))
     if safe:
         return r
 
@@ -123,6 +134,7 @@ def find_global(module, name):
         return r
 
     raise ZRPCError("Unsafe global: %s.%s" % (module, name))
+
 
 def server_find_global(module, name):
     """Helper for message unpickler"""

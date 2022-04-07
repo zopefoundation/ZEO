@@ -18,7 +18,21 @@ from __future__ import print_function
 # FOR A PARTICULAR PURPOSE
 #
 ##############################################################################
-usage="""Test speed of a ZODB storage
+
+import asyncore
+import getopt
+import os
+import sys
+import time
+
+import persistent
+import transaction
+import ZODB
+from ZODB.POSException import ConflictError
+from ZEO.tests import forker
+
+
+usage = """Test speed of a ZODB storage
 
 Options:
 
@@ -48,40 +62,39 @@ Options:
     -t n       Number of concurrent threads to run.
 """
 
-import asyncore
-import sys, os, getopt, time
-##sys.path.insert(0, os.getcwd())
-
-import persistent
-import transaction
-import ZODB
-from ZODB.POSException import ConflictError
-from ZEO.tests import forker
 
 class P(persistent.Persistent):
     pass
 
+
 fs_name = "zeo-speed.fs"
+
 
 class ZEOExit(asyncore.file_dispatcher):
     """Used to exit ZEO.StorageServer when run is done"""
+
     def writable(self):
         return 0
+
     def readable(self):
         return 1
+
     def handle_read(self):
         buf = self.recv(4)
         assert buf == "done"
         self.delete_fs()
         os._exit(0)
+
     def handle_close(self):
         print("Parent process exited unexpectedly")
         self.delete_fs()
         os._exit(0)
+
     def delete_fs(self):
         os.unlink(fs_name)
         os.unlink(fs_name + ".lock")
         os.unlink(fs_name + ".tmp")
+
 
 def work(db, results, nrep, compress, data, detailed, minimize, threadno=None):
     for j in range(nrep):
@@ -98,7 +111,7 @@ def work(db, results, nrep, compress, data, detailed, minimize, threadno=None):
                     if key in rt:
                         p = rt[key]
                     else:
-                        rt[key] = p =P()
+                        rt[key] = p = P()
                     for i in range(r):
                         v = getattr(p, str(i), P())
                         if compress is not None:
@@ -121,46 +134,49 @@ def work(db, results, nrep, compress, data, detailed, minimize, threadno=None):
                     print("%s\t%s\t%.4f\t%d\t%d" % (j, r, t, conflicts,
                                                     threadno))
             results[r].append((t, conflicts))
-            rt=d=p=v=None # release all references
+            rt = p = v = None  # release all references
             if minimize:
                 time.sleep(3)
                 jar.cacheMinimize()
+
 
 def main(args):
     opts, args = getopt.getopt(args, 'zd:n:Ds:LMt:U')
     s = None
     compress = None
-    data=sys.argv[0]
-    nrep=5
-    minimize=0
-    detailed=1
+    data = sys.argv[0]
+    nrep = 5
+    minimize = 0
+    detailed = 1
     cache = None
     domain = 'AF_INET'
     threads = 1
     for o, v in opts:
-        if o=='-n': nrep = int(v)
-        elif o=='-d': data = v
-        elif o=='-s': s = v
-        elif o=='-z':
+        if o == '-n':
+            nrep = int(v)
+        elif o == '-d':
+            data = v
+        elif o == '-s':
+            s = v
+        elif o == '-z':
             import zlib
             compress = zlib.compress
-        elif o=='-L':
-            minimize=1
-        elif o=='-M':
-            detailed=0
-        elif o=='-D':
+        elif o == '-L':
+            minimize = 1
+        elif o == '-M':
+            detailed = 0
+        elif o == '-D':
             global debug
-            os.environ['STUPID_LOG_FILE']=''
-            os.environ['STUPID_LOG_SEVERITY']='-999'
+            os.environ['STUPID_LOG_FILE'] = ''
+            os.environ['STUPID_LOG_SEVERITY'] = '-999'
             debug = 1
         elif o == '-C':
-            cache = 'speed'
+            cache = 'speed'  # NOQA: F841 unused variable
         elif o == '-U':
             domain = 'AF_UNIX'
         elif o == '-t':
             threads = int(v)
 
-    zeo_pipe = None
     if s:
         s = __import__(s, globals(), globals(), ('__doc__',))
         s = s.Storage
@@ -169,25 +185,25 @@ def main(args):
         s, server, pid = forker.start_zeo("FileStorage",
                                           (fs_name, 1), domain=domain)
 
-    data=open(data).read()
-    db=ZODB.DB(s,
-               # disable cache deactivation
-               cache_size=4000,
-               cache_deactivate_after=6000,)
+    data = open(data).read()
+    db = ZODB.DB(s,
+                 # disable cache deactivation
+                 cache_size=4000,
+                 cache_deactivate_after=6000)
 
     print("Beginning work...")
-    results={1:[], 10:[], 100:[], 1000:[]}
+    results = {1: [], 10: [], 100: [], 1000: []}
     if threads > 1:
         import threading
-        l = []
+        thread_list = []
         for i in range(threads):
             t = threading.Thread(target=work,
                                  args=(db, results, nrep, compress, data,
                                        detailed, minimize, i))
-            l.append(t)
-        for t in l:
+            thread_list.append(t)
+        for t in thread_list:
             t.start()
-        for t in l:
+        for t in thread_list:
             t.join()
 
     else:
@@ -202,21 +218,24 @@ def main(args):
     print("num\tmean\tmin\tmax")
     for r in 1, 10, 100, 1000:
         times = []
-        for time, conf in results[r]:
-            times.append(time)
+        for time_val, conf in results[r]:
+            times.append(time_val)
         t = mean(times)
         print("%d\t%.4f\t%.4f\t%.4f" % (r, t, min(times), max(times)))
 
-def mean(l):
+
+def mean(lst):
     tot = 0
-    for v in l:
+    for v in lst:
         tot = tot + v
-    return tot / len(l)
+    return tot / len(lst)
 
-##def compress(s):
-##    c = zlib.compressobj()
-##    o = c.compress(s)
-##    return o + c.flush()
 
-if __name__=='__main__':
+# def compress(s):
+#    c = zlib.compressobj()
+#    o = c.compress(s)
+#    return o + c.flush()
+
+
+if __name__ == '__main__':
     main(sys.argv[1:])

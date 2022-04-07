@@ -1,5 +1,3 @@
-import unittest
-
 from zope.testing import setupstack
 
 from .. import server, client
@@ -13,6 +11,7 @@ else:
     server_ping_method = 'ping'
     server_zss = 'zeo_storages_by_storage_id'
 
+
 class SyncTests(setupstack.TestCase):
 
     def instrument(self):
@@ -22,6 +21,7 @@ class SyncTests(setupstack.TestCase):
 
         [zs] = getattr(server.server, server_zss)['1']
         orig_ping = getattr(zs, server_ping_method)
+
         def ping():
             self.__ping_calls += 1
             return orig_ping()

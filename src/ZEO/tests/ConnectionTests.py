@@ -26,11 +26,10 @@ from ZEO.tests import forker
 
 from ZODB.Connection import TransactionMetaData
 from ZODB.DB import DB
-from ZODB.POSException import ReadOnlyError, ConflictError
+from ZODB.POSException import ReadOnlyError
 from ZODB.tests.StorageTestBase import StorageTestBase
 from ZODB.tests.MinPO import MinPO
 from ZODB.tests.StorageTestBase import zodb_pickle, zodb_unpickle
-import ZODB.tests.util
 
 import transaction
 
@@ -39,6 +38,7 @@ from . import testssl
 logger = logging.getLogger('ZEO.tests.ConnectionTests')
 
 ZERO = '\0'*8
+
 
 class TestClientStorage(ClientStorage):
 
@@ -50,6 +50,7 @@ class TestClientStorage(ClientStorage):
         ClientStorage.notify_connected(self, conn, info)
         self.connection_count_for_tests += 1
         self.verify_result = conn.verify_result
+
 
 class DummyDB(object):
     def invalidate(self, *args, **kwargs):
@@ -93,7 +94,7 @@ class CommonSetupTearDown(StorageTestBase):
             self._storage.close()
             if hasattr(self._storage, 'cleanup'):
                 logging.debug("cleanup storage %s" %
-                         self._storage.__name__)
+                              self._storage.__name__)
                 self._storage.cleanup()
         for stop in self._servers:
             stop()
@@ -113,7 +114,7 @@ class CommonSetupTearDown(StorageTestBase):
                         for dummy in range(5):
                             try:
                                 os.unlink(path)
-                            except:
+                            except:  # NOQA: E722 bare except
                                 time.sleep(0.5)
                             else:
                                 need_to_delete = False
@@ -188,7 +189,7 @@ class CommonSetupTearDown(StorageTestBase):
         stop = self._servers[index]
         if stop is not None:
             stop()
-            self._servers[index] = lambda : None
+            self._servers[index] = lambda: None
 
     def pollUp(self, timeout=30.0, storage=None):
         if storage is None:
@@ -270,7 +271,6 @@ class ConnectionTests(CommonSetupTearDown):
         # Stores should fail here
         self.assertRaises(ReadOnlyError, self._dostore)
         self._storage.close()
-
 
     def checkDisconnectionError(self):
         # Make sure we get a ClientDisconnected when we try to read an
@@ -374,7 +374,7 @@ class ConnectionTests(CommonSetupTearDown):
         pickle, rev = self._storage.load(oid, '')
         newobj = zodb_unpickle(pickle)
         self.assertEqual(newobj, obj)
-        newobj.value = 42 # .value *should* be 42 forever after now, not 13
+        newobj.value = 42  # .value *should* be 42 forever after now, not 13
         self._dostore(oid, data=newobj, revid=rev)
         self._storage.close()
 
@@ -416,6 +416,7 @@ class ConnectionTests(CommonSetupTearDown):
     def checkBadMessage2(self):
         # just like a real message, but with an unpicklable argument
         global Hack
+
         class Hack(object):
             pass
 
@@ -505,7 +506,7 @@ class ConnectionTests(CommonSetupTearDown):
 
         r1["a"] = MinPO("a")
         transaction.commit()
-        self.assertEqual(r1._p_state, 0) # up-to-date
+        self.assertEqual(r1._p_state, 0)  # up-to-date
 
         db2 = DB(self.openClientStorage())
         r2 = db2.open().root()
@@ -524,9 +525,9 @@ class ConnectionTests(CommonSetupTearDown):
             if r1._p_state == -1:
                 break
             time.sleep(i / 10.0)
-        self.assertEqual(r1._p_state, -1) # ghost
+        self.assertEqual(r1._p_state, -1)  # ghost
 
-        r1.keys() # unghostify
+        r1.keys()  # unghostify
         self.assertEqual(r1._p_serial, r2._p_serial)
         self.assertEqual(r1["b"].value, "b")
 
@@ -550,6 +551,7 @@ class ConnectionTests(CommonSetupTearDown):
         with short_timeout(self):
             self.assertRaises(ClientDisconnected,
                               self._storage.load, b'\0'*8, '')
+
 
 class SSLConnectionTests(ConnectionTests):
 
@@ -585,13 +587,13 @@ class InvqTests(CommonSetupTearDown):
         revid2 = self._dostore(oid2, revid2)
 
         forker.wait_until(
-            lambda :
+            lambda:
             perstorage.lastTransaction() == self._storage.lastTransaction())
 
         perstorage.load(oid, '')
         perstorage.close()
 
-        forker.wait_until(lambda : os.path.exists('test-1.zec'))
+        forker.wait_until(lambda: os.path.exists('test-1.zec'))
 
         revid = self._dostore(oid, revid)
 
@@ -617,7 +619,7 @@ class InvqTests(CommonSetupTearDown):
         revid = self._dostore(oid, revid)
         forker.wait_until(
             "Client has seen all of the transactions from the server",
-            lambda :
+            lambda:
             perstorage.lastTransaction() == self._storage.lastTransaction()
             )
         perstorage.load(oid, '')
@@ -634,6 +636,7 @@ class InvqTests(CommonSetupTearDown):
                          self._storage.load(oid, ''))
 
         perstorage.close()
+
 
 class ReconnectionTests(CommonSetupTearDown):
     # The setUp() starts a server automatically.  In order for its
@@ -798,7 +801,7 @@ class ReconnectionTests(CommonSetupTearDown):
         # Start a read-write server
         self.startServer(index=1, read_only=0, keep=0)
         # After a while, stores should work
-        for i in range(300): # Try for 30 seconds
+        for i in range(300):  # Try for 30 seconds
             try:
                 self._dostore()
                 break
@@ -840,7 +843,7 @@ class ReconnectionTests(CommonSetupTearDown):
         revid = self._dostore(oid, revid)
         forker.wait_until(
             "Client has seen all of the transactions from the server",
-            lambda :
+            lambda:
             perstorage.lastTransaction() == self._storage.lastTransaction()
             )
         perstorage.load(oid, '')
@@ -893,7 +896,6 @@ class ReconnectionTests(CommonSetupTearDown):
         # Module ZEO.ClientStorage, line 679, in tpc_finish
         # Module ZEO.ClientStorage, line 709, in _update_cache
         # KeyError: ...
-
 
     def checkReconnection(self):
         # Check that the client reconnects when a server restarts.
@@ -952,6 +954,7 @@ class ReconnectionTests(CommonSetupTearDown):
         self.assertTrue(did_a_store)
         self._storage.close()
 
+
 class TimeoutTests(CommonSetupTearDown):
     timeout = 1
 
@@ -967,9 +970,8 @@ class TimeoutTests(CommonSetupTearDown):
         # Make sure it's logged as CRITICAL
         with open("server.log") as f:
             for line in f:
-                if (('Transaction timeout after' in line) and
-                    ('CRITICAL ZEO.StorageServer' in line)
-                ):
+                if ('Transaction timeout after' in line) and \
+                   ('CRITICAL ZEO.StorageServer' in line):
                     break
             else:
                 self.fail('bad logging')
@@ -1002,7 +1004,7 @@ class TimeoutTests(CommonSetupTearDown):
         t = TransactionMetaData()
         old_connection_count = storage.connection_count_for_tests
         storage.tpc_begin(t)
-        revid1 = storage.store(oid, ZERO, zodb_pickle(obj), '', t)
+        storage.store(oid, ZERO, zodb_pickle(obj), '', t)
         storage.tpc_vote(t)
         # Now sleep long enough for the storage to time out
         time.sleep(3)
@@ -1020,6 +1022,7 @@ class TimeoutTests(CommonSetupTearDown):
         # Load should fail since the object should not be in either the cache
         # or the server.
         self.assertRaises(KeyError, storage.load, oid, '')
+
 
 class MSTThread(threading.Thread):
 
@@ -1054,7 +1057,7 @@ class MSTThread(threading.Thread):
             # Begin a transaction
             t = TransactionMetaData()
             for c in clients:
-                #print("%s.%s.%s begin" % (tname, c.__name, i))
+                # print("%s.%s.%s begin" % (tname, c.__name, i))
                 c.tpc_begin(t)
 
             for j in range(testcase.nobj):
@@ -1063,18 +1066,18 @@ class MSTThread(threading.Thread):
                     oid = c.new_oid()
                     c.__oids.append(oid)
                     data = MinPO("%s.%s.t%d.o%d" % (tname, c.__name, i, j))
-                    #print(data.value)
+                    # print(data.value)
                     data = zodb_pickle(data)
                     c.store(oid, ZERO, data, '', t)
 
             # Vote on all servers and handle serials
             for c in clients:
-                #print("%s.%s.%s vote" % (tname, c.__name, i))
+                # print("%s.%s.%s vote" % (tname, c.__name, i))
                 c.tpc_vote(t)
 
             # Finish on all servers
             for c in clients:
-                #print("%s.%s.%s finish\n" % (tname, c.__name, i))
+                # print("%s.%s.%s finish\n" % (tname, c.__name, i))
                 c.tpc_finish(t)
 
             for c in clients:
@@ -1090,7 +1093,7 @@ class MSTThread(threading.Thread):
         for c in self.clients:
             try:
                 c.close()
-            except:
+            except:  # NOQA: E722 bare except
                 pass
 
 
@@ -1100,6 +1103,7 @@ def short_timeout(self):
     self._storage._server.timeout = 1
     yield
     self._storage._server.timeout = old
+
 
 # Run IPv6 tests if V6 sockets are supported
 try:

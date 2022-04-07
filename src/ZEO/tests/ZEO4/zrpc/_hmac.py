@@ -6,16 +6,18 @@
 Implements the HMAC algorithm as described by RFC 2104.
 """
 from six.moves import map
-from six.moves import zip
+
 
 def _strxor(s1, s2):
     """Utility method. XOR the two strings s1 and s2 (must have same length).
     """
     return "".join(map(lambda x, y: chr(ord(x) ^ ord(y)), s1, s2))
 
+
 # The size of the digests returned by HMAC depends on the underlying
 # hashing module used.
 digest_size = None
+
 
 class HMAC(object):
     """RFC2104 HMAC class.
@@ -23,7 +25,7 @@ class HMAC(object):
     This supports the API for Cryptographic Hash Functions (PEP 247).
     """
 
-    def __init__(self, key, msg = None, digestmod = None):
+    def __init__(self, key, msg=None, digestmod=None):
         """Create a new HMAC object.
 
         key:       key for the keyed hash object.
@@ -56,8 +58,8 @@ class HMAC(object):
         if msg is not None:
             self.update(msg)
 
-##    def clear(self):
-##        raise NotImplementedError("clear() method not available in HMAC.")
+#    def clear(self):
+#        raise NotImplementedError("clear() method not available in HMAC.")
 
     def update(self, msg):
         """Update this hashing object with the string msg.
@@ -92,7 +94,8 @@ class HMAC(object):
         return "".join([hex(ord(x))[2:].zfill(2)
                         for x in tuple(self.digest())])
 
-def new(key, msg = None, digestmod = None):
+
+def new(key, msg=None, digestmod=None):
     """Create a new hashing object and return it.
 
     key: The starting key for the hash.

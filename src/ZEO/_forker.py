@@ -26,10 +26,9 @@ import six
 from ZEO._compat import StringIO
 
 logger = logging.getLogger('ZEO.tests.forker')
-
 DEBUG = os.environ.get('ZEO_TEST_SERVER_DEBUG')
-
 ZEO4_SERVER = os.environ.get('ZEO4_SERVER')
+
 
 class ZEOConfig(object):
     """Class to generate ZEO configuration file. """
@@ -61,8 +60,7 @@ class ZEOConfig(object):
         for name in (
                 'invalidation_queue_size', 'invalidation_age',
                 'transaction_timeout', 'pid_filename', 'msgpack',
-                'ssl_certificate', 'ssl_key', 'client_conflict_resolution',
-            ):
+                'ssl_certificate', 'ssl_key', 'client_conflict_resolution'):
             v = getattr(self, name, None)
             if v:
                 print(name.replace('_', '-'), v, file=f)
@@ -134,7 +132,7 @@ def runner(config, qin, qout, timeout=None,
         os.remove(config)
 
         try:
-            qin.get(timeout=timeout) # wait for shutdown
+            qin.get(timeout=timeout)  # wait for shutdown
         except Empty:
             pass
         server.server.close()
@@ -158,6 +156,7 @@ def runner(config, qin, qout, timeout=None,
             ZEO.asyncio.server.best_protocol_version = old_protocol
             ZEO.asyncio.server.ServerProtocol.protocols = old_protocols
 
+
 def stop_runner(thread, config, qin, qout, stop_timeout=19, pid=None):
     qin.put('stop')
     try:
@@ -179,6 +178,7 @@ def stop_runner(thread, config, qin, qout, stop_timeout=19, pid=None):
     thread.join(stop_timeout)
 
     gc.collect()
+
 
 def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
                      path='Data.fs', protocol=None, blob_dir=None,
@@ -220,7 +220,8 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
         print(zeo_conf)
 
     # Store the config info in a temp file.
-    fd, tmpfile = tempfile.mkstemp(".conf", prefix='ZEO_forker', dir=os.getcwd())
+    fd, tmpfile = tempfile.mkstemp(".conf", prefix='ZEO_forker',
+                                   dir=os.getcwd())
     with os.fdopen(fd, 'w') as fp:
         fp.write(zeo_conf)
 
@@ -273,9 +274,11 @@ def debug_logging(logger='ZEO', stream='stderr', level=logging.DEBUG):
 
     return stop
 
+
 def whine(*message):
     print(*message, file=sys.stderr)
     sys.stderr.flush()
+
 
 class ThreadlessQueue(object):
 
