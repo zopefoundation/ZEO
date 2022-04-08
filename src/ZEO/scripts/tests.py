@@ -12,18 +12,21 @@
 #
 ##############################################################################
 from __future__ import print_function
-import doctest, re, unittest
+import doctest
+import re
+import unittest
+
 from zope.testing import renormalizing
+
 
 def test_suite():
     return unittest.TestSuite((
         doctest.DocFileSuite(
             'zeopack.test',
             checker=renormalizing.RENormalizing([
-                (re.compile('usage: Usage: '), 'Usage: '), # Py 2.4
-                (re.compile('options:'), 'Options:'), # Py 2.4
+                (re.compile('usage: Usage: '), 'Usage: '),  # Py 2.4
+                (re.compile('options:'), 'Options:'),  # Py 2.4
                 ]),
             globs={'print_function': print_function},
             ),
         ))
-

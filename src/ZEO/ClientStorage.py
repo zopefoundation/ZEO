@@ -52,8 +52,10 @@ import ZEO.cache
 
 logger = logging.getLogger(__name__)
 
+
 def tid2time(tid):
     return str(TimeStamp(tid))
+
 
 def get_timestamp(prev_ts=None):
     """Internal helper to return a unique TimeStamp instance.
@@ -69,7 +71,9 @@ def get_timestamp(prev_ts=None):
         t = t.laterThan(prev_ts)
     return t
 
+
 MB = 1024**2
+
 
 @zope.interface.implementer(ZODB.interfaces.IMultiCommitStorage)
 class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
@@ -90,7 +94,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                  blob_cache_size=None, blob_cache_size_check=10,
                  client_label=None,
                  cache=None,
-                 ssl = None, ssl_server_hostname=None,
+                 ssl=None, ssl_server_hostname=None,
                  # Mostly ignored backward-compatability options
                  client=None, var=None,
                  min_disconnect_poll=1, max_disconnect_poll=None,
@@ -229,14 +233,15 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         if isinstance(addr, int):
             addr = ('127.0.0.1', addr)
 
-        self.__name__ = name or str(addr) # Standard convention for storages
+        self.__name__ = name or str(addr)  # Standard convention for storages
 
         if isinstance(addr, six.string_types):
             if WIN:
                 raise ValueError("Unix sockets are not available on Windows")
             addr = [addr]
         elif (isinstance(addr, tuple) and len(addr) == 2 and
-              isinstance(addr[0], six.string_types) and isinstance(addr[1], int)):
+              isinstance(addr[0], six.string_types) and
+              isinstance(addr[1], int)):
             addr = [addr]
 
         logger.info(
@@ -252,7 +257,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         self._is_read_only = read_only
         self._read_only_fallback = read_only_fallback
 
-        self._addr = addr # For tests
+        self._addr = addr  # For tests
 
         self._iterators = weakref.WeakValueDictionary()
         self._iterator_ids = set()
@@ -268,7 +273,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
 
         self._db = None
 
-        self._oids = [] # List of pre-fetched oids from server
+        self._oids = []  # List of pre-fetched oids from server
 
         cache = self._cache = open_cache(
             cache, var, client, storage, cache_size)
@@ -304,7 +309,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             addr, self, cache, storage,
             ZEO.asyncio.client.Fallback if read_only_fallback else read_only,
             wait_timeout or 30,
-            ssl = ssl, ssl_server_hostname=ssl_server_hostname,
+            ssl=ssl, ssl_server_hostname=ssl_server_hostname,
             )
         self._call = self._server.call
         self._async = self._server.async_
@@ -345,6 +350,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             self._check_blob_size_thread.join()
 
     _check_blob_size_thread = None
+
     def _check_blob_size(self, bytes=None):
         if self._blob_cache_size is None:
             return
@@ -386,8 +392,8 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         pass
 
     _connection_generation = 0
+
     def notify_connected(self, conn, info):
-        reconnected = self._connection_generation
         self.set_server_addr(conn.get_peername())
         self.protocol_version = conn.protocol_version
         self._is_read_only = conn.is_read_only()
@@ -409,23 +415,20 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
 
         self._info.update(info)
 
-        for iface in (
-            ZODB.interfaces.IStorageRestoreable,
-            ZODB.interfaces.IStorageIteration,
-            ZODB.interfaces.IStorageUndoable,
-            ZODB.interfaces.IStorageCurrentRecordIteration,
-            ZODB.interfaces.IBlobStorage,
-            ZODB.interfaces.IExternalGC,
-            ):
-            if (iface.__module__, iface.__name__) in self._info.get(
-                'interfaces', ()):
+        for iface in (ZODB.interfaces.IStorageRestoreable,
+                      ZODB.interfaces.IStorageIteration,
+                      ZODB.interfaces.IStorageUndoable,
+                      ZODB.interfaces.IStorageCurrentRecordIteration,
+                      ZODB.interfaces.IBlobStorage,
+                      ZODB.interfaces.IExternalGC):
+            if (iface.__module__, iface.__name__) in \
+               self._info.get('interfaces', ()):
                 zope.interface.alsoProvides(self, iface)
 
         if self.protocol_version[1:] >= b'5':
-            self.ping = lambda : self._call('ping', timeout=0)
+            self.ping = lambda: self._call('ping', timeout=0)
         else:
-            self.ping = lambda : self._call('lastTransaction', timeout=0)
-
+            self.ping = lambda: self._call('lastTransaction', timeout=0)
 
     def set_server_addr(self, addr):
         # Normalize server address and convert to string
@@ -570,7 +573,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             try:
                 return self._oids.pop()
             except IndexError:
-                pass # We ran out. We need to get some more.
+                pass  # We ran out. We need to get some more.
 
             self._oids[:0] = reversed(self._call('new_oids'))
 
@@ -769,7 +772,6 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         finally:
             lock.close()
 
-
     def temporaryDirectory(self):
         return self.fshelper.temp_dir
 
@@ -781,7 +783,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
 
             conflicts = True
             vote_attempts = 0
-            while conflicts and vote_attempts < 9: # 9? Mainly avoid inf. loop
+            while conflicts and vote_attempts < 9:  # 9? Mainly avoid inf. loop
                 conflicts = False
                 for oid in self._call('vote', id(txn)) or ():
                     if isinstance(oid, dict):
@@ -877,11 +879,11 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
     def tpc_abort(self, txn, timeout=None):
         """Storage API: abort a transaction.
 
-        (The timeout keyword argument is for tests to wat longer than
+        (The timeout keyword argument is for tests to wait longer than
         they normally would.)
         """
         try:
-            tbuf = txn.data(self)
+            tbuf = txn.data(self)  # NOQA: F841 unused variable
         except KeyError:
             return
 
@@ -936,7 +938,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             while blobs:
                 oid, blobfilename = blobs.pop()
                 self._blob_data_bytes_loaded += os.stat(blobfilename).st_size
-                targetpath = self.fshelper.getPathForOID(oid, create=True)
+                self.fshelper.getPathForOID(oid, create=True)
                 target_blob_file_name = self.fshelper.getBlobFilename(oid, tid)
                 lock = _lock_blob(target_blob_file_name)
                 try:
@@ -1075,6 +1077,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         """supported keywords: ``timeout``."""
         return self._call('server_status', **kw)
 
+
 class TransactionIterator(object):
 
     def __init__(self, storage, iid, *args):
@@ -1168,14 +1171,18 @@ class BlobCacheLayout(object):
                          ZODB.blob.BLOB_SUFFIX)
             )
 
+
 def _accessed(filename):
     try:
         os.utime(filename, (time.time(), os.stat(filename).st_mtime))
     except OSError:
-        pass # We tried. :)
+        pass  # We tried. :)
     return filename
 
+
 cache_file_name = re.compile(r'\d+$').match
+
+
 def _check_blob_cache_size(blob_dir, target):
 
     logger = logging.getLogger(__name__+'.check_blob_cache')
@@ -1200,7 +1207,7 @@ def _check_blob_cache_size(blob_dir, target):
             # Someone is already cleaning up, so don't bother
             logger.debug("%s Another thread is checking the blob cache size.",
                          get_ident())
-            open(attempt_path, 'w').close() # Mark that we tried
+            open(attempt_path, 'w').close()  # Mark that we tried
             return
 
     logger.debug("%s Checking blob cache size. (target: %s)",
@@ -1238,7 +1245,7 @@ def _check_blob_cache_size(blob_dir, target):
                     try:
                         os.remove(attempt_path)
                     except OSError:
-                        pass # Sigh, windows
+                        pass  # Sigh, windows
                     continue
                 logger.debug("%s   -->", get_ident())
                 break
@@ -1260,8 +1267,8 @@ def _check_blob_cache_size(blob_dir, target):
                         fsize = os.stat(file_name).st_size
                         try:
                             ZODB.blob.remove_committed(file_name)
-                        except OSError as v:
-                            pass # probably open on windows
+                        except OSError:
+                            pass  # probably open on windows
                         else:
                             size -= fsize
                     finally:
@@ -1276,11 +1283,13 @@ def _check_blob_cache_size(blob_dir, target):
     finally:
         check_lock.close()
 
+
 def check_blob_size_script(args=None):
     if args is None:
         args = sys.argv[1:]
     blob_dir, target = args
     _check_blob_cache_size(blob_dir, int(target))
+
 
 def _lock_blob(path):
     lockfilename = os.path.join(os.path.dirname(path), '.lock')
@@ -1295,6 +1304,7 @@ def _lock_blob(path):
                 raise
         else:
             break
+
 
 def open_cache(cache, var, client, storage, cache_size):
     if isinstance(cache, (None.__class__, str)):

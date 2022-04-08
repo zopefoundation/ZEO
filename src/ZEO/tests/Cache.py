@@ -17,6 +17,7 @@ from ZODB.Connection import TransactionMetaData
 from ZODB.tests.MinPO import MinPO
 from ZODB.tests.StorageTestBase import zodb_unpickle
 
+
 class TransUndoStorageWithCache(object):
 
     def checkUndoInvalidation(self):

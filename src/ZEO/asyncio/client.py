@@ -24,7 +24,6 @@ a tiny wrapper arount `ClientRunner``.
 """
 
 from ZEO.Exceptions import ClientDisconnected, ServerException
-import concurrent.futures
 import logging
 import random
 import threading
@@ -43,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 Fallback = object()
 
-local_random = random.Random() # use separate generator to facilitate tests
+local_random = random.Random()  # use separate generator to facilitate tests
 
 
 class Protocol(base.ZEOBaseProtocol):
@@ -78,7 +77,7 @@ class Protocol(base.ZEOBaseProtocol):
         self.client = client
         self.connect_poll = connect_poll
         self.heartbeat_interval = heartbeat_interval
-        self.futures = {} # { message_id -> future }
+        self.futures = {}  # { message_id -> future }
         self.ssl = ssl
         self.ssl_server_hostname = ssl_server_hostname
         self.invalidations = []
@@ -87,7 +86,7 @@ class Protocol(base.ZEOBaseProtocol):
 
     def close(self, exc=None):
         if not self.closed:
-            super().close() # will set ``closed``
+            super().close()  # will set ``closed``
             self._connecting.cancel()
             if self.verify_task is not None:
                 self.verify_task.cancel()
@@ -115,6 +114,7 @@ class Protocol(base.ZEOBaseProtocol):
 
         # an ``asyncio.Future``
         self._connecting = cr = asyncio.ensure_future(cr, loop=self.loop)
+
         @cr.add_done_callback
         def done_connecting(future):
             if future.cancelled():
@@ -122,7 +122,9 @@ class Protocol(base.ZEOBaseProtocol):
             elif future.exception() is not None:
                 logger.info("Connection to %r failed, %s",
                             self.addr, future.exception())
-            else: return
+            else:
+                return
+
             # keep trying
             if not self.closed:
                 logger.info("retry connecting %r", self.addr)
@@ -147,6 +149,7 @@ class Protocol(base.ZEOBaseProtocol):
             self.client.disconnected(self)
 
     verify_task = None
+
     def finish_connection(self, protocol_version):
         """setup for *protocol_version* and verify the connection."""
         # the first byte of ``protocol_version`` specifies the coding type
@@ -177,7 +180,8 @@ class Protocol(base.ZEOBaseProtocol):
                 try:
                     server_tid = await self.call_sync(
                         'register', self.storage_key,
-                        self.read_only if self.read_only is not Fallback else False,
+                        self.read_only if self.read_only is not Fallback
+                        else False,
                         )
                 except ZODB.POSException.ReadOnlyError:
                     if self.read_only is Fallback:
@@ -196,11 +200,12 @@ class Protocol(base.ZEOBaseProtocol):
                 await self.client.register(self, server_tid)
 
     exception_type_type = type(Exception)
+
     def message_received(self, data):
         msgid, async_, name, args = self.decode(data)
         if name == '.reply':
             future = self.futures.pop(msgid)
-            if async_: # ZEO 5 exception
+            if async_:  # ZEO 5 exception
                 class_, args = args
                 factory = exc_factories.get(class_)
                 if factory:
@@ -225,7 +230,7 @@ class Protocol(base.ZEOBaseProtocol):
             else:
                 future.set_result(args)
         else:
-            assert async_ # clients only get async calls
+            assert async_  # clients only get async calls
             if name not in self.client_methods:
                 raise AttributeError(name)
             # it is important to not directly execute the call
@@ -243,6 +248,7 @@ class Protocol(base.ZEOBaseProtocol):
             getattr(self.client, name)(*args)
 
     message_id = 0
+
     def call(self, future, method, args, message_id=None):
         if message_id is None:
             self.message_id += 1
@@ -280,28 +286,33 @@ class Protocol(base.ZEOBaseProtocol):
         self.heartbeat_handle = self.loop.call_later(
             self.heartbeat_interval, self.heartbeat)
 
+
 def create_Exception(class_, args):
     return exc_classes[class_](*args)
 
+
 def create_ConflictError(class_, args):
     exc = exc_classes[class_](
-        message = args['message'],
-        oid     = args['oid'],
-        serials = args['serials'],
+        message=args['message'],
+        oid=args['oid'],
+        serials=args['serials'],
         )
     exc.class_name = args.get('class_name')
     return exc
 
+
 def create_BTreesConflictError(class_, args):
     return ZODB.POSException.BTreesConflictError(
-        p1 = args['p1'],
-        p2 = args['p2'],
-        p3 = args['p3'],
-        reason = args['reason'],
+        p1=args['p1'],
+        p2=args['p2'],
+        p3=args['p3'],
+        reason=args['reason'],
         )
+
 
 def create_MultipleUndoErrors(class_, args):
     return ZODB.POSException.MultipleUndoErrors(args['_errs'])
+
 
 exc_classes = {
     'builtins.KeyError': KeyError,
@@ -344,10 +355,13 @@ class ClientIo(object):
     # connect.
 
     protocol = None
-    ready = None # Tri-value: None=Never connected, True=connected,
-                 # False=Disconnected
     protocols = ()
     client_label = None  # for some log messages
+    # ready can have three values:
+    #   None=Never connected
+    #   True=connected
+    #   False=Disconnected
+    ready = None
 
     def __init__(self, loop,
                  addrs, client, cache, storage_key, read_only, connect_poll,
@@ -380,7 +394,6 @@ class ClientIo(object):
         self.register_lock = asyncio.Lock()
         self.disconnected(None)
 
-
     def trying_to_connect(self):
         """Return whether we're trying to connect
 
@@ -391,6 +404,7 @@ class ClientIo(object):
                 self.is_read_only() and self.read_only is Fallback)
 
     closed = False
+
     def close(self):
         if not self.closed:
             self.closed = True
@@ -407,6 +421,7 @@ class ClientIo(object):
         self.protocols = ()
 
     connected = None
+
     def manage_connected(self):
         """manage the future ``connected``.
 
@@ -463,21 +478,21 @@ class ClientIo(object):
             self.upgrade(protocol)
             await self.verify(server_tid)
         else:
-            protocol.close() # too late, we went home with another
+            protocol.close()  # too late, we went home with another
 
     def register_failed(self, protocol, exc):
         # A protocol failed registration. That's weird.  If they've all
         # failed, we should try again in a bit.
         protocol.close()
         logger.exception("Registration or cache validation failed, %s", exc)
-        if (self.protocol is None and not
-            any(not p.closed for p in self.protocols)
-            ):
+        if self.protocol is None and \
+           not any(not p.closed for p in self.protocols):
             self.loop.call_later(
                 self.register_failed_poll + local_random.random(),
                 self.try_connecting)
 
-    verify_result = None # for tests
+    verify_result = None  # for tests
+
     async def verify(self, server_tid):
         """cache verification and invalidation -- run as task."""
         protocol = self.protocol
@@ -600,7 +615,6 @@ class ClientIo(object):
         if self.trying_to_connect():
             self.disconnected(None)
 
-
     # Special methods because they update the cache.
 
     def _load_before(self, oid, tid):
@@ -615,7 +629,8 @@ class ClientIo(object):
             future = self.protocol.load_before(oid, tid)
         elif timeout:
             future = self.call_with_timeout_co(timeout,
-                self._load_before, (oid, tid))
+                                               self._load_before,
+                                               (oid, tid))
         else:
             raise ClientDisconnected
         data = await future
@@ -664,7 +679,7 @@ class ClientIo(object):
                 cache.setLastTid(tid)
                 f(tid)
             return tid
-        except Exception as exc:
+        except Exception:
             # At this point, our cache is in an inconsistent
             # state.  We need to reconnect in hopes of
             # recovering to a consistent state.
@@ -721,7 +736,8 @@ class ClientRunner(object):
     def setup_delegation(self, loop):
         self.loop = loop
         self.client = client = ClientIo(loop, *self.__args, **self.__kwargs)
-        self.call_with_timeout = call_with_timeout = client.call_with_timeout_co
+        self.call_with_timeout = call_with_timeout = \
+            client.call_with_timeout_co
         self.call_sync = client.call_sync
         self.call_async = client.call_async
         self.call_async_iter = client.call_async_iter
@@ -770,7 +786,8 @@ class ClientRunner(object):
                            indirect=False, wait=False)
 
     def load_before(self, oid, tid):
-        return self._call_(self.client.load_before_co, self.timeout, oid, tid, indirect=False)
+        return self._call_(self.client.load_before_co, self.timeout,
+                           oid, tid, indirect=False)
 
     def tpc_finish(self, tid, updates, f, **kw):
         # ``kw`` for test only; supported ``wait``
@@ -818,8 +835,7 @@ class ClientThread(ClientRunner):
 
     def __init__(self, addrs, client, cache,
                  storage_key='1', read_only=False, timeout=30,
-                 disconnect_poll=1, ssl=None, ssl_server_hostname=None,
-                ):
+                 disconnect_poll=1, ssl=None, ssl_server_hostname=None):
         self.set_options(addrs, client, cache, storage_key, read_only,
                          timeout, disconnect_poll,
                          ssl=ssl, ssl_server_hostname=ssl_server_hostname,
@@ -836,6 +852,7 @@ class ClientThread(ClientRunner):
             raise self.exception
 
     exception = None
+
     def run_io_thread(self):
         loop = None
         try:
@@ -869,6 +886,7 @@ class ClientThread(ClientRunner):
             logger.debug('Stopping client thread')
 
     closed = False
+
     def close(self):
         if not self.closed:
             self.closed = True

@@ -23,13 +23,11 @@ import codecs
 import itertools
 import logging
 import os
-import socket
 import sys
 import tempfile
 import threading
 import time
 import warnings
-import ZEO.asyncio.server
 import ZODB.blob
 import ZODB.event
 import ZODB.serialize
@@ -37,8 +35,7 @@ import ZODB.TimeStamp
 import zope.interface
 import six
 
-from ZEO._compat import Pickler, Unpickler, BytesIO
-from ZEO.Exceptions import AuthError
+from ZEO._compat import Pickler, Unpickler
 from ZEO.monitor import StorageStats
 from ZEO.asyncio.server import Delay, MTDelay, Result
 from ZODB.Connection import TransactionMetaData
@@ -46,10 +43,10 @@ from ZODB.loglevels import BLATHER
 from ZODB.POSException import StorageError, StorageTransactionError
 from ZODB.POSException import TransactionError, ReadOnlyError, ConflictError
 from ZODB.serialize import referencesf
-from ZODB.utils import oid_repr, p64, u64, z64, Lock, RLock
+from ZODB.utils import p64, u64, z64, Lock, RLock
 
 # BBB mtacceptor is unused and will be removed in ZEO version 6
-if os.environ.get("ZEO_MTACCEPTOR"): # mainly for tests
+if os.environ.get("ZEO_MTACCEPTOR"):  # mainly for tests
     warnings.warn('The mtacceptor module is deprecated and will be removed '
                   'in ZEO version 6.', DeprecationWarning)
     from .asyncio.mtacceptor import Acceptor
@@ -57,6 +54,7 @@ else:
     from .asyncio.server import Acceptor
 
 logger = logging.getLogger('ZEO.StorageServer')
+
 
 def log(message, level=logging.INFO, label='', exc_info=False):
     """Internal helper to log a message."""
@@ -68,15 +66,18 @@ def log(message, level=logging.INFO, label='', exc_info=False):
 class StorageServerError(StorageError):
     """Error reported when an unpicklable exception is raised."""
 
-registered_methods = set(( 'get_info', 'lastTransaction',
-    'getInvalidations', 'new_oids', 'pack', 'loadBefore', 'storea',
-    'checkCurrentSerialInTransaction', 'restorea', 'storeBlobStart',
-    'storeBlobChunk', 'storeBlobEnd', 'storeBlobShared',
-    'deleteObject', 'tpc_begin', 'vote', 'tpc_finish', 'tpc_abort',
-    'history', 'record_iternext', 'sendBlob', 'getTid', 'loadSerial',
-    'new_oid', 'undoa', 'undoLog', 'undoInfo', 'iterator_start',
-    'iterator_next', 'iterator_record_start', 'iterator_record_next',
-    'iterator_gc', 'server_status', 'set_client_label', 'ping'))
+
+registered_methods = set(
+    ('get_info', 'lastTransaction',
+     'getInvalidations', 'new_oids', 'pack', 'loadBefore', 'storea',
+     'checkCurrentSerialInTransaction', 'restorea', 'storeBlobStart',
+     'storeBlobChunk', 'storeBlobEnd', 'storeBlobShared',
+     'deleteObject', 'tpc_begin', 'vote', 'tpc_finish', 'tpc_abort',
+     'history', 'record_iternext', 'sendBlob', 'getTid', 'loadSerial',
+     'new_oid', 'undoa', 'undoLog', 'undoInfo', 'iterator_start',
+     'iterator_next', 'iterator_record_start', 'iterator_record_next',
+     'iterator_gc', 'server_status', 'set_client_label', 'ping'))
+
 
 class ZEOStorage(object):
     """Proxy to underlying storage for a single remote client."""
@@ -146,7 +147,7 @@ class ZEOStorage(object):
         info = self.get_info()
 
         if not info['supportsUndo']:
-            self.undoLog = self.undoInfo = lambda *a,**k: ()
+            self.undoLog = self.undoInfo = lambda *a, **k: ()
 
         # XXX deprecated: but ZODB tests use getTid. They shouldn't
         self.getTid = storage.getTid
@@ -166,16 +167,16 @@ class ZEOStorage(object):
                     "Falling back to using _transaction attribute, which\n."
                     "is icky.",
                     logging.ERROR)
-                self.tpc_transaction = lambda : storage._transaction
+                self.tpc_transaction = lambda: storage._transaction
             else:
                 raise
 
         self.connection.methods = registered_methods
 
-    def history(self,tid,size=1):
+    def history(self, tid, size=1):
         # This caters for storages which still accept
         # a version parameter.
-        return self.storage.history(tid,size=size)
+        return self.storage.history(tid, size=size)
 
     def _check_tid(self, tid, exc=None):
         if self.read_only:
@@ -235,7 +236,7 @@ class ZEOStorage(object):
     def get_info(self):
         storage = self.storage
 
-        supportsUndo = (getattr(storage, 'supportsUndo', lambda : False)()
+        supportsUndo = (getattr(storage, 'supportsUndo', lambda: False)()
                         and self.connection.protocol_version[1:] >= b'310')
 
         # Communicate the backend storage interfaces to the client
@@ -382,7 +383,7 @@ class ZEOStorage(object):
         # Called from client thread
 
         if not self.connected:
-            return # We're disconnected
+            return  # We're disconnected
 
         try:
             self.log(
@@ -404,14 +405,12 @@ class ZEOStorage(object):
                 oid, oldserial, data, blobfilename = self.blob_log.pop()
                 self._store(oid, oldserial, data, blobfilename)
 
-
             if not self.conflicts:
                 try:
                     serials = self.storage.tpc_vote(self.transaction)
                 except ConflictError as err:
-                    if (self.client_conflict_resolution and
-                        err.oid and err.serials and err.data
-                        ):
+                    if self.client_conflict_resolution and \
+                       err.oid and err.serials and err.data:
                         self.conflicts[err.oid] = dict(
                             oid=err.oid, serials=err.serials, data=err.data)
                     else:
@@ -424,7 +423,7 @@ class ZEOStorage(object):
                 self.storage.tpc_abort(self.transaction)
                 return list(self.conflicts.values())
             else:
-                self.locked = True # signal to lock manager to hold lock
+                self.locked = True  # signal to lock manager to hold lock
                 return self.serials
 
         except Exception as err:
@@ -474,7 +473,7 @@ class ZEOStorage(object):
 
     def storeBlobEnd(self, oid, serial, data, id):
         self._check_tid(id, exc=StorageTransactionError)
-        assert self.txnlog is not None # effectively not allowed after undo
+        assert self.txnlog is not None  # effectively not allowed after undo
         fd, tempname = self.blob_tempfile
         self.blob_tempfile = None
         os.close(fd)
@@ -482,14 +481,11 @@ class ZEOStorage(object):
 
     def storeBlobShared(self, oid, serial, data, filename, id):
         self._check_tid(id, exc=StorageTransactionError)
-        assert self.txnlog is not None # effectively not allowed after undo
+        assert self.txnlog is not None  # effectively not allowed after undo
 
         # Reconstruct the full path from the filename in the OID directory
-        if (os.path.sep in filename
-            or not (filename.endswith('.tmp')
-                    or filename[:-1].endswith('.tmp')
-                    )
-            ):
+        if os.path.sep in filename or \
+           not (filename.endswith('.tmp') or filename[:-1].endswith('.tmp')):
             logger.critical(
                 "We're under attack! (bad filename to storeBlobShared, %r)",
                 filename)
@@ -650,6 +646,7 @@ class StorageServerDB(object):
 
     transform_record_data = untransform_record_data = lambda self, data: data
 
+
 class StorageServer(object):
 
     """The server side implementation of ZEO.
@@ -723,9 +720,8 @@ class StorageServer(object):
         log("%s created %s with storages: %s" %
             (self.__class__.__name__, read_only and "RO" or "RW", msg))
 
-
         self._lock = Lock()
-        self.ssl = ssl # For dev convenience
+        self.ssl = ssl  # For dev convenience
 
         self.read_only = read_only
         self.database = None
@@ -737,9 +733,9 @@ class StorageServer(object):
         self.invq_bound = invalidation_queue_size
         self.invq = {}
 
-        self.zeo_storages_by_storage_id = {} # {storage_id -> [ZEOStorage]}
-        self.lock_managers = {} # {storage_id -> LockManager}
-        self.stats = {} # {storage_id -> StorageStats}
+        self.zeo_storages_by_storage_id = {}  # {storage_id -> [ZEOStorage]}
+        self.lock_managers = {}  # {storage_id -> LockManager}
+        self.stats = {}  # {storage_id -> StorageStats}
         for name, storage in storages.items():
             self._setup_invq(name, storage)
             storage.registerDB(StorageServerDB(self, name))
@@ -896,6 +892,7 @@ class StorageServer(object):
         return latest_tid, list(oids)
 
     __thread = None
+
     def start_thread(self, daemon=True):
         self.__thread = thread = threading.Thread(target=self.loop)
         thread.setName("StorageServer(%s)" % _addr_label(self.addr))
@@ -903,6 +900,7 @@ class StorageServer(object):
         thread.start()
 
     __closed = False
+
     def close(self, join_timeout=1):
         """Close the dispatcher so that there are no new connections.
 
@@ -959,6 +957,7 @@ class StorageServer(object):
         return dict((storage_id, self.server_status(storage_id))
                     for storage_id in self.storages)
 
+
 class StubTimeoutThread(object):
 
     def begin(self, client):
@@ -967,7 +966,8 @@ class StubTimeoutThread(object):
     def end(self, client):
         pass
 
-    is_alive = lambda self: 'stub'
+    def is_alive(self):
+        return 'stub'
 
 
 class TimeoutThread(threading.Thread):
@@ -983,7 +983,7 @@ class TimeoutThread(threading.Thread):
         self._timeout = timeout
         self._client = None
         self._deadline = None
-        self._cond = threading.Condition() # Protects _client and _deadline
+        self._cond = threading.Condition()  # Protects _client and _deadline
 
     def begin(self, client):
         # Called from the restart code the "main" thread, whenever the
@@ -1013,14 +1013,14 @@ class TimeoutThread(threading.Thread):
                 if howlong <= 0:
                     # Prevent reporting timeout more than once
                     self._deadline = None
-                client = self._client # For the howlong <= 0 branch below
+                client = self._client  # For the howlong <= 0 branch below
 
             if howlong <= 0:
                 client.log("Transaction timeout after %s seconds" %
                            self._timeout, logging.CRITICAL)
                 try:
                     client.call_soon_threadsafe(client.connection.close)
-                except:
+                except:  # NOQA: E722 bare except
                     client.log("Timeout failure", logging.CRITICAL,
                                exc_info=sys.exc_info())
                     self.end(client)
@@ -1074,6 +1074,7 @@ def _addr_label(addr):
         host, port = addr
         return str(host) + ":" + str(port)
 
+
 class CommitLog(object):
 
     def __init__(self):
@@ -1116,22 +1117,27 @@ class CommitLog(object):
             self.file.close()
             self.file = None
 
+
 class ServerEvent(object):
 
     def __init__(self, server, **kw):
         self.__dict__.update(kw)
         self.server = server
 
+
 class Serving(ServerEvent):
     pass
 
+
 class Closed(ServerEvent):
     pass
+
 
 def never_resolve_conflict(oid, committedSerial, oldSerial, newpickle,
                            committedData=b''):
     raise ConflictError(oid=oid, serials=(committedSerial, oldSerial),
                         data=newpickle)
+
 
 class LockManager(object):
 
@@ -1140,7 +1146,7 @@ class LockManager(object):
         self.stats = stats
         self.timeout = timeout
         self.locked = None
-        self.waiting = {} # {ZEOStorage -> (func, delay)}
+        self.waiting = {}  # {ZEOStorage -> (func, delay)}
         self._lock = RLock()
 
     def lock(self, zs, func):
@@ -1218,10 +1224,10 @@ class LockManager(object):
                         zs, "(%r) dequeue lock: transactions waiting: %s")
 
     def _log_waiting(self, zs, message):
-        l = len(self.waiting)
-        zs.log(message % (self.storage_id, l),
-               logging.CRITICAL if l > 9 else (
-                   logging.WARNING if l > 3 else logging.DEBUG)
+        length = len(self.waiting)
+        zs.log(message % (self.storage_id, length),
+               logging.CRITICAL if length > 9 else (
+                   logging.WARNING if length > 3 else logging.DEBUG)
                )
 
     def _can_lock(self, zs):

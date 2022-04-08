@@ -20,11 +20,11 @@ from persistent.TimeStamp import TimeStamp
 from ZODB.Connection import TransactionMetaData
 from ZODB.tests.StorageTestBase import zodb_pickle, MinPO
 
-import ZEO.ClientStorage
 from ZEO.Exceptions import ClientDisconnected
 from ZEO.tests.TestThread import TestThread
 
 ZERO = b'\0'*8
+
 
 class WorkerThread(TestThread):
 
@@ -61,6 +61,7 @@ class WorkerThread(TestThread):
         future = self.storage._server.call('vote', id(self.trans), wait=False)
         self.ready.set()
         future.result(9)
+
 
 class CommitLockTests(object):
 
@@ -100,7 +101,7 @@ class CommitLockTests(object):
         for i in range(self.NUM_CLIENTS):
             storage = self._new_storage_client()
             txn = TransactionMetaData()
-            tid = self._get_timestamp()
+            self._get_timestamp()
 
             t = WorkerThread(self, storage, txn)
             self._threads.append(t)
@@ -123,8 +124,9 @@ class CommitLockTests(object):
 
     def _get_timestamp(self):
         t = time.time()
-        t = TimeStamp(*time.gmtime(t)[:5]+(t%60,))
+        t = TimeStamp(*time.gmtime(t)[:5]+(t % 60,))
         return repr(t)
+
 
 class CommitLockVoteTests(CommitLockTests):
 

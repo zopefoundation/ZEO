@@ -49,20 +49,23 @@ from zdaemon.zdoptions import ZDOptions
 logger = logging.getLogger('ZEO.runzeo')
 _pid = str(os.getpid())
 
+
 def log(msg, level=logging.INFO, exc_info=False):
     """Internal: generic logging function."""
     message = "(%s) %s" % (_pid, msg)
     logger.log(level, message, exc_info=exc_info)
+
 
 def parse_binding_address(arg):
     # Caution:  Not part of the official ZConfig API.
     obj = ZConfig.datatypes.SocketBindingAddress(arg)
     return obj.family, obj.address
 
+
 def windows_shutdown_handler():
     # Called by the signal mechanism on Windows to perform shutdown.
-    import asyncore
     asyncore.close_all()
+
 
 class ZEOOptionsMixin(object):
 
@@ -75,14 +78,18 @@ class ZEOOptionsMixin(object):
         self.monitor_family, self.monitor_address = parse_binding_address(arg)
 
     def handle_filename(self, arg):
-        from ZODB.config import FileStorage # That's a FileStorage *opener*!
+        from ZODB.config import FileStorage  # That's a FileStorage *opener*!
+
         class FSConfig(object):
+
             def __init__(self, name, path):
                 self._name = name
                 self.path = path
                 self.stop = None
+
             def getSectionName(self):
                 return self._name
+
         if not self.storages:
             self.storages = []
         name = str(1 + len(self.storages))
@@ -90,6 +97,7 @@ class ZEOOptionsMixin(object):
         self.storages.append(conf)
 
     testing_exit_immediately = False
+
     def handle_test(self, *args):
         self.testing_exit_immediately = True
 
@@ -116,6 +124,7 @@ class ZEOOptionsMixin(object):
                  None, 'auth-realm=')
         self.add('pid_file', 'zeo.pid_filename',
                  None, 'pid-file=')
+
 
 class ZEOOptions(ZDOptions, ZEOOptionsMixin):
 
@@ -179,8 +188,8 @@ class ZEOServer(object):
         root.addHandler(handler)
 
     def check_socket(self):
-        if (isinstance(self.options.address, tuple) and
-            self.options.address[1] is None):
+        if isinstance(self.options.address, tuple) and \
+           self.options.address[1] is None:
             self.options.address = self.options.address[0], 0
             return
         if self.can_connect(self.options.family, self.options.address):
@@ -224,7 +233,7 @@ class ZEOServer(object):
                 self.setup_win32_signals()
             return
         if hasattr(signal, 'SIGXFSZ'):
-            signal.signal(signal.SIGXFSZ, signal.SIG_IGN) # Special case
+            signal.signal(signal.SIGXFSZ, signal.SIG_IGN)  # Special case
         init_signames()
         for sig, name in signames.items():
             method = getattr(self, "handle_" + name.lower(), None)
@@ -244,12 +253,12 @@ class ZEOServer(object):
                          "will *not* be installed.")
             return
         SignalHandler = Signals.Signals.SignalHandler
-        if SignalHandler is not None: # may be None if no pywin32.
+        if SignalHandler is not None:  # may be None if no pywin32.
             SignalHandler.registerHandler(signal.SIGTERM,
                                           windows_shutdown_handler)
             SignalHandler.registerHandler(signal.SIGINT,
                                           windows_shutdown_handler)
-            SIGUSR2 = 12 # not in signal module on Windows.
+            SIGUSR2 = 12  # not in signal module on Windows.
             SignalHandler.registerHandler(SIGUSR2, self.handle_sigusr2)
 
     def create_server(self):
@@ -275,20 +284,21 @@ class ZEOServer(object):
 
     def handle_sigusr2(self):
         # log rotation signal - do the same as Zope 2.7/2.8...
-        if self.options.config_logger is None or os.name not in ("posix", "nt"):
-            log("received SIGUSR2, but it was not handled!", 
+        if self.options.config_logger is None or \
+           os.name not in ("posix", "nt"):
+            log("received SIGUSR2, but it was not handled!",
                 level=logging.WARNING)
             return
 
         loggers = [self.options.config_logger]
 
         if os.name == "posix":
-            for l in loggers:
-                l.reopen()
+            for logger in loggers:
+                logger.reopen()
             log("Log files reopened successfully", level=logging.INFO)
-        else: # nt - same rotation code as in Zope's Signals/Signals.py
-            for l in loggers:
-                for f in l.handler_factories:
+        else:  # nt - same rotation code as in Zope's Signals/Signals.py
+            for logger in loggers:
+                for f in logger.handler_factories:
                     handler = f()
                     if hasattr(handler, 'rotate') and callable(handler.rotate):
                         handler.rotate()
@@ -347,20 +357,21 @@ def create_server(storages, options):
     return StorageServer(
         options.address,
         storages,
-        read_only = options.read_only,
-        invalidation_queue_size = options.invalidation_queue_size,
-        invalidation_age = options.invalidation_age,
-        transaction_timeout = options.transaction_timeout,
-        monitor_address = options.monitor_address,
-        auth_protocol = options.auth_protocol,
-        auth_database = options.auth_database,
-        auth_realm = options.auth_realm,
+        read_only=options.read_only,
+        invalidation_queue_size=options.invalidation_queue_size,
+        invalidation_age=options.invalidation_age,
+        transaction_timeout=options.transaction_timeout,
+        monitor_address=options.monitor_address,
+        auth_protocol=options.auth_protocol,
+        auth_database=options.auth_database,
+        auth_realm=options.auth_realm,
         )
 
 
 # Signal names
 
 signames = None
+
 
 def signame(sig):
     """Return a symbolic name for a signal.
@@ -372,6 +383,7 @@ def signame(sig):
     if signames is None:
         init_signames()
     return signames.get(sig) or "signal %d" % sig
+
 
 def init_signames():
     global signames
@@ -391,6 +403,7 @@ def main(args=None):
     options.realize(args)
     s = ZEOServer(options)
     s.main()
+
 
 if __name__ == "__main__":
     main()

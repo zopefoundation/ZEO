@@ -21,8 +21,12 @@ Changelog
   "ZEO 5 client with ZEO 4 server".
 
 
-5.3.1 (unreleased)
+5.4.0 (unreleased)
 ------------------
+
+- Lint the code with flake8
+
+- Add support for Python 3.10.
 
 - Add ``ConflictError`` to the list of unlogged server exceptions
   (the client/its application should determine whether it wants
@@ -38,7 +42,6 @@ Changelog
   hinting towards a server rather than client problem.
 
   See `issue 156 <https://github.com/zopefoundation/ZEO/issues/156>`_.
-
 
 
 5.3.0 (2022-03-24)

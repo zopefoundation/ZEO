@@ -21,6 +21,7 @@ import ZEO.Exceptions
 
 ZERO = '\0'*8
 
+
 class BasicThread(threading.Thread):
     def __init__(self, storage, doNextEvent, threadStartedEvent):
         self.storage = storage
@@ -123,7 +124,6 @@ class ThreadTests(object):
 
     # Helper for checkMTStores
     def mtstorehelper(self):
-        name = threading.currentThread().getName()
         objs = []
         for i in range(10):
             objs.append(MinPO("X" * 200000))

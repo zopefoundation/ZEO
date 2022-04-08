@@ -45,6 +45,7 @@ from ..StorageServer import ZEOStorage
 from ZEO.Exceptions import AuthError
 from ..hash import sha1
 
+
 def get_random_bytes(n=8):
     try:
         b = os.urandom(n)
@@ -53,8 +54,10 @@ def get_random_bytes(n=8):
         b = b"".join(L)
     return b
 
+
 def hexdigest(s):
     return sha1(s.encode()).hexdigest()
+
 
 class DigestDatabase(Database):
     def __init__(self, filename, realm=None):
@@ -69,6 +72,7 @@ class DigestDatabase(Database):
         dig = hexdigest("%s:%s:%s" % (username, self.realm, password))
         self._users[username] = dig
 
+
 def session_key(h_up, nonce):
     # The hash itself is a bit too short to be a session key.
     # HMAC wants a 64-byte key.  We don't want to use h_up
@@ -76,6 +80,7 @@ def session_key(h_up, nonce):
     # use the hash plus part of h_up.
     return (sha1(("%s:%s" % (h_up, nonce)).encode('latin-1')).digest() +
             h_up.encode('utf-8')[:44])
+
 
 class StorageClass(ZEOStorage):
     def set_database(self, database):
@@ -123,6 +128,7 @@ class StorageClass(ZEOStorage):
         return self._finish_auth(check == response)
 
     extensions = [auth_get_challenge, auth_response]
+
 
 class DigestClient(Client):
     extensions = ["auth_get_challenge", "auth_response"]

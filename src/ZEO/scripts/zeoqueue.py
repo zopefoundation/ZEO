@@ -37,7 +37,6 @@ STATEFILE = 'zeoqueue.pck'
 PROGRAM = sys.argv[0]
 
 
-
 tcre = re.compile(r"""
     (?P<ymd>
      \d{4}-      # year
@@ -67,7 +66,6 @@ ccre = re.compile(r"""
 wcre = re.compile(r'Clients waiting: (?P<num>\d+)')
 
 
-
 def parse_time(line):
     """Return the time portion of a zLOG line in seconds or None."""
     mo = tcre.match(line)
@@ -97,7 +95,6 @@ class Txn(object):
             return False
 
 
-
 class Status(object):
     """Track status of ZEO server by replaying log records.
 
@@ -303,7 +300,6 @@ class Status(object):
                 break
 
 
-
 def usage(code, msg=''):
     print(__doc__ % globals(), file=sys.stderr)
     if msg:

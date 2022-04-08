@@ -15,6 +15,7 @@
 
 import os
 
+
 def parentdir(p, n=1):
     """Return the ancestor of p from n levels up."""
     d = p
@@ -24,6 +25,7 @@ def parentdir(p, n=1):
             d = os.getcwd()
         n -= 1
     return d
+
 
 class Environment(object):
     """Determine location of the Data.fs & ZEO_SERVER.pid files.

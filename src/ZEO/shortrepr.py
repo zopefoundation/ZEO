@@ -14,8 +14,9 @@
 
 REPR_LIMIT = 60
 
+
 def short_repr(obj):
-    "Return an object repr limited to REPR_LIMIT bytes."
+    """Return an object repr limited to REPR_LIMIT bytes."""
 
     # Some of the objects being repr'd are large strings. A lot of memory
     # would be wasted to repr them and then truncate, so they are treated

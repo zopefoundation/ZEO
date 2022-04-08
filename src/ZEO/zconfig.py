@@ -3,6 +3,7 @@
 import os
 import sys
 
+
 def ssl_config(section, server):
     import ssl
 
@@ -10,12 +11,13 @@ def ssl_config(section, server):
     auth = section.authenticate
     if auth:
         if os.path.isdir(auth):
-            capath=auth
+            capath = auth
         elif auth != 'DYNAMIC':
-            cafile=auth
+            cafile = auth
 
     context = ssl.create_default_context(
-        ssl.Purpose.CLIENT_AUTH, cafile=cafile, capath=capath)
+        ssl.Purpose.CLIENT_AUTH if server else ssl.Purpose.SERVER_AUTH,
+        cafile=cafile, capath=capath)
 
     if not auth:
         assert not server
@@ -43,11 +45,14 @@ def ssl_config(section, server):
 
     return context, section.server_hostname
 
+
 def server_ssl(section):
     return ssl_config(section, True)
 
+
 def client_ssl(section):
     return ssl_config(section, False)
+
 
 class ClientStorageConfig(object):
 
@@ -85,6 +90,6 @@ class ClientStorageConfig(object):
             name=config.name,
             read_only=config.read_only,
             read_only_fallback=config.read_only_fallback,
-            server_sync = config.server_sync,
+            server_sync=config.server_sync,
             wait_timeout=config.wait_timeout,
             **options)

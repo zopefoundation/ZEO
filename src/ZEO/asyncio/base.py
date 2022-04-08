@@ -38,10 +38,10 @@ from struct import pack
 from struct import unpack
 import sys
 
+
 logger = logging.getLogger(__name__)
 
 INET_FAMILIES = socket.AF_INET, socket.AF_INET6
-
 
 
 class ZEOBaseProtocol(Protocol):
@@ -61,6 +61,7 @@ class ZEOBaseProtocol(Protocol):
     def call_async_iter(self, it):
         self.write_message_iter(self.encode(0, True, method, args)
                                 for method, args in it)
+
     def get_peername(self):
         return self.transport.get_extra_info('peername')
 
@@ -69,6 +70,7 @@ class ZEOBaseProtocol(Protocol):
 
     closed = False
     sm_protocol = None
+
     def close(self):
         if not self.closed:
             self.closed = True
@@ -196,7 +198,7 @@ class SizedMessageProtocol(Protocol):
                     it = message
                     for message in it:
                         write_message(message)
-                        if paused: # paused again. Put iter back.
+                        if paused:  # paused again. Put iter back.
                             output.insert(0, it)
 
         self.resume_writing = resume_writing
@@ -204,8 +206,8 @@ class SizedMessageProtocol(Protocol):
         # input handling
         # the following implements a state machine with
         # states ``process_size`` and ``process_message``
-        received_count = [0]  #  number of received (not yet processed) bytes
-        received_buffer = [] # received data chunks
+        received_count = [0]  # number of received (not yet processed) bytes
+        received_buffer = []  # received data chunks
         read_state = [None]  # read state: (*count*, *processor*)
 
         def read(no):
