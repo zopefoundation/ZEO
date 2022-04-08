@@ -33,7 +33,7 @@ tests_require = [
     'ZODB >= 5.5.1',
     'zope.testing',
     'manuel',
-    'msgpack < 1',
+    'msgpack',
     'zope.testrunner',
 ]
 
