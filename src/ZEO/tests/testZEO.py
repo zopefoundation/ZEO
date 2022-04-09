@@ -1713,9 +1713,13 @@ def can_use_empty_string_for_local_host_on_client():
 
 slow_test_classes = [
     BlobAdaptedFileStorageTests, BlobWritableCacheTests,
-    MappingStorageTests, DemoStorageTests,
-    FileStorageTests,
-    FileStorageHexTests, FileStorageClientHexTests,
+    # keep to test a storage without blobs
+    # and with in memory store (may have different latency than
+    # ``FileStorage`` and therefore expose other race conditions)
+    MappingStorageTests,
+#   DemoStorageTests,
+#   FileStorageTests,
+#   FileStorageHexTests, FileStorageClientHexTests,
     ]
 if not forker.ZEO4_SERVER:
     slow_test_classes.append(FileStorageSSLTests)
