@@ -1744,9 +1744,10 @@ slow_test_classes = [
     # and with in memory store (may have different latency than
     # ``FileStorage`` and therefore expose other race conditions)
     MappingStorageTests,
-#   DemoStorageTests,
-#   FileStorageTests,
-#   FileStorageHexTests, FileStorageClientHexTests,
+    # drop to save time
+    #   DemoStorageTests,
+    #   FileStorageTests,
+    #   FileStorageHexTests, FileStorageClientHexTests,
     ]
 if not forker.ZEO4_SERVER:
     slow_test_classes.append(FileStorageSSLTests)
