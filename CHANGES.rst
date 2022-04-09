@@ -4,6 +4,18 @@ Changelog
 5.4.0 (unreleased)
 ------------------
 
+- Test ZEO only with the following storages
+  ``FileStorage`` with server side blobs,
+  ``FileStorage`` with shared blob directory,
+  ``MappingStorage`` (without blobs).
+
+  Those tests cover all storage features with impact on ZEO:
+  without blobs, with shared blobs and with server side blobs;
+  load, store, two phase commit, undo.
+  Therefore, passing tests for those storages provide high confidence that ZEO
+  works for other properly implemented storages as well.
+  See `#198 <https://github.com/zopefoundation/ZEO/issues/198>`_.
+
 - Lint the code with flake8
 
 - Add support for Python 3.10.
