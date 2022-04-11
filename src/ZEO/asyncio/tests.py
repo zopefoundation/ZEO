@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 class Base(object):
-    DELAY = 0.01  # time (s) to allow the loop to execute
+    DELAY = 0.05  # time (s) to allow the loop to execute
 
     enc = b'Z'
     seq_type = list
