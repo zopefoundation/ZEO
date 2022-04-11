@@ -555,8 +555,19 @@ class ClientIo(object):
                 self.register_failed(protocol, exc)
 
             else:
-                self.connected.set_result(None)
+                # Note: it is important that we first inform
+                # ``client`` (actually the ``ClientStorage``)
+                # that we are (almost) connected
+                # before we officially announce connectedness:
+                # the ``notify_connected`` adds information vital
+                # for storage use; the announcement
+                # allows waiting threads to use the storage.
+                # ``notify_connected`` can call our ``call_async``
+                # but **MUST NOT** use other methods or the normal API
+                # to interact with the server (deadlock or
+                # ``ClientDisconnected`` would result).
                 self.client.notify_connected(self, info)
+                self.connected.set_result(None)
 
     def get_peername(self):
         return self.protocol.get_peername()

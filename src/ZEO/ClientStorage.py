@@ -387,6 +387,17 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
 
     _connection_generation = 0
     def notify_connected(self, conn, info):
+        """The connection is about to be established via *conn*.
+
+        *conn* is an ``ayncio.client.ClientIo`` instance.
+        We can use it already for asynchronous server calls
+        but must not make synchronous calls or
+        use the normal server call API (would lead to deadlock
+        or ``ClientDisconnected``).
+
+        *info* is a ``dict`` providing information about the server
+        (and its associated storage).
+        """
         reconnected = self._connection_generation
         self.set_server_addr(conn.get_peername())
         self.protocol_version = conn.protocol_version
@@ -405,6 +416,9 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         self._connection_generation += 1
 
         if self._client_label:
+            # Note: we cannot yet use ``_async`` (connection not yet
+            # officially established) but can already use
+            # ``ClientIo.call_async``
             conn.call_async('set_client_label', self._client_label)
 
         self._info.update(info)

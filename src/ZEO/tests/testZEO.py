@@ -326,18 +326,18 @@ class GenericTests(
     def _do_store_in_separate_thread(self, oid, revid, voted):
 
         def do_store():
+            self.exception = None
             store = self._new_storage_client()
             try:
                 t = transaction.get()
+                self.assertEqual(store._connection_generation, 1)
                 store.tpc_begin(t)
+                self.assertEqual(store._connection_generation, 1)
                 store.store(oid, revid, b'x', '', t)
                 store.tpc_vote(t)
                 store.tpc_finish(t)
             except Exception as v:
-                import traceback
-                print('E'*70)
-                print(v)
-                traceback.print_exception(*sys.exc_info())
+                self.exception = v
             finally:
                 store.close()
 
@@ -345,6 +345,8 @@ class GenericTests(
         thread.setDaemon(True)
         thread.start()
         thread.join(voted and .1 or 9)
+        if self.exception is not None:
+            raise self.exception.with_traceback(self.exception.__traceback__)
         return thread
 
 class FullGenericTests(
@@ -1717,9 +1719,9 @@ slow_test_classes = [
     # and with in memory store (may have different latency than
     # ``FileStorage`` and therefore expose other race conditions)
     MappingStorageTests,
-#   DemoStorageTests,
-#   FileStorageTests,
-#   FileStorageHexTests, FileStorageClientHexTests,
+    # DemoStorageTests,
+    # FileStorageTests,
+    # FileStorageHexTests, FileStorageClientHexTests,
     ]
 if not forker.ZEO4_SERVER:
     slow_test_classes.append(FileStorageSSLTests)
