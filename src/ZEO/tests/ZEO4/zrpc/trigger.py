@@ -21,7 +21,7 @@ import socket
 import errno
 
 from ZODB.utils import positive_id
-from ZEO._compat import thread, get_ident
+from ZEO._compat import thread
 
 # Original comments follow; they're hard to follow in the context of
 # ZEO's use of triggers.  TODO:  rewrite from a ZEO perspective.
@@ -55,6 +55,7 @@ from ZEO._compat import thread, get_ident
 # why this is true, imagine this scenario: A thread tries to push some
 # new data onto a channel's outgoing data queue at the same time that
 # the main thread is trying to remove some]
+
 
 class _triggerbase(object):
     """OS-independent base class for OS-dependent trigger class."""
@@ -127,13 +128,14 @@ class _triggerbase(object):
                     return
             try:
                 thunk[0](*thunk[1:])
-            except:
+            except:  # NOQA: E722 bare except
                 nil, t, v, tbinfo = asyncore.compact_traceback()
                 print(('exception in trigger thunk:'
                        ' (%s:%s %s)' % (t, v, tbinfo)))
 
     def __repr__(self):
         return '<select-trigger (%s) at %x>' % (self.kind, positive_id(self))
+
 
 if os.name == 'posix':
 
@@ -187,39 +189,39 @@ else:
 
             count = 0
             while 1:
-               count += 1
-               # Bind to a local port; for efficiency, let the OS pick
-               # a free port for us.
-               # Unfortunately, stress tests showed that we may not
-               # be able to connect to that port ("Address already in
-               # use") despite that the OS picked it.  This appears
-               # to be a race bug in the Windows socket implementation.
-               # So we loop until a connect() succeeds (almost always
-               # on the first try).  See the long thread at
-               # http://mail.zope.org/pipermail/zope/2005-July/160433.html
-               # for hideous details.
-               a = socket.socket()
-               a.bind(("127.0.0.1", 0))
-               connect_address = a.getsockname()  # assigned (host, port) pair
-               a.listen(1)
-               try:
-                   w.connect(connect_address)
-                   break    # success
-               except socket.error as detail:
-                   if detail[0] != errno.WSAEADDRINUSE:
-                       # "Address already in use" is the only error
-                       # I've seen on two WinXP Pro SP2 boxes, under
-                       # Pythons 2.3.5 and 2.4.1.
-                       raise
-                   # (10048, 'Address already in use')
-                   # assert count <= 2 # never triggered in Tim's tests
-                   if count >= 10:  # I've never seen it go above 2
-                       a.close()
-                       w.close()
-                       raise BindError("Cannot bind trigger!")
-                   # Close `a` and try again.  Note:  I originally put a short
-                   # sleep() here, but it didn't appear to help or hurt.
-                   a.close()
+                count += 1
+                # Bind to a local port; for efficiency, let the OS pick
+                # a free port for us.
+                # Unfortunately, stress tests showed that we may not
+                # be able to connect to that port ("Address already in
+                # use") despite that the OS picked it.  This appears
+                # to be a race bug in the Windows socket implementation.
+                # So we loop until a connect() succeeds (almost always
+                # on the first try).  See the long thread at
+                # http://mail.zope.org/pipermail/zope/2005-July/160433.html
+                # for hideous details.
+                a = socket.socket()
+                a.bind(("127.0.0.1", 0))
+                connect_address = a.getsockname()  # assigned (host, port) pair
+                a.listen(1)
+                try:
+                    w.connect(connect_address)
+                    break    # success
+                except socket.error as detail:
+                    if detail[0] != errno.WSAEADDRINUSE:
+                        # "Address already in use" is the only error
+                        # I've seen on two WinXP Pro SP2 boxes, under
+                        # Pythons 2.3.5 and 2.4.1.
+                        raise
+                    # (10048, 'Address already in use')
+                    # assert count <= 2 # never triggered in Tim's tests
+                    if count >= 10:  # I've never seen it go above 2
+                        a.close()
+                        w.close()
+                        raise BindError("Cannot bind trigger!")
+                    # Close `a` and try again.  Note:  I originally put a short
+                    # sleep() here, but it didn't appear to help or hurt.
+                    a.close()
 
             r, addr = a.accept()  # r becomes asyncore's (self.)socket
             a.close()

@@ -14,7 +14,7 @@
 """Basic unit tests for a client cache."""
 from __future__ import print_function
 
-from ZODB.utils import p64, repr_to_oid
+from ZODB.utils import p64, u64, z64, repr_to_oid
 import doctest
 import os
 import re
@@ -28,8 +28,6 @@ import ZODB.tests.util
 import zope.testing.setupstack
 import zope.testing.renormalizing
 
-import ZEO.cache
-from ZODB.utils import p64, u64, z64
 
 n1 = p64(1)
 n2 = p64(2)
@@ -47,8 +45,8 @@ def hexprint(file):
         printable = ""
         hex = ""
         for character in line:
-            if (character in string.printable
-                and not ord(character) in [12,13,9]):
+            if character in string.printable and \
+               not ord(character) in [12, 13, 9]:
                 printable += character
             else:
                 printable += '.'
@@ -63,7 +61,10 @@ def hexprint(file):
 def oid(o):
     repr = '%016x' % o
     return repr_to_oid(repr)
+
+
 tid = oid
+
 
 class CacheTests(ZODB.tests.util.TestCase):
 
@@ -207,30 +208,30 @@ class CacheTests(ZODB.tests.util.TestCase):
         self.assertTrue(1 not in cache.noncurrent)
 
     def testVeryLargeCaches(self):
-        cache = ZEO.cache.ClientCache('cache', size=(1<<32)+(1<<20))
+        cache = ZEO.cache.ClientCache('cache', size=(1 << 32)+(1 << 20))
         cache.store(n1, n2, None, b"x")
         cache.close()
-        cache = ZEO.cache.ClientCache('cache', size=(1<<33)+(1<<20))
+        cache = ZEO.cache.ClientCache('cache', size=(1 << 33)+(1 << 20))
         self.assertEqual(cache.load(n1), (b'x', n2))
         cache.close()
 
     def testConversionOfLargeFreeBlocks(self):
         with open('cache', 'wb') as f:
-            f.write(ZEO.cache.magic+
+            f.write(ZEO.cache.magic +
                     b'\0'*8 +
-                    b'f'+struct.pack(">I", (1<<32)-12)
+                    b'f'+struct.pack(">I", (1 << 32)-12)
                     )
-            f.seek((1<<32)-1)
+            f.seek((1 << 32)-1)
             f.write(b'x')
-        cache = ZEO.cache.ClientCache('cache', size=1<<32)
+        cache = ZEO.cache.ClientCache('cache', size=1 << 32)
         cache.close()
-        cache = ZEO.cache.ClientCache('cache', size=1<<32)
+        cache = ZEO.cache.ClientCache('cache', size=1 << 32)
         cache.close()
         with open('cache', 'rb') as f:
             f.seek(12)
             self.assertEqual(f.read(1), b'f')
             self.assertEqual(struct.unpack(">I", f.read(4))[0],
-                            ZEO.cache.max_block_size)
+                             ZEO.cache.max_block_size)
 
     if not sys.platform.startswith('linux'):
         # On platforms without sparse files, these tests are just way
@@ -277,7 +278,7 @@ class CacheTests(ZODB.tests.util.TestCase):
             self.assertEqual(os.path.getsize(
                 'cache'), ZEO.cache.ZEC_HEADER_SIZE+small*recsize+extra)
             self.assertEqual(set(u64(oid) for (oid, tid) in cache.contents()),
-                              set(range(small)))
+                             set(range(small)))
             for i in range(100, 110):
                 cache.store(p64(i), n1, None, data)
 
@@ -297,7 +298,7 @@ class CacheTests(ZODB.tests.util.TestCase):
                 'cache', size=ZEO.cache.ZEC_HEADER_SIZE+small*recsize+extra)
             self.assertEqual(len(cache), expected_len)
             self.assertEqual(set(u64(oid) for (oid, tid) in cache.contents()),
-                              expected_oids)
+                             expected_oids)
 
             # Now make it bigger
             cache.close()
@@ -308,8 +309,7 @@ class CacheTests(ZODB.tests.util.TestCase):
             self.assertEqual(os.path.getsize(
                 'cache'), ZEO.cache.ZEC_HEADER_SIZE+large*recsize+extra)
             self.assertEqual(set(u64(oid) for (oid, tid) in cache.contents()),
-                              expected_oids)
-
+                             expected_oids)
 
             for i in range(200, 305):
                 cache.store(p64(i), n1, None, data)
@@ -321,7 +321,7 @@ class CacheTests(ZODB.tests.util.TestCase):
                                 list(range(106, 110)) +
                                 list(range(200, 305)))
             self.assertEqual(set(u64(oid) for (oid, tid) in cache.contents()),
-                              expected_oids)
+                             expected_oids)
 
             # Make sure we can reopen with same size
             cache.close()
@@ -329,7 +329,7 @@ class CacheTests(ZODB.tests.util.TestCase):
                 'cache', size=ZEO.cache.ZEC_HEADER_SIZE+large*recsize+extra)
             self.assertEqual(len(cache), expected_len)
             self.assertEqual(set(u64(oid) for (oid, tid) in cache.contents()),
-                              expected_oids)
+                             expected_oids)
 
             # Cleanup
             cache.close()
@@ -356,6 +356,7 @@ class CacheTests(ZODB.tests.util.TestCase):
         self.assertEqual(cache.loadBefore(oid, n2), (b'first', n1, n2))
         self.assertEqual(cache.loadBefore(oid, n3), (b'second', n2, None))
 
+
 def kill_does_not_cause_cache_corruption():
     r"""
 
@@ -363,7 +364,7 @@ If we kill a process while a cache is being written to, the cache
 isn't corrupted.  To see this, we'll write a little script that
 writes records to a cache file repeatedly.
 
->>> import os, random, sys, time
+>>> import os, sys
 >>> with open('t', 'w') as f:
 ...     _ = f.write('''
 ... import os, random, sys, time
@@ -402,6 +403,7 @@ writes records to a cache file repeatedly.
 
 """
 
+
 def full_cache_is_valid():
     r"""
 
@@ -419,6 +421,7 @@ still be used.
 >>> cache.close()
 """
 
+
 def cannot_open_same_cache_file_twice():
     r"""
 >>> import ZEO.cache
@@ -431,6 +434,7 @@ LockError: Couldn't lock 'cache.lock'
 
 >>> cache.close()
 """
+
 
 def broken_non_current():
     r"""
@@ -466,6 +470,7 @@ Couldn't find non-current
 """
 
 # def bad_magic_number(): See rename_bad_cache_file
+
 
 def cache_trace_analysis():
     r"""
@@ -23011,6 +23016,7 @@ Cleanup:
 
 """
 
+
 def cache_simul_properly_handles_load_miss_after_eviction_and_inval():
     r"""
 
@@ -23041,6 +23047,7 @@ Now try to do simulation:
 
     """
 
+
 def invalidations_with_current_tid_dont_wreck_cache():
     """
     >>> cache = ZEO.cache.ClientCache('cache', 1000)
@@ -23058,6 +23065,7 @@ def invalidations_with_current_tid_dont_wreck_cache():
     >>> logging.getLogger().removeHandler(handler)
     >>> logging.getLogger().setLevel(old_level)
     """
+
 
 def rename_bad_cache_file():
     """
@@ -23108,6 +23116,7 @@ An attempt to open a bad cache file will cause it to be dropped and recreated.
     >>> logging.getLogger().setLevel(old_level)
     """
 
+
 def test_suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(CacheTests))
@@ -23115,10 +23124,9 @@ def test_suite():
         doctest.DocTestSuite(
             setUp=zope.testing.setupstack.setUpDirectory,
             tearDown=zope.testing.setupstack.tearDown,
-            checker=ZODB.tests.util.checker + \
-                zope.testing.renormalizing.RENormalizing([
-                    (re.compile(r'31\.3%'), '31.2%'),
-                ]),
+            checker=(ZODB.tests.util.checker +
+                     zope.testing.renormalizing.RENormalizing([
+                        (re.compile(r'31\.3%'), '31.2%')])),
             )
         )
     return suite

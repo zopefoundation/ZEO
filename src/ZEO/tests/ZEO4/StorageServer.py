@@ -41,7 +41,6 @@ from ZEO._compat import Pickler, Unpickler, BytesIO
 from ZEO.Exceptions import AuthError
 from .monitor import StorageStats, StatsServer
 from .zrpc.connection import ManagedServerConnection, Delay, MTDelay, Result
-from .zrpc.server import Dispatcher
 from ZODB.Connection import TransactionMetaData
 from ZODB.loglevels import BLATHER
 from ZODB.POSException import StorageError, StorageTransactionError
@@ -52,6 +51,7 @@ from ZODB.utils import oid_repr, p64, u64, z64
 ResolvedSerial = b'rs'
 
 logger = logging.getLogger('ZEO.StorageServer')
+
 
 def log(message, level=logging.INFO, label='', exc_info=False):
     """Internal helper to log a message."""
@@ -152,7 +152,7 @@ class ZEOStorage(object):
         info = self.get_info()
 
         if not info['supportsUndo']:
-            self.undoLog = self.undoInfo = lambda *a,**k: ()
+            self.undoLog = self.undoInfo = lambda *a, **k: ()
 
         self.getTid = storage.getTid
         self.load = storage.load
@@ -164,7 +164,7 @@ class ZEOStorage(object):
         try:
             fn = storage.getExtensionMethods
         except AttributeError:
-            pass # no extension methods
+            pass  # no extension methods
         else:
             d = fn()
             self._extensions.update(d)
@@ -182,14 +182,14 @@ class ZEOStorage(object):
                     "Falling back to using _transaction attribute, which\n."
                     "is icky.",
                     logging.ERROR)
-                self.tpc_transaction = lambda : storage._transaction
+                self.tpc_transaction = lambda: storage._transaction
             else:
                 raise
 
-    def history(self,tid,size=1):
+    def history(self, tid, size=1):
         # This caters for storages which still accept
         # a version parameter.
-        return self.storage.history(tid,size=size)
+        return self.storage.history(tid, size=size)
 
     def _check_tid(self, tid, exc=None):
         if self.read_only:
@@ -253,8 +253,7 @@ class ZEOStorage(object):
     def get_info(self):
         storage = self.storage
 
-
-        supportsUndo = (getattr(storage, 'supportsUndo', lambda : False)()
+        supportsUndo = (getattr(storage, 'supportsUndo', lambda: False)()
                         and self.connection.peer_protocol_version >= b'Z310')
 
         # Communicate the backend storage interfaces to the client
@@ -448,7 +447,7 @@ class ZEOStorage(object):
 
     def _try_to_vote(self, delay=None):
         if self.connection is None:
-            return # We're disconnected
+            return  # We're disconnected
         if delay is not None and delay.sent:
             # as a consequence of the unlocking strategy, _try_to_vote
             # may be called multiple times for delayed
@@ -472,7 +471,6 @@ class ZEOStorage(object):
                 for op, args in self.txnlog:
                     if not getattr(self, op)(*args):
                         break
-
 
                 # Blob support
                 while self.blob_log and not self.store_failed:
@@ -547,7 +545,7 @@ class ZEOStorage(object):
 
     def storeBlobEnd(self, oid, serial, data, id):
         self._check_tid(id, exc=StorageTransactionError)
-        assert self.txnlog is not None # effectively not allowed after undo
+        assert self.txnlog is not None  # effectively not allowed after undo
         fd, tempname = self.blob_tempfile
         self.blob_tempfile = None
         os.close(fd)
@@ -555,14 +553,12 @@ class ZEOStorage(object):
 
     def storeBlobShared(self, oid, serial, data, filename, id):
         self._check_tid(id, exc=StorageTransactionError)
-        assert self.txnlog is not None # effectively not allowed after undo
+        assert self.txnlog is not None  # effectively not allowed after undo
 
         # Reconstruct the full path from the filename in the OID directory
-        if (os.path.sep in filename
-            or not (filename.endswith('.tmp')
-                    or filename[:-1].endswith('.tmp')
-                    )
-            ):
+        if os.path.sep in filename or \
+           not (filename.endswith('.tmp')
+                or filename[:-1].endswith('.tmp')):
             logger.critical(
                 "We're under attack! (bad filename to storeBlobShared, %r)",
                 filename)
@@ -590,7 +586,7 @@ class ZEOStorage(object):
                      (oid_repr(oid), str(err)), BLATHER)
         if not isinstance(err, TransactionError):
             # Unexpected errors are logged and passed to the client
-            self.log("%s error: %s, %s" % ((op,)+ sys.exc_info()[:2]),
+            self.log("%s error: %s, %s" % ((op,) + sys.exc_info()[:2]),
                      logging.ERROR, exc_info=True)
         err = self._marshal_error(err)
         # The exception is reported back as newserial for this oid
@@ -687,7 +683,7 @@ class ZEOStorage(object):
         pickler.fast = 1
         try:
             pickler.dump(error)
-        except:
+        except:  # NOQA: E722 bare except
             msg = "Couldn't pickle storage exception: %s" % repr(error)
             self.log(msg, logging.ERROR)
             error = StorageServerError(msg)
@@ -754,6 +750,7 @@ class ZEOStorage(object):
     def set_client_label(self, label):
         self.log_label = str(label)+' '+_addr_label(self.connection.addr)
 
+
 class StorageServerDB(object):
 
     def __init__(self, server, storage_id):
@@ -771,6 +768,7 @@ class StorageServerDB(object):
         self.server._invalidateCache(self.storage_id)
 
     transform_record_data = untransform_record_data = lambda self, data: data
+
 
 class StorageServer(object):
 
@@ -872,7 +870,6 @@ class StorageServer(object):
         log("%s created %s with storages: %s" %
             (self.__class__.__name__, read_only and "RO" or "RW", msg))
 
-
         self._lock = threading.Lock()
         self._commit_locks = {}
         self._waiting = dict((name, []) for name in storages)
@@ -938,7 +935,6 @@ class StorageServer(object):
             self.invq[name] = list(lastInvalidations(self.invq_bound))
             self.invq[name].reverse()
 
-
     def _setup_auth(self, protocol):
         # Can't be done in global scope, because of cyclic references
         from .auth import get_module
@@ -971,7 +967,6 @@ class StorageServer(object):
             raise ValueError("password database realm %r "
                              "does not match storage realm %r"
                              % (self.database.realm, self.auth_realm))
-
 
     def new_connection(self, sock, addr):
         """Internal: factory to create a new connection.
@@ -1046,7 +1041,6 @@ class StorageServer(object):
             except DisconnectedError:
                 pass
 
-
     def invalidate(self, conn, storage_id, tid, invalidated=(), info=None):
         """Internal: broadcast info and invalidations to clients.
 
@@ -1091,7 +1085,6 @@ class StorageServer(object):
         #
         # b. A connection is closes while we are iterating. We'll need
         #    to cactch and ignore Disconnected errors.
-
 
         if invalidated:
             invq = self.invq[storage_id]
@@ -1152,9 +1145,10 @@ class StorageServer(object):
             asyncore.loop(timeout, map=self.socket_map)
         except Exception:
             if not self.__closed:
-                raise # Unexpected exc
+                raise  # Unexpected exc
 
     __thread = None
+
     def start_thread(self, daemon=True):
         self.__thread = thread = threading.Thread(target=self.loop)
         thread.setName("StorageServer(%s)" % _addr_label(self.addr))
@@ -1162,6 +1156,7 @@ class StorageServer(object):
         thread.start()
 
     __closed = False
+
     def close(self, join_timeout=1):
         """Close the dispatcher so that there are no new connections.
 
@@ -1183,7 +1178,7 @@ class StorageServer(object):
             for conn in connections[:]:
                 try:
                     conn.connection.close()
-                except:
+                except:  # NOQA: E722 bare except
                     pass
 
         for name, storage in six.iteritems(self.storages):
@@ -1278,7 +1273,6 @@ class StorageServer(object):
                 except Exception:
                     logger.exception("Calling unlock callback")
 
-
     def stop_waiting(self, zeostore):
         storage_id = zeostore.storage_id
         waiting = self._waiting[storage_id]
@@ -1303,7 +1297,8 @@ class StorageServer(object):
         status = self.stats[storage_id].__dict__.copy()
         status['connections'] = len(status['connections'])
         status['waiting'] = len(self._waiting[storage_id])
-        status['timeout-thread-is-alive'] = self.timeouts[storage_id].is_alive()
+        status['timeout-thread-is-alive'] = \
+            self.timeouts[storage_id].is_alive()
         last_transaction = self.storages[storage_id].lastTransaction()
         last_transaction_hex = codecs.encode(last_transaction, 'hex_codec')
         # doctests and maybe clients expect a str, not bytes
@@ -1315,6 +1310,7 @@ class StorageServer(object):
         return dict((storage_id, self.server_status(storage_id))
                     for storage_id in self.storages)
 
+
 def _level_for_waiting(waiting):
     if len(waiting) > 9:
         return logging.CRITICAL
@@ -1322,6 +1318,7 @@ def _level_for_waiting(waiting):
         return logging.WARNING
     else:
         return logging.DEBUG
+
 
 class StubTimeoutThread(object):
 
@@ -1331,7 +1328,8 @@ class StubTimeoutThread(object):
     def end(self, client):
         pass
 
-    is_alive = lambda self: 'stub'
+    def is_alive(self):
+        return 'stub'
 
 
 class TimeoutThread(threading.Thread):
@@ -1347,7 +1345,7 @@ class TimeoutThread(threading.Thread):
         self._timeout = timeout
         self._client = None
         self._deadline = None
-        self._cond = threading.Condition() # Protects _client and _deadline
+        self._cond = threading.Condition()  # Protects _client and _deadline
 
     def begin(self, client):
         # Called from the restart code the "main" thread, whenever the
@@ -1377,14 +1375,14 @@ class TimeoutThread(threading.Thread):
                 if howlong <= 0:
                     # Prevent reporting timeout more than once
                     self._deadline = None
-                client = self._client # For the howlong <= 0 branch below
+                client = self._client  # For the howlong <= 0 branch below
 
             if howlong <= 0:
                 client.log("Transaction timeout after %s seconds" %
                            self._timeout, logging.CRITICAL)
                 try:
                     client.connection.call_from_thread(client.connection.close)
-                except:
+                except:  # NOQA: E722 bare except
                     client.log("Timeout failure", logging.CRITICAL,
                                exc_info=sys.exc_info())
                     self.end(client)
@@ -1480,6 +1478,7 @@ class ClientStub(object):
 
         self.rpc.callAsyncIterator(store())
 
+
 class ClientStub308(ClientStub):
 
     def invalidateTransaction(self, tid, args):
@@ -1488,6 +1487,7 @@ class ClientStub308(ClientStub):
 
     def invalidateVerify(self, oid):
         ClientStub.invalidateVerify(self, (oid, ''))
+
 
 class ZEOStorage308Adapter(object):
 
@@ -1498,7 +1498,7 @@ class ZEOStorage308Adapter(object):
         return self is other or self.storage is other
 
     def getSerial(self, oid):
-        return self.storage.loadEx(oid)[1] # Z200
+        return self.storage.loadEx(oid)[1]  # Z200
 
     def history(self, oid, version, size=1):
         if version:
@@ -1568,6 +1568,7 @@ class ZEOStorage308Adapter(object):
     def __getattr__(self, name):
         return getattr(self.storage, name)
 
+
 def _addr_label(addr):
     if isinstance(addr, six.binary_type):
         return addr.decode('ascii')
@@ -1576,6 +1577,7 @@ def _addr_label(addr):
     else:
         host, port = addr
         return str(host) + ":" + str(port)
+
 
 class CommitLog(object):
 
@@ -1619,14 +1621,17 @@ class CommitLog(object):
             self.file.close()
             self.file = None
 
+
 class ServerEvent(object):
 
     def __init__(self, server, **kw):
         self.__dict__.update(kw)
         self.server = server
 
+
 class Serving(ServerEvent):
     pass
+
 
 class Closed(ServerEvent):
     pass

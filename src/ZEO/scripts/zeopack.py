@@ -8,7 +8,6 @@ import time
 import traceback
 import ZEO.ClientStorage
 from six.moves import map
-from six.moves import zip
 
 usage = """Usage: %prog [options] [servers]
 
@@ -21,7 +20,8 @@ each is of the form:
 
 """
 
-WAIT = 10 # wait no more than 10 seconds for client to connect
+WAIT = 10  # wait no more than 10 seconds for client to connect
+
 
 def _main(args=None, prog=None):
     if args is None:
@@ -160,9 +160,10 @@ def _main(args=None, prog=None):
                 continue
             cs.pack(packt, wait=True)
             cs.close()
-        except:
+        except:  # NOQA: E722 bare except
             traceback.print_exception(*(sys.exc_info()+(99, sys.stderr)))
             error("Error packing storage %s in %r" % (name, addr))
+
 
 def main(*args):
     root_logger = logging.getLogger()
@@ -178,6 +179,6 @@ def main(*args):
         logging.getLogger().setLevel(old_level)
         logging.getLogger().removeHandler(handler)
 
+
 if __name__ == "__main__":
     main()
-

@@ -27,6 +27,7 @@ import ZODB.FileStorage
 import ZODB.tests.util
 import ZODB.utils
 
+
 def proper_handling_of_blob_conflicts():
     r"""
 
@@ -108,6 +109,7 @@ The transaction is aborted by the server:
     >>> fs.close()
     """
 
+
 def proper_handling_of_errors_in_restart():
     r"""
 
@@ -148,6 +150,7 @@ We can start another client and get the storage lock.
     >>> fs.close()
     >>> server.close()
     """
+
 
 def errors_in_vote_should_clear_lock():
     """
@@ -409,6 +412,7 @@ If clients disconnect while waiting, they will be dequeued:
     >>> server.close()
     """
 
+
 def lock_sanity_check():
     r"""
 On one occasion with 3.10.0a1 in production, we had a case where a
@@ -492,6 +496,7 @@ ZEOStorage as closed and see if trying to get a lock cleans it up:
     >>> server.close()
     """
 
+
 def test_suite():
     return unittest.TestSuite((
         doctest.DocTestSuite(
@@ -505,6 +510,7 @@ def test_suite():
                 ]),
             ),
         ))
+
 
 if __name__ == '__main__':
     unittest.main(defaultTest='test_suite')

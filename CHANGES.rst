@@ -21,23 +21,8 @@ Changelog
   "ZEO 5 client with ZEO 4 server".
 
 
-5.3.1 (unreleased)
+5.4.0 (unreleased)
 ------------------
-
-- Add ``ConflictError`` to the list of unlogged server exceptions
-  (the client/its application should determine whether it wants
-  them logged).
-
-  Prevent ``no current transaction: tpc_abort()`` server log entries.
-  The storage API allows ``tpc_abort`` to be called with an
-  invalid transaction (the call should be ignored in this case)
-  and the server's ``tpc_vote`` relies on this.
-
-  Change the server's log message label for request exceptions
-  from ``Bad request ...`` to ``... raised exception:``,
-  hinting towards a server rather than client problem.
-
-  See `issue 156 <https://github.com/zopefoundation/ZEO/issues/156>`_.
 
 - Test ZEO only with the following storages
   ``FileStorage`` with server side blobs,
@@ -53,9 +38,7 @@ Changelog
 
 - Lint the code with flake8
 
-
-5.3.0 (2022-03-24)
-------------------
+- Add support for Python 3.10.
 
 - Add ``ConflictError`` to the list of unlogged server exceptions
   (the client/its application should determine whether it wants
@@ -71,7 +54,6 @@ Changelog
   hinting towards a server rather than client problem.
 
   See `issue 156 <https://github.com/zopefoundation/ZEO/issues/156>`_.
-
 
 
 5.3.0 (2022-03-24)

@@ -36,20 +36,22 @@ MAX_DEPTH = 20
 MIN_OBJSIZE = 128
 MAX_OBJSIZE = 2048
 
+
 def an_object():
     """Return an object suitable for a PersistentMapping key"""
     size = random.randrange(MIN_OBJSIZE, MAX_OBJSIZE)
     if os.path.exists("/dev/urandom"):
-        f = open("/dev/urandom")
-        buf = f.read(size)
-        f.close()
+        fp = open("/dev/urandom")
+        buf = fp.read(size)
+        fp.close()
         return buf
     else:
-        f = open(MinPO.__file__)
-        l = list(f.read(size))
-        f.close()
-        random.shuffle(l)
-        return "".join(l)
+        fp = open(MinPO.__file__)
+        lst = list(fp.read(size))
+        fp.close()
+        random.shuffle(lst)
+        return "".join(lst)
+
 
 def setup(cn):
     """Initialize the database with some objects"""
@@ -63,6 +65,7 @@ def setup(cn):
         transaction.commit()
     cn.close()
 
+
 def work(cn):
     """Do some work with a transaction"""
     cn.sync()
@@ -74,11 +77,13 @@ def work(cn):
     obj.value = an_object()
     transaction.commit()
 
+
 def main():
     # Yuck!  Need to cleanup forker so that the API is consistent
     # across Unix and Windows, at least if that's possible.
     if os.name == "nt":
         zaddr, tport, pid = forker.start_zeo_server('MappingStorage', ())
+
         def exitserver():
             import socket
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -87,6 +92,7 @@ def main():
     else:
         zaddr = '', random.randrange(20000, 30000)
         pid, exitobj = forker.start_zeo_server(MappingStorage(), zaddr)
+
         def exitserver():
             exitobj.close()
 
@@ -97,6 +103,7 @@ def main():
 
     exitserver()
 
+
 def start_child(zaddr):
 
     pid = os.fork()
@@ -106,6 +113,7 @@ def start_child(zaddr):
         _start_child(zaddr)
     finally:
         os._exit(0)
+
 
 def _start_child(zaddr):
     storage = ClientStorage(zaddr, debug=1, min_disconnect_poll=0.5, wait=1)
@@ -132,6 +140,7 @@ def _start_child(zaddr):
         else:
             c.__count += 1
         work(c)
+
 
 if __name__ == "__main__":
     main()

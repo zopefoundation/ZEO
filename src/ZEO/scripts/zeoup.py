@@ -47,6 +47,7 @@ from ZEO.ClientStorage import ClientStorage
 
 ZEO_VERSION = 2
 
+
 def setup_logging():
     # Set up logging to stderr which will show messages originating
     # at severity ERROR or higher.
@@ -58,6 +59,7 @@ def setup_logging():
     handler = logging.StreamHandler()
     handler.setFormatter(fmt)
     root.addHandler(handler)
+
 
 def check_server(addr, storage, write):
     t0 = time.time()
@@ -97,10 +99,12 @@ def check_server(addr, storage, write):
     t1 = time.time()
     print("Elapsed time: %.2f" % (t1 - t0))
 
+
 def usage(exit=1):
     print(__doc__)
     print(" ".join(sys.argv))
     sys.exit(exit)
+
 
 def main():
     host = None
@@ -123,7 +127,7 @@ def main():
             elif o == '--nowrite':
                 write = 0
             elif o == '-1':
-                ZEO_VERSION = 1
+                ZEO_VERSION = 1  # NOQA: F841 unused variable
     except Exception as err:
         s = str(err)
         if s:
@@ -142,6 +146,7 @@ def main():
 
     setup_logging()
     check_server(addr, storage, write)
+
 
 if __name__ == "__main__":
     try:

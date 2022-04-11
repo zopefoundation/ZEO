@@ -1,0 +1,75 @@
+# Generated from:
+# https://github.com/zopefoundation/meta/tree/master/config/pure-python
+[meta]
+template = "pure-python"
+commit-id = "0c07a1cfd78d28a07aebd23383ed16959f166574"
+
+[python]
+with-windows = false
+with-pypy = true
+with-future-python = false
+with-legacy-python = true
+with-docs = true
+with-sphinx-doctests = false
+
+[tox]
+use-flake8 = true
+testenv-commands = [
+    "# Run unit tests first.",
+    "zope-testrunner -u --test-path=src {posargs:-vc}",
+    "# Only run functional tests if unit tests pass.",
+    "zope-testrunner -f --test-path=src {posargs:-vc}",
+    ]
+testenv-deps = [
+    "!zodbmaster: ZODB >= 4.2.0b1",
+    "zodbmaster: -e git+https://github.com/zopefoundation/ZODB.git@master#egg=ZODB",
+    "uvloop: uvloop",
+    ]
+testenv-setenv = [
+    "!py27-!pypy: PYTHONWARNINGS=ignore::ResourceWarning",
+    "msgpack1: ZEO_MSGPACK=1",
+    "zeo4: ZEO4_SERVER=1",
+    ]
+
+[flake8]
+additional-config = [
+    "# E501 line too long",
+    "# F401 unused import",
+    "per-file-ignores =",
+    "    src/ZEO/tests/test_cache.py: E501",
+    "    src/ZEO/_compat.py: F401",
+    "    src/ZEO/asyncio/compat.py: F401",
+    ]
+
+[coverage]
+fail-under = 53
+
+[manifest]
+additional-rules = [
+    "include *.py",
+    "include COPYING",
+    "include log.ini",
+    "recursive-include src *.csr",
+    "recursive-include src *.pem",
+    "recursive-include src *.rst",
+    "recursive-include src *.test",
+    "recursive-include src *.txt",
+    "recursive-include src *.xml",
+    ]
+
+[github-actions]
+additional-config = [
+    "- [\"2.7\",   \"py27-msgpack1\"]",
+    "- [\"2.7\",   \"py27-zeo4\"]",
+    "- [\"2.7\",   \"py27-zodbmaster\"]",
+    "- [\"3.7\",   \"py37-msgpack1\"]",
+    "- [\"3.7\",   \"py37-uvloop\"]",
+    "- [\"3.7\",   \"py37-zodbmaster\"]",
+    "- [\"3.8\",   \"py38-msgpack1\"]",
+    "- [\"3.8\",   \"py38-uvloop\"]",
+    "- [\"3.9\",   \"py39-msgpack1\"]",
+    "- [\"3.9\",   \"py39-uvloop\"]",
+    "- [\"3.10\",  \"py310-msgpack1\"]",
+    "- [\"3.10\",  \"py310-uvloop\"]",
+    "- [\"pypy-3.7\", \"pypy3-msgpack1\"]",
+    ]

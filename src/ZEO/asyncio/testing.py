@@ -6,7 +6,6 @@ except NameError:
     class ConnectionRefusedError(OSError):
         pass
 
-import pprint
 
 class Loop:
     """Simple loop for testing purposes.
@@ -20,7 +19,7 @@ class Loop:
 
     def __init__(self, addrs=(), debug=True):
         self.addrs = addrs
-        self.get_debug = lambda : debug
+        self.get_debug = lambda: debug
         self.connecting = {}
         self.later = []
         self.exceptions = []
@@ -33,7 +32,7 @@ class Loop:
         func(*args)
 
     def _connect(self, future, protocol_factory):
-        self.protocol  = protocol  = protocol_factory()
+        self.protocol = protocol = protocol_factory()
         self.transport = transport = Transport(protocol)
         protocol.connection_made(transport)
         future.set_result((transport, protocol))
@@ -47,10 +46,8 @@ class Loop:
         if not future.cancelled():
             future.set_exception(ConnectionRefusedError())
 
-    def create_connection(
-        self, protocol_factory, host=None, port=None, sock=None,
-        ssl=None, server_hostname=None
-        ):
+    def create_connection(self, protocol_factory, host=None, port=None,
+                          sock=None, ssl=None, server_hostname=None):
         future = asyncio.Future(loop=self)
         if sock is None:
             addr = host, port
@@ -84,18 +81,20 @@ class Loop:
     def call_exception_handler(self, context):
         self.exceptions.append(context)
 
-
     closed = False
+
     def close(self):
         Loop.__init__(self)  # break reference cycles
         self.closed = True
 
     stopped = False
+
     def stop(self):
         self.stopped = True
 
 
 AsyncioLoop = asyncio.get_event_loop_policy()._loop_factory
+
 
 class FaithfulLoop(Loop, AsyncioLoop):
     """Testing loop variant with true ``asyncio`` ``call_*`` methods."""
@@ -160,6 +159,7 @@ class _ProtocolWrapper:
         self._loop.call_soon_threadsafe(self._protocol.connection_lost, exc)
 
     _protocol = None
+
     def __getattr__(self, attr):
         return getattr(self._protocol, attr)
 
@@ -211,11 +211,13 @@ class Transport(object):
             self.protocol.resume_writing()
 
     closed = False
+
     def close(self):
         self.closed = True
 
     def get_extra_info(self, name):
         return self.extra[name]
+
 
 class AsyncRPC(object):
     """Adapt an asyncio API to an RPC to help hysterical tests
@@ -225,6 +227,7 @@ class AsyncRPC(object):
 
     def __getattr__(self, name):
         return lambda *a, **kw: self.api.call(name, *a, **kw)
+
 
 class ClientRunner(object):
 

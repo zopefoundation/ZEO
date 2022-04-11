@@ -1,13 +1,11 @@
 import asyncio
 from zope.testing import setupstack
 from unittest import mock
-from ZODB.POSException import ReadOnlyError
 from ZODB.utils import maxtid, RLock
 
 import collections
 import logging
 import struct
-import unittest
 from functools import partial
 from time import sleep
 
@@ -52,6 +50,7 @@ class Base(object):
         return self.unsized(data, True)
 
     target = None
+
     def send(self, method, *args, **kw):
         target = kw.pop('target', self.target)
         called = kw.pop('called', True)
@@ -115,7 +114,7 @@ class TestClientThread(ClientThread):
             if loop is not None:
                 loop.close()
             logger.debug('Stopping client thread')
-        
+
 
 class ClientTests(Base, setupstack.TestCase, TestClientThread):
 
@@ -138,6 +137,7 @@ class ClientTests(Base, setupstack.TestCase, TestClientThread):
     # the final result. We can call their ``result`` method to
     # wait for their result
     future_mode = None
+
     def enter_future_mode(self):
         if self.future_mode is None:
             self.future_mode = self._call_
@@ -147,15 +147,14 @@ class ClientTests(Base, setupstack.TestCase, TestClientThread):
 
     def exit_future_mode(self):
         if self.future_mode is not None:
-            self._call_ = self.future_mode # back to synchronous mode
+            self._call_ = self.future_mode  # back to synchronous mode
             del self.future_mode
-
 
     def start(self,
               addrs=(('127.0.0.1', 8200), ), loop_addrs=None,
               read_only=False,
               finish_start=False,
-              future_mode = True,
+              future_mode=True,
               ):
         # To create a client, we need to specify an address, a client
         # object and a cache.
@@ -293,7 +292,11 @@ class ClientTests(Base, setupstack.TestCase, TestClientThread):
         loaded = self.load_before(b'1'*8, maxtid)
 
         # The data wasn't in the cache, so we made a server call:
-        self.assertEqual(self.pop(), ((b'1'*8, maxtid), False, 'loadBefore', (b'1'*8, maxtid)))
+        self.assertEqual(self.pop(),
+                         ((b'1'*8, maxtid),
+                          False,
+                          'loadBefore',
+                          (b'1'*8, maxtid)))
         # Note load_before uses the oid as the message id.
         self.respond((b'1'*8, maxtid), (b'data', b'a'*8, None))
         self.assertEqual(loaded.result(), (b'data', b'a'*8, None))
@@ -313,7 +316,11 @@ class ClientTests(Base, setupstack.TestCase, TestClientThread):
         # the requests will be collapsed:
         loaded2 = self.load_before(b'1'*8, maxtid)
 
-        self.assertEqual(self.pop(), ((b'1'*8, maxtid), False, 'loadBefore', (b'1'*8, maxtid)))
+        self.assertEqual(self.pop(),
+                         ((b'1'*8, maxtid),
+                          False,
+                          'loadBefore',
+                          (b'1'*8, maxtid)))
         self.respond((b'1'*8, maxtid), (b'data2', b'b'*8, None))
         self.assertEqual(loaded.result(), (b'data2', b'b'*8, None))
         self.assertEqual(loaded2.result(), (b'data2', b'b'*8, None))
@@ -327,7 +334,11 @@ class ClientTests(Base, setupstack.TestCase, TestClientThread):
         self.assertFalse(transport.data)
         loaded = self.load_before(b'1'*8, b'_'*8)
 
-        self.assertEqual(self.pop(), ((b'1'*8, b'_'*8), False, 'loadBefore', (b'1'*8, b'_'*8)))
+        self.assertEqual(self.pop(),
+                         ((b'1'*8, b'_'*8),
+                          False,
+                          'loadBefore',
+                          (b'1'*8, b'_'*8)))
         self.respond((b'1'*8, b'_'*8), (b'data0', b'^'*8, b'_'*8))
         self.assertEqual(loaded.result(), (b'data0', b'^'*8, b'_'*8))
 
@@ -336,6 +347,7 @@ class ClientTests(Base, setupstack.TestCase, TestClientThread):
         # iteratable to tpc_finish_threadsafe.
 
         tids = []
+
         def finished_cb(tid):
             tids.append(tid)
 
@@ -438,7 +450,8 @@ class ClientTests(Base, setupstack.TestCase, TestClientThread):
 
         # We have to verify the cache, so we're not done connecting:
         self.assertFalse(client.connected.done())
-        self.assertEqual(self.pop(), (3, False, 'getInvalidations', (b'a'*8, )))
+        self.assertEqual(self.pop(),
+                         (3, False, 'getInvalidations', (b'a'*8, )))
         self.respond(3, (b'e'*8, [b'4'*8]))
 
         self.assertEqual(self.pop(), (4, False, 'get_info', ()))
@@ -450,7 +463,7 @@ class ClientTests(Base, setupstack.TestCase, TestClientThread):
 
         # And the cache has been updated:
         self.assertEqual(cache.load(b'2'*8),
-                         ('2 data', b'a'*8)) # unchanged
+                         ('2 data', b'a'*8))  # unchanged
         self.assertEqual(cache.load(b'4'*8), None)
 
         # Because we were able to update the cache, we didn't have to
@@ -473,7 +486,8 @@ class ClientTests(Base, setupstack.TestCase, TestClientThread):
 
         # We have to verify the cache, so we're not done connecting:
         self.assertFalse(client.connected.done())
-        self.assertEqual(self.pop(), (3, False, 'getInvalidations', (b'a'*8, )))
+        self.assertEqual(self.pop(),
+                         (3, False, 'getInvalidations', (b'a'*8, )))
 
         # We respond None, indicating that we're too far out of date:
         self.respond(3, None)
@@ -541,10 +555,10 @@ class ClientTests(Base, setupstack.TestCase, TestClientThread):
         self.respond(2, 'a'*8)
         self.pop()
         self.assertFalse(client.connected.done() or transport.data)
-        delay, func, args, _ = loop.later.pop(1) # first in later is heartbeat
+        delay, func, args, _ = loop.later.pop(1)  # first in later is heartbeat
         self.assertTrue(8 < delay < 10)
-        self.assertEqual(len(loop.later), 1) # first in later is heartbeat
-        self.loop.call_soon_threadsafe(func, *args) # connect again
+        self.assertEqual(len(loop.later), 1)  # first in later is heartbeat
+        self.loop.call_soon_threadsafe(func, *args)  # connect again
         self.assertFalse(protocol is loop.protocol)
         self.assertFalse(transport is loop.transport)
         protocol = loop.protocol
@@ -602,7 +616,8 @@ class ClientTests(Base, setupstack.TestCase, TestClientThread):
         # We connect the second address:
         loop.call_soon_threadsafe(loop.connect_connecting, addrs[1])
         loop.protocol.data_received(sized(self.enc + b'3101'))
-        self.assertEqual(self.unsized(loop.transport.pop(2)), self.enc + b'3101')
+        self.assertEqual(self.unsized(loop.transport.pop(2)),
+                         self.enc + b'3101')
         self.assertEqual(self.parse(loop.transport.pop()),
                          (1, False, 'register', ('TEST', False)))
         self.assertTrue(self.is_read_only())
@@ -703,15 +718,14 @@ class ClientTests(Base, setupstack.TestCase, TestClientThread):
             protocol.data_received(sized(self.enc + b'200'))
             self.assertTrue(isinstance(error.call_args[0][1], ProtocolError))
 
-
     def test_get_peername(self):
         wrapper, cache, loop, client, protocol, transport = self.start(
             finish_start=True)
         self.assertEqual(client.get_peername(), '1.2.3.4')
 
-
     def test_ClientDisconnected_on_call_timeout(self):
-        wrapper, cache, loop, client, protocol, transport = self.start(future_mode=False)
+        (wrapper, cache, loop, client, protocol,
+         transport) = self.start(future_mode=False)
         self.assertRaises(ClientDisconnected, self.call, 'foo')
         client.ready = False
         self.assertRaises(ClientDisconnected, self.call, 'foo')
@@ -721,7 +735,7 @@ class ClientTests(Base, setupstack.TestCase, TestClientThread):
         # that caused it to fail badly if errors were raised while
         # handling data.
 
-        wrapper, cache, loop, client, protocol, transport =self.start(
+        wrapper, cache, loop, client, protocol, transport = self.start(
             finish_start=True)
 
         wrapper.receiveBlobStart.side_effect = ValueError('test')
@@ -785,9 +799,9 @@ class ClientTests(Base, setupstack.TestCase, TestClientThread):
         # emulate the reply, followed by an asynchronous call
         # of ``invalidateTransaction``.
         # It is important that the two messages are delivered together
-        msg = self.respond(4, "b"*8, return_msg=True) + \
-              self.server_async_call("invalidateTransaction", "c"*8, (),
-                                     return_msg=True)
+        msg = (self.respond(4, "b"*8, return_msg=True) +
+               self.server_async_call("invalidateTransaction", "c"*8, (),
+                                      return_msg=True))
         protocol.data_received(msg)
         self.assertEqual(loop.exceptions, [])
         f.result()  # no exception
@@ -811,7 +825,7 @@ class ClientTests(Base, setupstack.TestCase, TestClientThread):
         protocol_1.data_received(sized(self.enc + b'3101'))
         self.assertTrue(io.register_lock.locked())
         self.assertEqual(self.unsized(transport_1.pop(2)), self.enc + b'3101')
-        self.assertEqual(len(transport_1.data), 2) # register call
+        self.assertEqual(len(transport_1.data), 2)  # register call
         # start the second protocol
         protocol_2.data_received(sized(self.enc + b'3101'))
         self.assertEqual(self.unsized(transport_2.pop(2)), self.enc + b'3101')
@@ -832,7 +846,6 @@ class MsgpackClientTests(ClientTests):
     seq_type = tuple
 
 
-
 class MemoryCache(object):
 
     def __init__(self):
@@ -844,6 +857,7 @@ class MemoryCache(object):
     clear = __init__
 
     closed = False
+
     def close(self):
         self.closed = True
 
@@ -908,6 +922,7 @@ class ServerTests(Base, setupstack.TestCase):
 
     message_id = 0
     target = None
+
     def call(self, meth, *args, **kw):
         if kw:
             expect = kw.pop('expect', self)
@@ -975,9 +990,11 @@ class ServerTests(Base, setupstack.TestCase):
         self.call('foo', target=None)
         self.assertTrue(protocol.loop.transport.closed)
 
+
 class MsgpackServerTests(ServerTests):
     enc = b'M'
     seq_type = tuple
+
 
 def server_protocol(msgpack,
                     zeo_storage=None,
@@ -987,14 +1004,12 @@ def server_protocol(msgpack,
     if zeo_storage is None:
         zeo_storage = mock.Mock()
     loop = Loop()
-    sock = () # anything not None
+    sock = ()  # anything not None
     new_connection(loop, addr, sock, zeo_storage, msgpack)
     if protocol_version:
         loop.protocol.data_received(sized(protocol_version))
     return loop.protocol
 
-def response(*data):
-    return sized(self.encode(*data))
 
 def sized(message):
     return struct.pack(">I", len(message)) + message
@@ -1019,18 +1034,22 @@ class ZEOBaseProtocolTests(setupstack.TestCase):
 
     def setUp(self):
         self.loop = loop = Loop()
-        loop.create_connection(lambda: ZEOBaseProtocol(loop, "proto"), sock=True)
+        loop.create_connection(lambda: ZEOBaseProtocol(loop, "proto"),
+                               sock=True)
 
     def test_write_message_iter(self):
         """test https://github.com/zopefoundation/ZEO/issues/150."""
         loop = self.loop
         protocol, transport = loop.protocol, loop.transport
         transport.capacity = 1  # single message
+
         def it(tag):
             yield tag
             yield tag
+
         protocol.write_message_iter(it(b"0"))
         protocol.write_message_iter(it(b"1"))
+
         for b in b"0011":
             l, t = transport.pop(2)
             self.assertEqual(l, b"\x00\x00\x00\x01")

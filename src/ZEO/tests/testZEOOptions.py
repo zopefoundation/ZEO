@@ -27,6 +27,7 @@ from zdaemon.tests.testzdoptions import TestZDOptions
 # supplies the empty string.
 DEFAULT_BINDING_HOST = ""
 
+
 class TestZEOOptions(TestZDOptions):
 
     OptionsClass = ZEOOptions
@@ -59,7 +60,7 @@ class TestZEOOptions(TestZDOptions):
         # Hide the base class test_configure
         pass
 
-    def test_default_help(self): pass # disable silly test w spurious failures
+    def test_default_help(self): pass  # disable silly test w spurious failures
 
     def test_defaults_with_schema(self):
         options = self.OptionsClass()
@@ -105,6 +106,7 @@ def test_suite():
     for cls in [TestZEOOptions]:
         suite.addTest(unittest.makeSuite(cls))
     return suite
+
 
 if __name__ == "__main__":
     unittest.main(defaultTest='test_suite')

@@ -21,6 +21,7 @@ from ZODB.Connection import TransactionMetaData
 
 from ..asyncio.testing import AsyncRPC
 
+
 class IterationTests(object):
 
     def _assertIteratorIdsEmpty(self):
@@ -44,7 +45,7 @@ class IterationTests(object):
             # everything goes away as expected.
             gc.enable()
             gc.collect()
-            gc.collect() # sometimes PyPy needs it twice to clear weak refs
+            gc.collect()  # sometimes PyPy needs it twice to clear weak refs
 
             self._storage._iterator_gc()
 
@@ -147,7 +148,6 @@ class IterationTests(object):
         self._dostore()
         six.advance_iterator(self._storage.iterator())
 
-        iid = list(self._storage._iterator_ids)[0]
         t = TransactionMetaData()
         self._storage.tpc_begin(t)
         # Show that after disconnecting, the client side GCs the iterators
@@ -176,12 +176,12 @@ def iterator_sane_after_reconnect():
 
 Start a server:
 
-    >>> addr, adminaddr = start_server(
+    >>> addr, adminaddr = start_server(  # NOQA: F821 undefined
     ...     '<filestorage>\npath fs\n</filestorage>', keep=1)
 
 Open a client storage to it and commit a some transactions:
 
-    >>> import ZEO, ZODB, transaction
+    >>> import ZEO, ZODB
     >>> client = ZEO.client(addr)
     >>> db = ZODB.DB(client)
     >>> conn = db.open()
@@ -196,10 +196,11 @@ Create an iterator:
 
 Restart the storage:
 
-    >>> stop_server(adminaddr)
-    >>> wait_disconnected(client)
-    >>> _ = start_server('<filestorage>\npath fs\n</filestorage>', addr=addr)
-    >>> wait_connected(client)
+    >>> stop_server(adminaddr)  # NOQA: F821 undefined
+    >>> wait_disconnected(client)  # NOQA: F821 undefined
+    >>> _ = start_server(  # NOQA: F821 undefined
+    ...         '<filestorage>\npath fs\n</filestorage>', addr=addr)
+    >>> wait_connected(client)  # NOQA: F821 undefined
 
 Now, we'll create a second iterator:
 

@@ -21,11 +21,10 @@ is used to store the data until a commit or abort.
 # A faster implementation might store trans data in memory until it
 # reaches a certain size.
 
-import os
 import tempfile
-import ZODB.blob
 
 from ZEO._compat import Pickler, Unpickler
+
 
 class TransactionBuffer(object):
 
@@ -44,8 +43,8 @@ class TransactionBuffer(object):
         # stored are builtin types -- strings or None.
         self.pickler = Pickler(self.file, 1)
         self.pickler.fast = 1
-        self.server_resolved = set() # {oid}
-        self.client_resolved = {} # {oid -> buffer_record_number}
+        self.server_resolved = set()  # {oid}
+        self.client_resolved = {}  # {oid -> buffer_record_number}
         self.exception = None
 
     def close(self):
@@ -93,9 +92,7 @@ class TransactionBuffer(object):
             if oid not in seen:
                 yield oid, None, True
 
-
     # Support ZEO4:
-
     def serialnos(self, args):
         for oid in args:
             if isinstance(oid, bytes):

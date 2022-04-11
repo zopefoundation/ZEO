@@ -41,25 +41,25 @@ import time
 import getopt
 import operator
 # ZEO logs measure wall-clock time so for consistency we need to do the same
-#from time import clock as now
+# from time import clock as now
 from time import time as now
 
 from ZODB.FileStorage import FileStorage
-#from BDBStorage.BDBFullStorage import BDBFullStorage
-#from Standby.primary import PrimaryStorage
-#from Standby.config import RS_PORT
+# from BDBStorage.BDBFullStorage import BDBFullStorage
+# from Standby.primary import PrimaryStorage
+# from Standby.config import RS_PORT
 from ZODB.Connection import TransactionMetaData
 from ZODB.utils import p64
 from functools import reduce
 
-datecre = re.compile('(\d\d\d\d-\d\d-\d\d)T(\d\d:\d\d:\d\d)')
-methcre = re.compile("ZEO Server (\w+)\((.*)\) \('(.*)', (\d+)")
+datecre = re.compile(r'(\d\d\d\d-\d\d-\d\d)T(\d\d:\d\d:\d\d)')
+methcre = re.compile(r"ZEO Server (\w+)\((.*)\) \('(.*)', (\d+)")
+
 
 class StopParsing(Exception):
     pass
 
 
-
 def usage(code, msg=''):
     print(__doc__)
     if msg:
@@ -67,7 +67,6 @@ def usage(code, msg=''):
     sys.exit(code)
 
 
-
 def parse_time(line):
     """Return the time portion of a zLOG line in seconds or None."""
     mo = datecre.match(line)
@@ -95,7 +94,6 @@ def parse_line(line):
     return t, m, c
 
 
-
 class StoreStat(object):
     def __init__(self, when, oid, size):
         self.when = when
@@ -104,8 +102,10 @@ class StoreStat(object):
 
     # Crufty
     def __getitem__(self, i):
-        if i == 0: return self.oid
-        if i == 1: return self.size
+        if i == 0:
+            return self.oid
+        if i == 1:
+            return self.size
         raise IndexError
 
 
@@ -136,9 +136,9 @@ class TxnStat(object):
         self._finishtime = when
 
 
-
 # Mapping oid -> revid
 _revids = {}
+
 
 class ReplayTxn(TxnStat):
     def __init__(self, storage):
@@ -157,7 +157,7 @@ class ReplayTxn(TxnStat):
             # BAW: simulate a pickle of the given size
             data = 'x' * obj.size
             # BAW: ignore versions for now
-            newrevid  = self._storage.store(p64(oid), revid, data, '', t)
+            newrevid = self._storage.store(p64(oid), revid, data, '', t)
             _revids[oid] = newrevid
         if self._aborttime:
             self._storage.tpc_abort(t)
@@ -172,7 +172,6 @@ class ReplayTxn(TxnStat):
         self._replaydelta = t1 - t0 - origdelta
 
 
-
 class ZEOParser(object):
     def __init__(self, maxtxns=-1, report=1, storage=None):
         self.__txns = []
@@ -261,7 +260,6 @@ class ZEOParser(object):
             print('average faster txn was:', float(sum) / len(faster))
 
 
-
 def main():
     try:
         opts, args = getopt.getopt(
@@ -294,8 +292,8 @@ def main():
 
     if replay:
         storage = FileStorage(storagefile)
-        #storage = BDBFullStorage(storagefile)
-        #storage = PrimaryStorage('yyz', storage, RS_PORT)
+        # storage = BDBFullStorage(storagefile)
+        # storage = PrimaryStorage('yyz', storage, RS_PORT)
     t0 = now()
     p = ZEOParser(maxtxns, report, storage)
     i = 0
@@ -308,7 +306,7 @@ def main():
             p.parse(line)
         except StopParsing:
             break
-        except:
+        except:  # NOQA: E722 bare except
             print('input file line:', i)
             raise
     t1 = now()
@@ -321,6 +319,5 @@ def main():
     print('total time:', t3-t0)
 
 
-
 if __name__ == '__main__':
     main()

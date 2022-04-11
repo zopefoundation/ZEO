@@ -15,11 +15,26 @@
 """
 import sys
 import platform
+import _thread as thread
+from threading import get_ident
+
+from ZODB._compat import BytesIO  # NOQA: F401 unused import
+from zodbpickle.pickle import dump
+from zodbpickle.pickle import dumps
+from zodbpickle.pickle import loads
+from zodbpickle.pickle import Pickler
+from zodbpickle.pickle import Unpickler as _Unpickler
+
+try:
+    from cStringIO import StringIO  # NOQA: F401 unused import
+except ImportError:
+    from io import StringIO  # NOQA: F401 unused import
+
 
 PYPY = getattr(platform, 'python_implementation', lambda: None)() == 'PyPy'
 WIN = sys.platform.startswith('win')
 
-from zodbpickle.pickle import Pickler, Unpickler as _Unpickler, dump, dumps, loads
+
 class Unpickler(_Unpickler):
     # Python 3 doesn't allow assignments to find_global,
     # instead, find_class can be overridden
@@ -30,14 +45,3 @@ class Unpickler(_Unpickler):
         if self.find_global is None:
             return super(Unpickler, self).find_class(modulename, name)
         return self.find_global(modulename, name)
-
-# String and Bytes IO
-from ZODB._compat import BytesIO
-
-import _thread as thread
-from threading import get_ident
-
-try:
-    from cStringIO import StringIO
-except:
-    from io import StringIO

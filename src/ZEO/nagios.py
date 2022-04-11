@@ -33,6 +33,7 @@ diff_names = 'aborts commits conflicts conflicts_resolved loads stores'.split()
 
 per_times = dict(seconds=1.0, minutes=60.0, hours=3600.0, days=86400.0)
 
+
 def new_metric(metrics, storage_id, name, value):
     if storage_id == '1':
         label = name
@@ -43,6 +44,7 @@ def new_metric(metrics, storage_id, name, value):
             label = "%s:%s" % (storage_id, name)
     metrics.append("%s=%s" % (label, value))
 
+
 def result(messages, metrics=(), status=None):
     if metrics:
         messages[0] += '|' + metrics[0]
@@ -51,11 +53,14 @@ def result(messages, metrics=(), status=None):
     print('\n'.join(messages))
     return status
 
+
 def error(message):
     return result((message, ), (), 2)
 
+
 def warn(message):
     return result((message, ), (), 1)
+
 
 def check(addr, output_metrics, status, per):
     m = re.match(r'\[(\S+)\]:(\d+)$', addr)
@@ -75,7 +80,7 @@ def check(addr, output_metrics, status, per):
         return error("Can't connect %s" % err)
 
     s.sendall(b'\x00\x00\x00\x04ruok')
-    proto = s.recv(struct.unpack(">I", s.recv(4))[0])
+    proto = s.recv(struct.unpack(">I", s.recv(4))[0])  # NOQA: F841 unused
     datas = s.recv(struct.unpack(">I", s.recv(4))[0])
     s.close()
     data = json.loads(datas.decode("ascii"))
@@ -94,8 +99,8 @@ def check(addr, output_metrics, status, per):
             now = time.time()
             if os.path.exists(status):
                 dt = now - os.stat(status).st_mtime
-                if dt > 0: # sanity :)
-                    with open(status) as f:      # Read previous
+                if dt > 0:  # sanity :)
+                    with open(status) as f:  # Read previous
                         old = json.loads(f.read())
                     dt /= per_times[per]
                     for storage_id, sdata in sorted(data.items()):
@@ -105,7 +110,7 @@ def check(addr, output_metrics, status, per):
                             for name in diff_names:
                                 v = (sdata[name] - sold[name]) / dt
                                 new_metric(metrics, storage_id, name, v)
-            with open(status, 'w') as f: # save current
+            with open(status, 'w') as f:  # save current
                 f.write(json.dumps(data))
 
     for storage_id, sdata in sorted(data.items()):
@@ -115,6 +120,7 @@ def check(addr, output_metrics, status, per):
     if not messages:
         messages.append('OK')
     return result(messages, metrics, level or None)
+
 
 def main(args=None):
     if args is None:
@@ -138,6 +144,7 @@ def main(args=None):
     [addr] = args
     return check(
         addr, options.output_metrics, options.status_path, options.time_units)
+
 
 if __name__ == '__main__':
     main()

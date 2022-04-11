@@ -3,17 +3,18 @@
 import json
 import logging
 import os
-import random
 import threading
 import ZODB.POSException
-
-logger = logging.getLogger(__name__)
 
 from ..shortrepr import short_repr
 
 from . import base
 from .compat import asyncio, new_event_loop
 from .marshal import server_decoder, encoder, reduce_exception
+
+
+logger = logging.getLogger(__name__)
+
 
 class ServerProtocol(base.ZEOBaseProtocol):
     """asyncio low-level ZEO server interface
@@ -41,6 +42,7 @@ class ServerProtocol(base.ZEOBaseProtocol):
         )
 
     closed = False
+
     def close(self):
         logger.debug("Closing server protocol")
         if not self.closed:
@@ -48,7 +50,8 @@ class ServerProtocol(base.ZEOBaseProtocol):
             if self.transport is not None:
                 self.transport.close()
 
-    connected = None # for tests
+    connected = None  # for tests
+
     def connection_made(self, transport):
         self.connected = True
         super(ServerProtocol, self).connection_made(transport)
@@ -63,11 +66,12 @@ class ServerProtocol(base.ZEOBaseProtocol):
         self.stop()
 
     def stop(self):
-        pass # Might be replaced when running a thread per client
+        pass  # Might be replaced when running a thread per client
 
     def finish_connection(self, protocol_version):
         if protocol_version == b'ruok':
-            self.write_message(json.dumps(self.zeo_storage.ruok()).encode("ascii"))
+            self.write_message(
+                json.dumps(self.zeo_storage.ruok()).encode("ascii"))
             self.close()
         else:
             version = protocol_version[1:]
@@ -98,7 +102,7 @@ class ServerProtocol(base.ZEOBaseProtocol):
             return
 
         if message_id == -1:
-            return # keep-alive
+            return  # keep-alive
 
         if name not in self.methods:
             logger.error('Invalid method, %r', name)
@@ -112,7 +116,7 @@ class ServerProtocol(base.ZEOBaseProtocol):
                     "%s`%r` raised exception:",
                     'async ' if async_ else '', name)
             if async_:
-                return self.close() # No way to recover/cry for help
+                return self.close()  # No way to recover/cry for help
             else:
                 return self.send_error(message_id, exc)
 
@@ -150,15 +154,18 @@ class ServerProtocol(base.ZEOBaseProtocol):
     def async_threadsafe(self, method, *args):
         self.call_soon_threadsafe(self.call_async, method, args)
 
+
 best_protocol_version = os.environ.get(
     'ZEO_SERVER_PROTOCOL',
     ServerProtocol.protocols[-1].decode('utf-8')).encode('utf-8')
 assert best_protocol_version in ServerProtocol.protocols
 
+
 def new_connection(loop, addr, socket, zeo_storage, msgpack):
     protocol = ServerProtocol(loop, addr, zeo_storage, msgpack)
     cr = loop.create_connection(lambda: protocol, sock=socket)
     asyncio.ensure_future(cr, loop=loop)
+
 
 class Delay(object):
     """Used to delay response to client for synchronous calls.
@@ -195,6 +202,7 @@ class Delay(object):
     def __reduce__(self):
         raise TypeError("Can't pickle delays.")
 
+
 class Result(Delay):
 
     def __init__(self, *args):
@@ -204,6 +212,7 @@ class Result(Delay):
         reply, callback = self.args
         protocol.send_reply(msgid, reply)
         callback()
+
 
 class MTDelay(Delay):
 
@@ -269,6 +278,7 @@ class Acceptor(object):
         self.event_loop.close()
 
     closed = False
+
     def close(self):
         if not self.closed:
             self.closed = True
@@ -280,6 +290,7 @@ class Acceptor(object):
         self.server.close()
 
         f = asyncio.ensure_future(self.server.wait_closed(), loop=loop)
+
         @f.add_done_callback
         def server_closed(f):
             # stop the loop when the server closes:

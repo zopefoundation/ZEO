@@ -169,9 +169,11 @@ from __future__ import print_function
 from __future__ import print_function
 from __future__ import print_function
 
-import datetime, sys, re, os
+import datetime
+import os
+import re
+import sys
 from six.moves import map
-from six.moves import zip
 
 
 def time(line):
@@ -187,9 +189,10 @@ def sub(t1, t2):
     return delta.days*86400.0+delta.seconds+delta.microseconds/1000000.0
 
 
-
 waitre = re.compile(r'Clients waiting: (\d+)')
 idre = re.compile(r' ZSS:\d+/(\d+.\d+.\d+.\d+:\d+) ')
+
+
 def blocked_times(args):
     f, thresh = args
 
@@ -217,7 +220,6 @@ def blocked_times(args):
             t2 = t1
 
         if not blocking and last_blocking:
-            last_wait = 0
             t2 = time(line)
             cid = idre.search(line).group(1)
 
@@ -225,11 +227,14 @@ def blocked_times(args):
             d = sub(t1, time(line))
             if d >= thresh:
                 print(t1, sub(t1, t2), cid, d)
-            t1 = t2 = cid = blocking = waiting = last_wait = max_wait = 0
+            t1 = t2 = cid = blocking = waiting = 0
 
         last_blocking = blocking
 
+
 connidre = re.compile(r' zrpc-conn:(\d+.\d+.\d+.\d+:\d+) ')
+
+
 def time_calls(f):
     f, thresh = f
     if f == '-':
@@ -255,12 +260,14 @@ def time_calls(f):
 
     print(maxd)
 
+
 def xopen(f):
     if f == '-':
         return sys.stdin
     if ' ' in f:
         return os.popen(f, 'r')
     return open(f)
+
 
 def time_tpc(f):
     f, thresh = f
@@ -307,11 +314,14 @@ def time_tpc(f):
                 t = time(line)
                 d = sub(t1, t)
                 if d >= thresh:
-                    print('c', t1, cid, sub(t1, t2), vs, sub(t2, t3), sub(t3, t))
+                    print('c', t1, cid, sub(t1, t2),
+                          vs, sub(t2, t3), sub(t3, t))
                 del transactions[cid]
 
 
 newobre = re.compile(r"storea\(.*, '\\x00\\x00\\x00\\x00\\x00")
+
+
 def time_trans(f):
     f, thresh = f
     if f == '-':
@@ -363,8 +373,8 @@ def time_trans(f):
                     t = time(line)
                     d = sub(t1, t)
                     if d >= thresh:
-                        print(t1, cid, "%s/%s" % (stores, old), \
-                              sub(t0, t1), sub(t1, t2), vs, \
+                        print(t1, cid, "%s/%s" % (stores, old),
+                              sub(t0, t1), sub(t1, t2), vs,
                               sub(t2, t), 'abort')
                 del transactions[cid]
         elif ' calling tpc_finish(' in line:
@@ -377,10 +387,11 @@ def time_trans(f):
                 t = time(line)
                 d = sub(t1, t)
                 if d >= thresh:
-                    print(t1, cid, "%s/%s" % (stores, old), \
-                          sub(t0, t1), sub(t1, t2), vs, \
+                    print(t1, cid, "%s/%s" % (stores, old),
+                          sub(t0, t1), sub(t1, t2), vs,
                           sub(t2, t3), sub(t3, t))
                 del transactions[cid]
+
 
 def minute(f, slice=16, detail=1, summary=1):
     f, = f
@@ -405,10 +416,9 @@ def minute(f, slice=16, detail=1, summary=1):
 
     for line in f:
         line = line.strip()
-        if (line.find('returns') > 0
-            or line.find('storea') > 0
-            or line.find('tpc_abort') > 0
-            ):
+        if line.find('returns') > 0 or \
+           line.find('storea') > 0 or \
+           line.find('tpc_abort') > 0:
             client = connidre.search(line).group(1)
             m = line[:slice]
             if m != mlast:
@@ -452,12 +462,13 @@ def minute(f, slice=16, detail=1, summary=1):
         print('Summary:     \t', '\t'.join(('min', '10%', '25%', 'med',
                                             '75%', '90%', 'max', 'mean')))
         print("n=%6d\t" % len(cls), '-'*62)
-        print('Clients: \t', '\t'.join(map(str,stats(cls))))
-        print('Reads:   \t', '\t'.join(map(str,stats(rs))))
-        print('Stores:  \t', '\t'.join(map(str,stats(ss))))
-        print('Commits: \t', '\t'.join(map(str,stats(cs))))
-        print('Aborts:  \t', '\t'.join(map(str,stats(aborts))))
-        print('Trans:   \t', '\t'.join(map(str,stats(ts))))
+        print('Clients: \t', '\t'.join(map(str, stats(cls))))
+        print('Reads:   \t', '\t'.join(map(str, stats(rs))))
+        print('Stores:  \t', '\t'.join(map(str, stats(ss))))
+        print('Commits: \t', '\t'.join(map(str, stats(cs))))
+        print('Aborts:  \t', '\t'.join(map(str, stats(aborts))))
+        print('Trans:   \t', '\t'.join(map(str, stats(ts))))
+
 
 def stats(s):
     s.sort()
@@ -468,13 +479,14 @@ def stats(s):
     ni = n + 1
     for p in .1, .25, .5, .75, .90:
         lp = ni*p
-        l = int(lp)
+        lp_int = int(lp)
         if lp < 1 or lp > n:
             out.append('-')
-        elif abs(lp-l) < .00001:
-            out.append(s[l-1])
+        elif abs(lp-lp_int) < .00001:
+            out.append(s[lp_int-1])
         else:
-            out.append(int(s[l-1] + (lp - l) * (s[l] - s[l-1])))
+            out.append(
+                int(s[lp_int-1] + (lp - lp_int) * (s[lp_int] - s[lp_int-1])))
 
     mean = 0.0
     for v in s:
@@ -484,17 +496,22 @@ def stats(s):
 
     return out
 
+
 def minutes(f):
     minute(f, 16, detail=0)
+
 
 def hour(f):
     minute(f, 13)
 
+
 def day(f):
     minute(f, 10)
 
+
 def hours(f):
     minute(f, 13, detail=0)
+
 
 def days(f):
     minute(f, 10, detail=0)
@@ -502,6 +519,8 @@ def days(f):
 
 new_connection_idre = re.compile(
     r"new connection \('(\d+.\d+.\d+.\d+)', (\d+)\):")
+
+
 def verify(f):
     f, = f
 
@@ -527,6 +546,7 @@ def verify(f):
                 d = sub(t1, time(line))
                 print(cid, t1, n, d, n and (d*1000.0/n) or '-')
 
+
 def recovery(f):
     f, = f
 
@@ -542,16 +562,16 @@ def recovery(f):
         n += 1
         if line.find('RecoveryServer') < 0:
             continue
-        l = line.find('sending transaction ')
-        if l > 0 and last.find('sending transaction ') > 0:
-            trans.append(line[l+20:].strip())
+        pos = line.find('sending transaction ')
+        if pos > 0 and last.find('sending transaction ') > 0:
+            trans.append(line[pos+20:].strip())
         else:
             if trans:
                 if len(trans) > 1:
                     print("  ... %s similar records skipped ..." % (
                         len(trans) - 1))
                     print(n, last.strip())
-                trans=[]
+                trans = []
             print(n, line.strip())
         last = line
 
@@ -559,7 +579,6 @@ def recovery(f):
         print("  ... %s similar records skipped ..." % (
             len(trans) - 1))
         print(n, last.strip())
-
 
 
 if __name__ == '__main__':

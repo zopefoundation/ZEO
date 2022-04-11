@@ -14,7 +14,6 @@
 import doctest
 import unittest
 
-import ZEO.asyncio.testing
 
 class FakeStorageBase(object):
 
@@ -22,7 +21,7 @@ class FakeStorageBase(object):
         if name in ('getTid', 'history', 'load', 'loadSerial',
                     'lastTransaction', 'getSize', 'getName', 'supportsUndo',
                     'tpc_transaction'):
-           return lambda *a, **k: None
+            return lambda *a, **k: None
         raise AttributeError(name)
 
     def isReadOnly(self):
@@ -31,17 +30,19 @@ class FakeStorageBase(object):
     def __len__(self):
         return 4
 
+
 class FakeStorage(FakeStorageBase):
 
     def record_iternext(self, next=None):
-        if next == None:
-           next = '0'
+        if next is None:
+            next = '0'
         next = str(int(next) + 1)
         oid = next
         if next == '4':
             next = None
 
         return oid, oid*8, 'data ' + oid, next
+
 
 class FakeServer(object):
     storages = {
@@ -55,12 +56,16 @@ class FakeServer(object):
 
     client_conflict_resolution = False
 
+
 class FakeConnection(object):
     protocol_version = b'Z4'
     addr = 'test'
 
-    call_soon_threadsafe = lambda f, *a: f(*a)
+    def call_soon_threadsafe(f, *a):
+        return f(*a)
+
     async_ = async_threadsafe = None
+
 
 def test_server_record_iternext():
     """
@@ -98,6 +103,7 @@ The storage info also reflects the fact that record_iternext is supported.
     False
 
 """
+
 
 def test_client_record_iternext():
     """Test client storage delegation to the network client
@@ -143,8 +149,10 @@ Now we'll have our way with it's private _server attr:
 
 """
 
+
 def test_suite():
     return doctest.DocTestSuite()
+
 
 if __name__ == '__main__':
     unittest.main(defaultTest='test_suite')

@@ -9,7 +9,7 @@ date should be a string like "23-Sep-2003"
 The following files are updated:
     - setup.py
     - NEWS.txt
-    - doc/guide/zodb.tex
+    - docs/guide/zodb.tex
     - src/ZEO/__init__.py
     - src/ZEO/version.txt
     - src/ZODB/__init__.py
@@ -73,7 +73,7 @@ def main(args):
     replace("NEWS.txt",
             r"^Release date: .*",
             "Release date: %s" % date)
-    replace("doc/guide/zodb.tex",
+    replace("docs/guide/zodb.tex",
             r"release{\S+}",
             "release{%s}" % version)
 if __name__ == "__main__":

@@ -11,10 +11,11 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-version = '6.0.0.dev0'
 
 from setuptools import setup, find_packages
 import os
+
+version = '6.0.0.dev0'
 
 install_requires = [
     'ZODB >= 5.1.1',
@@ -30,10 +31,16 @@ install_requires = [
 tests_require = [
     # We rely on implementation details of
     # test mocks. See https://github.com/zopefoundation/ZODB/pull/222
+    'ZConfig',
     'ZODB >= 5.5.1',
+    'ZopeUndo',
     'zope.testing',
     'manuel',
+    'random2',
+    'transaction',
+    'mock',
     'msgpack',
+    'zdaemon',
     'zope.testrunner',
 ]
 
@@ -46,6 +53,7 @@ Programming Language :: Python :: 3.6
 Programming Language :: Python :: 3.7
 Programming Language :: Python :: 3.8
 Programming Language :: Python :: 3.9
+Programming Language :: Python :: 3.10
 Programming Language :: Python :: Implementation :: CPython
 Programming Language :: Python :: Implementation :: PyPy
 Topic :: Database
@@ -55,11 +63,13 @@ Operating System :: Unix
 Framework :: ZODB
 """.strip().split('\n')
 
+
 def _modname(path, base, name=''):
     if path == base:
         return name
     dirname, basename = os.path.split(path)
     return _modname(dirname, base, basename + '.' + name)
+
 
 def _flatten(suite, predicate=lambda *x: True):
     from unittest import TestCase
@@ -71,18 +81,20 @@ def _flatten(suite, predicate=lambda *x: True):
                 for x in _flatten(suite_or_case):
                     yield x
 
+
 def _no_layer(suite_or_case):
     return getattr(suite_or_case, 'layer', None) is None
+
 
 def _unittests_only(suite, mod_suite):
     for case in _flatten(mod_suite, _no_layer):
         suite.addTest(case)
 
+
 def alltests():
     import logging
     import pkg_resources
     import unittest
-    import ZEO.ClientStorage
 
     class NullHandler(logging.Handler):
         level = 50
@@ -98,7 +110,8 @@ def alltests():
     for dirpath, dirnames, filenames in os.walk(base):
         if os.path.basename(dirpath) == 'tests':
             for filename in filenames:
-                if filename != 'testZEO.py': continue
+                if filename != 'testZEO.py':
+                    continue
                 if filename.endswith('.py') and filename.startswith('test'):
                     mod = __import__(
                         _modname(dirpath, base, os.path.splitext(filename)[0]),
@@ -106,11 +119,13 @@ def alltests():
                     _unittests_only(suite, mod.test_suite())
     return suite
 
+
 long_description = (
     open('README.rst').read()
     + '\n' +
     open('CHANGES.rst').read()
 )
+
 setup(name="ZEO",
       version=version,
       description=long_description.split('\n', 2)[1],
@@ -124,7 +139,7 @@ setup(name="ZEO",
       license="ZPL 2.1",
       platforms=["any"],
       classifiers=classifiers,
-      test_suite="__main__.alltests", # to support "setup.py test"
+      test_suite="__main__.alltests",  # to support "setup.py test"
       tests_require=tests_require,
       extras_require={
           'test': tests_require,
@@ -151,4 +166,4 @@ setup(name="ZEO",
       """,
       include_package_data=True,
       python_requires='>=3.5.2',
-)
+      )

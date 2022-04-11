@@ -30,10 +30,7 @@ from __future__ import print_function
 from __future__ import print_function
 from __future__ import print_function
 
-import asyncore
-import socket
 import time
-import logging
 
 zeo_version = 'unknown'
 try:
@@ -46,6 +43,7 @@ else:
         )
     if zeo_dist is not None:
         zeo_version = zeo_dist.version
+
 
 class StorageStats(object):
     """Per-storage usage statistics."""
