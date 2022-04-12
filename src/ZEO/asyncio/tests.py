@@ -1,4 +1,3 @@
-import asyncio
 from zope.testing import setupstack
 from unittest import mock
 from ZODB.utils import maxtid, RLock
@@ -7,7 +6,6 @@ import collections
 import logging
 import struct
 from functools import partial
-from time import sleep
 
 from ..Exceptions import ClientDisconnected, ProtocolError
 

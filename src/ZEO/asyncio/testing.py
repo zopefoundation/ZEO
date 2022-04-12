@@ -160,10 +160,9 @@ class FaithfulLoop(Loop, AsyncioLoop):
         with self._inactivity_lock:
             # We use here implementation details
             if len(self._ready) == 0:  # inactive
-               self._inactivity_checker_scheduled = False
+                self._inactivity_checker_scheduled = False
             else:
                 self.call_soon(self._check_inactive)
-
 
 
 class _ProtocolWrapper:
