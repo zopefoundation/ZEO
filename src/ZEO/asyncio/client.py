@@ -438,8 +438,9 @@ class ClientIO(object):
     #   True=connected
     #   False=Disconnected
     # Note: ``True`` indicates only the first phase of readyness;
-    #   it does not mean that we are fully ready.
+    #   it does not mean that we are "fully ready".
     ready = None
+    operational = False  # fully ready?
 
     def __init__(self, loop,
                  addrs, client, cache, storage_key, read_only, connect_poll,
@@ -491,7 +492,7 @@ class ClientIO(object):
         Either because we're disconnected, or because we're connected
         read-only, but want a writable connection if we can get one.
         """
-        return (not self.ready or
+        return (not self.operational or
                 self.is_read_only() and self.read_only is Fallback)
 
     closed = False
@@ -501,7 +502,7 @@ class ClientIO(object):
         if not self.closed:
             self.closed = True
             logger.debug("closing %s", self)
-            self.ready = False
+            self.ready = self.operational = False
             self.connected.cancel()
             if self.protocol is not None:
                 self.protocol.close()
@@ -532,7 +533,7 @@ class ClientIO(object):
             if protocol is self.protocol and protocol is not None:
                 self.client.notify_disconnected()
             if self.ready:
-                self.ready = False
+                self.ready = self.operational = False
             self.manage_connected()
             self.protocol = None
             self._clear_protocols()
@@ -541,7 +542,7 @@ class ClientIO(object):
             self.try_connecting()
 
     def upgrade(self, protocol):
-        self.ready = False
+        self.ready = self.operational = False
         self.manage_connected()
         self.protocol.close()
         self.protocol = protocol
@@ -647,17 +648,23 @@ class ClientIO(object):
             del self.protocol
             self.register_failed(protocol, exc)
         else:
-            # The cache is validated and the last tid we got from the server.
-            # Set ready so we apply any invalidations that follow.
-            # We've been ignoring them up to this point.
+            # The cache is validated wrt the last tid we got from the server.
             self.cache.setLastTid(server_tid)
-            self.ready = True
 
             # See comment in __init__. :(
+            # Process queued invalidations
+            # Note: new invalidations will only be seen
+            # after the coroutine gives up control, i.e. surely
+            # after the following loop and the ``ready = True``.
+            # Thus, we do no lose invalidations.
             for tid, oids in self.verify_invalidation_queue:
                 if tid > server_tid:
-                    self.invalidateTransaction(tid, oids)
+                    self._invalidateTransaction(tid, oids)
             self.verify_invalidation_queue = []
+
+            # Set ready so arriving invalidations are no longer queued.
+            # Note: we are not yet fully ready.
+            self.ready = True
 
             try:
                 info = yield protocol.fut('get_info')
@@ -683,12 +690,13 @@ class ClientIO(object):
                 # ``ClientDisconnected`` would result).
                 self.client.notify_connected(self, info)
                 self.connected.set_result(None)  # signal full readyness
+                self.operational = True
 
     def get_peername(self):
         return self.protocol.get_peername()
 
-    def call_async_threadsafe(self, future, wait_ready, method, args):
-        if self.ready:
+    def call_async_threadsafe(self, future, wait_operational, method, args):
+        if self.operational:
             self.protocol.call_async(method, args)
             future.set_result(None)
         else:
@@ -697,18 +705,20 @@ class ClientIO(object):
     def call_async_from_same_thread(self, method, *args):
         return self.protocol.call_async(method, args)
 
-    def call_async_iter_threadsafe(self, future, wait_ready, it):
-        if self.ready:
+    def call_async_iter_threadsafe(self, future, wait_operational, it):
+        if self.operational:
             self.protocol.call_async_iter(it)
             future.set_result(None)
         else:
             future.set_exception(ClientDisconnected())
 
-    def _when_ready(self, func, result_future, *args):
+    def _when_operational(self, func, result_future, *args):
 
         if self.ready is None:
             # We started without waiting for a connection. (prob tests :( )
             result_future.set_exception(ClientDisconnected("never connected"))
+        elif self.operational:
+            func(result_future, *args)
         else:
             @self.connected.add_done_callback
             def done(future):
@@ -719,37 +729,38 @@ class ClientIO(object):
                 if e is not None:
                     future.set_exception(e)
                 else:
-                    if self.ready:
+                    if self.operational:
                         func(result_future, *args)
                     else:
-                        self._when_ready(func, result_future, *args)
+                        self._when_operational(func, result_future, *args)
 
-    def call_threadsafe(self, future, wait_ready, method, args):
-        if self.ready:
+    def call_threadsafe(self, future, wait_operational, method, args):
+        if self.operational:
             self.protocol.call(future, method, args)
-        elif wait_ready:
-            self._when_ready(
-                self.call_threadsafe, future, wait_ready, method, args)
+        elif wait_operational:
+            self._when_operational(
+                self.call_threadsafe, future, wait_operational, method, args)
         else:
             future.set_exception(ClientDisconnected())
 
     # Special methods because they update the cache.
 
     @future_generator
-    def load_before_threadsafe(self, future, wait_ready, oid, tid):
+    def load_before_threadsafe(self, future, wait_operational, oid, tid):
         data = self.cache.loadBefore(oid, tid)
         if data is not None:
             future.set_result(data)
-        elif self.ready:
+        elif self.operational:
             try:
                 data = yield self.protocol.load_before(oid, tid)
             except Exception as exc:
                 future.set_exception(exc)
             else:
                 future.set_result(data)
-        elif wait_ready:
-            self._when_ready(
-                self.load_before_threadsafe, future, wait_ready, oid, tid)
+        elif wait_operational:
+            self._when_operational(
+                self.load_before_threadsafe, future, wait_operational,
+                oid, tid)
         else:
             future.set_exception(ClientDisconnected())
 
@@ -760,8 +771,8 @@ class ClientIO(object):
         except Exception:
             logger.exception("Exception for prefetch `%r` `%r`", oid, tid)
 
-    def prefetch(self, future, wait_ready, oids, tid):
-        if self.ready:
+    def prefetch(self, future, wait_operational, oids, tid):
+        if self.operational:
             for oid in oids:
                 if self.cache.loadBefore(oid, tid) is None:
                     self._prefetch(oid, tid)
@@ -771,8 +782,8 @@ class ClientIO(object):
             future.set_exception(ClientDisconnected())
 
     @future_generator
-    def tpc_finish_threadsafe(self, future, wait_ready, tid, updates, f):
-        if self.ready:
+    def tpc_finish_threadsafe(self, future, wait_operational, tid, updates, f):
+        if self.operational:
             try:
                 tid = yield self.protocol.fut('tpc_finish', tid)
                 cache = self.cache
@@ -848,15 +859,20 @@ class ClientIO(object):
 
     # server callbacks
     def invalidateTransaction(self, tid, oids):
-        if self.ready:
-            # see the cache related comment in ``tpc_finish_threadsafe``
-            # why we think that locking is not necessary at this place
-            for oid in oids:
-                self.cache.invalidate(oid, tid)
-            self.client.invalidateTransaction(tid, oids)
-            self.cache.setLastTid(tid)
-        else:
+        if not self.ready:
+            # the client is not yet ready to process invalidations
+            # queue them
             self.verify_invalidation_queue.append((tid, oids))
+        else:
+            self._invalidateTransaction(tid, oids)
+
+    def _invalidateTransaction(self, tid, oids):
+        # see the cache related comment in ``tpc_finish_threadsafe``
+        # why we think that locking is not necessary at this place
+        for oid in oids:
+            self.cache.invalidate(oid, tid)
+        self.client.invalidateTransaction(tid, oids)
+        self.cache.setLastTid(tid)
 
     @property
     def protocol_version(self):
@@ -896,7 +912,7 @@ class ClientRunner(object):
             # Some explanation of the code below.
             # Timeouts on Python 2 are expensive, so we try to avoid
             # them if we're connected.  The 3rd argument below is a
-            # wait_ready flag.  If false, and we're disconnected, we fail
+            # wait_operational flag.  If false, and we're disconnected, we fail
             # immediately. If that happens, then we try again with the
             # wait flag set to True and wait with the default timeout.
             result = Future()
@@ -923,7 +939,7 @@ class ClientRunner(object):
         try:
             return future.result(timeout)
         except concurrent.futures.TimeoutError:
-            if not self.client.ready:
+            if not self.client.operational:
                 raise ClientDisconnected("timed out waiting for connection")
             else:
                 raise
@@ -968,7 +984,7 @@ class ClientRunner(object):
         return self.io_call(self.client.tpc_finish_threadsafe, tid, updates, f)
 
     def is_connected(self):
-        return self.client.ready
+        return self.client.operational
 
     def is_read_only(self):
         protocol = self.client.protocol
@@ -1006,7 +1022,7 @@ class ClientRunner(object):
         """auxiliary method to be used as `io_call` after closure."""
         raise ClientDisconnected('closed')
 
-    def apply_threadsafe(self, future, wait_ready, func, *args):
+    def apply_threadsafe(self, future, wait_operational, func, *args):
         try:
             future.set_result(func(*args))
         except Exception as exc:
