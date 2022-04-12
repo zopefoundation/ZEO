@@ -1,4 +1,6 @@
+from _thread import allocate_lock
 import asyncio
+from time import sleep
 
 try:
     ConnectionRefusedError
@@ -98,18 +100,13 @@ AsyncioLoop = asyncio.get_event_loop_policy()._loop_factory
 
 class FaithfulLoop(Loop, AsyncioLoop):
     """Testing loop variant with true ``asyncio`` ``call_*`` methods."""
-    def __init__(self, addrs=(), debug=True, wait=None):
+    def __init__(self, addrs=(), debug=True):
         Loop.__init__(self, addrs, debug)
         AsyncioLoop.__init__(self)
-        self.wait = wait
 
     call_soon = AsyncioLoop.call_soon
 
-    def call_soon_threadsafe(self, func, *args, **kw):
-        handle = AsyncioLoop.call_soon_threadsafe(self, func, *args, **kw)
-        if self.wait is not None:
-            self.wait()
-        return handle
+    call_soon_threadsafe = AsyncioLoop.call_soon_threadsafe
 
     def call_later(self, delay, func, *args):
         th = AsyncioLoop.call_later(self, delay, func, *args)
@@ -138,13 +135,44 @@ class FaithfulLoop(Loop, AsyncioLoop):
         if not self.is_closed():
             AsyncioLoop.close(self)
             Loop.close(self)
-            self.wait = None  # break reference cycle
+
+    _inactivity_checker_scheduled = False
+    _inactivity_lock = allocate_lock()
+
+    def run_until_inactive(self):
+        """return when the loop becomes inactive."""
+        with self._inactivity_lock:
+            if not self._inactivity_checker_scheduled:
+                self._inactivity_checker_scheduled = True
+                self.call_soon_threadsafe(self._check_inactive)
+        while True:
+            sleep(0.005)
+            with self._inactivity_lock:
+                if not self._inactivity_checker_scheduled:
+                    return
+
+    def _check_inactive(self):
+        """check whether the loop has nothing to do.
+
+        In this case, reset ``_inactivity_checker_scheduled``,
+        otherwise, reschedule itself.
+        """
+        with self._inactivity_lock:
+            # We use here implementation details
+            if len(self._ready) == 0:  # inactive
+               self._inactivity_checker_scheduled = False
+            else:
+                self.call_soon(self._check_inactive)
+
 
 
 class _ProtocolWrapper:
     """Wrapped protocol.
 
-    It properly delegates to the ``asyncio`` thread.
+    Protocol instances can only be used by their ``asyncio`` thread.
+    The wrapper allows tests (run in a different thread) to
+    use the wrapped protocol normally by properly delegating
+    method calls to the ``asyncio`` thread.
     """
 
     def __init__(self, loop):
@@ -154,9 +182,11 @@ class _ProtocolWrapper:
     def data_received(self, data):
         # perform in IO thread
         self._loop.call_soon_threadsafe(self._protocol.data_received, data)
+        self._loop.run_until_inactive()
 
     def connection_lost(self, exc):
         self._loop.call_soon_threadsafe(self._protocol.connection_lost, exc)
+        self._loop.run_until_inactive()
 
     _protocol = None
 
