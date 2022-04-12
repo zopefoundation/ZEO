@@ -578,16 +578,12 @@ class ZRPCConnectionTests(ZEO.tests.ConnectionTests.CommonSetupTearDown):
         handler = zope.testing.loggingsupport.InstalledHandler(
             'ZEO.asyncio.client')
 
-        # We no longer implement the event loop, we we no longer know
+        # We no longer implement the event loop, we no longer know
         # how to break it.  We'll just stop it instead for now.
         self._storage._server.loop.call_soon_threadsafe(
             self._storage._server.loop.stop)
-
-        forker.wait_until(
-            'disconnected',
-            lambda: not self._storage.is_connected()
-            )
-
+        # We wait for the client thread to stop (to avoid a race condition)
+        self._storage._server.thread.join(1)
         log = str(handler)
         handler.uninstall()
         self.assertTrue("Client loop stopped unexpectedly" in log)

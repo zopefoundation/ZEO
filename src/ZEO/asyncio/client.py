@@ -361,6 +361,8 @@ class ClientIo(object):
     #   None=Never connected
     #   True=connected
     #   False=Disconnected
+    # Note: ``True`` indicates only the first phase of readyness;
+    #   it does not mean that we are fully ready.
     ready = None
 
     def __init__(self, loop,
@@ -549,15 +551,21 @@ class ClientIo(object):
             del self.protocol
             self.register_failed(protocol, exc)
         else:
-            # The cache is validated and the last tid we got from the server.
-            # Set ready so we apply any invalidations that follow.
-            # We've been ignoring them up to this point.
+            # The cache is validated wrt the last tid we got from the server.
             self.cache.setLastTid(server_tid)
-            self.ready = True
 
+            # Process queued invalidations
+            # Note: new invalidations will only be seen
+            # after the coroutine gives up control, i.e. surely
+            # after the following loop and the ``ready = True``.
+            # Thus, we do no lose invalidations.
             for tid, oids in protocol.invalidations:
                 if tid > server_tid:
                     self.invalidateTransaction(tid, oids)
+
+            # Set ready so arriving invalidations are no longer queued.
+            # Note: we are not yet fully ready.
+            self.ready = True
 
             try:
                 info = await call('get_info')
@@ -582,7 +590,7 @@ class ClientIo(object):
                 # to interact with the server (deadlock or
                 # ``ClientDisconnected`` would result).
                 self.client.notify_connected(self, info)
-                self.connected.set_result(None)
+                self.connected.set_result(None)  # signal full readyness
 
     def get_peername(self):
         return self.protocol.get_peername()
@@ -606,7 +614,11 @@ class ClientIo(object):
         Usually, we do not wait for the initial readyness
         unless *init_ok*.
         """
-        if self.ready:
+        # Quick check for the normal case (already fully connected)
+        # Note: `ready` can be set before we are truely ready.
+        # We check it nevertheless because this is cheaper
+        # than `not self.connected.cancelled()`.
+        if self.ready and self.connected.done():
             result = method(*args)
         elif timeout and (init_ok or self.ready is not None):
             try:
@@ -636,7 +648,7 @@ class ClientIo(object):
         data = self.cache.loadBefore(oid, tid)
         if data is not None:
             return data
-        elif self.ready:
+        elif self.ready and self.connected.done():
             future = self.protocol.load_before(oid, tid)
         elif timeout:
             future = self.call_with_timeout_co(timeout,
@@ -660,7 +672,7 @@ class ClientIo(object):
                 logger.exception("Exception for prefetch `%r` `%r`", oid, tid)
 
     async def tpc_finish_co(self, tid, updates, f):
-        if not self.ready:
+        if not (self.ready and self.connected.done()):
             raise ClientDisconnected
         try:
             tid = await self.protocol.call_sync('tpc_finish', tid)
@@ -806,7 +818,14 @@ class ClientRunner(object):
                            indirect=False, **kw)
 
     def is_connected(self):
-        return self.client.ready
+        # ``wait`` will work only if the loop is running
+        if not (self.client.ready and self.loop.is_running()):
+            return False
+        try:
+            self.wait(0)  # ``ClientDisconnected`` if not yet fully connected
+            return True
+        except ClientDisconnected:
+            return False
 
     def is_read_only(self):
         protocol = self.client.protocol
@@ -814,8 +833,23 @@ class ClientRunner(object):
             return True
         return protocol.read_only
 
+    __closed = False
+
     def close(self):
-        self._call_(self.client.close_co, indirect=False, wait=True)
+        if self.__closed:
+            return
+        self.__closed = True
+        if self.loop.is_running():
+            self._call_(self.client.close_co, indirect=False, wait=True)
+        else:
+            # we cannot close normally (running loop required)
+            # therefore, patch the state and inform the client.
+            try:
+                if self.client.ready:
+                    self.client.ready = None
+                    self.client.client.notify_disconnected()
+            except AttributeError:
+                pass
         self._call_ = self._call_after_closure  # break cycle
 
     def _call_after_closure(*args, **kw):
@@ -832,7 +866,8 @@ class ClientRunner(object):
         def noop():
             return
         return self._call_(self.client.call_with_timeout_co,
-                           timeout or self.timeout, noop, (), True,
+                           self.timeout if timeout is None else timeout,
+                           noop, (), True,
                            indirect=False)
 
 
@@ -862,12 +897,14 @@ class ClientThread(ClientRunner):
         if self.exception:
             raise self.exception
 
+    # Some tests will set this to use an instrumented loop
+    loop = None
+
     exception = None
 
     def run_io_thread(self):
-        loop = None
         try:
-            loop = new_event_loop()
+            loop = self.loop if self.loop is not None else new_event_loop()
             asyncio.set_event_loop(loop)
             self.setup_delegation(loop)
             self.started.set()
@@ -877,32 +914,20 @@ class ClientThread(ClientRunner):
             self.exception = exc
             self.started.set()
         finally:
-            if not self.closed:
-                self.closed = True
-                # we would like to close the lower
-                # layers - but for this a running loop
-                # is necessary
-                # Therefore, we just patch up the state a bit
-                # to prevent deadlocks and notify the storage.
-                self._call_ = self._call_after_closure  # break cycle
-                try:
-                    if self.client.ready:
-                        self.client.ready = None
-                        self.client.client.notify_disconnected()
-                except AttributeError:
-                    pass
+            if not self.__closed:
+                super().close()
                 logger.critical("Client loop stopped unexpectedly")
-            if loop is not None:
-                loop.close()
+            loop.close()
             logger.debug('Stopping client thread')
 
-    closed = False
+    __closed = False
 
     def close(self):
-        if not self.closed:
-            self.closed = True
+        if not self.__closed:
+            self.__closed = True
             super().close()
-            self.loop.call_soon_threadsafe(self.loop.stop)
+            if self.loop.is_running():
+                self.loop.call_soon_threadsafe(self.loop.stop)
             self.thread.join(9)
-            if self.exception:
-                raise self.exception
+        if self.exception:
+            raise self.exception

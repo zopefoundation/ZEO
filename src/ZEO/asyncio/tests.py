@@ -79,44 +79,7 @@ class Base(object):
         return self.unsized(self.loop.transport.pop(count), parse)
 
 
-class TestClientThread(ClientThread):
-    """For the ``async/await`` client implementation we need
-    a (mostly) standard ``asyncio`` event loop and it must be run
-    in a sepearte thread (because this implementation is no longer
-    based on callbacks but uses true coroutines).
-
-    We use a ``ClientThread`` variant which allows to specify
-    the loop to be used.
-    """
-
-    def run_io_thread(self):
-        loop = self.loop
-        try:
-            asyncio.set_event_loop(loop)
-            self.setup_delegation(loop)
-            self.started.set()
-            loop.run_forever()
-        except Exception as exc:
-            raise
-            logger.exception("Client thread")
-            self.exception = exc
-        finally:
-            if not self.closed:
-                self.closed = True
-                try:
-                    if self.client.ready:
-                        self.client.ready = False
-                        self.client.client.notify_disconnected()
-                    super().close()
-                except AttributeError:
-                    pass
-                logger.critical("Client loop stopped unexpectedly")
-            if loop is not None:
-                loop.close()
-            logger.debug('Stopping client thread')
-
-
-class ClientTests(Base, setupstack.TestCase, TestClientThread):
+class ClientTests(Base, setupstack.TestCase, ClientThread):
 
     maxDiff = None
 
@@ -167,9 +130,9 @@ class ClientTests(Base, setupstack.TestCase, TestClientThread):
         self.loop = loop = FaithfulLoop(
             addrs if loop_addrs is None else loop_addrs,
             wait=self.wait_loop)
-        TestClientThread.__init__(self,
-                                  addrs, wrapper, cache, 'TEST',
-                                  read_only, timeout=1)
+        ClientThread.__init__(self,
+                              addrs, wrapper, cache, 'TEST',
+                              read_only, timeout=1)
         self.assertFalse(wrapper.notify_disconnected.called)
         protocol = loop.protocol
         transport = loop.transport
@@ -830,15 +793,19 @@ class ClientTests(Base, setupstack.TestCase, TestClientThread):
         protocol_2.data_received(sized(self.enc + b'3101'))
         self.assertEqual(self.unsized(transport_2.pop(2)), self.enc + b'3101')
         self.assertEqual(len(transport_2.data), 0)  # waits for lock
+        self.assertFalse(io.connected.done())
         # finish first protocol connection
         self.respond(1, None, protocol=protocol_1)  # register
         self.respond(2, b"a"*8, protocol=protocol_1)  # lastTransaction
+        self.assertTrue(io.ready)
+        self.assertFalse(io.connected.done())
         self.respond(3, {}, protocol=protocol_1)  # get_info
         # the second protocol has got the lock but released it immediately
         # because it was closed due to the accepted protocol 1
         self.assertFalse(io.register_lock.locked())
         self.assertTrue(protocol_2._protocol.closed)
         self.assertTrue(io.ready)
+        self.assertTrue(io.connected.done())
 
 
 class MsgpackClientTests(ClientTests):
