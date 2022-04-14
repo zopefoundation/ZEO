@@ -777,9 +777,13 @@ class ClientIO(object):
     def prefetch_co(self, oids, tid):
         if not self.operational:
             raise ClientDisconnected()
+        oids_tofetch = []
         for oid in oids:
             if self.cache.loadBefore(oid, tid) is None:
-                yield self._prefetch_co(oid, tid)
+                oids_tofetch.append(oid)
+        if oids_tofetch:
+            yield asyncio.gather(*(Task(self._prefetch_co(oid, tid), loop=self.loop)
+                                   for oid in oids_tofetch))
 
     @coroutine
     def tpc_finish_co(self, tid, updates, f):
