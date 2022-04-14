@@ -766,6 +766,8 @@ class ClientRunner(object):
         self.call_async = client.call_async
         self.call_async_iter = client.call_async_iter
         run_coroutine = asyncio.run_coroutine_threadsafe
+        futures = {}  # id -> future -- used to prevent garbage collection
+        self.futures = futures  # make visible for tests
 
         def call(meth, *args,
                  timeout=self.timeout, indirect=True, wait=True):
@@ -778,7 +780,15 @@ class ClientRunner(object):
                 args = timeout, meth, args
                 meth = call_with_timeout
             future = run_coroutine(meth(*args), loop)
-            return future.result() if wait else future
+            if wait:
+                return future.result()
+            # Python 3.10 kills the coroutine when the future
+            # is garbage collected -- protect it
+            futures[id(future)] = future
+            @future.add_done_callback
+            def cleanup(f):
+                del futures[id(f)]
+            return future
 
         self._call_ = call  # creates reference cycle
 
