@@ -663,13 +663,14 @@ class ClientIo(object):
         return data
 
     async def prefetch_co(self, oids, tid):
-        for oid in oids:
+        async def prefetch(oid):
             try:
                 await self.load_before_co(0, oid, tid)
             except ClientDisconnected:
                 return
             except Exception:
                 logger.exception("Exception for prefetch `%r` `%r`", oid, tid)
+        await asyncio.gather(*(prefetch(oid) for oid in oids), loop=self.loop)
 
     async def tpc_finish_co(self, tid, updates, f):
         if not (self.ready and self.connected.done()):
