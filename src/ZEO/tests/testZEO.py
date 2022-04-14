@@ -1103,7 +1103,15 @@ def test_prefetch(self):
     >>> len(storage._cache) < count
     True
 
-    But it is filled eventually:
+    The ``prefetch`` returns a future.
+    As long as it is not yet done, it is part of a reference
+    cycle and therefore not immediately garbage collected.
+    But a garbage collection run might destroy it.
+    Verify that ``prefetch`` nevertheless works correctly.
+    >>> import gc
+    >>> _ = gc.collect()
+
+    Verify that the cache is filled eventually:
 
     >>> from zope.testing.wait import wait
     >>> wait((lambda : len(storage._cache) >= count), 2)

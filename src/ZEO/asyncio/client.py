@@ -805,6 +805,7 @@ class ClientRunner(object):
         return self._call_(self.call_async_iter, it, timeout=0)
 
     def prefetch(self, oids, tid):
+        oids = tuple(oids)  # avoid concurrency problems
         return self._call_(self.client.prefetch_co, oids, tid,
                            indirect=False, wait=False)
 
