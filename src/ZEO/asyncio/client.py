@@ -926,6 +926,18 @@ class ClientRunner(object):
         switch_thread()
 
     def prefetch(self, oids, tid):
+        oids = tuple(oids)  # avoid concurrency problems
+        # There is potential for a race condition here:
+        # we return a future, likely immediately released by
+        # the caller. A cyclic reference prevents immediate
+        # finalization, but a garbage collection might finalize
+        # and effectively terminate the preloading process.
+        # If the IO thread is sufficiently fast it has created a
+        # future representing a server response, referenced globally.
+        # Such a future protects the return value from
+        # the garbage collector (it is referenced via callbacks).
+        # It the IO thread is not fast enough, the complete
+        # structure may be released during a garbage collection.
         return self.io_call(
             self.client.prefetch_co(oids, tid), wait=False)
 
