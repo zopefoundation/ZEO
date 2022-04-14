@@ -1759,6 +1759,7 @@ slow_test_classes = [
     # and with in memory store (may have different latency than
     # ``FileStorage`` and therefore expose other race conditions)
     MappingStorageTests,
+    # drop to save time
     # DemoStorageTests,
     # FileStorageTests,
     # FileStorageHexTests, FileStorageClientHexTests,
