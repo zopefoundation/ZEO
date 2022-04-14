@@ -785,6 +785,7 @@ class ClientRunner(object):
             # Python 3.10 kills the coroutine when the future
             # is garbage collected -- protect it
             futures[id(future)] = future
+
             @future.add_done_callback
             def cleanup(f):
                 del futures[id(f)]
