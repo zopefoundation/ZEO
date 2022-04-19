@@ -20,7 +20,7 @@ A server connection is represented by a ``Protocol`` instance.
 
 The ``asyncio`` loop must be run in a separate thread.
 The loop management is the responsibility of ``ClientThread``,
-a tiny wrapper arount `ClientRunner``.
+a tiny wrapper arount ``ClientRunner``.
 """
 
 from ZEO.Exceptions import ClientDisconnected, ServerException
@@ -835,23 +835,24 @@ class ClientRunner(object):
             return True
         return protocol.read_only
 
+    # Some tests will set this to use an instrumented loop
+    loop = None
+
     __closed = False
 
     def close(self):
         if self.__closed:
             return
         self.__closed = True
-        if self.loop.is_running():
+        loop = self.loop
+        if loop is None or loop.is_closed():  # pragma: no cover
+            # this should not happen
+            return
+        if loop.is_running():
             self._call_(self.client.close_co, indirect=False, wait=True)
-        else:
-            # we cannot close normally (running loop required)
-            # therefore, patch the state and inform the client.
-            try:
-                if self.client.ready:
-                    self.client.ready = None
-                    self.client.client.notify_disconnected()
-            except AttributeError:
-                pass
+        else:  # pragma: no cover
+            # this should not happen
+            loop.run_until_complete(self.client.close_co())
         self._call_ = self._call_after_closure  # break cycle
 
     def _call_after_closure(*args, **kw):
@@ -899,9 +900,6 @@ class ClientThread(ClientRunner):
         if self.exception:
             raise self.exception
 
-    # Some tests will set this to use an instrumented loop
-    loop = None
-
     exception = None
 
     def run_io_thread(self):
@@ -925,11 +923,27 @@ class ClientThread(ClientRunner):
     __closed = False
 
     def close(self):
+        """close the server connection and release resources.
+
+        ``close`` can be called at any moment; it should not
+        raise an exception. Calling ``close`` again does
+        not have an effect. Most other calls will raise
+        a ``ClientDisconnected`` exception.
+        """
         if not self.__closed:
             self.__closed = True
+            loop = self.loop
+            if loop is None:  # pragma no cover
+                # we have never been connected
+                return
             super().close()
-            if self.loop.is_running():
-                self.loop.call_soon_threadsafe(self.loop.stop)
-            self.thread.join(9)
+            if loop.is_running():
+                loop.call_soon_threadsafe(loop.stop)
+                # ``loop`` will be closed in the IO thread
+                # after stop processing
+            self.thread.join(9)  # wait for the IO thread to terminate
         if self.exception:
             raise self.exception
+
+    def is_closed(self):
+        return self.__closed

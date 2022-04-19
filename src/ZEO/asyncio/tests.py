@@ -5,6 +5,7 @@ from ZODB.utils import maxtid, RLock
 import collections
 import logging
 import struct
+from time import sleep
 from functools import partial
 
 from ..Exceptions import ClientDisconnected, ProtocolError
@@ -821,6 +822,29 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         self.assertTrue(protocol_2._protocol.closed)
         self.assertTrue(io.ready)
         self.assertTrue(io.connected.done())
+
+    def test_close_with_running_loop(self):
+        storage_mock, cache, loop, io, protocol, transport = self.start(
+            finish_start=True)
+        self.close()
+        self.assertFalse(io.ready)
+        self.assertTrue(self.is_closed())
+        self.assertTrue(loop.is_closed())
+        self.close()  # subsequent calls do not have an effect
+
+    def test_close_with_stopped_loop(self):
+        storage_mock, cache, loop, io, protocol, transport = self.start(
+            finish_start=True)
+        loop.call_soon_threadsafe(loop.stop)  # schedule loop stop
+        # risks race condition as the loop is going to be closed during
+        # stop processing
+        # loop.run_until_inactive()
+        sleep(0.1)  # give the loop time to stop
+        self.close()
+        self.assertFalse(io.ready)
+        self.assertTrue(self.is_closed())
+        self.assertTrue(loop.is_closed())
+        self.close()  # subsequent calls do not have an effect
 
 
 class MsgpackClientTests(ClientTests):
