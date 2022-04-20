@@ -39,13 +39,19 @@ class SizedMessageProtocol(asyncio.Protocol):
 
         # output handling
         pack = struct.pack
-        paused = []  # Paused indicator, mutable to avoid attr lookup
-        output = []  # Output buffer when paused
+        paused = []  # if ``paused`` we must buffer output
+        output = []  # output buffer - contains messages or iterators
         append = output.append
         writelines = transport.writelines
 
+        # Note: Outside ``resume_writing``
+        # ``not paused`` implies ``not output``. This
+        # allows to use ``if paused`` instead of
+        # ``if paused or output`` in ``write_message`` and
+        # ``write_message_iter``.
+
         def write_message(message):
-            if paused:
+            if paused:  # equivalent to ``paused or output``
                 append(message)
             else:
                 writelines((pack(">I", len(message)), message))
@@ -53,11 +59,8 @@ class SizedMessageProtocol(asyncio.Protocol):
         self.write_message = write_message
 
         def write_message_iter(message_iter):
-            # Note, don't worry about combining messages.  Iters
-            # will be used with blobs, in which case, the individual
-            # messages will be big to begin with.
             data = iter(message_iter)
-            if paused:
+            if paused:  # equivalent to ``paused or output``
                 append(data)
                 return
             for message in data:
@@ -69,19 +72,23 @@ class SizedMessageProtocol(asyncio.Protocol):
         self.write_message_iter = write_message_iter
 
         def resume_writing():
+            # precondition: ``paused`` and "at least 1 message writable"
             del paused[:]
             writelines = self.transport.writelines
             while output and not paused:
                 message = output.pop(0)
                 if isinstance(message, bytes):
+                    # a message
                     writelines((pack(">I", len(message)), message))
                 else:
+                    # an iterator
                     data = message
                     for message in data:
                         writelines((pack(">I", len(message)), message))
                         if paused:  # paused again. Put iter back.
                             output.insert(0, data)
                             break
+            # post condition: ``paused or not output``
 
         self.resume_writing = resume_writing
 
