@@ -172,17 +172,14 @@ class SizedMessageProtocol(Protocol):
             """
             writelines((pack(">I", len(message)), message))
 
-        # Note: I believe that outside ``resume_writing``
+        # Note: Outside ``resume_writing``
         # ``not paused`` implies ``not output``. This
-        # would allow to use ``if paused`` instead of
+        # allows to use ``if paused`` instead of
         # ``if paused or output`` in ``write_message`` and
         # ``write_message_iter``.
-        # However with this shortcut,
-        # I had observed a race condition hinting towards
-        # messages received out of order. Thus, my belief might be wrong.
 
         def write_message(message):
-            if paused or output:
+            if paused:  # equivalent to ``paused or output``
                 append(message)
             else:
                 _write_message(message)
@@ -191,7 +188,7 @@ class SizedMessageProtocol(Protocol):
 
         def write_message_iter(message_iter):
             data = iter(message_iter)
-            if paused or output:
+            if paused:  # equivalent to ``paused or output``
                 append(data)
                 return
             for message in data:
