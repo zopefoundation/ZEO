@@ -807,6 +807,51 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         protocol.connection_lost(None)
         self.assertTrue(handle._cancelled)
 
+    def test_asyncall_doesnt_overtake_reply(self):
+        """verify that an asynchronous call after a reply does not
+        become effective before the reply."""
+        storage_mock, cache, loop, io, protocol, transport = self.start(
+            finish_start=True)
+        # our syncchronous call
+        f = self.tpc_finish(None, (), lambda *args: None, wait=False)
+        self.assertEqual(self.pop(), (4, False, "tpc_finish", (None,)))
+        # emulate the reply, followed by an asynchronous call
+        # of ``invalidateTransaction``.
+        # It is important that the two messages are delivered together
+        msg = (self.respond(4, "b"*8, return_msg=True) +
+               self.server_async_call("invalidateTransaction", "c"*8, (),
+                                      return_msg=True))
+        protocol.data_received(msg)
+        self.assertEqual(loop.exceptions, [])
+        f.result()  # no exception
+        self.assertEqual(cache.getLastTid(), "c"*8)
+
+    def test_reply_doesnt_overtake_asyncall(self):
+        """verify that a reply does not overtake an asynchronous call."""
+        storage_mock, cache, loop, io, protocol, transport = self.start(
+            finish_start=True)
+        # our synchronous call
+        f = self.call("sync", wait=False)
+        self.assertEqual(self.pop(), (4, False, "sync", ()))
+        # emulate an asynchronous call followed by the reply
+        self.observed = None
+
+        def observer():
+            """used as the storage's `receiveBlobStop`.
+            It records the state of ``f`` and therefore allows
+            to check what is processed first.
+            """
+            self.observed = bool(f.done())
+
+        io.receiveBlobStop = observer
+        # Emulate an async call to the client followed by the reply.
+        # It is important that the two messages are delivered together.
+        msg = (self.server_async_call("receiveBlobStop", return_msg=True) +
+               self.respond(4, None, return_msg=True))
+        protocol.data_received(msg)
+        self.assertEqual(loop.exceptions, [])
+        self.assertIs(self.observed, False)
+
     def test_close_with_running_loop(self):
         storage_mock, cache, loop, io, protocol, transport = self.start(
             finish_start=True)

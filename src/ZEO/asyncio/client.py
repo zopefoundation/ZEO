@@ -980,8 +980,10 @@ class ClientRunner(object):
     def load_before(self, oid, tid):
         return self.io_call(self.client.load_before_threadsafe, oid, tid)
 
-    def tpc_finish(self, tid, updates, f):
-        return self.io_call(self.client.tpc_finish_threadsafe, tid, updates, f)
+    def tpc_finish(self, tid, updates, f, **kw):
+        # ``kw`` for test only; supported ``wait``
+        return self.io_call(
+                self.client.tpc_finish_threadsafe, tid, updates, f, **kw)
 
     def is_connected(self):
         return self.client.operational
