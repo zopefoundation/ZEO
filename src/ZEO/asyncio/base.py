@@ -51,7 +51,7 @@ class ZEOBaseProtocol(Protocol):
         self.loop = loop
         self.name = name
 
-    # API
+    # API -- defined in ``connection_made``
     # write_message(message)
     # write_message_iter(message_iter)
     def call_async(self, method, args):
@@ -87,7 +87,7 @@ class ZEOBaseProtocol(Protocol):
     # def finish_connection(protocol_version_message)
     # def message_received(message)
 
-    #  ``Protocol`` responsibilities
+    #  ``Protocol`` responsibilities -- defined in ``connection_made``
     # data_received
     # eof_received
     # pause_writing
@@ -165,41 +165,60 @@ class SizedMessageProtocol(Protocol):
         append = output.append
         writelines = transport.writelines
 
+        def _write_message(message):
+            """hand the message over to the transport.
+
+            May set ``paused``.
+            """
+            writelines((pack(">I", len(message)), message))
+
+        # Note: I believe that outside ``resume_writing``
+        # ``not paused`` implies ``not output``. This
+        # would allow to use ``if paused`` instead of
+        # ``if paused or output`` in ``write_message`` and
+        # ``write_message_iter``.
+        # However with this shortcut,
+        # I had observed a race condition hinting towards
+        # messages received out of order. Thus, my belief might be wrong.
+
         def write_message(message):
-            if paused:
+            if paused or output:
                 append(message)
             else:
-                writelines((pack(">I", len(message)), message))
+                _write_message(message)
 
         self.write_message = write_message
 
         def write_message_iter(message_iter):
             data = iter(message_iter)
-            if paused:
+            if paused or output:
                 append(data)
                 return
             for message in data:
-                write_message(message)
+                _write_message(message)
                 if paused:
                     append(data)
-                    break
+                    return
 
         self.write_message_iter = write_message_iter
 
         def resume_writing():
+            # precondition: ``paused`` and "at least 1 message writable"
             del paused[:]
             while output and not paused:
                 message = output.pop(0)
                 if isinstance(message, bytes):
                     # a message
-                    write_message(message)
+                    _write_message(message)
                 else:
                     # an iterator
                     it = message
                     for message in it:
-                        write_message(message)
+                        _write_message(message)
                         if paused:  # paused again. Put iter back.
                             output.insert(0, it)
+                            break
+            # post condition: ``paused or not output``
 
         self.resume_writing = resume_writing
 

@@ -784,6 +784,32 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         f.result()  # no exception
         self.assertEqual(cache.getLastTid(), "c"*8)
 
+    def test_reply_doesnt_overtake_asyncall(self):
+        """verify that a reply does not overtake an asynchronous call."""
+        storage_mock, cache, loop, io, protocol, transport = self.start(
+            finish_start=True)
+        # our synchronous call
+        f = self.call("sync", wait=False)
+        self.assertEqual(self.pop(), (4, False, "sync", ()))
+        # emulate an asynchronous call followed by the reply
+        self.observed = None
+
+        def observer():
+            """used as the storage's `receiveBlobStop`.
+            It records the state of ``f`` and therefore allows
+            to check what is processed first.
+            """
+            self.observed = f.done()
+
+        io.receiveBlobStop = observer
+        # Emulate an async call to the client followed by the reply.
+        # It is important that the two messages are delivered together.
+        msg = (self.server_async_call("receiveBlobStop", return_msg=True) +
+               self.respond(4, None, return_msg=True))
+        protocol.data_received(msg)
+        self.assertEqual(loop.exceptions, [])
+        self.assertIs(self.observed, False)
+
     def test_serialized_registration(self):
         addrs = [('1.2.3.4', 8200), ('2.2.3.4', 8200)]
         wrapper, cache, loop, io, protocol, transport = self.start(

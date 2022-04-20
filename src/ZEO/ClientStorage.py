@@ -717,8 +717,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             else:
                 # We're using a server shared cache.  If the file isn't
                 # here, it's not anywhere.
-                raise POSException.POSKeyError(
-                        "No blob file at %s" % blob_filename, oid, serial)
+                raise NoBlobFileError(oid, serial, blob_filename)
 
         if os.path.exists(blob_filename):
             return _accessed(blob_filename)
@@ -742,14 +741,14 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
 
             # Ask the server to send it to us.  When this function
             # returns, it will have been sent. (The recieving will
-            # have been handled by the asyncore thread.)
+            # have been handled by the IO thread.)
 
             self._call('sendBlob', oid, serial)
 
             if os.path.exists(blob_filename):
                 return _accessed(blob_filename)
 
-            raise POSException.POSKeyError("No blob file", oid, serial)
+            raise NoBlobFileError(oid, serial)
 
         finally:
             lock.close()
@@ -773,10 +772,10 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                 if self.shared_blob_dir:
                     # We're using a server shared cache.  If the file isn't
                     # here, it's not anywhere.
-                    raise POSException.POSKeyError("No blob file", oid, serial)
+                    raise NoBlobFileError(oid, serial)
                 self._call('sendBlob', oid, serial)
                 if not os.path.exists(blob_filename):
-                    raise POSException.POSKeyError("No blob file", oid, serial)
+                    raise NoBlobFileError(oid, serial)
 
             _accessed(blob_filename)
             if blob is None:
@@ -1334,3 +1333,8 @@ def open_cache(cache, var, client, storage, cache_size):
         cache = ClientCache(cache, cache_size)
 
     return cache
+
+
+class NoBlobFileError(POSException.POSKeyError):
+    def __str__(self):
+        return "No blob file for oid " + super().__str__()

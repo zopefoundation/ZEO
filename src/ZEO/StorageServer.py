@@ -621,13 +621,17 @@ class ZEOStorage(object):
 
 
 class StorageServerDB(object):
-    """Adapter from StorageServerDB to ZODB.interfaces.IStorageWrapper
+    """Adapts (StorageServer, storage_id) to ZODB.interfaces.IStorageWrapper.
 
-    This is used in a ZEO fan-out situation, where a storage server
-    calls registerDB on a ClientStorage.
+    The class is used as ``DB`` emulation in a ``registerDB`` call;
+    it allows the storage server to keep its cached data about a storage
+    up to date and to keep the respective connections informed.
 
-    Note that this is called from the Client-storage's IO thread, so
-    always a separate thread from the storge-server connections.
+    In particular, the class is used in a ZEO fan-out situation,
+    where a storage server calls registerDB on a ClientStorage.
+    Note that in this case the methods are called from the Client-storage's
+    IO thread, a separate thread from the storge-server connections.
+    Thus, the methods need to be thread safe.
     """
 
     def __init__(self, server, storage_id):
