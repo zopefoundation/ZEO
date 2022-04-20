@@ -682,9 +682,10 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
 
         # This is especially handy with iterators:
         self.async_iter((name, ()) for name in 'abcde')
+        self.async_('f')
         self.assertEqual(self.pop(), [(0, True, 'a', ()), (0, True, 'b', ())])
         self.assertEqual(self.pop(), [(0, True, 'c', ()), (0, True, 'd', ())])
-        self.assertEqual(self.pop(), (0, True, 'e', ()))
+        self.assertEqual(self.pop(), [(0, True, 'e', ()), (0, True, 'f', ())])
         self.assertEqual(self.pop(), [])
 
     def test_bad_protocol(self):
