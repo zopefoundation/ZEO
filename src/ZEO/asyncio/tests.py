@@ -90,6 +90,9 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         self.close()
         self.future_mode = None
         super(ClientTests, self).tearDown()
+        loop = self.loop
+        if loop is not None:
+            self.assertEqual(loop.exceptions, [])
 
     # For normal operation all (server) interface calls are synchronous:
     # they wait for the result.
@@ -180,6 +183,9 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
     def sync_call(self, meth, *args):
         """call future returning *meth* with *args* and wait for result."""
         return meth(*args).result(2)
+
+    def observe(self, f, *args):
+        self.observed = f(*args)
 
     def testClientBasics(self):
 
@@ -358,14 +364,16 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         protocol.connection_lost(exc)
         wrapper.notify_disconnected.assert_called_with()
 
-        self.assertTrue(isinstance(loaded.exception(), ClientDisconnected))
+        self.assertIsInstance(loaded.exception(), ClientDisconnected)
         self.assertEqual(loaded.exception().args, (exc,))
-        self.assertTrue(isinstance(f1.exception(), ClientDisconnected))
+        self.assertIsInstance(f1.exception(), ClientDisconnected)
         self.assertEqual(f1.exception().args, (exc,))
 
         # Because we reconnected, a new protocol and transport were created:
-        self.assertTrue(protocol is not loop.protocol)
-        self.assertTrue(transport is not loop.transport)
+        self.assertIsNot(protocol, loop.protocol)
+        self.assertTrue(protocol.closed)
+        self.assertIsNot(transport, loop.transport)
+        self.assertTrue(transport.closed)
         protocol = loop.protocol
         transport = loop.transport
 
@@ -397,7 +405,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
 
         # The close method closes the connection and cache:
         client.close()
-        self.assertTrue(transport.closed and cache.closed)
+        self.assertTrue(transport.closed and cache.closed and protocol.closed)
 
         # The client doesn't reconnect
         self.assertEqual(loop.protocol, protocol)
@@ -533,8 +541,8 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         self.assertEqual(len(loop.later), 1)  # first in later is heartbeat
         self.loop.call_soon_threadsafe(func, *args)  # connect again
         self.loop.run_until_inactive()
-        self.assertFalse(protocol is loop.protocol)
-        self.assertFalse(transport is loop.transport)
+        self.assertIsNot(protocol, loop.protocol)
+        self.assertIsNot(transport, loop.transport)
         protocol = loop.protocol
         transport = loop.transport
         protocol.data_received(sized(self.enc + b'3101'))
@@ -610,10 +618,10 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         # Now, the original protocol is closed, and the client is
         # no-longer ready:
         self.assertFalse(client.ready)
-        self.assertFalse(client.protocol is protocol._protocol)
+        self.assertIsNot(client.protocol, protocol._protocol)
         self.assertEqual(client.protocol, loop.protocol._protocol)
         self.assertEqual(protocol.closed, True)
-        self.assertTrue(client.connected is not connected)
+        self.assertIsNot(client.connected, connected)
         self.assertFalse(client.connected.done())
         protocol, transport = loop.protocol, loop.transport
         self.assertEqual(protocol.read_only, False)
@@ -639,8 +647,8 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
 
         # We'll disconnect:
         protocol.connection_lost(Exception("lost"))
-        self.assertTrue(protocol is not loop.protocol)
-        self.assertTrue(transport is not loop.transport)
+        self.assertIsNot(protocol, loop.protocol)
+        self.assertIsNot(transport, loop.transport)
         protocol = loop.protocol
         transport = loop.transport
 
@@ -693,7 +701,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         with mock.patch("ZEO.asyncio.client.logger.error") as error:
             self.assertFalse(error.called)
             protocol.data_received(sized(self.enc + b'200'))
-            self.assertTrue(isinstance(error.call_args[0][1], ProtocolError))
+            self.assertIsInstance(error.call_args[0][1], ProtocolError)
 
     def test_get_peername(self):
         wrapper, cache, loop, client, protocol, transport = self.start(
@@ -873,6 +881,40 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         self.assertTrue(loop.is_closed())
         self.close()  # subsequent calls do not have an effect
 
+    def test_io_close(self):
+        storage_mock, cache, loop, io, protocol, transport = self.start(
+            finish_start=True)
+        tf = self.call("test")
+        loop.call_soon_threadsafe(self.observe, io.close)
+        loop.run_until_inactive()
+        self.assertTrue(self.observed.done())
+        self.assertTrue(protocol.closed)
+        self.assertTrue(tf.done())
+        self.assertIsInstance(tf.exception(), ClientDisconnected)
+
+    def test_io_close_after_connection_loss(self):
+        storage_mock, cache, loop, io, protocol, transport = self.start(
+            finish_start=True)
+        tf1 = self.call("test")
+        loop.run_until_inactive()
+        # With the following 2 lines, ``connection_lost`` will
+        # effectively overtake the call: i.e. it appears as
+        # if the connection were lost before the call.
+        # This means that the call will start waiting for a reconnection.
+        # Further down, we verify that ``close`` cleans up the state;
+        # this is necessary as the closing prevents a reconnection.
+        tf2 = self.call("test")
+        protocol.connection_lost(None)
+        loop.call_soon_threadsafe(self.observe, io.close)
+        loop.run_until_inactive()
+        self.assertTrue(self.observed.done())
+        self.assertTrue(protocol.closed)
+        self.assertTrue(tf1.done())
+        self.assertIsInstance(tf1.exception(), ClientDisconnected)
+        self.assertTrue(tf2.done())
+        self.assertIsInstance(tf2.exception(), ClientDisconnected)
+
+
 
 class MsgpackClientTests(ClientTests):
     enc = b'M'
@@ -1000,10 +1042,7 @@ class ServerTests(Base, setupstack.TestCase):
         self.call('register', False, expect=None)
 
         # It does other things, like, send hearbeats:
-        # Note: the call below causes an internal exception in the ``msgpack``
-        # test because the message is not ``msgpack`` encoded.
-        # This will result in a log entry.
-        protocol.data_received(sized(b'(J\xff\xff\xff\xffK\x00U\x06.replyNt.'))
+        protocol.data_received(sized(self.encode(-1, 0, '.reply', None)))
 
         # The client can make async calls:
         self.send('register')
@@ -1017,7 +1056,7 @@ class ServerTests(Base, setupstack.TestCase):
         protocol = self.connect(True)
         protocol.zeo_storage.notify_connected.assert_called_once_with(protocol)
 
-        # If we try to call a methid that isn't in the protocol's
+        # If we try to call a method that isn't in the protocol's
         # white list, it will disconnect:
         self.assertFalse(protocol.loop.transport.closed)
         self.call('foo', target=None)

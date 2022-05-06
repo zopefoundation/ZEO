@@ -605,7 +605,9 @@ class ZEOStorage(object):
 
     def iterator_gc(self, iids):
         for iid in iids:
-            self._iterators.pop(iid, None)
+            it = self._iterators.pop(iid, None)
+            if hasattr(it, "close"):
+                it.close()
 
     def server_status(self):
         return self.server.server_status(self.storage_id)

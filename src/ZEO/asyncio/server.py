@@ -49,8 +49,7 @@ class ServerProtocol(base.ZEOBaseProtocol):
         logger.debug("Closing server protocol")
         if not self.closed:
             self.closed = True
-            if self.transport is not None:
-                self.transport.close()
+            super().close()
 
     connected = None  # for tests
 
@@ -64,7 +63,8 @@ class ServerProtocol(base.ZEOBaseProtocol):
         self.connected = False
         if exc:
             logger.error("Disconnected %s:%s", exc.__class__.__name__, exc)
-        self.zeo_storage.notify_disconnected()
+        if not self.closed:  # unanticipated connection loss
+            self.zeo_storage.notify_disconnected()
         self.stop()
 
     def stop(self):

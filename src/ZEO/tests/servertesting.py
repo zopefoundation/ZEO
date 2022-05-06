@@ -36,12 +36,23 @@ import ZODB.MappingStorage
 
 
 class StorageServer(ZEO.StorageServer.StorageServer):
-
     def __init__(self, addr='test_addr', storages=None, **kw):
         if storages is None:
             storages = {'1': ZODB.MappingStorage.MappingStorage()}
         ZEO.StorageServer.StorageServer.__init__(self, addr, storages, **kw)
 
+    def close(self):
+        if self.__closed: 
+            return
+        # instances are typically not run in their own thread
+        # therefore, the loop usually does not run and the
+        # normal ``close`` does not work.
+        loop = self.acceptor.event_loop  # might not work for ``MTAcceptor``
+        if loop.is_running():
+            return super().close()
+        loop.call_soon_threadsafe(super().close)
+        loop.run_forever()  # will stop automatically
+        loop.close()
 
 def client(server, name='client'):
     zs = ZEO.StorageServer.ZEOStorage(server)

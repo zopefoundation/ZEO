@@ -107,6 +107,8 @@ The transaction is aborted by the server:
     >>> logger.removeHandler(handler)
     >>> zs2.tpc_abort('1')
     >>> fs.close()
+
+    >>> server.close()
     """
 
 
@@ -192,6 +194,8 @@ Of course, if vote suceeds, the lock will be held:
     True
 
     >>> zs.tpc_abort('1')
+
+    >>> server.close()
     """
 
 

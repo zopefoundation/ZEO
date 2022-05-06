@@ -63,20 +63,30 @@ class ZEOBaseProtocol(Protocol):
                                 for method, args in it)
 
     def get_peername(self):
-        return self.transport.get_extra_info('peername')
+        return self.sm_protocol.transport.get_extra_info('peername')
 
     def protocol_factory(self):
         return self
 
-    closed = False
+    closing = None  # ``None`` or closed future
     sm_protocol = None
 
     def close(self):
-        if not self.closed:
-            self.closed = True
+        """schedule closing, return closed future."""
+        # with ``asyncio``, ``close`` only schedules the closing;
+        # close completion is signalled via a call to ``connection_lost``.
+        closing = self.closing
+        if closing is None:
+            closing = self.closing = self.loop.create_future()
             # can get closed before ``sm_protocol`` set up
             if self.sm_protocol is not None:
+                # will eventually cause ``connection_lost``
                 self.sm_protocol.close()
+            else:
+                closing.set_result(True)
+        elif self.sm_protocol is not None:
+                self.sm_protocol.close()  # no problem if repeated
+        return closing
 
     def __repr__(self):
         cls = self.__class__
@@ -94,8 +104,6 @@ class ZEOBaseProtocol(Protocol):
     # resume_writing
     def connection_made(self, transport):
         logger.info("Connected %s", self)
-        self.closed = False
-        self.transport = transport
         # set up lower level sized message protocol
         smp = self.sm_protocol = SizedMessageProtocol(
             self.loop, self._first_message)  # creates reference cycle
@@ -107,8 +115,23 @@ class ZEOBaseProtocol(Protocol):
         self.write_message = smp.write_message
         self.write_message_iter = smp.write_message_iter
 
+    # In real life ``connection_lost`` is only called by
+    # the transport and ``asyncio.Protocol`` guarantees that
+    # it is called exactly once (if ``connection_made`` has
+    # been called) or not at all.
+    # Some tests, however, call ``connection_lost`` themselves.
+    # The following attribute helps to ensure that ``connection_lost``
+    # is called exactly once.
+    connection_lost_called = False
+
     def connection_lost(self, exc):
+        """The call signals close completion."""
+        self.connection_lost_called = True
         self.sm_protocol.connection_lost(exc)
+        closing = self.closing
+        if closing is None:
+            closing = self.closing = self.loop.create_future()
+        closing.set_result(True)
 
     # internal
     def _first_message(self, protocol_version):
@@ -246,27 +269,34 @@ class SizedMessageProtocol(Protocol):
             received_count[0] -= no
             return data
 
+        # the following two functions introduce a reference cycle
+        # broken in ``eof_received``
         def process_size(size):
             read_state[0] = (unpack(">I", size)[0], process_message)
 
         def process_message(message):
             try:
-                self.receive(message)
+                self.receive(message)  # may close: ``read_state[0] = None``
             except Exception:
                 logger.exception("Processing message `%r` failed" % message)
-            read_state[0] = (4, process_size)
+            if read_state[0]:  # not yet closed
+                read_state[0] = (4, process_size)
 
         def data_received(data):
             received_buffer.append(data)
             received_count[0] += len(data)
-            while read_state[0][0] <= received_count[0]:
+            while read_state[0] and read_state[0][0] <= received_count[0]:
                 no, processor = read_state[0]
                 processor(read(no))
 
         self.data_received = data_received
 
         def eof_received():
+            nonlocal process_size, process_message
             read_state[0] = None
+            try:
+                del process_size, process_message  # break reference cycle
+            except NameError: pass
 
         self.eof_received = eof_received
 
@@ -280,6 +310,22 @@ class SizedMessageProtocol(Protocol):
     def set_receive(self, receive):
         self.receive = receive
 
+    __closed = False
+
     def close(self):
+        if self.__closed:
+            return
+        self.__closed = True
+        self.eof_received()
         self.transport.close()
-        self.__dict__.clear()  # break cycles
+        self.transport = self.receive = None  # break reference cycles
+
+    # We define ``connection_lost`` to avoid a ``ResourceWarning``
+    # about an unclosed SSL transport -- it should not be necessary
+    # as the transport informed us about the lost connection.
+    # It also helps for some tests which call ``connection_lost``
+    # without transport intervention.
+    def connection_lost(self, exc):
+        if self.__closed:
+            return
+        self.transport.close()

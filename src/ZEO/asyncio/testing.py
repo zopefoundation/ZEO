@@ -1,5 +1,6 @@
 from _thread import allocate_lock
 import asyncio
+from asyncio.futures import Future
 from time import sleep
 
 try:
@@ -88,6 +89,9 @@ class Loop:
     def close(self):
         Loop.__init__(self)  # break reference cycles
         self.closed = True
+
+    def create_future(self):
+        return Future(loop=self)
 
     stopped = False
 
@@ -242,7 +246,15 @@ class Transport(object):
     closed = False
 
     def close(self):
+        if self.closed:
+            return
         self.closed = True
+        # honor the ``asyncio.Protocol`` obligation:
+        # if ``connection_made`` has been called, there will
+        # be exactly one ``connection_lost`` call.
+        if not self.protocol.connection_lost_called:
+            self.protocol.connection_lost(None)
+        self.protocol = None  # break reference cycle
 
     def get_extra_info(self, name):
         return self.extra[name]
@@ -283,4 +295,4 @@ class ClientRunner(object):
         pass
 
     def close(self):
-        pass
+        self.cache.close()  # client responsibility

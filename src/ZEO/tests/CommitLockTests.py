@@ -49,7 +49,10 @@ class WorkerThread(TestThread):
             self.myvote()
             self.storage.tpc_finish(self.trans)
         except ClientDisconnected:
-            pass
+            self.storage.tpc_abort(self.trans)
+        except Exception:
+            self.storage.tpc_abort(self.trans)
+            raise
 
     def myvote(self):
         # The vote() call is synchronous, which makes it difficult to
@@ -77,7 +80,11 @@ class CommitLockTests(object):
     # This causes the commit lock code to be exercised.  Once the
     # other connections are started, the first transaction completes.
 
+    txn = None
+
     def _cleanup(self):
+        if self.txn is not None:
+            self._storage.tpc_abort(self.txn)
         for store, trans in self._storages:
             store.tpc_abort(trans)
             store.close()
@@ -88,6 +95,7 @@ class CommitLockTests(object):
         self._storage.tpc_begin(txn)
         oid = self._storage.new_oid()
         self._storage.store(oid, ZERO, zodb_pickle(MinPO(1)), '', txn)
+        self.txn = txn
         return oid, txn
 
     def _begin_threads(self):

@@ -151,6 +151,7 @@ class CacheTests(ZODB.tests.util.TestCase):
 
         # TODO:  Need to make sure eviction of non-current data
         # are handled correctly.
+        cache.close()
 
     def testSerialization(self):
         self.cache.store(n1, n2, None, b"data for n1")
@@ -206,6 +207,7 @@ class CacheTests(ZODB.tests.util.TestCase):
         # If an object cannot be stored in the cache, it must not be
         # recorded as non-current.
         self.assertTrue(1 not in cache.noncurrent)
+        cache.close()
 
     def testVeryLargeCaches(self):
         cache = ZEO.cache.ClientCache('cache', size=(1 << 32)+(1 << 20))

@@ -84,15 +84,30 @@ class Protocol(base.ZEOBaseProtocol):
 
         self.connect()
 
+    closed = False  # actively closed
+
     def close(self, exc=None):
+        """schedule closing; register closing with the client."""
         if not self.closed:
-            super().close()  # will set ``closed``
+            self.closed = True
             self._connecting.cancel()
+            self._connecting = None  # break reference cycle
             if self.verify_task is not None:
                 self.verify_task.cancel()
             for future in self.pop_futures():
                 if not future.done():
                     future.set_exception(ClientDisconnected(exc or "Closed"))
+            # Note: it is important (at least for the tests) that
+            # the following call comes after the future cleanup (above).
+            # The ``close`` below will close the transport which
+            # will call ``connection_lost`` but without the ``exc``
+            # information -- therefore, the futures would get the wrong
+            # exception
+            closing = super().close()
+            closing_protocol_futures = self.client.closing_protocol_futures
+            closing_protocol_futures.add(closing)
+            closing.add_done_callback(closing_protocol_futures.remove)
+            self.client = None  # break reference cycle
 
     def pop_futures(self):
         # Remove and return futures from self.futures.  The caller
@@ -141,12 +156,14 @@ class Protocol(base.ZEOBaseProtocol):
         logger.debug('connection_lost %r', exc)
         super().connection_lost(exc)
         self.heartbeat_handle.cancel()
-        if self.closed:
+        if self.closed:  # ``connection_lost`` was expected
             for f in self.pop_futures():
-                f.cancel()
+                if not f.done():
+                    f.set_exception(ClientDisconnected(exc or "Closed"))
         else:
+            client = self.client
             self.close(exc or "Connection lost")
-            self.client.disconnected(self)
+            client.disconnected(self)
 
     verify_task = None
 
@@ -250,6 +267,13 @@ class Protocol(base.ZEOBaseProtocol):
     message_id = 0
 
     def call(self, future, method, args, message_id=None):
+        # The check below is important to handle a potential race
+        # between a server call and ``close``.
+        # In ``close``, all waiting futures get ``ClientDisconnected``
+        # set, but if the call is processed after ``close``,
+        # this does not happen there and needs to be handled here.
+        if self.closed:
+            raise ClientDisconnected("closed")
         if message_id is None:
             self.message_id += 1
             message_id = self.message_id
@@ -394,6 +418,7 @@ class ClientIo(object):
             setattr(self, name, getattr(client, name))
         self.cache = cache
         self.register_lock = asyncio.Lock()
+        self.closing_protocol_futures = set()  # closing futures
         self.disconnected(None)
 
     def trying_to_connect(self):
@@ -408,13 +433,16 @@ class ClientIo(object):
     closed = False
 
     def close(self):
+        """schedule closing and return close future."""
         if not self.closed:
             self.closed = True
             self.ready = False
+            self.connected.cancel()
             if self.protocol is not None:
                 self.protocol.close()
             self.cache.close()
             self._clear_protocols()
+        return asyncio.gather(*self.closing_protocol_futures)
 
     def _clear_protocols(self, protocol=None):
         for p in self.protocols:
@@ -628,10 +656,14 @@ class ClientIo(object):
             result = method(*args)
         else:
             raise ClientDisconnected
-        return await result if asyncio.isfuture(result) else result
+        try:
+            return await result if asyncio.isfuture(result) else result
+        finally:
+            del result  # avoid reference cycle in case of exception
 
     async def close_co(self):
-        self.close()
+        await self.close()
+        self.client = None  # break reference cycle
 
     async def new_addrs_co(self, addrs):
         self.addrs = addrs
@@ -656,7 +688,10 @@ class ClientIo(object):
                                                (oid, tid))
         else:
             raise ClientDisconnected
-        data = await future
+        try:
+            data = await future
+        finally:
+            del future  # avoid reference cycle in case of exception
         if data:
             state, start, end = data
             self.cache.store(oid, start, end, state)
@@ -841,19 +876,21 @@ class ClientRunner(object):
     __closed = False
 
     def close(self):
+        # Small race condition risk if ``close`` is called concurrently
         if self.__closed:
             return
         self.__closed = True
+        call = self._call_
+        self._call_ = self._call_after_closure
         loop = self.loop
         if loop is None or loop.is_closed():  # pragma: no cover
             # this should not happen
             return
         if loop.is_running():
-            self._call_(self.client.close_co, indirect=False, wait=True)
+            call(self.client.close_co, indirect=False, wait=True)
         else:  # pragma: no cover
             # this should not happen
             loop.run_until_complete(self.client.close_co())
-        self._call_ = self._call_after_closure  # break cycle
 
     def _call_after_closure(*args, **kw):
         """auxiliary method to be used as `_call_` after closure."""
@@ -943,7 +980,10 @@ class ClientThread(ClientRunner):
                 # after stop processing
             self.thread.join(9)  # wait for the IO thread to terminate
         if self.exception:
-            raise self.exception
+            try:
+                raise self.exception
+            finally:
+                self.exception = None  # break reference cycle
 
     def is_closed(self):
         return self.__closed
