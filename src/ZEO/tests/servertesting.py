@@ -42,7 +42,7 @@ class StorageServer(ZEO.StorageServer.StorageServer):
         ZEO.StorageServer.StorageServer.__init__(self, addr, storages, **kw)
 
     def close(self):
-        if self.__closed: 
+        if self.__closed:
             return
         # instances are typically not run in their own thread
         # therefore, the loop usually does not run and the
@@ -53,6 +53,7 @@ class StorageServer(ZEO.StorageServer.StorageServer):
         loop.call_soon_threadsafe(super().close)
         loop.run_forever()  # will stop automatically
         loop.close()
+
 
 def client(server, name='client'):
     zs = ZEO.StorageServer.ZEOStorage(server)

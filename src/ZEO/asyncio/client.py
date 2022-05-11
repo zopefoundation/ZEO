@@ -94,6 +94,10 @@ class Protocol(base.ZEOBaseProtocol):
             self._connecting = None  # break reference cycle
             if self.verify_task is not None:
                 self.verify_task.cancel()
+                # even cancelled, the task retains a reference to
+                # the coroutine which creates a reference cycle
+                # break it
+                self.verify_task = None
             for future in self.pop_futures():
                 if not future.done():
                     future.set_exception(ClientDisconnected(exc or "Closed"))
@@ -120,33 +124,24 @@ class Protocol(base.ZEOBaseProtocol):
     def connect(self):
         if isinstance(self.addr, tuple):
             host, port = self.addr
-            cr = self.loop.create_connection(
+            cr = lambda: self.loop.create_connection(  # noqa: E731
                 self.protocol_factory, host or '127.0.0.1', port,
                 ssl=self.ssl, server_hostname=self.ssl_server_hostname)
         else:
-            cr = self.loop.create_unix_connection(
+            cr = lambda: self.loop.create_unix_connection(  # noqa: E731
                 self.protocol_factory, self.addr, ssl=self.ssl)
 
-        # an ``asyncio.Future``
-        self._connecting = cr = asyncio.ensure_future(cr, loop=self.loop)
-
-        @cr.add_done_callback
-        def done_connecting(future):
-            if future.cancelled():
-                logger.info("Connection to %r cancelled", self.addr)
-            elif future.exception() is not None:
-                logger.info("Connection to %r failed, %s",
-                            self.addr, future.exception())
-            else:
-                return
-
-            # keep trying
-            if not self.closed:
+        async def connect():
+            while not self.closed:
+                try:
+                    return await cr()
+                except ConnectionError as exc:
+                    logger.info("Connection to %r failed, %r",
+                                self.addr, exc)
+                await asyncio.sleep(self.connect_poll + local_random.random())
                 logger.info("retry connecting %r", self.addr)
-                self.loop.call_later(
-                    self.connect_poll + local_random.random(),
-                    self.connect,
-                    )
+
+        self._connecting = self.loop.create_task(connect())
 
     def connection_made(self, transport):
         super().connection_made(transport)
@@ -162,6 +157,7 @@ class Protocol(base.ZEOBaseProtocol):
                     f.set_exception(ClientDisconnected(exc or "Closed"))
         else:
             client = self.client
+            # will set ``self.client = None``
             self.close(exc or "Connection lost")
             client.disconnected(self)
 
@@ -663,7 +659,10 @@ class ClientIo(object):
 
     async def close_co(self):
         await self.close()
-        self.client = None  # break reference cycle
+        # break reference cycles
+        for name in Protocol.client_delegated:
+            delattr(self, name)
+        self.client = self.cache = None
 
     async def new_addrs_co(self, addrs):
         self.addrs = addrs
@@ -891,7 +890,9 @@ class ClientRunner(object):
         else:  # pragma: no cover
             # this should not happen
             loop.run_until_complete(self.client.close_co())
+        self.__args = None  # break reference cycle
 
+    @staticmethod
     def _call_after_closure(*args, **kw):
         """auxiliary method to be used as `_call_` after closure."""
         raise ClientDisconnected('closed')

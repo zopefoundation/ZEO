@@ -85,7 +85,7 @@ class ZEOBaseProtocol(Protocol):
             else:
                 closing.set_result(True)
         elif self.sm_protocol is not None:
-                self.sm_protocol.close()  # no problem if repeated
+            self.sm_protocol.close()  # no problem if repeated
         return closing
 
     def __repr__(self):
@@ -296,7 +296,8 @@ class SizedMessageProtocol(Protocol):
             read_state[0] = None
             try:
                 del process_size, process_message  # break reference cycle
-            except NameError: pass
+            except NameError:
+                pass
 
         self.eof_received = eof_received
 
@@ -320,7 +321,8 @@ class SizedMessageProtocol(Protocol):
         self.transport.close()
         self.transport = self.receive = None  # break reference cycles
 
-    # We define ``connection_lost`` to avoid a ``ResourceWarning``
+    # We define ``connection_lost`` to close the transport
+    # in order to avoid a ``ResourceWarning``
     # about an unclosed SSL transport -- it should not be necessary
     # as the transport informed us about the lost connection.
     # It also helps for some tests which call ``connection_lost``

@@ -746,6 +746,7 @@ class CommonBlobTests(object):
         self._storage.tpc_begin(t)
         self._storage.storeBlob(
           oid, ZODB.utils.z64, 'foo', 'blob_file', '', t)
+        self._storage.tpc_abort(t)
         self._storage.close()
 
 

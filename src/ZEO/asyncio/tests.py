@@ -93,6 +93,8 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         loop = self.loop
         if loop is not None:
             self.assertEqual(loop.exceptions, [])
+        # ``mock`` creates cyclic structures; break the cycles
+        _break_mock_cycles(self.target)
 
     # For normal operation all (server) interface calls are synchronous:
     # they wait for the result.
@@ -138,6 +140,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         ClientThread.__init__(self,
                               addrs, wrapper, cache, 'TEST',
                               read_only, timeout=1)
+        loop.run_until_inactive()
         self.assertFalse(wrapper.notify_disconnected.called)
         protocol = loop.protocol
         transport = loop.transport
@@ -490,6 +493,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         self.assertTrue(protocol is None and transport is None)
 
         # There are 2 connection attempts outstanding:
+        self.loop.run_until_inactive()
         self.assertEqual(sorted(loop.connecting), addrs)
 
         # We cause the first one to fail:
@@ -513,6 +517,8 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         transport = loop.transport
         protocol.data_received(sized(self.enc + b'3101'))
         self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'3101')
+        # cancel the heartbeat to make debugging easier
+        protocol.heartbeat_handle.cancel()
         self.respond(1, None)
 
         # Now, when the first connection fails, it won't be retried,
@@ -915,7 +921,6 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         self.assertIsInstance(tf2.exception(), ClientDisconnected)
 
 
-
 class MsgpackClientTests(ClientTests):
     enc = b'M'
     seq_type = tuple
@@ -1168,3 +1173,15 @@ class SizedMessageProtocolTests(setupstack.TestCase):
 
 def to_byte(i):
     return bytes([i])
+
+
+def _break_mock_cycles(m):
+    """break (``mock`` introduced) cycles in mock *m*.
+
+    Do not break cycles due to mock calling.
+    """
+    m._mock_parent = m._mock_new_parent = None
+    for c in m._mock_children.values():
+        _break_mock_cycles(c)
+    if isinstance(m._mock_return_value, mock.Mock):
+        _break_mock_cycles(m._mock_return_value)
