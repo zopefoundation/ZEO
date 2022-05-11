@@ -154,7 +154,7 @@ class Protocol(base.ZEOBaseProtocol):
 
         @coroutine
         def connect():
-            while 1:
+            while not self.closed:
                 try:
                     yield cr()
                     return
@@ -164,10 +164,8 @@ class Protocol(base.ZEOBaseProtocol):
                 except Exception as exc:
                     logger.info("Connection to %r failed, %s",
                                 self.addr, exc)
-                # keep trying
-                if not self.closed:
-                    yield asyncio.sleep(self.connect_poll + local_random.random())
-                    logger.info("retry connecting %r", self.addr)
+                yield asyncio.sleep(self.connect_poll + local_random.random())
+                logger.info("retry connecting %r", self.addr)
 
         self._connecting = Task(connect(), self.loop)
 
