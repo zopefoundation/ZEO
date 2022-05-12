@@ -90,10 +90,10 @@ class Protocol(base.ZEOBaseProtocol):
         """schedule closing; register closing with the client."""
         if not self.closed:
             self.closed = True
-            self._connecting.cancel()
+            cancel_task(self._connecting)
             self._connecting = None  # break reference cycle
             if self.verify_task is not None:
-                self.verify_task.cancel()
+                cancel_task(self.verify_task)
                 # even cancelled, the task retains a reference to
                 # the coroutine which creates a reference cycle
                 # break it
@@ -988,3 +988,11 @@ class ClientThread(ClientRunner):
 
     def is_closed(self):
         return self.__closed
+
+
+def cancel_task(task):
+    task.cancel()
+    # With Python before 3.8, cancelation is not sufficient to
+    # ignore a potential exception -- eat it in a done callback
+    task.add_done_callback(
+        lambda future: future.cancelled() or future.exception())

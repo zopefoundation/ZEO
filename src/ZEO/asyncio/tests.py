@@ -407,7 +407,8 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         self.assertFalse(wrapper.invalidateTransaction.called)
 
         # The close method closes the connection and cache:
-        client.close()
+        loop.call_soon_threadsafe(client.close)
+        loop.run_until_inactive()
         self.assertTrue(transport.closed and cache.closed and protocol.closed)
 
         # The client doesn't reconnect
