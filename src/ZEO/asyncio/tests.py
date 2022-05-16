@@ -921,6 +921,72 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         self.assertTrue(tf2.done())
         self.assertIsInstance(tf2.exception(), ClientDisconnected)
 
+    def test_io_close_before_connection(self):
+        storage_mock, cache, loop, io, protocol, transport = self.start(
+            loop_addrs=(),  # prevent auto connection
+            finish_start=False)
+        loop.call_soon_threadsafe(self.observe, io.close)
+        loop.run_until_inactive()
+        self.assertTrue(self.observed.done())
+
+    def test_io_close_after_register_exception(self):
+        storage_mock, cache, loop, io, protocol, transport = self.start(
+            finish_start=False)
+        protocol.data_received(sized(self.enc + b'3101'))
+        # let the register call fail
+        self.respond(1, ("Exception", "register_failed"), async_=True)
+        loop.call_soon_threadsafe(self.observe, io.close)
+        loop.run_until_inactive()
+        self.assertTrue(self.observed.done())
+        self.assertTrue(protocol.closed)
+
+    def test_io_close_after_register_exception_before_reconnection(self):
+        addr = ('127.0.0.1', 8200)
+        storage_mock, cache, loop, io, protocol, transport = self.start(
+            addrs=(addr,),
+            loop_addrs=(),  # prevent auto connection
+            finish_start=False)
+        loop.call_soon_threadsafe(loop.connect_connecting, addr)  # connect
+        loop.run_until_inactive()
+        loop.protocol.data_received(sized(self.enc + b'3101'))
+        # let the register call fail
+        self.respond(1, ("Exception", "register_failed"), async_=True)
+        # check "reconnection called for"
+        try_reconnecting = loop.later[1]  # entry 0 is "heartbeat"
+        connect = try_reconnecting[1]
+        self.assertEqual(connect.__func__.__name__,
+                         "try_connecting")
+        connect()
+        loop.call_soon_threadsafe(self.observe, io.close)
+        loop.run_until_inactive()
+        self.assertTrue(self.observed.done())
+        self.assertTrue(loop.protocol.closed)
+
+    def test_io_close_after_register_exception_after_reconnection(self):
+        addr = ('127.0.0.1', 8200)
+        storage_mock, cache, loop, io, protocol, transport = self.start(
+            addrs=(addr,),
+            loop_addrs=(),  # prevent auto connection
+            finish_start=False)
+        loop.call_soon_threadsafe(loop.connect_connecting, addr)  # connect
+        loop.run_until_inactive()
+        loop.protocol.data_received(sized(self.enc + b'3101'))
+        # let the register call fail
+        self.respond(1, ("Exception", "register_failed"), async_=True)
+        # check "reconnection called for"
+        try_reconnecting = loop.later[1]  # entry 0 is "heartbeat"
+        connect = try_reconnecting[1]
+        self.assertEqual(connect.__func__.__name__,
+                         "try_connecting")
+        connect()
+        loop.call_soon_threadsafe(loop.connect_connecting, addr)  # connect
+        loop.run_until_inactive()
+        loop.protocol.data_received(sized(self.enc + b'3101'))
+        loop.call_soon_threadsafe(self.observe, io.close)
+        loop.run_until_inactive()
+        self.assertTrue(self.observed.done())
+        self.assertTrue(loop.protocol.closed)
+
 
 class MsgpackClientTests(ClientTests):
     enc = b'M'

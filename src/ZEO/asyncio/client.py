@@ -429,7 +429,7 @@ class ClientIo(object):
     closed = False
 
     def close(self):
-        """schedule closing and return close future."""
+        """schedule closing and return closed future."""
         if not self.closed:
             self.closed = True
             self.ready = False
@@ -658,7 +658,25 @@ class ClientIo(object):
             del result  # avoid reference cycle in case of exception
 
     async def close_co(self):
-        await self.close()
+        # The following ``close`` deadlocked in isolated tests.
+        # Prevent this with a timeout and log information
+        # to understand the bug.
+        # await self.close()
+        try:
+            await asyncio.wait_for(self.close(), 3)
+        except asyncio.TimeoutError:
+            from pprint import pformat
+            info = {"client": pformat(vars(self))}
+            if self.protocol is not None:
+                info["protocol"] = pformat(vars(self.protocol))
+            if self.protocols:
+                info["protocols"] = pformat([pformat(vars(p))
+                                             for p in self.protocols])
+            logger.error(
+                "closing did not finish within a reasonable time.\n"
+                "Please report this as a bug with the following info:\n"
+                "%s", pformat(info))
+            raise
         # break reference cycles
         for name in Protocol.client_delegated:
             delattr(self, name)
