@@ -74,4 +74,20 @@ The simplest client configuration specified a server address:
     >>> print(storage._blob_cache_size_check)
     104857600
 
+In isolated runs, the ``close`` below failed with a timeout.
+Set up a log handler to get at the associated log message.
+
+    >>> import logging
+    >>> from zope.testing.loggingsupport import InstalledHandler
+    >>> handler = InstalledHandler("ZEO.asyncio.client", level=logging.ERROR)
+
     >>> storage.close()
+
+Check log records
+
+    >>> handler.records
+    []
+
+Cleanup
+
+    >>> handler.uninstall()
