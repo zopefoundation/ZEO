@@ -85,7 +85,12 @@ Set up a log handler to get at the associated log message.
 
 Check log records
 
-    >>> handler.records
+    >>> def check_log_records(records):
+    ...     records = [r.message for r in records]
+    ...     if len(records) != 1:
+    ...	        return records
+    ...     return records if "bug" in records[0] else []
+    >>> check_log_records(handler.records)
     []
 
 Cleanup
