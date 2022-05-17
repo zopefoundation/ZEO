@@ -131,7 +131,8 @@ class ZEOBaseProtocol(Protocol):
         closing = self.closing
         if closing is None:
             closing = self.closing = self.loop.create_future()
-        closing.set_result(True)
+        if not closing.done():
+            closing.set_result(True)
 
     # internal
     def _first_message(self, protocol_version):

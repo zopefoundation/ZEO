@@ -23,15 +23,16 @@ The loop management is the responsibility of ``ClientThread``,
 a tiny wrapper arount ``ClientRunner``.
 """
 
-from ZEO.Exceptions import ClientDisconnected, ServerException
 import logging
 import random
+import sys
 import threading
 
 import ZODB.event
 import ZODB.POSException
 
 import ZEO.Exceptions
+from ZEO.Exceptions import ClientDisconnected, ServerException
 import ZEO.interfaces
 
 from . import base
@@ -43,6 +44,8 @@ logger = logging.getLogger(__name__)
 Fallback = object()
 
 local_random = random.Random()  # use separate generator to facilitate tests
+
+uvloop_used = "uvloop" in sys.modules
 
 
 class Protocol(base.ZEOBaseProtocol):
@@ -90,6 +93,8 @@ class Protocol(base.ZEOBaseProtocol):
         """schedule closing; register closing with the client."""
         if not self.closed:
             self.closed = True
+            logger.debug('closing %s: %s', self, exc)
+            connecting = not self._connecting.done()
             cancel_task(self._connecting)
             self._connecting = None  # break reference cycle
             if self.verify_task is not None:
@@ -108,9 +113,22 @@ class Protocol(base.ZEOBaseProtocol):
             # information -- therefore, the futures would get the wrong
             # exception
             closing = super().close()
-            closing_protocol_futures = self.client.closing_protocol_futures
-            closing_protocol_futures.add(closing)
-            closing.add_done_callback(closing_protocol_futures.remove)
+            cfs = self.client.closing_protocol_futures
+            cfs.add(closing)
+            closing.add_done_callback(cfs.remove)
+            # ``uvloop`` workaround:
+            # The closing logic relies an the ``asyncio``
+            # promise that ``connection_lost`` will be called
+            # exactly once after ``connection_made`` has been called.
+            # ``uvloop`` may not fulfill this promise when the
+            # connecting process has been cancelled.
+            # To avoid ``close`` to deadlock, we pretend that
+            # closing has finished in this case. This might cause
+            # the closing process to terminate too early and
+            # leave resources (collected with the next garbage collection).
+            if uvloop_used and connecting:
+                if not closing.done():
+                    closing.set_result(True)
             self.client = None  # break reference cycle
 
     def pop_futures(self):
@@ -144,12 +162,14 @@ class Protocol(base.ZEOBaseProtocol):
         self._connecting = self.loop.create_task(connect())
 
     def connection_made(self, transport):
+        logger.debug('connection_made %s', self)
         super().connection_made(transport)
         self.heartbeat(write=False)
 
     def connection_lost(self, exc):
-        logger.debug('connection_lost %r', exc)
+        logger.debug('connection_lost %s: %r', self, exc)
         super().connection_lost(exc)
+        assert self.closing.done()
         self.heartbeat_handle.cancel()
         if self.closed:  # ``connection_lost`` was expected
             for f in self.pop_futures():
@@ -432,6 +452,7 @@ class ClientIo(object):
         """schedule closing and return closed future."""
         if not self.closed:
             self.closed = True
+            logger.debug("closing %s", self)
             self.ready = False
             self.connected.cancel()
             if self.protocol is not None:
@@ -479,7 +500,7 @@ class ClientIo(object):
         self._clear_protocols(protocol)
 
     def try_connecting(self):
-        logger.debug('try_connecting')
+        logger.debug('try_connecting %s', self)
         if not self.closed:
             self.protocols = [
                 Protocol(self.loop, addr, self,
@@ -662,8 +683,10 @@ class ClientIo(object):
         # Prevent this with a timeout and log information
         # to understand the bug.
         # await self.close()
+        closing = self.close()
         try:
-            await asyncio.wait_for(self.close(), 3)
+            # the ``shield`` is necessary to keep the state unchanged
+            await asyncio.wait_for(asyncio.shield(closing), 3)
         except asyncio.TimeoutError:
             from pprint import pformat
             info = {"client": pformat(vars(self))}

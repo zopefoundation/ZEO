@@ -987,6 +987,23 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         self.assertTrue(self.observed.done())
         self.assertTrue(loop.protocol.closed)
 
+    def test_io_close_after_register_exception_after_connection_lost(self):
+        addr = ('127.0.0.1', 8200)
+        storage_mock, cache, loop, io, protocol, transport = self.start(
+            addrs=(addr,),
+            loop_addrs=(),  # prevent auto connection
+            finish_start=False)
+        loop.call_soon_threadsafe(loop.connect_connecting, addr)  # connect
+        loop.run_until_inactive()
+        loop.protocol.data_received(sized(self.enc + b'3101'))
+        # let the register call fail
+        self.respond(1, ("Exception", "register_failed"), async_=True)
+        loop.protocol.connection_lost("disconnected")
+        loop.call_soon_threadsafe(self.observe, io.close)
+        loop.run_until_inactive()
+        self.assertTrue(self.observed.done())
+        self.assertTrue(loop.protocol.closed)
+
 
 class MsgpackClientTests(ClientTests):
     enc = b'M'

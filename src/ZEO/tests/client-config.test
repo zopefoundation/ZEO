@@ -77,9 +77,18 @@ The simplest client configuration specified a server address:
 In isolated runs, the ``close`` below failed with a timeout.
 Set up a log handler to get at the associated log message.
 
+Note: ``InstalledHandler`` changes the logger's level.
+Therefore, we cannot set ``level`` to ``ERROR`` even though
+we are only interested in error messages for this test (it would discard
+other log messages important for the timeout analysis).
+Instead, we initially request the ``DEBUG`` level
+and later set the handler's level to ``ERROR``.
+The main logfile might get unusual entries as a side effect.
+
     >>> import logging
     >>> from zope.testing.loggingsupport import InstalledHandler
-    >>> handler = InstalledHandler("ZEO.asyncio.client", level=logging.ERROR)
+    >>> handler = InstalledHandler("ZEO.asyncio.client", level=logging.DEBUG)
+    >>> handler.setLevel(logging.ERROR)
 
     >>> storage.close()
 
