@@ -36,7 +36,6 @@ tests_require = [
     'ZopeUndo',
     'zope.testing',
     'manuel',
-    'random2',
     'transaction',
     'mock',
     'msgpack < 1',
