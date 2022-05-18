@@ -27,8 +27,18 @@ testenv-deps = [
     "uvloop: uvloop",
     ]
 testenv-setenv = [
-    "!py27-!pypy: PYTHONWARNINGS=ignore::ResourceWarning",
+    "PYTHONWARNINGS=ignore::ResourceWarning",
     "msgpack1: ZEO_MSGPACK=1",
+    ]
+
+[flake8]
+additional-config = [
+    "# E501 line too long",
+    "# F401 unused import",
+    "per-file-ignores =",
+    "    src/ZEO/tests/test_cache.py: E501",
+    "    src/ZEO/_compat.py: F401",
+    "    src/ZEO/asyncio/compat.py: F401",
     ]
 
 [coverage]
@@ -49,7 +59,6 @@ additional-rules = [
 
 [github-actions]
 additional-config = [
-    "- [\"2.7\",   \"py27-msgpack1\"]",
     "- [\"3.7\",   \"py37-msgpack1\"]",
     "- [\"3.7\",   \"py37-uvloop\"]",
     "- [\"3.7\",   \"py37-zodbmaster\"]",

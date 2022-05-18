@@ -100,29 +100,18 @@ class Future(object):
         return rv
 
     def call_callbacks(self):
-        exc_stop = None
         for cb in self.callbacks:  # allows ``callbacks`` to grow
             try:
                 cb(self)
             except (SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as exc:
-                if six.PY2:
-                    # trollius stops the loop by raising _StopError
-                    # we delay loop stopping till after all callbacks are invoked
-                    # this goes in line with py3 behaviour
-                    if isinstance(exc, asyncio.base_events._StopError):
-                        exc_stop = exc
-                        continue
-
                 self._loop.call_exception_handler({
                         'message': 'Exception in callback %s' % (cb,),
                         'exception': exc,
                     })
 
         del self.callbacks[:]
-        if exc_stop is not None:
-            raise exc_stop
 
     def set_result(self, result):
         if self.state:
@@ -140,28 +129,18 @@ class Future(object):
         self._result = exc
         self.call_callbacks()
 
-    # trollius and py3 < py3.7 access ._exception directly
+    # py3 < py3.7 access ._exception directly
     @property
     def _exception(self):
         if self.state != 2:  # EXCEPTION
             return None
         return self._result
 
-    if six.PY3:
-        # return from generator raises SyntaxError on py2
-        exec('''if 1:
-        def __await__(self):
-            if not self.state:
-                self._asyncio_future_blocking = True
-                yield self
-            return self.result()
-        ''')
-    else:
-        def __await__(self):
-            if not self.state:
-                self._asyncio_future_blocking = True
-                yield self
-            raise asyncio.Return(self.result())
+    def __await__(self):
+        if not self.state:
+            self._asyncio_future_blocking = True
+            yield self
+        return self.result()
 
     __iter__ = __await__
 
@@ -173,25 +152,13 @@ class Future(object):
                 self.callbacks]
         return " ".join(str(x) for x in info)
 
-    if six.PY3:  # py3-only because cyclic garbage with __del__ is not collected on py2
-        def __del__(self):
-            if self.state == 2  and  not self._result_retrieved:  # EXCEPTION
-                self._loop.call_exception_handler({
-                    'message': "%s exception was never retrieved" % self.__class__.__name__,
-                    'exception': self._result,
-                    'future': self,
-                })
-
-# py3: asyncio.isfuture checks ._asyncio_future_blocking
-# py2: trollius does isinstace(_FUTURE_CLASSES)
-# -> register our Future so that it is recognized as such by trollius
-if six.PY2:
-    _ = asyncio.futures._FUTURE_CLASSES
-    if not isinstance(_, tuple):
-        _ = (_,)
-    _ += (Future,)
-    asyncio.futures._FUTURE_CLASSES = _
-    del _
+    def __del__(self):
+        if self.state == 2  and  not self._result_retrieved:  # EXCEPTION
+            self._loop.call_exception_handler({
+                'message': "%s exception was never retrieved" % self.__class__.__name__,
+                'exception': self._result,
+                'future': self,
+            })
 
 
 class ConcurrentFuture(Future):
@@ -271,13 +238,7 @@ class CoroutineExecutor:
             task = self.task
             self.task = None  # break reference cycle
             if isinstance(e, (StopIteration, _GenReturn)):
-                if six.PY2:
-                    v = getattr(e, 'value', None)  # e.g. no .value on plain return
-                    if hasattr(e, 'raised'):  # coroutines implemented inside trollius raise Return
-                        e.raised = True       # which checks it has been caught and complains if not
-                else:
-                    v = e.value
-                task.set_result(v)
+                task.set_result(e.value)
             elif isinstance(e, CancelledError):
                 if len(e.args) == 0:
                     msg = getattr(awaiting, '_xasyncio_cancel_msg', None)  # see _cancel_future
@@ -297,8 +258,6 @@ class CoroutineExecutor:
             if blocking is not None:
                 result._asyncio_future_blocking = False
                 await_next = result
-            elif six.PY2 and isinstance(result, asyncio.Future):
-                await_next = result  # trollius predates ._asyncio_future_blocking
 
             # `yield coro` - handle as if it was `yield from coro`
             elif _iscoroutine(result):
@@ -366,7 +325,7 @@ def _cancel_future(fut, msg):
     try:
         return fut.cancel(msg)
     except TypeError:
-        # on trollius and py3 < 3.9 Future.cancel does not accept msg
+        # on py3 < 3.9 Future.cancel does not accept msg
         _ = fut.cancel()
         fut._xasyncio_cancel_msg = msg
         return _
@@ -430,10 +389,6 @@ class ConcurrentTask(ConcurrentFuture):
                 x = self.executor.cancel(msg)
             except BaseException as e:
                 x = e
-                if six.PY2: # trollius stops the loop by raising _StopError
-                    if isinstance(e, asyncio.base_events._StopError):
-                        x = True
-                        raise
             finally:
                 res[0] = x
                 sema.release()

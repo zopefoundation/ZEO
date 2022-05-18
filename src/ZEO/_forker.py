@@ -234,14 +234,8 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
         # have to do with its default `spawn` method
         # from multiprocessing import Process as Thread
         process_type = os.environ.get("ZEO_PROCESS_TYPE", "")
-        if six.PY2:
-            from multiprocessing import Process as Thread
-            if process_type:
-                raise NotImplementedError(
-                        "$ZEO_PROCESS_TYPE is not supported on py2")
-        else:
-            from multiprocessing import context
-            Thread = getattr(context, process_type.capitalize() + "Process")
+        from multiprocessing import context
+        Thread = getattr(context, process_type.capitalize() + "Process")
         Queue = ThreadlessQueue
 
     logger.info("using thread type %r", Thread)

@@ -121,8 +121,6 @@ setup(name="ZEO",
       classifiers=[
         "Intended Audience :: Developers",
         "License :: OSI Approved :: Zope Public License",
-        "Programming Language :: Python :: 2",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
@@ -149,10 +147,6 @@ setup(name="ZEO",
           'msgpack': [
               'msgpack-python'
           ],
-          ':python_version == "2.7"': [
-              'futures',
-              'trollius',
-          ],
           'docs': [
               'Sphinx',
               'repoze.sphinx.autointerface',
@@ -169,5 +163,5 @@ setup(name="ZEO",
       zeo-nagios = ZEO.nagios:main
       """,
       include_package_data=True,
-      python_requires='>=2.7.9,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*',
+      python_requires='>=3.5.2',
       )

@@ -514,7 +514,7 @@ class ClientIO(object):
         """
         if self.connected is not None:
             self.connected.cancel()  # cancel waiters
-        self.connected = base.create_future(self.loop)
+        self.connected = self.loop.create_future()
 
     def disconnected(self, protocol=None):
         logger.debug('disconnected %r %r', self, protocol)

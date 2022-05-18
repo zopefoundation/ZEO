@@ -19,7 +19,6 @@ from ZEO.ClientStorage import ClientStorage
 from ZEO.Exceptions import ClientDisconnected
 from ZEO.tests import forker, Cache, CommitLockTests, ThreadTests
 from ZEO.tests import IterationTests
-from ZEO._compat import PY3
 from ZEO._compat import WIN
 import six
 
@@ -1856,10 +1855,6 @@ def test_suite():
         (re.compile("u('.*?')"), r"\1"),
         (re.compile('u(".*?")'), r"\1")
         ]
-    if not PY3:
-        patterns.append((re.compile("^'(blob[^']*)'"), r"b'\1'"))
-        patterns.append((re.compile("^'Z308'"), "b'Z308'"))
-        patterns.append((re.compile(r" Z4$"), " b'Z4'"))
     zeo.addTest(doctest.DocTestSuite(
         setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
         checker=renormalizing.RENormalizing(patterns),

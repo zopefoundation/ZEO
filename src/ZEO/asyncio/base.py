@@ -78,7 +78,7 @@ class ZEOBaseProtocol(asyncio.Protocol):
         # close completion is signalled via a call to ``connection_lost``.
         closing = self.closing
         if closing is None:
-            closing = self.closing = create_future(self.loop)
+            closing = self.closing = self.loop.create_future()
             # can get closed before ``sm_protocol`` set up
             if self.sm_protocol is not None:
                 # will eventually cause ``connection_lost``
@@ -138,7 +138,7 @@ class ZEOBaseProtocol(asyncio.Protocol):
         self.sm_protocol.connection_lost(exc)
         closing = self.closing
         if closing is None:
-            closing = self.closing = create_future(self.loop)
+            closing = self.closing = self.loop.create_future()
         if not closing.done():
             closing.set_result(True)
 
@@ -156,13 +156,6 @@ class ZEOBaseProtocol(asyncio.Protocol):
     def data_received(self, data):
         self.data_received(data)  # not an infinite loop, because overridden
 
-
-def create_future(loop):
-    mkf = getattr(loop, 'create_future', None)  # py3.5+
-    if mkf is not None:
-        return mkf()
-    else:
-        return asyncio.Future(loop=loop)        # py2
 
 
 def loop_run_forever(loop):

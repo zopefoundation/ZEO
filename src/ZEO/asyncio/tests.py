@@ -1,14 +1,4 @@
-from .._compat import PY3
 from .compat import asyncio
-
-if PY3:
-    def to_byte(i):
-        return bytes([i])
-else:
-    def to_byte(b):
-        if isinstance(b, int):
-            b = chr(b)
-        return b
 
 from zope.testing import setupstack
 from unittest import TestCase
@@ -1252,6 +1242,7 @@ class ZEOBaseProtocolTests(setupstack.TestCase):
             self.assertEqual(l, b"\x00\x00\x00\x01")
             self.assertEqual(t, to_byte(b))
 
+
     def test_repr(self):
         repr(self.loop.protocol)  # satisfied if no exception
 
@@ -1336,6 +1327,10 @@ class SizedMessageProtocolTests(setupstack.TestCase):
         proto.set_receive(close)
         receive(data)
         self.assertEqual(self.received, [])
+
+
+def to_byte(i):
+    return bytes([i])
 
 
 def _break_mock_cycles(m):
@@ -1442,10 +1437,8 @@ class FutureTestsBase(OptimizeTestsBase):
         self.assertIs(type(e1), dict)
         self.assertEqual(set(e0.keys()), {'message', 'exception'})
         self.assertEqual(set(e1.keys()), {'message', 'exception'})
-        assertRe = self.assertRegex if PY3 else \
-                   self.assertRegexpMatches
-        assertRe(e0['message'], r'Exception in callback .*\bg\b')
-        assertRe(e1['message'], r'Exception in callback .*\bi\b')
+        self.assertRegex(e0['message'], r'Exception in callback .*\bg\b')
+        self.assertRegex(e1['message'], r'Exception in callback .*\bi\b')
         # RuntimeError('x') != RuntimeError('x')  -> compare by hand
         x0 = e0['exception']
         x1 = e1['exception']
