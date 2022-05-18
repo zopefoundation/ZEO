@@ -2,7 +2,6 @@ import unittest
 
 import mock
 
-from ZEO._compat import PY3
 from ZEO.runzeo import ZEOServer
 
 
@@ -167,11 +166,8 @@ class TestZEOServerSocket(unittest.TestCase):
         class Options(object):
             address = b'a byte str that does not exist'
 
-        if PY3:
-            # bytes are not a string type under Py3
-            assertion = self._not_unlinked
-        else:
-            assertion = self._unlinked
+        # bytes are not a string type under Py3
+        assertion = self._not_unlinked
 
         assertion(unlink, Options)
 

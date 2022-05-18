@@ -37,7 +37,7 @@ import ZODB.TimeStamp
 import zope.interface
 import six
 
-from ZEO._compat import Pickler, Unpickler, PY3, BytesIO
+from ZEO._compat import Pickler, Unpickler, BytesIO
 from ZEO.Exceptions import AuthError
 from .monitor import StorageStats, StatsServer
 from .zrpc.connection import ManagedServerConnection, Delay, MTDelay, Result
@@ -679,11 +679,7 @@ class ZEOStorage(object):
     def _marshal_error(self, error):
         # Try to pickle the exception.  If it can't be pickled,
         # the RPC response would fail, so use something that can be pickled.
-        if PY3:
-            pickler = Pickler(BytesIO(), 3)
-        else:
-            # The pure-python version requires at least one argument (PyPy)
-            pickler = Pickler(0)
+        pickler = Pickler(BytesIO(), 3)
         pickler.fast = 1
         try:
             pickler.dump(error)
@@ -1305,9 +1301,8 @@ class StorageServer(object):
             self.timeouts[storage_id].is_alive()
         last_transaction = self.storages[storage_id].lastTransaction()
         last_transaction_hex = codecs.encode(last_transaction, 'hex_codec')
-        if PY3:
-            # doctests and maybe clients expect a str, not bytes
-            last_transaction_hex = str(last_transaction_hex, 'ascii')
+        # doctests and maybe clients expect a str, not bytes
+        last_transaction_hex = str(last_transaction_hex, 'ascii')
         status['last-transaction'] = last_transaction_hex
         return status
 

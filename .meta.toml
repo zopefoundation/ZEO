@@ -31,6 +31,16 @@ testenv-setenv = [
     "zeo4: ZEO4_SERVER=1",
     ]
 
+[flake8]
+additional-config = [
+    "# E501 line too long",
+    "# F401 unused import",
+    "per-file-ignores =",
+    "    src/ZEO/tests/test_cache.py: E501",
+    "    src/ZEO/_compat.py: F401",
+    "    src/ZEO/asyncio/compat.py: F401",
+    ]
+
 [coverage]
 fail-under = 53
 

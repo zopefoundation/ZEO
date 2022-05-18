@@ -13,11 +13,9 @@
 ##############################################################################
 import logging
 
-from ZEO._compat import Unpickler, Pickler, BytesIO, PY3, PYPY
+from ZEO._compat import Unpickler, Pickler, BytesIO
 from .error import ZRPCError
 from .log import log, short_repr
-
-PY2 = not PY3
 
 
 def encode(*args):  # args: (msgid, flags, name, args)
@@ -42,28 +40,7 @@ def encode(*args):  # args: (msgid, flags, name, args)
     return res
 
 
-if PY3:
-    # XXX: Py3: Needs optimization.
-    fast_encode = encode
-elif PYPY:
-    # can't use the python-2 branch, need a new pickler
-    # every time, getvalue() only works once
-    fast_encode = encode
-else:
-
-    def fast_encode():
-        # Only use in cases where you *know* the data contains only basic
-        # Python objects
-        pickler = Pickler(1)
-        pickler.fast = 1
-        dump = pickler.dump
-
-        def fast_encode(*args):
-            return dump(args, 1)
-
-        return fast_encode
-
-    fast_encode = fast_encode()
+fast_encode = encode
 
 
 def decode(msg):
@@ -124,8 +101,8 @@ def find_global(module, name):
     except AttributeError:
         raise ZRPCError("module %s has no global %s" % (module, name))
 
-    safe = (getattr(r, '__no_side_effects__', 0) or
-            (PY2 and module in _SAFE_MODULE_NAMES))
+    safe = getattr(r, '__no_side_effects__', 0)
+
     if safe:
         return r
 

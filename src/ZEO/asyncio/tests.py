@@ -1,12 +1,3 @@
-from .._compat import PY3
-
-if PY3:
-    def to_byte(i):
-        return bytes([i])
-else:
-    def to_byte(b):
-        return b
-
 from zope.testing import setupstack
 import mock
 from ZODB.utils import maxtid, RLock
@@ -915,6 +906,10 @@ class ProtocolTests(setupstack.TestCase):
             l, t = transport.pop(2)
             self.assertEqual(l, b"\x00\x00\x00\x01")
             self.assertEqual(t, to_byte(b))
+
+
+def to_byte(i):
+    return bytes([i])
 
 
 def test_suite():
