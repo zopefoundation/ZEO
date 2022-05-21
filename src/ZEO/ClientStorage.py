@@ -712,6 +712,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         return serials
 
     def receiveBlobStart(self, oid, serial):
+        logger.debug("receiveBlobStart for %r, %r", oid, serial)
         blob_filename = self.fshelper.getBlobFilename(oid, serial)
         assert not os.path.exists(blob_filename)
         lockfilename = os.path.join(os.path.dirname(blob_filename), '.lock')
@@ -722,6 +723,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         f.close()
 
     def receiveBlobChunk(self, oid, serial, chunk):
+        logger.debug("receiveBlobChunk for %r, %r", oid, serial)
         blob_filename = self.fshelper.getBlobFilename(oid, serial)+'.dl'
         assert os.path.exists(blob_filename)
         f = open(blob_filename, 'r+b')
@@ -732,6 +734,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         self._check_blob_size(self._blob_data_bytes_loaded)
 
     def receiveBlobStop(self, oid, serial):
+        logger.debug("receiveBlobStop for %r, %r", oid, serial)
         blob_filename = self.fshelper.getBlobFilename(oid, serial)
         os.rename(blob_filename+'.dl', blob_filename)
         os.chmod(blob_filename, stat.S_IREAD)
@@ -1340,12 +1343,29 @@ def check_blob_size_script(args=None):
     _check_blob_cache_size(blob_dir, int(target))
 
 
+class _FileLock:
+    """Auxiliary class to provide for file lock logging."""
+    def __init__(self, filename, log_failure):
+        self.filename = filename
+        try:
+            self.lock = zc.lockfile.LockFile(filename)
+            logger.debug("locked %s", filename)
+        except zc.lockfile.LockError:
+            if log_failure:
+                logger.debug("failed to lock %s", filename)
+            raise
+
+    def close(self):
+        self.lock.close()
+        logger.debug("unlocked %s", self.filename)
+
+
 def _lock_blob(path):
     lockfilename = os.path.join(os.path.dirname(path), '.lock')
     n = 0
     while 1:
         try:
-            return zc.lockfile.LockFile(lockfilename)
+            return _FileLock(lockfilename, n == 0)
         except zc.lockfile.LockError:
             time.sleep(0.01)
             n += 1
