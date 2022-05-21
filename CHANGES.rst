@@ -4,7 +4,7 @@ Changelog
 6.0 (unreleased)
 ----------------
 
-- Drop Python 2 support
+- Drop Python 2 and 3.5 support
 
 - Reimplement and streamline the ``asyncio`` part of the ``ClientStorage``
   implementation:
