@@ -32,15 +32,11 @@ The ZEO protocol sits on top of a sized message protocol.
 The ZEO protocol has client and server variants.
 """
 import logging
-import socket
-import sys
 
 from .compat import asyncio
 from .smp import SizedMessageProtocol
 
 logger = logging.getLogger(__name__)
-
-INET_FAMILIES = socket.AF_INET, socket.AF_INET6
 
 
 class ZEOBaseProtocol(asyncio.Protocol):
@@ -105,13 +101,6 @@ class ZEOBaseProtocol(asyncio.Protocol):
     # resume_writing
     def connection_made(self, transport):
         logger.info("Connected %s", self)
-
-        if sys.version_info < (3, 6):
-            sock = transport.get_extra_info('socket')
-            if sock is not None and sock.family in INET_FAMILIES:
-                # See https://bugs.python.org/issue27456 :(
-                sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, True)
-
         # set up lower level sized message protocol
         # creates reference cycle
         smp = self.sm_protocol = SizedMessageProtocol(self._first_message)
