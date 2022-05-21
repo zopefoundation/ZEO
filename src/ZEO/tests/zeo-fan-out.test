@@ -123,8 +123,11 @@ Now, let's see if we can break it. :)
     ...         ZODB.blob.remove_committed(path)
     ...     _ = s2.fshelper.createPathForOID(blob_id[0])
     ...     blob_lock = _lock_blob(path)
-    ...     s2._call('sendBlob', *blob_id, timeout=9999)
-    ...     blob_lock.close()
+    ...     try:
+    ...         future = s2._call('sendBlob', *blob_id, wait=False)
+    ...         future.result(2)  # wait at most 2s for completion
+    ...     finally:
+    ...         blob_lock.close()
     ... else: print('Dang')
 
     >>> threadf.join()
@@ -137,7 +140,7 @@ invalidated:
     >>> stop_server(adminaddr0)
     >>> _ = start_server('<filestorage 1>\npath fs\n</filestorage>\n',
     ...                  port=port0)
-    >>> time.sleep(10) # get past startup / verification 
+    >>> time.sleep(1) # get past startup / verification 
 
     >>> for i in range(1000):
     ...     c1.sync()
