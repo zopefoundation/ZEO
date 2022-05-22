@@ -226,6 +226,7 @@ class SizedMessageProtocol(Protocol):
         def resume_writing():
             # precondition: ``paused`` and "at least 1 message writable"
             del paused[:]
+            logger.debug("writing resumed")
             while output and not paused:
                 message = output.pop(0)
                 if isinstance(message, bytes):
@@ -307,6 +308,7 @@ class SizedMessageProtocol(Protocol):
         self.connected = True
 
     def pause_writing(self):
+        logger.debug("writing paused")
         self.paused.append(1)
 
     def set_receive(self, receive):
