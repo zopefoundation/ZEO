@@ -7,7 +7,6 @@ import sys
 import time
 import traceback
 import ZEO.ClientStorage
-from six.moves import map
 
 usage = """Usage: %prog [options] [servers]
 

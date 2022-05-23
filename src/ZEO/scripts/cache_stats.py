@@ -53,7 +53,6 @@ import gzip
 
 # we assign ctime locally to facilitate test replacement!
 from time import ctime
-import six
 
 
 def add_interval_argument(parser):
@@ -297,7 +296,7 @@ def dumpbysize(bysize, how, how2):
     sizes = sorted(bysize.keys())
     for size in sizes:
         loads = 0
-        for n in six.itervalues(bysize[size]):
+        for n in bysize[size].values():
             loads += n
         print("%10s %6d %6d" % (addcommas(size),
                                 len(bysize.get(size, "")),
@@ -344,7 +343,7 @@ def hitrate(bycode):
 
 def histogram(d):
     bins = {}
-    for v in six.itervalues(d):
+    for v in d.values():
         bins[v] = bins.get(v, 0) + 1
     L = sorted(bins.items())
     return L
@@ -355,7 +354,7 @@ def U64(s):
 
 
 def oid_repr(oid):
-    if isinstance(oid, six.binary_type) and len(oid) == 8:
+    if isinstance(oid, bytes) and len(oid) == 8:
         return '%16x' % U64(oid)
     else:
         return repr(oid)

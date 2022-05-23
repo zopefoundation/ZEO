@@ -34,7 +34,6 @@ import time
 import ZODB.fsIndex
 import zc.lockfile
 from ZODB.utils import p64, u64, z64, RLock
-import six
 from ._compat import PYPY
 
 logger = logging.getLogger("ZEO.cache")
@@ -746,7 +745,7 @@ class ClientCache(object):
         # depends on whether the caller may change the cache.
         seek = self.f.seek
         read = self.f.read
-        for oid, ofs in six.iteritems(self.current):
+        for oid, ofs in self.current.items():
             seek(ofs)
             status = read(1)
             assert status == b'a', (ofs, self.f.tell(), oid)

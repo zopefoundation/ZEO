@@ -38,8 +38,6 @@ import signal
 import socket
 import logging
 
-import six
-
 import ZConfig.datatypes
 from zdaemon.zdoptions import ZDOptions
 
@@ -200,7 +198,7 @@ class ZEOServer(object):
             return 1
 
     def clear_socket(self):
-        if isinstance(self.options.address, six.string_types):
+        if isinstance(self.options.address, str):
             try:
                 os.unlink(self.options.address)
             except os.error:

@@ -19,7 +19,6 @@ version = '5.4.0.dev0'
 
 install_requires = [
     'ZODB >= 5.1.1',
-    'six',
     'transaction >= 2.0.3',
     'persistent >= 4.1.0',
     'zc.lockfile',

@@ -20,7 +20,6 @@ from ZEO.Exceptions import ClientDisconnected
 from ZEO.tests import forker, Cache, CommitLockTests, ThreadTests
 from ZEO.tests import IterationTests
 from ZEO._compat import WIN
-import six
 
 from ZODB.Connection import TransactionMetaData
 from ZODB.tests import StorageTestBase, BasicStorage,  \
@@ -350,7 +349,7 @@ class GenericTests(
         thread.start()
         thread.join(voted and .1 or 9)
         if self.exception is not None:
-            six.reraise(type(self.exception), self.exception)
+            raise self.exception.with_traceback(self.exception.__traceback__)
         return thread
 
 

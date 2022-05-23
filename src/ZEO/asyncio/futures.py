@@ -8,7 +8,6 @@ This module defines variants which run callbacks immediately.
 """
 
 from .compat import asyncio
-import six
 CancelledError = asyncio.CancelledError
 InvalidStateError = asyncio.InvalidStateError
 get_event_loop = asyncio.get_event_loop

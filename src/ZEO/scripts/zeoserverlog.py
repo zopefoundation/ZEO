@@ -173,7 +173,6 @@ import datetime
 import os
 import re
 import sys
-from six.moves import map
 
 
 def time(line):
