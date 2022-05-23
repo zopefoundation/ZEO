@@ -35,7 +35,7 @@ tests_require = [
     'ZopeUndo',
     'zope.testing',
     'transaction',
-    'msgpack < 1',
+    'msgpack',
     'zdaemon',
     'zope.testrunner',
 ]
