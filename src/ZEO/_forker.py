@@ -21,8 +21,7 @@ import multiprocessing
 import logging
 import tempfile
 
-from six.moves.queue import Empty
-import six
+from queue import Empty
 
 from ZEO._compat import StringIO
 
@@ -43,7 +42,7 @@ class ZEOConfig(object):
             else:
                 self.logpath = 'server.log'
 
-        if not isinstance(addr, six.string_types):
+        if not isinstance(addr, str):
             addr = '%s:%s' % addr
 
         self.log = log
@@ -238,7 +237,7 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
 
     if threaded:
         from threading import Thread
-        from six.moves.queue import Queue
+        from queue import Queue
     else:
         # Experimental to see whether server logging problems under MacOS
         # have to do with its default `spawn` method

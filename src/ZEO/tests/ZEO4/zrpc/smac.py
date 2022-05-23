@@ -27,7 +27,6 @@ is set to 1 and the MAC immediately follows the length.
 
 import asyncore
 import errno
-import six
 try:
     import hmac
 except ImportError:
@@ -186,7 +185,7 @@ class SizedMessageAsyncConnection(asyncore.dispatcher):
             if msg_size > input_len:
                 if inp is None:
                     self.__inp = d
-                elif isinstance(self.__inp, six.binary_type):
+                elif isinstance(self.__inp, bytes):
                     self.__inp = [self.__inp, d]
                 else:
                     self.__inp.append(d)
@@ -194,7 +193,7 @@ class SizedMessageAsyncConnection(asyncore.dispatcher):
                 return  # keep waiting for more input
 
             # load all previous input and d into single string inp
-            if isinstance(inp, six.binary_type):
+            if isinstance(inp, bytes):
                 inp = inp + d
             elif inp is None:
                 inp = d
@@ -269,9 +268,9 @@ class SizedMessageAsyncConnection(asyncore.dispatcher):
             size = sum((len(s) for s in output))
             while (size <= SEND_SIZE) and messages:
                 message = messages[0]
-                if isinstance(message, six.binary_type):
+                if isinstance(message, bytes):
                     size += self.__message_output(messages.pop(0), output)
-                elif isinstance(message, six.text_type):
+                elif isinstance(message, str):
                     # XXX This can silently lead to data loss and client hangs
                     # if asserts aren't enabled. Encountered this under Python3
                     # and 'ruok' protocol
@@ -282,11 +281,11 @@ class SizedMessageAsyncConnection(asyncore.dispatcher):
                     return self.close()
                 else:
                     try:
-                        message = six.advance_iterator(message)
+                        message = next(message)
                     except StopIteration:
                         messages.pop(0)
                     else:
-                        assert(isinstance(message, six.binary_type))
+                        assert(isinstance(message, bytes))
                         size += self.__message_output(message, output)
 
             v = b"".join(output)

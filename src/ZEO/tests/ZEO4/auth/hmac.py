@@ -2,7 +2,6 @@
 
 Implements the HMAC algorithm as described by RFC 2104.
 """
-from six.moves import map
 
 
 def _strxor(s1, s2):

@@ -35,7 +35,6 @@ import ZODB.event
 import ZODB.serialize
 import ZODB.TimeStamp
 import zope.interface
-import six
 
 from ZEO._compat import Pickler, Unpickler, BytesIO
 from ZEO.Exceptions import AuthError
@@ -1181,7 +1180,7 @@ class StorageServer(object):
                 except:  # NOQA: E722 bare except
                     pass
 
-        for name, storage in six.iteritems(self.storages):
+        for name, storage in self.storages.items():
             logger.info("closing storage %r", name)
             storage.close()
 
@@ -1570,9 +1569,9 @@ class ZEOStorage308Adapter(object):
 
 
 def _addr_label(addr):
-    if isinstance(addr, six.binary_type):
+    if isinstance(addr, bytes):
         return addr.decode('ascii')
-    if isinstance(addr, six.string_types):
+    if isinstance(addr, str):
         return addr
     else:
         host, port = addr
