@@ -36,7 +36,7 @@ tests_require = [
     'zope.testing',
     'random2',
     'transaction',
-    'msgpack < 1',
+    'msgpack',
     'zdaemon',
     'zope.testrunner',
 ]
