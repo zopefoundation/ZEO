@@ -482,8 +482,11 @@ Check to make sure the cache analysis scripts work.
     >>> time.time = lambda : now
 
     >>> os.environ["ZEO_CACHE_TRACE"] = 'yes'
-    >>> import random2 as random
+    >>> import random
     >>> random = random.Random(42)
+    >>> # adjust randint to provide the same output as before Python3 to match
+    >>> # test data. https://stackoverflow.com/a/55800424/9456786
+    >>> random.randint = lambda a, b: a + int(random.random() * (b-a+1))
     >>> history = []
     >>> serial = 1
     >>> for i in range(1000):
@@ -498,7 +501,6 @@ Check to make sure the cache analysis scripts work.
 
     >>> def cache_run(name, size):
     ...     serial = 1
-    ...     random.seed(42)
     ...     global now
     ...     now = 1278864701.5
     ...     cache = ZEO.cache.ClientCache(name, size*(1<<20))
