@@ -34,7 +34,6 @@ tests_require = [
     'ZODB >= 5.5.1',
     'ZopeUndo',
     'zope.testing',
-    'manuel',
     'random2',
     'transaction',
     'msgpack < 1',
