@@ -1,5 +1,5 @@
 from zope.testing import setupstack
-import mock
+from unittest import mock
 from ZODB.utils import maxtid, RLock
 
 import collections
