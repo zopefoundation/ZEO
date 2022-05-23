@@ -1,6 +1,5 @@
 import unittest
-
-import mock
+from unittest import mock
 
 from ZEO.runzeo import ZEOServer
 

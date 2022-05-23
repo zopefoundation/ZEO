@@ -1,8 +1,7 @@
 from .compat import asyncio
 
 from zope.testing import setupstack
-from unittest import TestCase
-import mock
+from unittest import TestCase, mock
 from ZODB.utils import maxtid, RLock
 
 import collections

@@ -81,7 +81,7 @@ class CreativeGetState(persistent.Persistent):
 class Test_convenience_functions(unittest.TestCase):
 
     def test_ZEO_client_convenience(self):
-        import mock
+        from unittest import mock
         import ZEO
 
         client_thread = mock.Mock(
@@ -93,7 +93,7 @@ class Test_convenience_functions(unittest.TestCase):
         client._cache.close()  # client thread responsibility
 
     def test_ZEO_DB_convenience_ok(self):
-        import mock
+        from unittest import mock
         import ZEO
 
         client_mock = mock.Mock(spec=['close'])
@@ -111,7 +111,7 @@ class Test_convenience_functions(unittest.TestCase):
         client_mock.close.assert_not_called()
 
     def test_ZEO_DB_convenience_error(self):
-        import mock
+        from unittest import mock
         import ZEO
 
         client_mock = mock.Mock(spec=['close'])
@@ -129,7 +129,7 @@ class Test_convenience_functions(unittest.TestCase):
         client_mock.close.assert_called_once()
 
     def test_ZEO_connection_convenience_ok(self):
-        import mock
+        from unittest import mock
         import ZEO
 
         ret = object()
@@ -148,7 +148,7 @@ class Test_convenience_functions(unittest.TestCase):
         DB_mock.close.assert_not_called()
 
     def test_ZEO_connection_convenience_value(self):
-        import mock
+        from unittest import mock
         import ZEO
 
         DB_mock = mock.Mock(spec=[
