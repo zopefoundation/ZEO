@@ -1,3 +1,5 @@
+"""ZEO server interface implementation."""
+
 import json
 import logging
 import os
@@ -159,7 +161,7 @@ assert best_protocol_version in ServerProtocol.protocols
 
 def new_connection(loop, addr, socket, zeo_storage, msgpack):
     protocol = ServerProtocol(loop, addr, zeo_storage, msgpack)
-    cr = loop.create_connection((lambda: protocol), sock=socket)
+    cr = loop.create_connection(lambda: protocol, sock=socket)
     asyncio.ensure_future(cr, loop=loop)
 
 

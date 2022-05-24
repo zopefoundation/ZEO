@@ -120,7 +120,7 @@ Changelog
 
 - Fixed to work with some changes made in ZODB 5.4.0.
 
-  Client-side updates are incuded for ZODB 5.4.0 or databases that
+  Client-side updates are included for ZODB 5.4.0 or databases that
   already had ``zodbpickle.binary`` OIDs. See `issue 113
   <https://github.com/zopefoundation/ZEO/issues/113>`_.
 
