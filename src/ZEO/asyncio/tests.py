@@ -77,6 +77,12 @@ class Base(object):
 
 
 class ClientTests(Base, setupstack.TestCase, ClientRunner):
+    """Test ``Client``.
+
+    The tests emulate a server and its responses to verify
+    that ``Client`` and ``client.Protocol`` instances behave
+    as they should.
+    """
 
     maxDiff = None
 
@@ -847,7 +853,7 @@ class ServerTests(Base, setupstack.TestCase):
         protocol = self.connect(True)
         protocol.zeo_storage.notify_connected.assert_called_once_with(protocol)
 
-        # If we try to call a methid that isn't in the protocol's
+        # If we try to call a method that isn't in the protocol's
         # white list, it will disconnect:
         self.assertFalse(protocol.loop.transport.closed)
         self.call('foo', target=None)

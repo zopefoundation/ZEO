@@ -112,6 +112,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         This is typically invoked from a custom_zodb.py file.
 
         All arguments except addr should be keyword arguments.
+
         Arguments:
 
         addr
@@ -121,6 +122,20 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             a pathname string to signify a Unix domain socket
             connection.  A hostname may be a DNS name or a dotted IP
             address.  Required.
+
+            All addresses are assumed to serve (essentially)
+            the same (potentially replicated) storage.
+            A connection tries to connect to those addresses;
+            the first successful connection establishment with
+            the called for ("read_only" or "writable") capabilities
+            is selected and used for storage interaction until
+            the connection is lost. In that case, a
+            reconnection is tried.
+            If ``ClientStorage`` calls for the "writable" capability
+            but allows for a "read only" fallback,,
+            a read only connection can be used as a fallback;
+            if a writable connection becomes available later, a
+            switch to this connection is performed.
 
         storage
             The server storage name, defaulting to '1'.  The name must
@@ -136,14 +151,12 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             address and the server storage name.  This is used to
             construct the response to getName()
 
-        cache
-            A cache object or a name, relative to the current working
-            directory, used to construct persistent cache filenames.
-            Defaults to None, in which case the cache is not
-            persistent.  See ClientCache for more info.
-
         wait_timeout
-            Maximum time to wait for results, including connecting.
+            Maximum time (seconds) to wait for connections,
+            defaulting to 30.
+            Note: the timeout applies only to [re]connect.
+            Normal operations can take arbitrary long. This
+            is important for long running operations, such as ``pack``.
 
         read_only
             A flag indicating whether this should be a
@@ -164,7 +177,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         shared_blob_dir
             Flag whether the blob_dir is a server-shared filesystem
             that should be used instead of transferring blob data over
-            ZEO protocol.
+            the ZEO protocol.
 
         blob_cache_size
             Maximum size of the ZEO blob cache, in bytes.  If not set, then
@@ -174,7 +187,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             This option is ignored if shared_blob_dir is true.
 
         blob_cache_size_check
-            ZEO check size as percent of blob_cache_size.  The ZEO
+            Cache check size as percent of blob_cache_size.  The ZEO
             cache size will be checked when this many bytes have been
             loaded into the cache. Defaults to 10% of the blob cache
             size.   This option is ignored if shared_blob_dir is true.
@@ -182,10 +195,72 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         client_label
             A label to include in server log messages for the client.
 
+        cache
+            A cache object or a file path (relative or absolute).
+            Defaults to None, in which case the cache is determined
+            from client and var.
+
+        ssl
+            An ssl client context (i.e. with purpose "ServerAuth")
+            to call for SSL connections.
+
+        ssl_server_hostname
+            The server hostname - used during the SSL authentication check
+
+        client
+        var
+            If cache is None, client determines the cache:
+            if it is None, then a non persistent cache is used;
+            otherwise, client is used together with var (defaults
+            to the current working directory) to construct the
+            file path for the persistent cache file
+
+        wait
+            Wait for server connection, defaulting to true.
+
+        credentials
+        username
+        password
+        realm
+            [ZEO4 only] Credentials for authentication to server.
+            In ZEO5 support for credentials has been dropped in favor of SSL.
+            `credentials` support is scheduled to be removed in `ZEO6`.
+
+        server_sync
+            Whether sync() should make a server round trip, thus causing client
+            to wait for outstanding invalidations.
+
+            The `sync` is called in `transaction.begin`. A server round trip
+            at this place guarantees that the transaction takes notice of all
+            prior modifications.
+
+            This may be important when several client processes share the same
+            ZODB as the following examples demonstrate.
+
+            Example 1: Assume that a user issues requests req1 and then req2
+            where req1 modifies data read by req2. If req1 and req2 are
+            processed by different Zope processes, then the transaction started
+            for req2 processing may see a ZODB state which does not yet include
+            the req1 modifications. A server round trip avoids this.
+
+            Example 2: A similar situation arises when 2 Zope processes
+            communicate via non ZODB means to inform the other about a state
+            change. If this communication happens to be faster than the ZODB
+            internal state change propagation then the target process again
+            risks to not yet see the changed state. A server round trip, again,
+            avoids this.
+
+            Defaults to false.
+
+        disconnect_poll
+        min_disconnect_poll
+        max_disconnect_poll
+        drop_cache_rather_verify
+            ignored; retained (as parameters) for compatibility
+
         Note that the authentication protocol is defined by the server
         and is detected by the ClientStorage upon connecting (see
         testConnection() and doAuth() for details).
-
         """
 
         assert not username or password or realm
@@ -285,7 +360,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             try:
                 self._wait()
             except Exception:
-                # No point in keeping the server going of the storage
+                # No point in keeping the server going if the storage
                 # creation fails
                 self._server.close()
                 raise
@@ -357,6 +432,11 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
     _connection_generation = 0
 
     def notify_connected(self, conn, info):
+        """The connection is about to be established via *conn*.
+
+        *info* is a ``dict`` providing information about the server
+        (and its associated storage).
+        """
         self.set_server_addr(conn.get_peername())
         self.protocol_version = conn.protocol_version
         self._is_read_only = conn.is_read_only()

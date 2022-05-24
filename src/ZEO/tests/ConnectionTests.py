@@ -935,7 +935,7 @@ class ReconnectionTests(CommonSetupTearDown):
 
         # When we start the second server, we use file data file from
         # the original server so tha the new server is a replica of
-        # the original.  We need this becaise ClientStorage won't use
+        # the original.  We need this because ClientStorage won't use
         # a server if the server's last transaction is earlier than
         # what the client has seen.
         self.startServer(index=1, path=self.file+'.0', create=False)
