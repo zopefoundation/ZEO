@@ -4,6 +4,7 @@ import os
 import threading
 import ZODB.POSException
 
+from ..ClientStorage import NoBlobFileError
 from ..shortrepr import short_repr
 
 from . import base
@@ -25,6 +26,7 @@ class ServerProtocol(base.Protocol):
 
     unlogged_exception_types = (
         ZODB.POSException.POSKeyError,
+        NoBlobFileError,
         ZODB.POSException.ConflictError,
         ZODB.POSException.ReadConflictError,
         )
