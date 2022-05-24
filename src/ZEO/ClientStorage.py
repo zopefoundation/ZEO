@@ -222,7 +222,8 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         username
         password
         realm
-            Credentials for authentication to server.
+            [ZEO4 only] Credentials for authentication to server.
+            In ZEO5 support for credentials has been dropped in favor or SSL.
 
         server_sync
             Whether sync() should make a server round trip, thus causing client
