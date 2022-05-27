@@ -17,6 +17,7 @@ import sys
 import platform
 import _thread as thread
 from threading import get_ident
+from io import StringIO
 
 from ZODB._compat import BytesIO  # NOQA: F401 unused import
 from zodbpickle.pickle import dump
@@ -24,12 +25,6 @@ from zodbpickle.pickle import dumps
 from zodbpickle.pickle import loads
 from zodbpickle.pickle import Pickler
 from zodbpickle.pickle import Unpickler as _Unpickler
-
-try:
-    from cStringIO import StringIO  # NOQA: F401 unused import
-except ImportError:
-    from io import StringIO  # NOQA: F401 unused import
-
 
 PYPY = getattr(platform, 'python_implementation', lambda: None)() == 'PyPy'
 WIN = sys.platform.startswith('win')

@@ -41,7 +41,6 @@ from .cache_stats import add_tracefile_argument
 
 # we assign ctime locally to facilitate test replacement!
 from time import ctime
-import six
 
 
 def main(args=None):
@@ -503,7 +502,7 @@ class CircularCacheSimulation(Simulation):
     def report(self):
         self.check()
         free = used = total = 0
-        for size, e in six.itervalues(self.filemap):
+        for size, e in self.filemap.values():
             total += size
             if e:
                 used += size
