@@ -1,5 +1,5 @@
 from zope.testing import setupstack
-from unittest import mock
+from unittest import TestCase, mock
 from ZODB.utils import maxtid, RLock
 
 import collections
@@ -13,6 +13,7 @@ from ..Exceptions import ClientDisconnected, ProtocolError
 from .base import ZEOBaseProtocol, SizedMessageProtocol
 from .testing import Loop, FaithfulLoop
 from .client import ClientThread, Fallback
+from .optimize import Future, AsyncTask, ConcurrentTask
 from .server import new_connection, best_protocol_version
 from .marshal import encoder, decoder
 
@@ -275,7 +276,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
                           False,
                           'loadBefore',
                           (b'1'*8, maxtid)))
-        # Note load_before uses the oid as the message id.
+        # Note load_before uses ``(oid, tid)`` as message id.
         self.respond((b'1'*8, maxtid), (b'data', b'a'*8, None))
         self.assertEqual(loaded.result(), (b'data', b'a'*8, None))
 
@@ -1269,3 +1270,132 @@ def _break_mock_cycles(m):
         _break_mock_cycles(c)
     if isinstance(m._mock_return_value, mock.Mock):
         _break_mock_cycles(m._mock_return_value)
+
+
+class OptimizeTestsBase:
+    def setUp(self):
+        self.loop = FaithfulLoop()
+
+    def tearDown(self):
+        self.loop.close()
+
+
+class FutureTests(OptimizeTestsBase, TestCase):
+    def setUp(self):
+        super().setUp()
+        self.fut = fut = Future(loop=self.loop)
+        self.callback = cb = mock.Mock()
+        fut.add_done_callback(cb)
+
+    def tearDown(self):
+        fut = self.fut
+        fut.cancel()
+        self.assertEqual(self.loop.exceptions, [])
+        _break_mock_cycles(self.callback)
+        super().tearDown()
+
+    def test_set_result(self):
+        self.fut.set_result(1)
+        self.assertEqual(self.fut.result(), 1)
+        self.check_called_not_scheduled()
+
+    def test_set_exception(self):
+        exc = Exception()
+        self.fut.set_exception(exc)
+        self.assertIs(self.fut.exception(), exc)
+        self.check_called_not_scheduled()
+
+    def test_remove_add_callback(self):
+        fut = self.fut
+        cb = self.callback
+        self.assertEqual(fut.remove_done_callback(cb), 1)
+        fut.set_result(1)
+        fut.add_done_callback(cb)
+        self.check_called_not_scheduled()
+
+    def test_cancel(self):
+        self.fut.cancel()
+        self.assertTrue(self.fut.cancelled())
+        self.check_called_not_scheduled()
+
+    def check_called_not_scheduled(self):
+        fut = self.fut
+        self.assertTrue(fut.done())
+        self.callback.assert_called_once()
+        self.assertEqual(len(self.loop._ready), 0)
+
+
+class CoroutineExecutorTestsBase(OptimizeTestsBase):
+    def run_loop(self):
+        loop = self.loop
+        loop.call_soon(loop.stop)
+        loop.run_forever()
+
+    def test_noop(self):
+
+        async def noop():
+            pass
+
+        t = self.make_task(noop)
+        self.assertTrue(t.done())
+        self.assertIsNone(t.result())
+
+    def test_asnyc_future(self):
+        self.check_future(self.loop.create_future(), True)
+
+    def test_optimized_future(self):
+        self.check_future(Future(loop=self.loop))
+
+    def check_future(self, fut, run_loop=False):
+
+        async def wait():
+            return await fut
+
+        t = self.make_task(wait)
+        self.assertFalse(t.done())
+        fut.set_result(1)
+        if run_loop:
+            self.run_loop()
+        self.assertTrue(t.done())
+        self.assertEqual(t.result(), 1)
+
+    def test_exception(self):
+        fut = Future(loop=self.loop)
+
+        async def exc():
+            return await fut
+
+        t = self.make_task(exc)
+        exc = Exception()
+        fut.set_exception(exc)
+        self.assertTrue(t.done())
+        self.assertIs(t.exception(), exc)
+
+    def test_handled_exception(self):
+
+        fut = Future(loop=self.loop)
+
+        async def exc():
+            try:
+                return await fut
+            except Exception:
+                return 1
+
+        t = self.make_task(exc)
+        exc = Exception()
+        fut.set_exception(exc)
+        self.assertTrue(t.done())
+        self.assertEqual(t.result(), 1)
+
+
+class AsyncTaskTests(CoroutineExecutorTestsBase, TestCase):
+    def make_task(self, coro):
+        return AsyncTask(coro(), self.loop)
+
+
+class ConcurrentTaskTests(CoroutineExecutorTestsBase, TestCase):
+    def make_task(self, coro):
+        loop = self.loop
+        t = ConcurrentTask(coro(), loop)
+        self.run_loop()
+        return t

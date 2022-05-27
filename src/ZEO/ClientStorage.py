@@ -564,12 +564,18 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         return self._call('loadSerial', oid, serial)
 
     def load(self, oid, version=''):
+        # Note: cache correctness is guaranteed only upto
+        # ``_cache.getLastTid()``. The following call therefore
+        # may return outdated information.
         result = self.loadBefore(oid, utils.maxtid)
         if result is None:
             raise POSException.POSKeyError(oid)
         return result[:2]
 
     def loadBefore(self, oid, tid):
+        # Note: cache correctness is guaranteed only for
+        # ``tid <= _cache.getLastTid()``.
+        # For larger *tid*, the cache may contain outdated information.
         result = self._cache.loadBefore(oid, tid)
         if result:
             return result

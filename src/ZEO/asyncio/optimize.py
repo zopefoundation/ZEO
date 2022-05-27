@@ -1,0 +1,188 @@
+"""Optimized variants of ``asyncio``'s ``Future`` and ``Task``.
+
+``asyncio`` schedules callbacks to be executed in the next
+loop run. This increases the number of loop runs necessary to
+obtain the result of a ZEO server request and adds significant
+latency (+ 27% in some benchmarks).
+This module defines variants which run callbacks immediately.
+"""
+
+from asyncio.base_tasks import _task_repr_info
+from asyncio import exceptions
+from asyncio.futures import _PyFuture as PyFuture
+from concurrent.futures import Future as ConcurrentFuture
+
+
+class Future(PyFuture):
+    """a ``Future`` calling (rather than scheduling) callbacks.
+
+    Context provided for callbacks is ignored.
+    """
+    def __schedule_callbacks(self):
+        # make this empty to avoid the scheduling
+        return
+
+    _schedule_callbacks = __schedule_callbacks  # for older versions
+
+    def _call_callbacks(self):
+        """replacement for ``__schedule_callbacks``, calling directly."""
+        callbacks = self._callbacks[:]
+        if not callbacks:
+            return
+        self._callbacks[:] = []
+        for callback in callbacks:
+            callback(self)
+
+    def cancel(self, msg=None):
+        if super().cancel():  # older versions do support ``msg``
+            self._call_callbacks()
+            return True
+        return False
+
+    def set_exception(self, exception):
+        super().set_exception(exception)
+        self._call_callbacks()
+
+    def set_result(self, result):
+        super().set_result(result)
+        self._call_callbacks()
+
+    def add_done_callback(self, fn, *, context=None):
+        """Add a callback to be run when the future becomes done.
+
+        The callback is called with a single argument - the future object. If
+        the future is already done when this is called, the callback
+        is called immediately.
+
+        ATT: ``context`` is ignored
+        """
+        if self.done():
+            fn(self)
+        else:
+            self._callbacks.append(fn)
+
+    def remove_done_callback(self, fn):
+        """Remove all instances of a callback from the "call when done" list.
+
+        Returns the number of callbacks removed.
+        """
+        filtered_callbacks = [f for f in self._callbacks if f != fn]
+        removed_count = len(self._callbacks) - len(filtered_callbacks)
+        if removed_count:
+            self._callbacks[:] = filtered_callbacks
+        return removed_count
+
+
+class CoroutineExecutor:
+    """Mixin to provide simplified ``task`` essentials.
+
+    No context support.
+
+    No ``cancel`` support (for the moment).
+    """
+
+    # to be defined by derived classes
+    # ASYNC = None
+
+    def __init__(self, coro, loop=None):
+        self._loop = loop
+        self._must_cancel = False
+        self._fut_waiter = None
+        self._coro = coro
+        if self.ASYNC:
+            super().__init__(loop=loop)
+            self._step()
+        else:
+            super().__init__()
+            self._loop.call_soon_threadsafe(self._step)
+
+    _repr_info = _task_repr_info
+
+    def get_name(self):
+        return "ZEO optimized task"
+
+    def cancel(self, msg=None):
+        raise NotImplementedError
+
+    def _step(self, exc=None):
+        """run coroutine until next ``await`` or completion."""
+        assert not self.done()
+        coro = self._coro
+        self._fut_waiter = None
+        try:
+            if exc is None:
+                result = coro.send(None)
+            else:
+                result = coro.throw(exc)
+        except StopIteration as exc:
+            super().set_result(exc.value)
+        except exceptions.CancelledError as exc:
+            # Save the original exception so we can chain it later.
+            self._cancelled_exc = exc
+            super().cancel()  # I.e., Future.cancel(self).
+        except (KeyboardInterrupt, SystemExit) as exc:
+            super().set_exception(exc)
+            raise
+        except BaseException as exc:
+            super().set_exception(exc)
+        else:
+            blocking = getattr(result, '_asyncio_future_blocking', None)
+            if blocking is not None:
+                # Yielded Future must come from Future.__iter__().
+                if blocking:
+                    if result is self:  # pragma: no cover
+                        new_exc = RuntimeError(
+                            f'Task cannot await on itself: {self!r}')
+                        self._step(new_exc)
+                    else:
+                        result._asyncio_future_blocking = False
+                        result.add_done_callback(self._wakeup)
+                        self._fut_waiter = result
+                        if self._must_cancel:
+                            if self._fut_waiter.cancel():
+                                self._must_cancel = False
+                else:  # pragma: no cover
+                    new_exc = RuntimeError(
+                        f'yield was used instead of yield from '
+                        f'in task {self!r} with {result!r}')
+                    self._step(new_exc)
+            else:  # pragma: no cover
+                # Yielding something else is an error.
+                new_exc = RuntimeError(f'Task got bad yield: {result!r}')
+                self._step(new_exc)
+        finally:
+            self = None  # Needed to break cycles when an exception occurs.
+
+    def _wakeup(self, future):
+        try:
+            future.result()
+        except BaseException as exc:
+            # This may also be a cancellation.
+            self._step(exc)
+        else:
+            # Don't pass the value of `future.result()` explicitly,
+            # as `Future.__iter__` and `Future.__await__` don't need it.
+            # If we call `_step(value, None)` instead of `_step()`,
+            # Python eval loop would use `.send(value)` method call,
+            # instead of `__next__()`, which is slower for futures
+            # that return non-generator iterators from their `__iter__`.
+            self._step()
+        self = None  # Needed to break cycles when an exception occurs.
+
+
+class AsyncTask(CoroutineExecutor, Future):
+    """simplified ``asyncio.Task``
+
+    Steps are not scheduled but executed immediately.
+    """
+    ASYNC = True
+
+
+class ConcurrentTask(CoroutineExecutor, ConcurrentFuture):
+    """Concurrent task"""
+    ASYNC = False
+
+    # Note: might need to redefine ``_repr_info``
+
+
+run_coroutine_threadsafe = ConcurrentTask
