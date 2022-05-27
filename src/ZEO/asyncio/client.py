@@ -23,7 +23,6 @@ The loop management is the responsibility of ``ClientThread``,
 a tiny wrapper around ``ClientRunner``.
 """
 import concurrent.futures
-import functools
 import logging
 import random
 import sys
@@ -39,6 +38,7 @@ import ZEO.interfaces
 from . import base
 from .compat import asyncio, new_event_loop
 from .marshal import encoder, decoder
+from .futures import Fut, future_generator
 
 logger = logging.getLogger(__name__)
 
@@ -47,38 +47,6 @@ Fallback = object()
 local_random = random.Random()  # use separate generator to facilitate tests
 
 uvloop_used = "uvloop" in sys.modules
-
-
-def future_generator(func):
-    """Decorates a generator that generates futures
-    """
-
-    @functools.wraps(func)
-    def call_generator(*args, **kw):
-        gen = func(*args, **kw)
-        try:
-            f = next(gen)
-        except StopIteration:
-            gen.close()
-        else:
-            def store(gen, future):
-                @future.add_done_callback
-                def _(future):
-                    try:
-                        try:
-                            result = future.result()
-                        except Exception as exc:
-                            f = gen.throw(exc)
-                        else:
-                            f = gen.send(result)
-                    except StopIteration:
-                        gen.close()
-                    else:
-                        store(gen, f)
-
-            store(gen, f)
-
-    return call_generator
 
 
 class Protocol(base.ZEOBaseProtocol):
@@ -1129,44 +1097,6 @@ class ClientThread(ClientRunner):
 
     def is_closed(self):
         return self.__closed
-
-
-_missing = object()
-
-
-class Fut(object):
-    """Lightweight future that calls it's callbacks immediately ...
-
-    rather than soon.
-    """
-
-    def __init__(self):
-        self.cbv = []
-
-    def add_done_callback(self, cb):
-        self.cbv.append(cb)
-
-    _result = _missing
-    exc = None
-
-    def set_exception(self, exc):
-        self.exc = exc
-        for cb in self.cbv:
-            cb(self)
-
-    def set_result(self, result):
-        self._result = result
-        for cb in self.cbv:
-            cb(self)
-
-    def result(self):
-        if self.exc:
-            raise self.exc
-        else:
-            return self._result
-
-    def done(self):
-        return (self._result is not _missing) or (self.exc is not None)
 
 
 def cancel_task(task):
