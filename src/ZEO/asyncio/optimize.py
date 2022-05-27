@@ -7,8 +7,8 @@ latency (+ 27% in some benchmarks).
 This module defines variants which run callbacks immediately.
 """
 
+from asyncio import CancelledError
 from asyncio.base_tasks import _task_repr_info
-from asyncio import exceptions
 from asyncio.futures import _PyFuture as PyFuture
 from concurrent.futures import Future as ConcurrentFuture
 
@@ -116,7 +116,7 @@ class CoroutineExecutor:
                 result = coro.throw(exc)
         except StopIteration as exc:
             super().set_result(exc.value)
-        except exceptions.CancelledError as exc:
+        except CancelledError as exc:
             # Save the original exception so we can chain it later.
             self._cancelled_exc = exc
             super().cancel()  # I.e., Future.cancel(self).

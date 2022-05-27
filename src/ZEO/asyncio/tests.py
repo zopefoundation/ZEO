@@ -957,7 +957,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         connect = try_reconnecting[1]
         self.assertEqual(connect.__func__.__name__,
                          "try_connecting")
-        connect()
+        loop.call_soon_threadsafe(connect)
         loop.call_soon_threadsafe(self.observe, io.close)
         loop.run_until_inactive()
         self.assertTrue(self.observed.done())
@@ -979,7 +979,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         connect = try_reconnecting[1]
         self.assertEqual(connect.__func__.__name__,
                          "try_connecting")
-        connect()
+        loop.call_soon_threadsafe(connect)
         loop.call_soon_threadsafe(loop.connect_connecting, addr)  # connect
         loop.run_until_inactive()
         loop.protocol.data_received(sized(self.enc + b'3101'))
