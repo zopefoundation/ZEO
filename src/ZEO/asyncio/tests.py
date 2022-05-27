@@ -27,7 +27,7 @@ from ..Exceptions import ClientDisconnected, ProtocolError
 from .base import ZEOBaseProtocol, SizedMessageProtocol
 from .testing import Loop, FaithfulLoop
 from .client import ClientThread, Fallback
-from .futures import Future, ConcurrentFuture
+from .futures import Future, ConcurrentFuture, AsyncTask, ConcurrentTask
 from .server import new_connection, best_protocol_version
 from .marshal import encoder, decoder
 
@@ -1393,6 +1393,103 @@ class ConcurrentFutureTests(FutureTestsBase, TestCase):
         return ConcurrentFuture(loop=loop)
 
 
+class CoroutineExecutorTestsBase(OptimizeTestsBase):
+    def run_loop(self):
+        loop = self.loop
+        loop.call_soon(loop.stop)
+        loop.run_forever()
+
+    def test_noop(self):
+
+        async def noop():
+            pass
+
+        t = self.make_task(noop)
+        self.assertTrue(t.done())
+        self.assertIsNone(t.result())
+
+    def test_async_future(self):
+        self.check_future(self.loop.create_future(), True)
+
+    def test_repr(self):
+
+        async def noop():
+            pass
+
+        t = self.make_task(noop)
+        repr(t)  # satisfied if no exception
+
+    def test_optimized_future(self):
+        self.check_future(Future(loop=self.loop))
+
+    def check_future(self, fut, run_loop=False):
+
+        async def wait():
+            return await fut
+
+        t = self.make_task(wait)
+        self.assertFalse(t.done())
+        fut.set_result(1)
+        if run_loop:
+            self.run_loop()
+        self.assertTrue(t.done())
+        self.assertEqual(t.result(), 1)
+
+    def test_exception(self):
+        fut = Future(loop=self.loop)
+
+        async def exc():
+            return await fut
+
+        t = self.make_task(exc)
+        exc = Exception()
+        fut.set_exception(exc)
+        self.assertTrue(t.done())
+        self.assertIs(t.exception(), exc)
+        exc.__traceback__ = None  # break reference cycle
+
+    def test_handled_exception(self):
+
+        fut = Future(loop=self.loop)
+
+        async def exc():
+            try:
+                return await fut
+            except Exception:
+                return 1
+
+        t = self.make_task(exc)
+        exc = Exception()
+        fut.set_exception(exc)
+        self.assertTrue(t.done())
+        self.assertEqual(t.result(), 1)
+        exc.__traceback__ = None  # break reference cycle
+
+    def test_cancel_future(self):
+        fut = Future(loop=self.loop)
+
+        async def exc():
+            return await fut
+
+        t = self.make_task(exc)
+        fut.cancel()
+        self.assertTrue(t.done())
+        self.assertTrue(t.cancelled())
+
+
+class AsyncTaskTests(CoroutineExecutorTestsBase, TestCase):
+    def make_task(self, coro):
+        return AsyncTask(coro(), self.loop)
+
+
+class ConcurrentTaskTests(CoroutineExecutorTestsBase, TestCase):
+    def make_task(self, coro):
+        loop = self.loop
+        t = ConcurrentTask(coro(), loop)
+        self.run_loop()
+        return t
+
+
 def test_suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(ClientTests))
@@ -1403,4 +1500,6 @@ def test_suite():
     suite.addTest(unittest.makeSuite(SizedMessageProtocolTests))
     suite.addTest(unittest.makeSuite(FutureTests))
     suite.addTest(unittest.makeSuite(ConcurrentFutureTests))
+    suite.addTest(unittest.makeSuite(AsyncTaskTests))
+    suite.addTest(unittest.makeSuite(ConcurrentTaskTests))
     return suite

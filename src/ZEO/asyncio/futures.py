@@ -1,4 +1,4 @@
-"""Optimized variants of ``asyncio``'s ``Future``.
+"""Optimized variants of ``asyncio``'s ``Future`` and ``Task``.
 
 ``asyncio`` schedules callbacks to be executed in the next
 loop run. This increases the number of loop runs necessary to
@@ -159,6 +159,89 @@ class ConcurrentFuture(Future):
         return Future.result(self)
 
 
+class CoroutineExecutor:
+    """Execute a coroutine on behalf of a task.
+
+    No context support.
+
+    No ``cancel`` support (for the moment).
+    """
+    __slots__ = "coro", "task", "awaiting"
+
+    def __init__(self, task, coro):
+        self.task = task  # likely creates a reference cycle
+        self.coro = coro
+
+    def step(self):
+        self.awaiting = None
+        try:
+            result = self.coro.send(None)
+        except BaseException as e:
+            # we are done
+            task = self.task
+            self.task = None  # break reference cycle
+            if isinstance(e, StopIteration):
+                task.set_result(e.value)
+            elif isinstance(e, CancelledError):
+                task._cancel()
+            else:
+                task.set_exception(e)
+                if isinstance(e, (KeyboardInterrupt, SystemExit)):
+                    raise
+        else:
+            result._asyncio_future_blocking = False
+            self.awaiting = result
+
+            @result.add_done_callback
+            def wakeup(unused, step=self.step):
+                step()
+
+    def cancel(self):
+        raise NotImplementedError
+
+
+class AsyncTask(Future):
+    """Simplified ``asyncio.Task``.
+
+    Steps are not scheduled but executed immediately.
+    """
+    __slots__ = "executor",
+
+    def __init__(self, coro, loop=None):
+        Future.__init__(self, loop=loop)
+        self.executor = CoroutineExecutor(self, coro)  # reference cycle
+        self.executor.step()
+
+    def cancel(self, msg=None):
+        """external cancel request."""
+        return self.executor.cancel()
+
+    def _cancel(self):
+        """internal cancel request."""
+        return Future.cancel(self)
+
+
+class ConcurrentTask(ConcurrentFuture):
+    """Task reporting to ``ConcurrentFuture``.
+
+    Steps are not scheduled but executed immediately.
+    """
+    __slots__ = "executor",
+
+    def __init__(self, coro, loop):
+        ConcurrentFuture.__init__(self, loop=loop)
+        self.executor = CoroutineExecutor(self, coro)  # reference cycle
+        self._loop.call_soon_threadsafe(self.executor.step)
+
+    def cancel(self, msg=None):
+        """external cancel request."""
+        return self.executor.cancel()
+
+    def _cancel(self):
+        """internal cancel request."""
+        return ConcurrentFuture.cancel(self)
+
+
 def future_generator(func):
     """Decorates a generator that generates futures
     """
@@ -189,3 +272,6 @@ def future_generator(func):
             store(gen, f)
 
     return call_generator
+
+
+run_coroutine_threadsafe = ConcurrentTask
