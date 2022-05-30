@@ -225,6 +225,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         realm
             [ZEO4 only] Credentials for authentication to server.
             In ZEO5 support for credentials has been dropped in favor of SSL.
+            `credentials` support is scheduled to be removed in `ZEO6`.
 
         server_sync
             Whether sync() should make a server round trip, thus causing client
@@ -235,10 +236,11 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             done before transaction.begin() call, that invokes sync(), was
             made.
 
-            Such kind of synchronization is necessary when e.g. two Zope
-            systems handle requests for the same user: the first request - that
-            modifies data - happens to go through Zope A, and the second
-            request - that reads data - happens to go through Zope B::
+            Assume that a user issues requests req1 and then req2 where req1
+            modifies data read by req2. If req1 and req2 are processed by
+            different Zope processes, then the transaction started for req2
+            processing may see a ZODB state which does not yet include the req1
+            modifications. A server round trip avoids this.
 
                     ZODB
                     /  \
@@ -248,28 +250,18 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                 req1     ↑
                         req2
 
-            Here req2 is issued by the user after req1 is complete.
 
-            So if, upon receiving second request, B does not synchronize with
-            current state of ZODB, it might start its transaction with ZODB
-            state that does not yet include changes made by A when handling
-            request 1.
-
-
-            Another example when server_sync might be needed is, again, two
-            systems that share their state via ZODB, but also send signals via
-            non-ZODB channel to notify peer when that state is updated::
+            A similar situation arises when 2 Zope processes communicate via
+            non ZODB means to inform the other about a state change. If this
+            communication happens to be faster than the ZODB internal state
+            change propagation then the target process again risks to not yet
+            see the changed state. A server round trip, again, avoids this.
 
                     ZODB
                     /  \
                    /    \
                   A ---> B
 
-            Here A updates data in ZODB, and then notifies B about it. B starts
-            new read-only transaction with the intent to observe updated data.
-            But if B, upon starting the transaction, does not explicitly
-            synchronize with ZODB server, it might start its transaction at
-            ZODB state that does not yet include changes made by A.
 
             Defaults to false.
 
