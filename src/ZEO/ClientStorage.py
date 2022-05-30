@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 ##############################################################################
 #
 # Copyright (c) 2001, 2002, 2003 Zope Foundation and Contributors.
@@ -223,11 +224,54 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         password
         realm
             [ZEO4 only] Credentials for authentication to server.
-            In ZEO5 support for credentials has been dropped in favor or SSL.
+            In ZEO5 support for credentials has been dropped in favor of SSL.
 
         server_sync
             Whether sync() should make a server round trip, thus causing client
-            to wait for outstanding invalidations. Defaults to false.
+            to wait for outstanding invalidations.
+
+            Going round-trip to server on sync() is needed to assuredly get
+            database view with ZODB changes that another ZODB client could have
+            done before transaction.begin() call, that invokes sync(), was
+            made.
+
+            Such kind of synchronization is necessary when e.g. two Zope
+            systems handle requests for the same user: the first request - that
+            modifies data - happens to go through Zope A, and the second
+            request - that reads data - happens to go through Zope B::
+
+                    ZODB
+                    /  \
+                   /    \
+                  A      B
+                  ↑
+                req1     ↑
+                        req2
+
+            Here req2 is issued by the user after req1 is complete.
+
+            So if, upon receiving second request, B does not synchronize with
+            current state of ZODB, it might start its transaction with ZODB
+            state that does not yet include changes made by A when handling
+            request 1.
+
+
+            Another example when server_sync might be needed is, again, two
+            systems that share their state via ZODB, but also send signals via
+            non-ZODB channel to notify peer when that state is updated::
+
+                    ZODB
+                    /  \
+                   /    \
+                  A ---> B
+
+            Here A updates data in ZODB, and then notifies B about it. B starts
+            new read-only transaction with the intent to observe updated data.
+            But if B, upon starting the transaction, does not explicitly
+            synchronize with ZODB server, it might start its transaction at
+            ZODB state that does not yet include changes made by A.
+
+            Defaults to false.
 
         disconnect_poll
         min_disconnect_poll
