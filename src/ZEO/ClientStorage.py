@@ -231,37 +231,25 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             Whether sync() should make a server round trip, thus causing client
             to wait for outstanding invalidations.
 
-            Going round-trip to server on sync() is needed to assuredly get
-            database view with ZODB changes that another ZODB client could have
-            done before transaction.begin() call, that invokes sync(), was
-            made.
+            The `sync` is called in `transaction.begin`. A server round trip
+            at this place guarantees that the transaction takes notice of all
+            prior modifications.
 
-            Assume that a user issues requests req1 and then req2 where req1
-            modifies data read by req2. If req1 and req2 are processed by
-            different Zope processes, then the transaction started for req2
-            processing may see a ZODB state which does not yet include the req1
-            modifications. A server round trip avoids this.
+            This may be important when several client processes share the same
+            ZODB as the following examples demonstrate.
 
-                    ZODB
-                    /  \
-                   /    \
-                  A      B
-                  ↑
-                req1     ↑
-                        req2
+            Example 1: Assume that a user issues requests req1 and then req2
+            where req1 modifies data read by req2. If req1 and req2 are
+            processed by different Zope processes, then the transaction started
+            for req2 processing may see a ZODB state which does not yet include
+            the req1 modifications. A server round trip avoids this.
 
-
-            A similar situation arises when 2 Zope processes communicate via
-            non ZODB means to inform the other about a state change. If this
-            communication happens to be faster than the ZODB internal state
-            change propagation then the target process again risks to not yet
-            see the changed state. A server round trip, again, avoids this.
-
-                    ZODB
-                    /  \
-                   /    \
-                  A ---> B
-
+            Example 2: A similar situation arises when 2 Zope processes
+            communicate via non ZODB means to inform the other about a state
+            change. If this communication happens to be faster than the ZODB
+            internal state change propagation then the target process again
+            risks to not yet see the changed state. A server round trip, again,
+            avoids this.
 
             Defaults to false.
 
