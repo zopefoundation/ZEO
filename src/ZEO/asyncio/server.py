@@ -55,7 +55,7 @@ class ServerProtocol(base.Protocol):
     def connection_made(self, transport):
         self.connected = True
         super(ServerProtocol, self).connection_made(transport)
-        self._write(self.announce_protocol)
+        self.write_message(self.announce_protocol)
 
     def connection_lost(self, exc):
         self.connected = False
@@ -69,7 +69,8 @@ class ServerProtocol(base.Protocol):
 
     def finish_connect(self, protocol_version):
         if protocol_version == b'ruok':
-            self._write(json.dumps(self.zeo_storage.ruok()).encode("ascii"))
+            self.write_message(
+                json.dumps(self.zeo_storage.ruok()).encode("ascii"))
             self.close()
         else:
             version = protocol_version[1:]
@@ -136,7 +137,7 @@ class ServerProtocol(base.Protocol):
                         ValueError("Couldn't pickle response"),
                         True)
 
-        self._write(result)
+        self.write_message(result)
 
     def send_reply_threadsafe(self, message_id, result):
         self.loop.call_soon_threadsafe(self.reply, message_id, result)

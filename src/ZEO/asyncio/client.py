@@ -210,7 +210,7 @@ class Protocol(base.Protocol):
         self.decode = decoder(protocol_version)
         self.heartbeat_bytes = self.encode(-1, 0, '.reply', None)
 
-        self._write(self.protocol_version)
+        self.write_message(self.protocol_version)
 
         credentials = (self.credentials,) if self.credentials else ()
 
@@ -280,7 +280,7 @@ class Protocol(base.Protocol):
     def call(self, future, method, args):
         self.message_id += 1
         self.futures[self.message_id] = future
-        self._write(self.encode(self.message_id, False, method, args))
+        self.write_message(self.encode(self.message_id, False, method, args))
         return future
 
     def fut(self, method, *args):
@@ -293,7 +293,7 @@ class Protocol(base.Protocol):
         if future is None:
             future = Fut()
             self.futures[message_id] = future
-            self._write(
+            self.write_message(
                 self.encode(message_id, False, 'loadBefore', (oid, tid)))
 
             @future.add_done_callback
@@ -321,7 +321,7 @@ class Protocol(base.Protocol):
 
     def heartbeat(self, write=True):
         if write:
-            self._write(self.heartbeat_bytes)
+            self.write_message(self.heartbeat_bytes)
         self.heartbeat_handle = self.loop.call_later(
             self.heartbeat_interval, self.heartbeat)
 
