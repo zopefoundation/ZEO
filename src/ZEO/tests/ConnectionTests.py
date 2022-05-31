@@ -438,7 +438,7 @@ class ConnectionTests(CommonSetupTearDown):
 
         def write():
             try:
-                self._storage._server.client.protocol._write(msg)
+                self._storage._server.client.protocol.write_message(msg)
             except Exception as exc:
                 future.set_exception(exc)
             else:
