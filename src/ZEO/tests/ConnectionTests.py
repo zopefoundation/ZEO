@@ -80,7 +80,7 @@ class CommonSetupTearDown(StorageTestBase):
         for i in 1, 2, ...
         """
         self.__super_setUp()
-        logging.info("setUp() %s", self.id())
+        logger.info("setUp() %s", self.id())
         self.file = 'storage_conf'
         self._servers = []
         self.caches = []
@@ -93,8 +93,8 @@ class CommonSetupTearDown(StorageTestBase):
         if getattr(self, '_storage', None) is not None:
             self._storage.close()
             if hasattr(self._storage, 'cleanup'):
-                logging.debug("cleanup storage %s" %
-                              self._storage.__name__)
+                logger.debug("cleanup storage %s" %
+                             self._storage.__name__)
                 self._storage.cleanup()
         for stop in self._servers:
             stop()
@@ -169,8 +169,8 @@ class CommonSetupTearDown(StorageTestBase):
     def startServer(self, create=1, index=0, read_only=0, ro_svr=0, keep=None,
                     path=None, **kw):
         addr = self.addr[index]
-        logging.info("startServer(create=%d, index=%d, read_only=%d) @ %s" %
-                     (create, index, read_only, addr))
+        logger.info("startServer(create=%d, index=%d, read_only=%d) @ %s" %
+                    (create, index, read_only, addr))
         if path is None:
             path = "%s.%d" % (self.file, index)
         sconf = self.getConfig(path, create, read_only)
@@ -184,8 +184,8 @@ class CommonSetupTearDown(StorageTestBase):
             self.addr[index] = zeoport
 
     def shutdownServer(self, index=0):
-        logging.info("shutdownServer(index=%d) @ %s" %
-                     (index, self._servers[index]))
+        logger.info("shutdownServer(index=%d) @ %s" %
+                    (index, self._servers[index]))
         stop = self._servers[index]
         if stop is not None:
             stop()
@@ -851,7 +851,7 @@ class ReconnectionTests(CommonSetupTearDown):
         self.pollDown()
         self._storage.verify_result = None
         perstorage.verify_result = None
-        logging.info('2ALLBEEF')
+        logger.info('2ALLBEEF')
         self.startServer(create=0, keep=0)
         self.pollUp()
         self.pollUp(storage=perstorage)
@@ -904,9 +904,9 @@ class ReconnectionTests(CommonSetupTearDown):
         oid = self._storage.new_oid()
         obj = MinPO(12)
         self._dostore(oid, data=obj)
-        logging.info("checkReconnection(): About to shutdown server")
+        logger.info("checkReconnection(): About to shutdown server")
         self.shutdownServer()
-        logging.info("checkReconnection(): About to restart server")
+        logger.info("checkReconnection(): About to restart server")
         self.startServer(create=0)
         forker.wait_until('reconnect', self._storage.is_connected)
         oid = self._storage.new_oid()
@@ -917,12 +917,12 @@ class ReconnectionTests(CommonSetupTearDown):
                 break
             except ClientDisconnected:
                 # Maybe the exception mess is better now
-                logging.info("checkReconnection(): Error after"
-                             " server restart; retrying.", exc_info=True)
+                logger.info("checkReconnection(): Error after"
+                            " server restart; retrying.", exc_info=True)
                 transaction.abort()
             # Give the other thread a chance to run.
             time.sleep(0.1)
-        logging.info("checkReconnection(): finished")
+        logger.info("checkReconnection(): finished")
         self._storage.close()
 
     def checkMultipleServers(self):
@@ -935,7 +935,7 @@ class ReconnectionTests(CommonSetupTearDown):
 
         # When we start the second server, we use file data file from
         # the original server so tha the new server is a replica of
-        # the original.  We need this becaise ClientStorage won't use
+        # the original.  We need this because ClientStorage won't use
         # a server if the server's last transaction is earlier than
         # what the client has seen.
         self.startServer(index=1, path=self.file+'.0', create=False)

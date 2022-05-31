@@ -1,3 +1,24 @@
+"""ZEO client interface implementation.
+
+The client interface implementation is split into two parts:
+``ClientRunner`` and ``Client``.
+
+``ClientRunner`` calls ``Client`` methods indirectly via
+``loop.call_soon_threadsafe``.
+``Client`` does not call ``ClientRunner`` methods; however, it
+can call ``ClientStorage`` and ``ClientCache`` methods.
+Those methods must be thread safe.
+
+Logically, ``Client`` represents a connection to one ZEO
+server. However, initially, it can open connections to serveral
+servers and choose one of them depending on availability
+and required/provided capabilities (read_only/writable).
+A server connection is represented by a ``Protocol`` instance.
+
+The ``asyncio`` loop must be run in a separate thread.
+The loop management is the responsibility of ``ClientThread``,
+a tiny wrapper arount ``ClientRunner``.
+"""
 from ZEO.Exceptions import ClientDisconnected, ServerException
 import concurrent.futures
 import functools
@@ -55,7 +76,7 @@ def future_generator(func):
 
 
 class Protocol(base.Protocol):
-    """asyncio low-level ZEO client interface
+    """asyncio connection to a single ZEO server.
     """
 
     # All of the code in this class runs in a single dedicated
@@ -71,7 +92,7 @@ class Protocol(base.Protocol):
                  addr, client, storage_key, read_only, connect_poll=1,
                  heartbeat_interval=60, ssl=None, ssl_server_hostname=None,
                  credentials=None):
-        """Create a client interface
+        """Create a server connection
 
         addr is either a host,port tuple or a string file name.
 
@@ -165,6 +186,10 @@ class Protocol(base.Protocol):
 
     @future_generator
     def finish_connect(self, protocol_version):
+        """setup for *protocol_version* and verify the connection."""
+        # the first byte of ``protocol_version`` specifies the coding type
+        # the remaining bytes the version proper
+
         # The future implementation we use differs from
         # asyncio.Future in that callbacks are called immediately,
         # rather than using the loops call_soon.  We want to avoid a
@@ -189,6 +214,8 @@ class Protocol(base.Protocol):
 
         credentials = (self.credentials,) if self.credentials else ()
 
+        # We try to register with the server; if this succeeds with
+        # the client.
         try:
             try:
                 server_tid = yield self.fut(
@@ -371,6 +398,8 @@ class Client(object):
     #   None=Never connected
     #   True=connected
     #   False=Disconnected
+    # Note: ``True`` indicates only the first phase of readyness;
+    #   it does not mean that we are fully ready.
     ready = None
 
     def __init__(self, loop,
@@ -379,7 +408,11 @@ class Client(object):
                  ssl=None, ssl_server_hostname=None, credentials=None):
         """Create a client interface
 
-        addr is either a host,port tuple or a string file name.
+        *addrs* specifies addresses of a set of servers which
+        (essentially) serve the same data.
+        Each address is either a host,port tuple or a string file name.
+        The object tries to connect to each of them and
+        chooses the first appropriate one.
 
         client is a ClientStorage. It must be thread safe.
 
@@ -503,6 +536,7 @@ class Client(object):
 
     @future_generator
     def verify(self, server_tid):
+        """cache verification and invalidation."""
         self.verify_invalidation_queue = []  # See comment in init :(
 
         protocol = self.protocol
@@ -581,8 +615,19 @@ class Client(object):
                 self.register_failed(self, exc)
 
             else:
+                # Note: it is important that we first inform
+                # ``client`` (actually the ``ClientStorage``)
+                # that we are (almost) connected
+                # before we officially announce connectedness:
+                # the ``notify_connected`` adds information vital
+                # for storage use; the announcement
+                # allows waiting threads to use the storage.
+                # ``notify_connected`` can call our ``call_async``
+                # but **MUST NOT** use other methods or the normal API
+                # to interact with the server (deadlock or
+                # ``ClientDisconnected`` would result).
                 self.client.notify_connected(self, info)
-                self.connected.set_result(None)
+                self.connected.set_result(None)  # signal full readyness
 
     def get_peername(self):
         return self.protocol.get_peername()
@@ -811,6 +856,15 @@ class ClientRunner(object):
                 raise
 
     def call(self, method, *args, **kw):
+        """call method named *method* with *args*.
+
+        Supported keywords:
+
+          timeout
+             wait at most this long for readyness
+             ``None`` is replaced by ``self.timeout`` (usually 30s)
+             default: ``None``
+        """
         return self.__call(self.call_threadsafe, method, args, **kw)
 
     def call_future(self, method, *args):
@@ -821,6 +875,7 @@ class ClientRunner(object):
         return result
 
     def async_(self, method, *args):
+        """call method named *method* with *args* asynchronously."""
         return self.__call(self.call_async_threadsafe, method, args)
 
     def async_iter(self, it):
@@ -870,6 +925,7 @@ class ClientRunner(object):
         self.__call(self.apply_threadsafe, self.client.new_addrs, addrs)
 
     def wait(self, timeout=None):
+        """wait for readyness"""
         if timeout is None:
             timeout = self.timeout
         self.wait_for_result(self.client.connected, timeout)
@@ -932,6 +988,13 @@ class ClientThread(ClientRunner):
     closed = False
 
     def close(self):
+        """close the server connection and release resources.
+
+        ``close`` can be called at any moment; it should not
+        raise an exception. Calling ``close`` again does
+        not have an effect. Most other calls will raise
+        a ``ClientDisconnected`` exception.
+        """
         if not self.closed:
             self.closed = True
             super(ClientThread, self).close()

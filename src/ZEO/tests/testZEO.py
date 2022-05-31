@@ -575,7 +575,7 @@ class ZRPCConnectionTests(ZEO.tests.ConnectionTests.CommonSetupTearDown):
         handler = zope.testing.loggingsupport.InstalledHandler(
             'ZEO.asyncio.client')
 
-        # We no longer implement the event loop, we we no longer know
+        # We no longer implement the event loop, we no longer know
         # how to break it.  We'll just stop it instead for now.
         self._storage._server.loop.call_soon_threadsafe(
             self._storage._server.loop.stop)
@@ -1744,9 +1744,9 @@ slow_test_classes = [
     # ``FileStorage`` and therefore expose other race conditions)
     MappingStorageTests,
     # drop to save time
-    #   DemoStorageTests,
-    #   FileStorageTests,
-    #   FileStorageHexTests, FileStorageClientHexTests,
+    # DemoStorageTests,
+    # FileStorageTests,
+    # FileStorageHexTests, FileStorageClientHexTests,
     ]
 if not forker.ZEO4_SERVER:
     slow_test_classes.append(FileStorageSSLTests)

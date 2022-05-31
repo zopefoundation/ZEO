@@ -9,6 +9,12 @@ except NameError:
 
 
 class Loop(object):
+    """Simple loop for testing purposes.
+
+    It calls callbacks directly (instead of in the next round);
+    it remembers ``call_later`` calls rather than schedule them;
+    it does not check calls to non threadsafe methods.
+    """
 
     protocol = transport = None
 
