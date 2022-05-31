@@ -329,6 +329,8 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                 blob_cache_size * blob_cache_size_check // 100)
             self._check_blob_size()
 
+        self.server_sync = server_sync
+
         self._server = _client_factory(
             addr, self, cache, storage,
             ZEO.asyncio.client.Fallback if read_only_fallback else read_only,
@@ -469,6 +471,9 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             self.ping = lambda: self._call('ping', timeout=0)
         else:
             self.ping = lambda: self._call('lastTransaction', timeout=0)
+
+        if self.server_sync:
+            self.sync = self.ping
 
     def set_server_addr(self, addr):
         # Normalize server address and convert to string
