@@ -39,7 +39,7 @@ class SizedMessageProtocol(Protocol):
 
         # output handling
         pack = struct.pack
-        paused = []  # if ``paused`` we must buffer output
+        paused = False  # if ``paused`` we must buffer output
         output = []  # output buffer - contains messages or iterators
         append = output.append
         writelines = transport.writelines
@@ -80,7 +80,8 @@ class SizedMessageProtocol(Protocol):
 
         def resume_writing():
             # precondition: ``paused`` and "at least 1 message writable"
-            del paused[:]
+            nonlocal paused
+            paused = False
             while output and not paused:
                 message = output.pop(0)
                 if isinstance(message, bytes):
@@ -99,7 +100,8 @@ class SizedMessageProtocol(Protocol):
         self.resume_writing = resume_writing
 
         def pause_writing():
-            paused.append(1)
+            nonlocal paused
+            paused = True
 
         self.pause_writing = pause_writing
 
@@ -109,59 +111,61 @@ class SizedMessageProtocol(Protocol):
         process_size = 1
         process_message = 2
         closed = None
-        self.read_state = process_size  # current state
-        self.read_wanted = 4  # bytes required for this state
-        self.received_count = 0  # number of received (not yet processed) bytes
-        self.received_buffer = []  # received data chunks
-        self.chunk_index = 0  # first unprocessed byte in first chunk
+        read_state = process_size  # current state
+        read_wanted = 4  # bytes required for this state
+        received_count = 0  # number of received (not yet processed) bytes
+        received_buffer = []  # received data chunks
+        chunk_index = 0  # first unprocessed byte in first chunk
         unpack = struct.unpack
 
         def data_received(data):
-            self.received_buffer.append(data)
-            self.received_count += len(data)
-            # ``not self.read_state`` means "closed"
-            while self.read_state and self.read_wanted <= self.received_count:
+            nonlocal received_count, read_state, read_wanted, chunk_index
+            received_buffer.append(data)
+            received_count += len(data)
+            # ``not read_state`` means "closed"
+            while read_state and read_wanted <= received_count:
                 # transfer ``read_wanted`` bytes into ``data``
                 data = None
-                wanted = self.read_wanted
+                wanted = read_wanted
                 while wanted:
-                    chunk = self.received_buffer[0]
-                    ch_unprocessed = len(chunk) - self.chunk_index
+                    chunk = received_buffer[0]
+                    ch_unprocessed = len(chunk) - chunk_index
                     if ch_unprocessed > wanted:
-                        n_index = self.chunk_index + wanted
-                        fragment = chunk[self.chunk_index:n_index]
-                        self.chunk_index = n_index
+                        n_index = chunk_index + wanted
+                        fragment = chunk[chunk_index:n_index]
+                        chunk_index = n_index
                         wanted = 0
                     else:
-                        del self.received_buffer[0]
+                        del received_buffer[0]
                         fragment = \
-                            chunk[self.chunk_index:] if self.chunk_index else chunk
-                        self.chunk_index = 0
+                            chunk[chunk_index:] if chunk_index else chunk
+                        chunk_index = 0
                         wanted -= ch_unprocessed
                     if data is None:  # typical case
                         data = fragment
                     else:
                         data += fragment
-                self.received_count -= self.read_wanted
+                received_count -= read_wanted
                 # process ``data``
-                if self.read_state is process_size:
-                    self.read_state = process_message
-                    self.read_wanted = unpack(">I", data)[0]
+                if read_state is process_size:
+                    read_state = process_message
+                    read_wanted = unpack(">I", data)[0]
                 else:  # ``read_state is process_message``
                     try:
                         self.receive(data)  # may close: ``not read_state``
                     except Exception:
                         logger.exception("Processing message `%r` failed"
                                          % data)
-                    if self.read_state:  # not yet closed
-                        self.read_state = process_size
-                        self.read_wanted = 4
+                    if read_state:  # not yet closed
+                        read_state = process_size
+                        read_wanted = 4
 
         # the following introduces a reference cycle broken in ``close``
         self.data_received = data_received
 
         def eof_received():
-            self.read_state = closed
+            nonlocal read_state
+            read_state = closed
 
         self.eof_received = eof_received
 
