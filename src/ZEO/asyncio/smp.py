@@ -66,14 +66,14 @@ class SizedMessageProtocol(asyncio.Protocol):
         self.write_message = write_message
 
         def write_message_iter(message_iter):
-            data = iter(message_iter)
+            it = iter(message_iter)
             if paused:  # equivalent to ``paused or output``
-                append(data)
+                append(it)
                 return
-            for message in data:
+            for message in it:
                 _write_message(message)
                 if paused:
-                    append(data)
+                    append(it)
                     return
 
         self.write_message_iter = write_message_iter
@@ -88,11 +88,11 @@ class SizedMessageProtocol(asyncio.Protocol):
                     _write_message(message)
                 else:
                     # an iterator
-                    data = message
-                    for message in data:
+                    it = message
+                    for message in it:
                         _write_message(message)
                         if paused:  # paused again. Put iter back.
-                            output.insert(0, data)
+                            output.insert(0, it)
                             break
             # post condition: ``paused or not output``
 
@@ -110,53 +110,52 @@ class SizedMessageProtocol(asyncio.Protocol):
         process_message = 2
         closed = None
         self.read_state = process_size  # current state
-        self.got = 0
-        self.want = 4
-        self.input = []  # Input buffer when assembling messages
+        self.read_wanted = 4  # bytes required for this state
+        self.received_count = 0  # number of received (not yet processed) bytes
+        self.received_buffer = []  # received data chunks
+        self.chunk_index = 0  # first unprocessed byte in first chunk
         unpack = struct.unpack
 
         def data_received(data):
-            # Low-level input handler collects data into sized messages.
-
-            # Note that the logic below assume that when new data pushes
-            # us over what we want, we process it in one call until we
-            # need more, because we assume that excess data is all in the
-            # last item of self.input. This is why the exception handling
-            # in the while loop is critical.  Without it, an exception
-            # might cause us to exit before processing all of the data we
-            # should, when then causes the logic to be broken in
-            # subsequent calls.
-
-            self.got += len(data)
-            self.input.append(data)
+            self.received_buffer.append(data)
+            self.received_count += len(data)
             # ``not self.read_state`` means "closed"
-            while self.read_state and self.got >= self.want:
-                extra = self.got - self.want
-                if extra == 0:
-                    collected = b''.join(self.input)
-                    self.input = []
-                else:
-                    input = self.input
-                    self.input = [input[-1][-extra:]]
-                    input[-1] = input[-1][:-extra]
-                    collected = b''.join(input)
-
-                self.got = extra
-
+            while self.read_state and self.read_wanted <= self.received_count:
+                # transfer ``read_wanted`` bytes into ``data``
+                data = None
+                wanted = self.read_wanted
+                while wanted:
+                    chunk = self.received_buffer[0]
+                    ch_unprocessed = len(chunk) - self.chunk_index
+                    if ch_unprocessed > wanted:
+                        n_index = self.chunk_index + wanted
+                        fragment = chunk[self.chunk_index:n_index]
+                        self.chunk_index = n_index
+                        wanted = 0
+                    else:
+                        del self.received_buffer[0]
+                        fragment = \
+                            chunk[self.chunk_index:] if self.chunk_index else chunk
+                        self.chunk_index = 0
+                        wanted -= ch_unprocessed
+                    if data is None:  # typical case
+                        data = fragment
+                    else:
+                        data += fragment
+                self.received_count -= self.read_wanted
+                # process ``data``
                 if self.read_state is process_size:
-                    # we were recieving the message size
-                    assert self.want == 4
-                    self.want = unpack(">I", collected)[0]
                     self.read_state = process_message
+                    self.read_wanted = unpack(">I", data)[0]
                 else:  # ``read_state is process_message``
                     try:
-                        self.receive(collected)  # may close: `not read_state`
+                        self.receive(data)  # may close: ``not read_state``
                     except Exception:
                         logger.exception("Processing message `%r` failed"
-                                         % collected)
+                                         % data)
                     if self.read_state:  # not yet closed
                         self.read_state = process_size
-                        self.want = 4
+                        self.read_wanted = 4
 
         # the following introduces a reference cycle broken in ``close``
         self.data_received = data_received
