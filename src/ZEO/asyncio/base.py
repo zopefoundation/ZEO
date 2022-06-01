@@ -33,15 +33,10 @@ The ZEO protocol has client and server variants.
 """
 from asyncio import Protocol
 import logging
-import socket
-from struct import pack
-from struct import unpack
-import sys
+import struct
 
 
 logger = logging.getLogger(__name__)
-
-INET_FAMILIES = socket.AF_INET, socket.AF_INET6
 
 
 class ZEOBaseProtocol(Protocol):
@@ -164,27 +159,16 @@ class SizedMessageProtocol(Protocol):
     ``SizedMessageProtocol`` instances can be used concurrently
     from coroutines (executed in the same thread).
     They are not thread safe.
-
-    Note: we would like to implement this via
-    ``asyncio.StreamReaderProtocol`` (much clearer) but
-    this would require a more faithfull loop implementation
-    which would make testing much more difficult.
     """
     def __init__(self, loop, receive):
         self.receive = receive
 
     def connection_made(self, transport):
-
-        if sys.version_info < (3, 6):
-            sock = transport.get_extra_info('socket')
-            if sock is not None and sock.family in INET_FAMILIES:
-                # See https://bugs.python.org/issue27456 :(
-                sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, True)
-
         self.transport = transport
 
         # output handling
-        self.paused = paused = []  # non empty indicates we must buffer output
+        pack = struct.pack
+        paused = False  # if ``paused`` we must buffer output
         output = []  # output buffer - contains messages or iterators
         append = output.append
         writelines = transport.writelines
@@ -225,8 +209,8 @@ class SizedMessageProtocol(Protocol):
 
         def resume_writing():
             # precondition: ``paused`` and "at least 1 message writable"
-            del paused[:]
-            logger.debug("writing resumed")
+            nonlocal paused
+            paused = False
             while output and not paused:
                 message = output.pop(0)
                 if isinstance(message, bytes):
@@ -244,72 +228,77 @@ class SizedMessageProtocol(Protocol):
 
         self.resume_writing = resume_writing
 
+        def pause_writing():
+            nonlocal paused
+            paused = True
+
+        self.pause_writing = pause_writing
+
         # input handling
         # the following implements a state machine with
-        # states ``process_size`` and ``process_message``
-        received_count = [0]  # number of received (not yet processed) bytes
+        # states ``process_size``, ``process_message`` and ``closed``
+        process_size = 1
+        process_message = 2
+        closed = None
+        read_state = process_size  # current state
+        read_wanted = 4  # bytes required for this state
+        received_count = 0  # number of received (not yet processed) bytes
         received_buffer = []  # received data chunks
-        read_state = [None]  # read state: (*count*, *processor*)
-
-        def read(no):
-            """return *no* bytes from the received buffer.
-
-            Precondition: the received buffer contains at least *no* bytes.
-            """
-            need = no
-            data = b""
-            while need:
-                chunk = received_buffer[0]
-                if len(chunk) > need:
-                    data += chunk[:need]
-                    received_buffer[0] = chunk[need:]
-                    need = 0
-                else:
-                    del received_buffer[0]
-                    data += chunk
-                    need -= len(chunk)
-            received_count[0] -= no
-            return data
-
-        # the following two functions introduce a reference cycle
-        # broken in ``eof_received``
-        def process_size(size):
-            read_state[0] = (unpack(">I", size)[0], process_message)
-
-        def process_message(message):
-            try:
-                self.receive(message)  # may close: ``read_state[0] = None``
-            except Exception:
-                logger.exception("Processing message `%r` failed" % message)
-            if read_state[0]:  # not yet closed
-                read_state[0] = (4, process_size)
+        chunk_index = 0  # first unprocessed byte in first chunk
+        unpack = struct.unpack
 
         def data_received(data):
+            nonlocal received_count, read_state, read_wanted, chunk_index
             received_buffer.append(data)
-            received_count[0] += len(data)
-            while read_state[0] and read_state[0][0] <= received_count[0]:
-                no, processor = read_state[0]
-                processor(read(no))
+            received_count += len(data)
+            # ``not read_state`` means "closed"
+            while read_state and read_wanted <= received_count:
+                # transfer ``read_wanted`` bytes into ``data``
+                data = None
+                wanted = read_wanted
+                while wanted:
+                    chunk = received_buffer[0]
+                    ch_unprocessed = len(chunk) - chunk_index
+                    if ch_unprocessed > wanted:
+                        n_index = chunk_index + wanted
+                        fragment = chunk[chunk_index:n_index]
+                        chunk_index = n_index
+                        wanted = 0
+                    else:
+                        del received_buffer[0]
+                        fragment = \
+                            chunk[chunk_index:] if chunk_index else chunk
+                        chunk_index = 0
+                        wanted -= ch_unprocessed
+                    if data is None:  # typical case
+                        data = fragment
+                    else:
+                        data += fragment
+                received_count -= read_wanted
+                # process ``data``
+                if read_state is process_size:
+                    read_state = process_message
+                    read_wanted = unpack(">I", data)[0]
+                else:  # ``read_state is process_message``
+                    try:
+                        self.receive(data)  # may close: ``not read_state``
+                    except Exception:
+                        logger.exception("Processing message `%r` failed"
+                                         % data)
+                    if read_state:  # not yet closed
+                        read_state = process_size
+                        read_wanted = 4
 
+        # the following introduces a reference cycle broken in ``close``
         self.data_received = data_received
 
         def eof_received():
-            nonlocal process_size, process_message
-            read_state[0] = None
-            try:
-                del process_size, process_message  # break reference cycle
-            except NameError:
-                pass
+            nonlocal read_state
+            read_state = closed
 
         self.eof_received = eof_received
 
-        # start processing
-        read_state[0] = (4, process_size)
         self.connected = True
-
-    def pause_writing(self):
-        logger.debug("writing paused")
-        self.paused.append(1)
 
     def set_receive(self, receive):
         self.receive = receive
@@ -322,7 +311,8 @@ class SizedMessageProtocol(Protocol):
         self.__closed = True
         self.eof_received()
         self.transport.close()
-        self.transport = self.receive = None  # break reference cycles
+        # break reference cycles
+        self.transport = self.receive = self.data_received = None
 
     # We define ``connection_lost`` to close the transport
     # in order to avoid a ``ResourceWarning``
@@ -330,7 +320,10 @@ class SizedMessageProtocol(Protocol):
     # as the transport informed us about the lost connection.
     # It also helps for some tests which call ``connection_lost``
     # without transport intervention.
+    connection_lost_called = False  # for tests
+
     def connection_lost(self, exc):
+        self.connection_lost_called = True
         if self.__closed:
             return
         self.transport.close()

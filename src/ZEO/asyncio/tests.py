@@ -1227,6 +1227,10 @@ class SizedMessageProtocolTests(setupstack.TestCase):
         self.transport = loop.transport
         self.protocol = loop.protocol
 
+    def tearDown(self):
+        self.protocol.close()
+        self.loop.close()
+
     def test_sm_write_message(self):
         protocol, transport = self.protocol, self.transport
         for i in range(2):
@@ -1254,6 +1258,46 @@ class SizedMessageProtocolTests(setupstack.TestCase):
         for msg in msgs:
             protocol.data_received(sized(msg))
         self.assertEqual(self.received, msgs)
+
+    def test_sm_data_received(self):
+        msg = b"a test message"
+        data = sized(msg) * 2
+        receive = self.protocol.data_received
+        expected = [msg] * 2
+
+        def check(*split_size):
+            idx = 0
+            for size in split_size:
+                nidx = idx + size
+                receive(data[idx:nidx])
+                idx = nidx
+            receive(data[idx:])
+            self.assertEqual(self.received, expected)
+            del self.received[:]
+
+        # single chunk; i.e. split chunk
+        check()
+        # individual messages
+        check(len(data) // 2)
+        # combine from 2 chunks
+        check(2, 2, 2)
+        # combine from 3 chunks
+        check(5, 2)
+        # optimal
+        check(4, len(msg), 4, len(msg))
+
+        # check message processing closed the protocol
+        # once closed, no further data is processed
+        proto = self.protocol
+        old_receive = proto.receive
+
+        def close(msg):
+            proto.close()
+            proto.set_receive(old_receive)
+
+        proto.set_receive(close)
+        receive(data)
+        self.assertEqual(self.received, [])
 
 
 def to_byte(i):
@@ -1342,6 +1386,14 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
 
     def test_asnyc_future(self):
         self.check_future(self.loop.create_future(), True)
+
+    def test_repr(self):
+
+        async def noop():
+            pass
+
+        t = self.make_task(noop)
+        repr(t)  # satisfied if no exception
 
     def test_optimized_future(self):
         self.check_future(Future(loop=self.loop))
