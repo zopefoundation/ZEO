@@ -209,13 +209,39 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         client
         var
             If cache is None, client determines the cache:
-            if it is None, then a non persisent cache is used;
-            otherwie, client is used together with var (defaults
+            if it is None, then a non persistent cache is used;
+            otherwise, client is used together with var (defaults
             to the current working directory) to construct the
             file path for the persistent cache file
 
         wait
             Wait for server connection, defaulting to true.
+
+        server_sync
+            Whether sync() should make a server round trip, thus causing client
+            to wait for outstanding invalidations.
+
+            The `sync` is called in `transaction.begin`. A server round trip
+            at this place guarantees that the transaction takes notice of all
+            prior modifications.
+
+            This may be important when several client processes share the same
+            ZODB as the following examples demonstrate.
+
+            Example 1: Assume that a user issues requests req1 and then req2
+            where req1 modifies data read by req2. If req1 and req2 are
+            processed by different Zope processes, then the transaction started
+            for req2 processing may see a ZODB state which does not yet include
+            the req1 modifications. A server round trip avoids this.
+
+            Example 2: A similar situation arises when 2 Zope processes
+            communicate via non ZODB means to inform the other about a state
+            change. If this communication happens to be faster than the ZODB
+            internal state change propagation then the target process again
+            risks to not yet see the changed state. A server round trip, again,
+            avoids this.
+
+            Defaults to false.
 
         credentials
         username
@@ -225,7 +251,6 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         min_disconnect_poll
         max_disconnect_poll
         drop_cache_rather_verify
-        server_sync
             ignored; retained (as parameters) for compatibility
         """
 
@@ -303,6 +328,8 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             self._blob_cache_size_check = (
                 blob_cache_size * blob_cache_size_check // 100)
             self._check_blob_size()
+
+        self.server_sync = server_sync
 
         self._server = _client_factory(
             addr, self, cache, storage,
@@ -444,6 +471,9 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             self.ping = lambda: self._call('ping', timeout=0)
         else:
             self.ping = lambda: self._call('lastTransaction', timeout=0)
+
+        if self.server_sync:
+            self.sync = self.ping
 
     def set_server_addr(self, addr):
         # Normalize server address and convert to string
