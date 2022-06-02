@@ -47,18 +47,35 @@ class StorageServer(ZEO.StorageServer.StorageServer):
         # instances are typically not run in their own thread
         # therefore, the loop usually does not run and the
         # normal ``close`` does not work.
-        loop = self.acceptor.event_loop  # might not work for ``MTAcceptor``
+        loop = self.get_loop()
         if loop.is_running():
             return super().close()
         loop.call_soon_threadsafe(super().close)
         loop.run_forever()  # will stop automatically
         loop.close()
 
+    def get_loop(self):
+        return self.acceptor.event_loop  # might not work for ``MTAcceptor``
+
 
 def client(server, name='client'):
     zs = ZEO.StorageServer.ZEOStorage(server)
     protocol = ZEO.asyncio.tests.server_protocol(
         False, zs, protocol_version=b'Z5', addr='test-addr-%s' % name)
+
+    # ``server_protocol`` uses its own testing loop (not
+    # that of *server*). As a consequence, ``protocol.close``
+    # does not work correctly.
+    # In addition, the artificial loop needs to get closed.
+    pr_close = protocol.close
+
+    def close(*args, **kw):
+        pr_close()
+        zs.notify_disconnected()
+        protocol.loop.close()
+        del protocol.close  # break reference cycle
+
+    protocol.close = close  # install proper closing
     zs.notify_connected(protocol)
     zs.register('1', 0)
     return zs

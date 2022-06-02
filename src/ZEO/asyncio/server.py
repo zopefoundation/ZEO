@@ -50,6 +50,7 @@ class ServerProtocol(base.ZEOBaseProtocol):
         if not self.closed:
             self.closed = True
             super().close()
+            self.zeo_storage = None  # break reference cycle
 
     connected = None  # for tests
 
@@ -304,3 +305,5 @@ class Acceptor(object):
 
         # But if the server doesn't close in a second, stop the loop anyway.
         loop.call_later(1, timeout)
+
+        self.server = None  # break reference cycle
