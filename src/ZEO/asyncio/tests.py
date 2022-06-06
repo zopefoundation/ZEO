@@ -1422,6 +1422,7 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
         fut.set_exception(exc)
         self.assertTrue(t.done())
         self.assertIs(t.exception(), exc)
+        exc.__traceback__ = None  # break reference cycle
 
     def test_handled_exception(self):
 
@@ -1438,6 +1439,18 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
         fut.set_exception(exc)
         self.assertTrue(t.done())
         self.assertEqual(t.result(), 1)
+        exc.__traceback__ = None  # break reference cycle
+
+    def test_cancel_future(self):
+        fut = Future(loop=self.loop)
+
+        async def exc():
+            return await fut
+
+        t = self.make_task(exc)
+        fut.cancel()
+        self.assertTrue(t.done())
+        self.assertTrue(t.cancelled())
 
 
 class AsyncTaskTests(CoroutineExecutorTestsBase, TestCase):

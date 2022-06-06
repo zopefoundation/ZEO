@@ -117,8 +117,7 @@ class CoroutineExecutor:
         except StopIteration as exc:
             super().set_result(exc.value)
         except CancelledError as exc:
-            # Save the original exception so we can chain it later.
-            self._cancelled_exc = exc
+            exc.__traceback__ = None  # avoid cyclic garbage
             super().cancel()  # I.e., Future.cancel(self).
         except (KeyboardInterrupt, SystemExit) as exc:
             super().set_exception(exc)
@@ -127,47 +126,17 @@ class CoroutineExecutor:
             super().set_exception(exc)
         else:
             blocking = getattr(result, '_asyncio_future_blocking', None)
-            if blocking is not None:
-                # Yielded Future must come from Future.__iter__().
-                if blocking:
-                    if result is self:  # pragma: no cover
-                        new_exc = RuntimeError(
-                            f'Task cannot await on itself: {self!r}')
-                        self._step(new_exc)
-                    else:
-                        result._asyncio_future_blocking = False
-                        result.add_done_callback(self._wakeup)
-                        self._fut_waiter = result
-                        if self._must_cancel:
-                            if self._fut_waiter.cancel():
-                                self._must_cancel = False
-                else:  # pragma: no cover
-                    new_exc = RuntimeError(
-                        f'yield was used instead of yield from '
-                        f'in task {self!r} with {result!r}')
-                    self._step(new_exc)
-            else:  # pragma: no cover
-                # Yielding something else is an error.
-                new_exc = RuntimeError(f'Task got bad yield: {result!r}')
-                self._step(new_exc)
+            assert blocking
+            result._asyncio_future_blocking = False
+            self._fut_waiter = result
+            if self._must_cancel:
+                if self._fut_waiter.cancel():
+                    self._must_cancel = False
+            @result.add_done_callback
+            def wakeup(unused, step=self._step):
+                step()
         finally:
             self = None  # Needed to break cycles when an exception occurs.
-
-    def _wakeup(self, future):
-        try:
-            future.result()
-        except BaseException as exc:
-            # This may also be a cancellation.
-            self._step(exc)
-        else:
-            # Don't pass the value of `future.result()` explicitly,
-            # as `Future.__iter__` and `Future.__await__` don't need it.
-            # If we call `_step(value, None)` instead of `_step()`,
-            # Python eval loop would use `.send(value)` method call,
-            # instead of `__next__()`, which is slower for futures
-            # that return non-generator iterators from their `__iter__`.
-            self._step()
-        self = None  # Needed to break cycles when an exception occurs.
 
 
 class AsyncTask(CoroutineExecutor, Future):
