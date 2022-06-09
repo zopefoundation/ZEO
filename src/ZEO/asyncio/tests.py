@@ -3,6 +3,7 @@ from unittest import TestCase, mock
 from ZODB.utils import maxtid, RLock
 
 import collections
+from itertools import count
 import logging
 import struct
 from time import sleep
@@ -1357,6 +1358,27 @@ class FutureTests(OptimizeTestsBase, TestCase):
         fut.add_done_callback(cb)
         self.check_called_not_scheduled()
 
+    def test_callback_can_add_callback(self):
+        fut = self.fut
+        cbno = count()
+        li = [1, 0, 0, 1]
+
+        def mk_callback():
+            """make numbered callback and register it."""
+            i = next(cbno)
+
+            @fut.add_done_callback
+            def callback(unused):
+                li.append(i)
+                if not li[i]:
+                    mk_callback()  # add new callback
+
+        mk_callback()
+        mk_callback()
+        mk_callback()
+        fut.set_result(None)
+        self.assertEqual(li[4:], [0, 1, 2, 3, 4, 5])
+
     def test_cancel(self):
         self.fut.cancel()
         self.assertTrue(self.fut.cancelled())
@@ -1384,7 +1406,7 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
         self.assertTrue(t.done())
         self.assertIsNone(t.result())
 
-    def test_asnyc_future(self):
+    def test_async_future(self):
         self.check_future(self.loop.create_future(), True)
 
     def test_repr(self):
