@@ -26,12 +26,9 @@ class Future(PyFuture):
 
     def _call_callbacks(self):
         """replacement for ``__schedule_callbacks``, calling directly."""
-        callbacks = self._callbacks[:]
-        if not callbacks:
-            return
-        self._callbacks[:] = []
-        for callback in callbacks:
+        for callback in self._callbacks:  # allows new callbacks
             callback(self)
+        self._callbacks[:] = []
 
     def cancel(self, msg=None):
         if super().cancel():  # older versions do support ``msg``
@@ -56,16 +53,18 @@ class Future(PyFuture):
 
         ATT: ``context`` is ignored
         """
-        if self.done():
-            fn(self)
-        else:
+        if not self.done() or self._callbacks:
             self._callbacks.append(fn)
+        else:
+            fn(self)
 
     def remove_done_callback(self, fn):
         """Remove all instances of a callback from the "call when done" list.
 
         Returns the number of callbacks removed.
         """
+        if self.done() and self._callbacks:
+            raise NotImplementedError("cannot remove callbacks when done")
         filtered_callbacks = [f for f in self._callbacks if f != fn]
         removed_count = len(self._callbacks) - len(filtered_callbacks)
         if removed_count:
@@ -132,6 +131,7 @@ class CoroutineExecutor:
             if self._must_cancel:
                 if self._fut_waiter.cancel():
                     self._must_cancel = False
+
             @result.add_done_callback
             def wakeup(unused, step=self._step):
                 step()
@@ -147,6 +147,9 @@ class AsyncTask(CoroutineExecutor, Future):
     ASYNC = True
 
 
+PyAsyncTask = AsyncTask
+
+
 class ConcurrentTask(CoroutineExecutor, ConcurrentFuture):
     """Concurrent task"""
     ASYNC = False
@@ -154,4 +157,13 @@ class ConcurrentTask(CoroutineExecutor, ConcurrentFuture):
     # Note: might need to redefine ``_repr_info``
 
 
+PyConcurrentTask = ConcurrentTask
+
 run_coroutine_threadsafe = ConcurrentTask
+py_run_coroutine_threadsafe = run_coroutine_threadsafe
+
+try:
+    from ._opt import Future, AsyncTask, ConcurrentTask,\
+         run_coroutine_threadsafe
+except ImportError:
+    pass

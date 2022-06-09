@@ -327,3 +327,11 @@ class SizedMessageProtocol(Protocol):
         if self.__closed:
             return
         self.transport.close()
+
+
+Py_SizedMessageProtocol = SizedMessageProtocol
+
+try:
+    from ._smp import SizedMessageProtocol
+except ImportError:
+    pass
