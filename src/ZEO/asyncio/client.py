@@ -38,7 +38,7 @@ import ZEO.interfaces
 from . import base
 from .compat import asyncio, new_event_loop
 from .marshal import encoder, decoder
-from .futures import Fut, future_generator
+from .futures import Future, future_generator
 
 logger = logging.getLogger(__name__)
 
@@ -291,7 +291,7 @@ class Protocol(base.ZEOBaseProtocol):
         return future
 
     def server_call(self, method, *args):
-        return self.call(Fut(), method, args)
+        return self.call(Future(loop=self.loop), method, args)
 
     def load_before(self, oid, tid):
         # Special-case load_before, so we collapse outstanding requests
@@ -299,7 +299,7 @@ class Protocol(base.ZEOBaseProtocol):
         message_id = (oid, tid)
         future = self.futures.get(message_id)
         if future is None:
-            future = Fut()
+            future = Future(loop=self.loop)
             self.futures[message_id] = future
             self.write_message(
                 self.encode(message_id, False, 'loadBefore', (oid, tid)))
@@ -868,7 +868,7 @@ class ClientRunner(object):
         self.call_threadsafe = self.client.call_threadsafe
         self.call_async_threadsafe = self.client.call_async_threadsafe
 
-        from concurrent.futures import Future
+        from concurrent.futures import Future as ConcurrentFuture
         call_soon_threadsafe = loop.call_soon_threadsafe
 
         def io_call(meth, *args, **kw):
@@ -884,7 +884,7 @@ class ClientRunner(object):
             # wait_operational flag.  If false, and we're disconnected, we fail
             # immediately. If that happens, then we try again with the
             # wait flag set to True and wait with the default timeout.
-            result = Future()
+            result = ConcurrentFuture()
             if not wait:
                 call_soon_threadsafe(meth, result, True, *args)
                 return result
@@ -894,7 +894,7 @@ class ClientRunner(object):
                 return self.wait_for_result(result, timeout)
             except ClientDisconnected:
                 if timeout is None:
-                    result = Future()
+                    result = ConcurrentFuture()
                     call_soon_threadsafe(meth, result, True, *args)
                     return self.wait_for_result(result, self.timeout)
                 else:

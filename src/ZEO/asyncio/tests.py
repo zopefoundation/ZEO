@@ -10,10 +10,12 @@ else:
         return b
 
 from zope.testing import setupstack
+from unittest import TestCase
 import mock
 from ZODB.utils import maxtid, RLock
 
 import collections
+from itertools import count
 import logging
 import struct
 import unittest
@@ -25,6 +27,7 @@ from ..Exceptions import ClientDisconnected, ProtocolError
 from .base import ZEOBaseProtocol, SizedMessageProtocol
 from .testing import Loop, FaithfulLoop
 from .client import ClientThread, Fallback
+from .futures import Future
 from .server import new_connection, best_protocol_version
 from .marshal import encoder, decoder
 
@@ -1305,6 +1308,82 @@ def _break_mock_cycles(m):
         _break_mock_cycles(m._mock_return_value)
 
 
+class OptimizeTestsBase:
+    def setUp(self):
+        self.loop = FaithfulLoop()
+
+    def tearDown(self):
+        self.loop.close()
+
+
+class FutureTests(OptimizeTestsBase, TestCase):
+    def setUp(self):
+        super(FutureTests, self).setUp()
+        self.fut = fut = Future(loop=self.loop)
+        self.callback = cb = mock.Mock()
+        fut.add_done_callback(cb)
+
+    def tearDown(self):
+        fut = self.fut
+        fut.cancel()
+        self.assertEqual(self.loop.exceptions, [])
+        _break_mock_cycles(self.callback)
+        super(FutureTests, self).tearDown()
+
+    def test_set_result(self):
+        self.fut.set_result(1)
+        self.assertEqual(self.fut.result(), 1)
+        self.check_called_not_scheduled()
+
+    def test_set_exception(self):
+        exc = Exception()
+        self.fut.set_exception(exc)
+        self.assertIs(self.fut.exception(), exc)
+        self.check_called_not_scheduled()
+
+    def test_remove_add_callback(self):
+        fut = self.fut
+        cb = self.callback
+        self.assertEqual(fut.remove_done_callback(cb), 1)
+        fut.set_result(1)
+        fut.add_done_callback(cb)
+        self.check_called_not_scheduled()
+
+    def test_callback_can_add_callback(self):
+        fut = self.fut
+        cbno = count()
+        li = [1, 0, 0, 1]
+
+        def mk_callback():
+            """make numbered callback and register it."""
+            i = next(cbno)
+
+            @fut.add_done_callback
+            def callback(unused):
+                li.append(i)
+                if not li[i]:
+                    # add new callback
+                    mk_callback()  # noqa: F821
+
+        mk_callback()
+        mk_callback()
+        mk_callback()
+        fut.set_result(None)
+        self.assertEqual(li[4:], [0, 1, 2, 3, 4, 5])
+        mk_callback = None  # break reference cycle
+
+    def test_cancel(self):
+        self.fut.cancel()
+        self.assertTrue(self.fut.cancelled())
+        self.check_called_not_scheduled()
+
+    def check_called_not_scheduled(self):
+        fut = self.fut
+        self.assertTrue(fut.done())
+        self.callback.assert_called_once()
+        self.assertEqual(len(self.loop._ready), 0)
+
+
 def test_suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(ClientTests))
@@ -1313,4 +1392,5 @@ def test_suite():
     suite.addTest(unittest.makeSuite(MsgpackServerTests))
     suite.addTest(unittest.makeSuite(ZEOBaseProtocolTests))
     suite.addTest(unittest.makeSuite(SizedMessageProtocolTests))
+    suite.addTest(unittest.makeSuite(FutureTests))
     return suite
