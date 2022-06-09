@@ -23,6 +23,7 @@ The loop management is the responsibility of ``ClientThread``,
 a tiny wrapper arount ``ClientRunner``.
 """
 
+import asyncio
 import logging
 import random
 import sys
@@ -36,9 +37,9 @@ from ZEO.Exceptions import ClientDisconnected, ServerException
 import ZEO.interfaces
 
 from . import base
-from .compat import asyncio, new_event_loop
+from .compat import new_event_loop
 from .marshal import encoder, decoder
-from .optimize import Future
+from .optimize import Future, AsyncTask as Task
 from .optimize import run_coroutine_threadsafe
 
 logger = logging.getLogger(__name__)
@@ -304,8 +305,33 @@ class Protocol(base.ZEOBaseProtocol):
         message_id = (oid, tid)
         future = self.futures.get(message_id)
         if future is None:
-            future = self.futures[message_id] = self.call(
-               Future(loop=self.loop), 'loadBefore', message_id, message_id)
+            future = Future(loop=self.loop)
+            # Check whether the cache contains the information.
+            # I am not sure whether the cache lookup it really
+            # necessary at this place (it has already been
+            # done in ``ClientStorage.loadBefore`` and therefore
+            # will likely fail here).
+            # The lookup at this place, however, guarantees
+            # (together with the folding of identical requests above)
+            # that we will not store data already in the cache.
+            # Maybe, this is important
+            cache = self.client.cache
+            data = cache.loadBefore(oid, tid)
+            if data:
+                future.set_result(data)
+            else:
+                # data not in the cache
+                # ensure the cache gets updated when the answer arrives
+                @future.add_done_callback
+                def store(future):
+                    if future.cancelled() or future.exception() is not None:
+                        return
+                    data = future.result()
+                    if data:
+                        state, start, end = data
+                        cache.store(oid, start, end, state)
+
+                self.call(future, 'loadBefore', message_id, message_id)
         return future
 
     # Methods called by the server.
@@ -674,11 +700,20 @@ class ClientIo(object):
                 await asyncio.wait_for(asyncio.shield(self.connected), timeout)
             except (asyncio.TimeoutError, asyncio.CancelledError):
                 raise ClientDisconnected
+            # potential race condition: we have been connected
+            # but may meanwhile have lost the connection again.
             result = method(*args)
         else:
             raise ClientDisconnected
         try:
-            return await result if asyncio.isfuture(result) else result
+            # expand ``asynio.isfuture`` into
+            # ``getattr(..., "_asyncio_future_blocking", None) is not None``
+            # for speed
+            return (
+                await result
+                if getattr(result, "_asyncio_future_blocking", None)
+                is not None
+                else result)
         finally:
             del result  # avoid reference cycle in case of exception
 
@@ -717,32 +752,28 @@ class ClientIo(object):
     # Special methods because they update the cache.
 
     async def load_before_co(self, timeout, oid, tid):
-        # Note: the following cache lookup seems mostly redundant;
-        # it has already been performed in ``ClientStorage.loadBefore``
-        # (and failed there).
-        # To repeat it here ensures (together with the collapse of
-        # identical `loadbBefore` requests) that we do not write the
-        # same information twice into the cache.
-        data = self.cache.loadBefore(oid, tid)
-        if data:
-            return data
         if self.operational:
             future = self.protocol.load_before(oid, tid)
-        elif timeout:
-            def callback():
-                """helper to delay protocol access until readyness."""
-                return self.protocol.load_before(oid, tid)
-            future = self.call_with_timeout_co(timeout, callback)
         else:
-            raise ClientDisconnected
+            # the following cache lookup is not necessary in
+            # real life: ``ClientStorage.loadBefore`` has
+            # already done it (and failed); we will fail, too --
+            # with high probability
+            # But a test relies on this cache lookup.
+            data = self.cache.loadBefore(oid, tid)
+            if data:
+                return data
+            if timeout:
+                def callback():
+                    """helper to delay protocol access until readyness."""
+                    return self.protocol.load_before(oid, tid)
+                future = self.call_with_timeout_co(timeout, callback)
+            else:
+                raise ClientDisconnected
         try:
-            data = await future
+            return await future
         finally:
             del future  # avoid reference cycle in case of exception
-        if data:
-            state, start, end = data
-            self.cache.store(oid, start, end, state)
-        return data
 
     async def prefetch_co(self, oids, tid):
         async def prefetch(oid):
@@ -753,7 +784,8 @@ class ClientIo(object):
             except Exception:
                 logger.exception("Exception for prefetch `%r` `%r`", oid, tid)
         # we could optimize by `AsyncTask` wrapping
-        await asyncio.gather(*(prefetch(oid) for oid in oids))
+        await asyncio.gather(*(Task(prefetch(oid), loop=self.loop)
+                               for oid in oids))
 
     async def tpc_finish_co(self, tid, updates, f):
         if not self.operational:
@@ -894,6 +926,17 @@ class ClientRunner(object):
 
     def prefetch(self, oids, tid):
         oids = tuple(oids)  # avoid concurrency problems
+        # There is potential for a race condition here:
+        # we return a future, likely immediately released by
+        # the caller. A cyclic reference prevents immediate
+        # finalization, but a garbage collection might finalize
+        # and effectively terminate the preloading process.
+        # If the IO thread is sufficiently fast it has created a
+        # future representing a server response, referenced globally.
+        # Such a future protects the return value from
+        # the garbage collector (it is referenced via callbacks).
+        # It the IO thread is not fast enough, the complete
+        # structure may be released during a garbage collection.
         return self._call_(self.client.prefetch_co, oids, tid,
                            indirect=False, wait=False)
 
