@@ -686,8 +686,9 @@ class ClientIo(object):
         Usually, we do not wait for the initial readyness
         unless *init_ok*.
 
-        The the *method* call returns a future, wait for
-        its result and return that: otherwise return the return value.
+        The *method* call is assumed to either return ``None``
+        or a future (or raise an exception).
+        If a future is returned, we wait for it and return its result.
         """
         # Quick check for the normal case (already fully connected)
         # Note: `ready` can be set before we are truely ready.
@@ -706,14 +707,7 @@ class ClientIo(object):
         else:
             raise ClientDisconnected
         try:
-            # expand ``asynio.isfuture`` into
-            # ``getattr(..., "_asyncio_future_blocking", None) is not None``
-            # for speed
-            return (
-                await result
-                if getattr(result, "_asyncio_future_blocking", None)
-                is not None
-                else result)
+            return result if result is None else await result
         finally:
             del result  # avoid reference cycle in case of exception
 
@@ -887,9 +881,11 @@ class ClientRunner(object):
             """call *meth* with arguments *args*.
 
             If *indirect*, make the call indirectly via ``call_with_timeout``.
-            In this case, *meth* must not be a coroutine function;
-            if not *indirect*, *meth* must be a coroutine function.
-            Coroutine functions are distinquished by a ``_co`` suffix.
+            In this case, *meth* must return either ``None`` or
+            a future; in particular, it cannot be a coroutine function.
+            If not *indirect*, *meth* must be a coroutine function.
+            Coroutine functions are defined with ``async def``
+            and have a ``_co`` suffix.
 
             If *wait*, return the result otherwise the future.
             """
