@@ -925,7 +925,7 @@ static const char *__pyx_f[] = {
 /*--- Type declarations ---*/
 struct __pyx_obj_3ZEO_7asyncio_4_smp_SizedMessageProtocol;
 
-/* "ZEO/asyncio/_smp.pyx":12
+/* "ZEO/asyncio/_smp.pyx":13
  * 
  * 
  * cdef enum ReadState:             # <<<<<<<<<<<<<<
@@ -938,7 +938,7 @@ enum __pyx_t_3ZEO_7asyncio_4_smp_ReadState {
   __pyx_e_3ZEO_7asyncio_4_smp_closed = 0
 };
 
-/* "ZEO/asyncio/_smp.pyx":21
+/* "ZEO/asyncio/_smp.pyx":22
  * 
  * 
  * cdef class SizedMessageProtocol:             # <<<<<<<<<<<<<<
@@ -1584,7 +1584,7 @@ static PyObject *__pyx_tuple__2;
 static PyObject *__pyx_codeobj__3;
 /* Late includes */
 
-/* "ZEO/asyncio/_smp.pyx":26
+/* "ZEO/asyncio/_smp.pyx":27
  *     cdef public object connection_lost_called
  * 
  *     def __init__(self, loop, receive):             # <<<<<<<<<<<<<<
@@ -1626,11 +1626,11 @@ static int __pyx_pw_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_1__init__(PyObjec
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_receive)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__init__", 1, 2, 2, 1); __PYX_ERR(0, 26, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__init__", 1, 2, 2, 1); __PYX_ERR(0, 27, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "__init__") < 0)) __PYX_ERR(0, 26, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "__init__") < 0)) __PYX_ERR(0, 27, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -1643,7 +1643,7 @@ static int __pyx_pw_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_1__init__(PyObjec
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("__init__", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 26, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("__init__", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 27, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("ZEO.asyncio._smp.SizedMessageProtocol.__init__", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -1661,7 +1661,7 @@ static int __pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol___init__(struct _
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__init__", 0);
 
-  /* "ZEO/asyncio/_smp.pyx":27
+  /* "ZEO/asyncio/_smp.pyx":28
  * 
  *     def __init__(self, loop, receive):
  *         self.receive = receive             # <<<<<<<<<<<<<<
@@ -1674,7 +1674,7 @@ static int __pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol___init__(struct _
   __Pyx_DECREF(__pyx_v_self->receive);
   __pyx_v_self->receive = __pyx_v_receive;
 
-  /* "ZEO/asyncio/_smp.pyx":28
+  /* "ZEO/asyncio/_smp.pyx":29
  *     def __init__(self, loop, receive):
  *         self.receive = receive
  *         self.__closed = self.connection_lost_called = False             # <<<<<<<<<<<<<<
@@ -1692,7 +1692,7 @@ static int __pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol___init__(struct _
   __Pyx_DECREF(__pyx_v_self->connection_lost_called);
   __pyx_v_self->connection_lost_called = Py_False;
 
-  /* "ZEO/asyncio/_smp.pyx":26
+  /* "ZEO/asyncio/_smp.pyx":27
  *     cdef public object connection_lost_called
  * 
  *     def __init__(self, loop, receive):             # <<<<<<<<<<<<<<
@@ -1706,7 +1706,7 @@ static int __pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol___init__(struct _
   return __pyx_r;
 }
 
-/* "ZEO/asyncio/_smp.pyx":30
+/* "ZEO/asyncio/_smp.pyx":31
  *         self.__closed = self.connection_lost_called = False
  * 
  *     def set_receive(self, receive):             # <<<<<<<<<<<<<<
@@ -1732,7 +1732,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_2set_receiv
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("set_receive", 0);
 
-  /* "ZEO/asyncio/_smp.pyx":31
+  /* "ZEO/asyncio/_smp.pyx":32
  * 
  *     def set_receive(self, receive):
  *         self.receive = receive             # <<<<<<<<<<<<<<
@@ -1745,7 +1745,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_2set_receiv
   __Pyx_DECREF(__pyx_v_self->receive);
   __pyx_v_self->receive = __pyx_v_receive;
 
-  /* "ZEO/asyncio/_smp.pyx":30
+  /* "ZEO/asyncio/_smp.pyx":31
  *         self.__closed = self.connection_lost_called = False
  * 
  *     def set_receive(self, receive):             # <<<<<<<<<<<<<<
@@ -1760,7 +1760,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_2set_receiv
   return __pyx_r;
 }
 
-/* "ZEO/asyncio/_smp.pyx":35
+/* "ZEO/asyncio/_smp.pyx":36
  *     cdef public object transport
  * 
  *     def close(self):             # <<<<<<<<<<<<<<
@@ -1793,17 +1793,17 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_4close(stru
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("close", 0);
 
-  /* "ZEO/asyncio/_smp.pyx":36
+  /* "ZEO/asyncio/_smp.pyx":37
  * 
  *     def close(self):
  *         if self.__closed:             # <<<<<<<<<<<<<<
  *             return
  *         self.__closed = True
  */
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_self->__pyx___closed); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 36, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_self->__pyx___closed); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 37, __pyx_L1_error)
   if (__pyx_t_1) {
 
-    /* "ZEO/asyncio/_smp.pyx":37
+    /* "ZEO/asyncio/_smp.pyx":38
  *     def close(self):
  *         if self.__closed:
  *             return             # <<<<<<<<<<<<<<
@@ -1814,7 +1814,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_4close(stru
     __pyx_r = Py_None; __Pyx_INCREF(Py_None);
     goto __pyx_L0;
 
-    /* "ZEO/asyncio/_smp.pyx":36
+    /* "ZEO/asyncio/_smp.pyx":37
  * 
  *     def close(self):
  *         if self.__closed:             # <<<<<<<<<<<<<<
@@ -1823,7 +1823,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_4close(stru
  */
   }
 
-  /* "ZEO/asyncio/_smp.pyx":38
+  /* "ZEO/asyncio/_smp.pyx":39
  *         if self.__closed:
  *             return
  *         self.__closed = True             # <<<<<<<<<<<<<<
@@ -1836,40 +1836,14 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_4close(stru
   __Pyx_DECREF(__pyx_v_self->__pyx___closed);
   __pyx_v_self->__pyx___closed = Py_True;
 
-  /* "ZEO/asyncio/_smp.pyx":39
+  /* "ZEO/asyncio/_smp.pyx":40
  *             return
  *         self.__closed = True
  *         self.eof_received()             # <<<<<<<<<<<<<<
  *         self.transport.close()
  *         # break reference cycles
  */
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_eof_received); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 39, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_4 = NULL;
-  if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_3))) {
-    __pyx_t_4 = PyMethod_GET_SELF(__pyx_t_3);
-    if (likely(__pyx_t_4)) {
-      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_3);
-      __Pyx_INCREF(__pyx_t_4);
-      __Pyx_INCREF(function);
-      __Pyx_DECREF_SET(__pyx_t_3, function);
-    }
-  }
-  __pyx_t_2 = (__pyx_t_4) ? __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_4) : __Pyx_PyObject_CallNoArg(__pyx_t_3);
-  __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 39, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_2);
-  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-
-  /* "ZEO/asyncio/_smp.pyx":40
- *         self.__closed = True
- *         self.eof_received()
- *         self.transport.close()             # <<<<<<<<<<<<<<
- *         # break reference cycles
- *         self.transport = self.receive = self.writelines = None
- */
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self->transport, __pyx_n_s_close); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 40, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_eof_received); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 40, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_t_4 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_3))) {
@@ -1888,7 +1862,33 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_4close(stru
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "ZEO/asyncio/_smp.pyx":42
+  /* "ZEO/asyncio/_smp.pyx":41
+ *         self.__closed = True
+ *         self.eof_received()
+ *         self.transport.close()             # <<<<<<<<<<<<<<
+ *         # break reference cycles
+ *         self.transport = self.receive = self.writelines = None
+ */
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self->transport, __pyx_n_s_close); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 41, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_3);
+  __pyx_t_4 = NULL;
+  if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_3))) {
+    __pyx_t_4 = PyMethod_GET_SELF(__pyx_t_3);
+    if (likely(__pyx_t_4)) {
+      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_3);
+      __Pyx_INCREF(__pyx_t_4);
+      __Pyx_INCREF(function);
+      __Pyx_DECREF_SET(__pyx_t_3, function);
+    }
+  }
+  __pyx_t_2 = (__pyx_t_4) ? __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_4) : __Pyx_PyObject_CallNoArg(__pyx_t_3);
+  __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
+  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 41, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+
+  /* "ZEO/asyncio/_smp.pyx":43
  *         self.transport.close()
  *         # break reference cycles
  *         self.transport = self.receive = self.writelines = None             # <<<<<<<<<<<<<<
@@ -1911,7 +1911,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_4close(stru
   __Pyx_DECREF(__pyx_v_self->writelines);
   __pyx_v_self->writelines = Py_None;
 
-  /* "ZEO/asyncio/_smp.pyx":35
+  /* "ZEO/asyncio/_smp.pyx":36
  *     cdef public object transport
  * 
  *     def close(self):             # <<<<<<<<<<<<<<
@@ -1934,7 +1934,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_4close(stru
   return __pyx_r;
 }
 
-/* "ZEO/asyncio/_smp.pyx":49
+/* "ZEO/asyncio/_smp.pyx":50
  *     cdef object writelines
  * 
  *     cdef _write_message(self, bytes message):             # <<<<<<<<<<<<<<
@@ -1958,7 +1958,7 @@ static PyObject *__pyx_f_3ZEO_7asyncio_4_smp_20SizedMessageProtocol__write_messa
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("_write_message", 0);
 
-  /* "ZEO/asyncio/_smp.pyx":50
+  /* "ZEO/asyncio/_smp.pyx":51
  * 
  *     cdef _write_message(self, bytes message):
  *         self.writelines((pack(">I", len(message)), message))             # <<<<<<<<<<<<<<
@@ -1967,10 +1967,10 @@ static PyObject *__pyx_f_3ZEO_7asyncio_4_smp_20SizedMessageProtocol__write_messa
  */
   if (unlikely(__pyx_v_message == Py_None)) {
     PyErr_SetString(PyExc_TypeError, "object of type 'NoneType' has no len()");
-    __PYX_ERR(0, 50, __pyx_L1_error)
+    __PYX_ERR(0, 51, __pyx_L1_error)
   }
-  __pyx_t_3 = PyBytes_GET_SIZE(__pyx_v_message); if (unlikely(__pyx_t_3 == ((Py_ssize_t)-1))) __PYX_ERR(0, 50, __pyx_L1_error)
-  __pyx_t_4 = PyInt_FromSsize_t(__pyx_t_3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 50, __pyx_L1_error)
+  __pyx_t_3 = PyBytes_GET_SIZE(__pyx_v_message); if (unlikely(__pyx_t_3 == ((Py_ssize_t)-1))) __PYX_ERR(0, 51, __pyx_L1_error)
+  __pyx_t_4 = PyInt_FromSsize_t(__pyx_t_3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 51, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_INCREF(__pyx_v_3ZEO_7asyncio_4_smp_pack);
   __pyx_t_5 = __pyx_v_3ZEO_7asyncio_4_smp_pack; __pyx_t_6 = NULL;
@@ -1988,7 +1988,7 @@ static PyObject *__pyx_f_3ZEO_7asyncio_4_smp_20SizedMessageProtocol__write_messa
   #if CYTHON_FAST_PYCALL
   if (PyFunction_Check(__pyx_t_5)) {
     PyObject *__pyx_temp[3] = {__pyx_t_6, __pyx_kp_u_I, __pyx_t_4};
-    __pyx_t_2 = __Pyx_PyFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_7, 2+__pyx_t_7); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 50, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_7, 2+__pyx_t_7); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 51, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
@@ -1997,14 +1997,14 @@ static PyObject *__pyx_f_3ZEO_7asyncio_4_smp_20SizedMessageProtocol__write_messa
   #if CYTHON_FAST_PYCCALL
   if (__Pyx_PyFastCFunction_Check(__pyx_t_5)) {
     PyObject *__pyx_temp[3] = {__pyx_t_6, __pyx_kp_u_I, __pyx_t_4};
-    __pyx_t_2 = __Pyx_PyCFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_7, 2+__pyx_t_7); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 50, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyCFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_7, 2+__pyx_t_7); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 51, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   } else
   #endif
   {
-    __pyx_t_8 = PyTuple_New(2+__pyx_t_7); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 50, __pyx_L1_error)
+    __pyx_t_8 = PyTuple_New(2+__pyx_t_7); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 51, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     if (__pyx_t_6) {
       __Pyx_GIVEREF(__pyx_t_6); PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_6); __pyx_t_6 = NULL;
@@ -2015,12 +2015,12 @@ static PyObject *__pyx_f_3ZEO_7asyncio_4_smp_20SizedMessageProtocol__write_messa
     __Pyx_GIVEREF(__pyx_t_4);
     PyTuple_SET_ITEM(__pyx_t_8, 1+__pyx_t_7, __pyx_t_4);
     __pyx_t_4 = 0;
-    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_8, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 50, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_8, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 51, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   }
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-  __pyx_t_5 = PyTuple_New(2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 50, __pyx_L1_error)
+  __pyx_t_5 = PyTuple_New(2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 51, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_GIVEREF(__pyx_t_2);
   PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_t_2);
@@ -2042,12 +2042,12 @@ static PyObject *__pyx_f_3ZEO_7asyncio_4_smp_20SizedMessageProtocol__write_messa
   __pyx_t_1 = (__pyx_t_8) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_8, __pyx_t_5) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_5);
   __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 50, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 51, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "ZEO/asyncio/_smp.pyx":49
+  /* "ZEO/asyncio/_smp.pyx":50
  *     cdef object writelines
  * 
  *     cdef _write_message(self, bytes message):             # <<<<<<<<<<<<<<
@@ -2073,7 +2073,7 @@ static PyObject *__pyx_f_3ZEO_7asyncio_4_smp_20SizedMessageProtocol__write_messa
   return __pyx_r;
 }
 
-/* "ZEO/asyncio/_smp.pyx":52
+/* "ZEO/asyncio/_smp.pyx":53
  *         self.writelines((pack(">I", len(message)), message))
  * 
  *     def write_message(self, message):             # <<<<<<<<<<<<<<
@@ -2105,7 +2105,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_6write_mess
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("write_message", 0);
 
-  /* "ZEO/asyncio/_smp.pyx":53
+  /* "ZEO/asyncio/_smp.pyx":54
  * 
  *     def write_message(self, message):
  *         if self.paused:             # <<<<<<<<<<<<<<
@@ -2115,7 +2115,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_6write_mess
   __pyx_t_1 = (__pyx_v_self->paused != 0);
   if (__pyx_t_1) {
 
-    /* "ZEO/asyncio/_smp.pyx":54
+    /* "ZEO/asyncio/_smp.pyx":55
  *     def write_message(self, message):
  *         if self.paused:
  *             self.output.append(message)             # <<<<<<<<<<<<<<
@@ -2124,11 +2124,11 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_6write_mess
  */
     if (unlikely(__pyx_v_self->output == Py_None)) {
       PyErr_Format(PyExc_AttributeError, "'NoneType' object has no attribute '%.30s'", "append");
-      __PYX_ERR(0, 54, __pyx_L1_error)
+      __PYX_ERR(0, 55, __pyx_L1_error)
     }
-    __pyx_t_2 = __Pyx_PyList_Append(__pyx_v_self->output, __pyx_v_message); if (unlikely(__pyx_t_2 == ((int)-1))) __PYX_ERR(0, 54, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyList_Append(__pyx_v_self->output, __pyx_v_message); if (unlikely(__pyx_t_2 == ((int)-1))) __PYX_ERR(0, 55, __pyx_L1_error)
 
-    /* "ZEO/asyncio/_smp.pyx":53
+    /* "ZEO/asyncio/_smp.pyx":54
  * 
  *     def write_message(self, message):
  *         if self.paused:             # <<<<<<<<<<<<<<
@@ -2138,7 +2138,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_6write_mess
     goto __pyx_L3;
   }
 
-  /* "ZEO/asyncio/_smp.pyx":56
+  /* "ZEO/asyncio/_smp.pyx":57
  *             self.output.append(message)
  *         else:
  *             self._write_message(message)             # <<<<<<<<<<<<<<
@@ -2146,14 +2146,14 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_6write_mess
  *     def write_message_iter(self, it):
  */
   /*else*/ {
-    if (!(likely(PyBytes_CheckExact(__pyx_v_message))||((__pyx_v_message) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "bytes", Py_TYPE(__pyx_v_message)->tp_name), 0))) __PYX_ERR(0, 56, __pyx_L1_error)
-    __pyx_t_3 = ((struct __pyx_vtabstruct_3ZEO_7asyncio_4_smp_SizedMessageProtocol *)__pyx_v_self->__pyx_vtab)->_write_message(__pyx_v_self, ((PyObject*)__pyx_v_message)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 56, __pyx_L1_error)
+    if (!(likely(PyBytes_CheckExact(__pyx_v_message))||((__pyx_v_message) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "bytes", Py_TYPE(__pyx_v_message)->tp_name), 0))) __PYX_ERR(0, 57, __pyx_L1_error)
+    __pyx_t_3 = ((struct __pyx_vtabstruct_3ZEO_7asyncio_4_smp_SizedMessageProtocol *)__pyx_v_self->__pyx_vtab)->_write_message(__pyx_v_self, ((PyObject*)__pyx_v_message)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 57, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   }
   __pyx_L3:;
 
-  /* "ZEO/asyncio/_smp.pyx":52
+  /* "ZEO/asyncio/_smp.pyx":53
  *         self.writelines((pack(">I", len(message)), message))
  * 
  *     def write_message(self, message):             # <<<<<<<<<<<<<<
@@ -2174,7 +2174,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_6write_mess
   return __pyx_r;
 }
 
-/* "ZEO/asyncio/_smp.pyx":58
+/* "ZEO/asyncio/_smp.pyx":59
  *             self._write_message(message)
  * 
  *     def write_message_iter(self, it):             # <<<<<<<<<<<<<<
@@ -2211,19 +2211,19 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_8write_mess
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("write_message_iter", 0);
 
-  /* "ZEO/asyncio/_smp.pyx":59
+  /* "ZEO/asyncio/_smp.pyx":60
  * 
  *     def write_message_iter(self, it):
  *         data = iter(it)             # <<<<<<<<<<<<<<
  *         if self.paused:
  *             self.output.append(data)
  */
-  __pyx_t_1 = PyObject_GetIter(__pyx_v_it); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 59, __pyx_L1_error)
+  __pyx_t_1 = PyObject_GetIter(__pyx_v_it); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 60, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_data = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "ZEO/asyncio/_smp.pyx":60
+  /* "ZEO/asyncio/_smp.pyx":61
  *     def write_message_iter(self, it):
  *         data = iter(it)
  *         if self.paused:             # <<<<<<<<<<<<<<
@@ -2233,7 +2233,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_8write_mess
   __pyx_t_2 = (__pyx_v_self->paused != 0);
   if (__pyx_t_2) {
 
-    /* "ZEO/asyncio/_smp.pyx":61
+    /* "ZEO/asyncio/_smp.pyx":62
  *         data = iter(it)
  *         if self.paused:
  *             self.output.append(data)             # <<<<<<<<<<<<<<
@@ -2242,11 +2242,11 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_8write_mess
  */
     if (unlikely(__pyx_v_self->output == Py_None)) {
       PyErr_Format(PyExc_AttributeError, "'NoneType' object has no attribute '%.30s'", "append");
-      __PYX_ERR(0, 61, __pyx_L1_error)
+      __PYX_ERR(0, 62, __pyx_L1_error)
     }
-    __pyx_t_3 = __Pyx_PyList_Append(__pyx_v_self->output, __pyx_v_data); if (unlikely(__pyx_t_3 == ((int)-1))) __PYX_ERR(0, 61, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyList_Append(__pyx_v_self->output, __pyx_v_data); if (unlikely(__pyx_t_3 == ((int)-1))) __PYX_ERR(0, 62, __pyx_L1_error)
 
-    /* "ZEO/asyncio/_smp.pyx":62
+    /* "ZEO/asyncio/_smp.pyx":63
  *         if self.paused:
  *             self.output.append(data)
  *             return             # <<<<<<<<<<<<<<
@@ -2257,7 +2257,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_8write_mess
     __pyx_r = Py_None; __Pyx_INCREF(Py_None);
     goto __pyx_L0;
 
-    /* "ZEO/asyncio/_smp.pyx":60
+    /* "ZEO/asyncio/_smp.pyx":61
  *     def write_message_iter(self, it):
  *         data = iter(it)
  *         if self.paused:             # <<<<<<<<<<<<<<
@@ -2266,7 +2266,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_8write_mess
  */
   }
 
-  /* "ZEO/asyncio/_smp.pyx":63
+  /* "ZEO/asyncio/_smp.pyx":64
  *             self.output.append(data)
  *             return
  *         for message in data:             # <<<<<<<<<<<<<<
@@ -2277,26 +2277,26 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_8write_mess
     __pyx_t_1 = __pyx_v_data; __Pyx_INCREF(__pyx_t_1); __pyx_t_4 = 0;
     __pyx_t_5 = NULL;
   } else {
-    __pyx_t_4 = -1; __pyx_t_1 = PyObject_GetIter(__pyx_v_data); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 63, __pyx_L1_error)
+    __pyx_t_4 = -1; __pyx_t_1 = PyObject_GetIter(__pyx_v_data); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 64, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_5 = Py_TYPE(__pyx_t_1)->tp_iternext; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 63, __pyx_L1_error)
+    __pyx_t_5 = Py_TYPE(__pyx_t_1)->tp_iternext; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 64, __pyx_L1_error)
   }
   for (;;) {
     if (likely(!__pyx_t_5)) {
       if (likely(PyList_CheckExact(__pyx_t_1))) {
         if (__pyx_t_4 >= PyList_GET_SIZE(__pyx_t_1)) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_6 = PyList_GET_ITEM(__pyx_t_1, __pyx_t_4); __Pyx_INCREF(__pyx_t_6); __pyx_t_4++; if (unlikely(0 < 0)) __PYX_ERR(0, 63, __pyx_L1_error)
+        __pyx_t_6 = PyList_GET_ITEM(__pyx_t_1, __pyx_t_4); __Pyx_INCREF(__pyx_t_6); __pyx_t_4++; if (unlikely(0 < 0)) __PYX_ERR(0, 64, __pyx_L1_error)
         #else
-        __pyx_t_6 = PySequence_ITEM(__pyx_t_1, __pyx_t_4); __pyx_t_4++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 63, __pyx_L1_error)
+        __pyx_t_6 = PySequence_ITEM(__pyx_t_1, __pyx_t_4); __pyx_t_4++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 64, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_6);
         #endif
       } else {
         if (__pyx_t_4 >= PyTuple_GET_SIZE(__pyx_t_1)) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_6 = PyTuple_GET_ITEM(__pyx_t_1, __pyx_t_4); __Pyx_INCREF(__pyx_t_6); __pyx_t_4++; if (unlikely(0 < 0)) __PYX_ERR(0, 63, __pyx_L1_error)
+        __pyx_t_6 = PyTuple_GET_ITEM(__pyx_t_1, __pyx_t_4); __Pyx_INCREF(__pyx_t_6); __pyx_t_4++; if (unlikely(0 < 0)) __PYX_ERR(0, 64, __pyx_L1_error)
         #else
-        __pyx_t_6 = PySequence_ITEM(__pyx_t_1, __pyx_t_4); __pyx_t_4++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 63, __pyx_L1_error)
+        __pyx_t_6 = PySequence_ITEM(__pyx_t_1, __pyx_t_4); __pyx_t_4++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 64, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_6);
         #endif
       }
@@ -2306,7 +2306,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_8write_mess
         PyObject* exc_type = PyErr_Occurred();
         if (exc_type) {
           if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-          else __PYX_ERR(0, 63, __pyx_L1_error)
+          else __PYX_ERR(0, 64, __pyx_L1_error)
         }
         break;
       }
@@ -2315,19 +2315,19 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_8write_mess
     __Pyx_XDECREF_SET(__pyx_v_message, __pyx_t_6);
     __pyx_t_6 = 0;
 
-    /* "ZEO/asyncio/_smp.pyx":64
+    /* "ZEO/asyncio/_smp.pyx":65
  *             return
  *         for message in data:
  *             self._write_message(message)             # <<<<<<<<<<<<<<
  *             if self.paused:
  *                 self.output.append(data)
  */
-    if (!(likely(PyBytes_CheckExact(__pyx_v_message))||((__pyx_v_message) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "bytes", Py_TYPE(__pyx_v_message)->tp_name), 0))) __PYX_ERR(0, 64, __pyx_L1_error)
-    __pyx_t_6 = ((struct __pyx_vtabstruct_3ZEO_7asyncio_4_smp_SizedMessageProtocol *)__pyx_v_self->__pyx_vtab)->_write_message(__pyx_v_self, ((PyObject*)__pyx_v_message)); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 64, __pyx_L1_error)
+    if (!(likely(PyBytes_CheckExact(__pyx_v_message))||((__pyx_v_message) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "bytes", Py_TYPE(__pyx_v_message)->tp_name), 0))) __PYX_ERR(0, 65, __pyx_L1_error)
+    __pyx_t_6 = ((struct __pyx_vtabstruct_3ZEO_7asyncio_4_smp_SizedMessageProtocol *)__pyx_v_self->__pyx_vtab)->_write_message(__pyx_v_self, ((PyObject*)__pyx_v_message)); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 65, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
 
-    /* "ZEO/asyncio/_smp.pyx":65
+    /* "ZEO/asyncio/_smp.pyx":66
  *         for message in data:
  *             self._write_message(message)
  *             if self.paused:             # <<<<<<<<<<<<<<
@@ -2337,7 +2337,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_8write_mess
     __pyx_t_2 = (__pyx_v_self->paused != 0);
     if (__pyx_t_2) {
 
-      /* "ZEO/asyncio/_smp.pyx":66
+      /* "ZEO/asyncio/_smp.pyx":67
  *             self._write_message(message)
  *             if self.paused:
  *                 self.output.append(data)             # <<<<<<<<<<<<<<
@@ -2346,11 +2346,11 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_8write_mess
  */
       if (unlikely(__pyx_v_self->output == Py_None)) {
         PyErr_Format(PyExc_AttributeError, "'NoneType' object has no attribute '%.30s'", "append");
-        __PYX_ERR(0, 66, __pyx_L1_error)
+        __PYX_ERR(0, 67, __pyx_L1_error)
       }
-      __pyx_t_3 = __Pyx_PyList_Append(__pyx_v_self->output, __pyx_v_data); if (unlikely(__pyx_t_3 == ((int)-1))) __PYX_ERR(0, 66, __pyx_L1_error)
+      __pyx_t_3 = __Pyx_PyList_Append(__pyx_v_self->output, __pyx_v_data); if (unlikely(__pyx_t_3 == ((int)-1))) __PYX_ERR(0, 67, __pyx_L1_error)
 
-      /* "ZEO/asyncio/_smp.pyx":67
+      /* "ZEO/asyncio/_smp.pyx":68
  *             if self.paused:
  *                 self.output.append(data)
  *                 return             # <<<<<<<<<<<<<<
@@ -2362,7 +2362,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_8write_mess
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
       goto __pyx_L0;
 
-      /* "ZEO/asyncio/_smp.pyx":65
+      /* "ZEO/asyncio/_smp.pyx":66
  *         for message in data:
  *             self._write_message(message)
  *             if self.paused:             # <<<<<<<<<<<<<<
@@ -2371,7 +2371,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_8write_mess
  */
     }
 
-    /* "ZEO/asyncio/_smp.pyx":63
+    /* "ZEO/asyncio/_smp.pyx":64
  *             self.output.append(data)
  *             return
  *         for message in data:             # <<<<<<<<<<<<<<
@@ -2381,7 +2381,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_8write_mess
   }
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "ZEO/asyncio/_smp.pyx":58
+  /* "ZEO/asyncio/_smp.pyx":59
  *             self._write_message(message)
  * 
  *     def write_message_iter(self, it):             # <<<<<<<<<<<<<<
@@ -2405,7 +2405,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_8write_mess
   return __pyx_r;
 }
 
-/* "ZEO/asyncio/_smp.pyx":70
+/* "ZEO/asyncio/_smp.pyx":71
  * 
  *     # protocol responsibilities
  *     def pause_writing(self):             # <<<<<<<<<<<<<<
@@ -2431,7 +2431,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_10pause_wri
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("pause_writing", 0);
 
-  /* "ZEO/asyncio/_smp.pyx":71
+  /* "ZEO/asyncio/_smp.pyx":72
  *     # protocol responsibilities
  *     def pause_writing(self):
  *         self.paused = 1             # <<<<<<<<<<<<<<
@@ -2440,7 +2440,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_10pause_wri
  */
   __pyx_v_self->paused = 1;
 
-  /* "ZEO/asyncio/_smp.pyx":70
+  /* "ZEO/asyncio/_smp.pyx":71
  * 
  *     # protocol responsibilities
  *     def pause_writing(self):             # <<<<<<<<<<<<<<
@@ -2455,7 +2455,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_10pause_wri
   return __pyx_r;
 }
 
-/* "ZEO/asyncio/_smp.pyx":73
+/* "ZEO/asyncio/_smp.pyx":74
  *         self.paused = 1
  * 
  *     def resume_writing(self):             # <<<<<<<<<<<<<<
@@ -2494,7 +2494,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_12resume_wr
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("resume_writing", 0);
 
-  /* "ZEO/asyncio/_smp.pyx":74
+  /* "ZEO/asyncio/_smp.pyx":75
  * 
  *     def resume_writing(self):
  *         self.paused = 0             # <<<<<<<<<<<<<<
@@ -2503,7 +2503,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_12resume_wr
  */
   __pyx_v_self->paused = 0;
 
-  /* "ZEO/asyncio/_smp.pyx":75
+  /* "ZEO/asyncio/_smp.pyx":76
  *     def resume_writing(self):
  *         self.paused = 0
  *         cdef list output = self.output             # <<<<<<<<<<<<<<
@@ -2515,7 +2515,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_12resume_wr
   __pyx_v_output = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "ZEO/asyncio/_smp.pyx":76
+  /* "ZEO/asyncio/_smp.pyx":77
  *         self.paused = 0
  *         cdef list output = self.output
  *         while output and not self.paused:             # <<<<<<<<<<<<<<
@@ -2534,7 +2534,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_12resume_wr
     __pyx_L5_bool_binop_done:;
     if (!__pyx_t_2) break;
 
-    /* "ZEO/asyncio/_smp.pyx":77
+    /* "ZEO/asyncio/_smp.pyx":78
  *         cdef list output = self.output
  *         while output and not self.paused:
  *             message = output.pop(0)             # <<<<<<<<<<<<<<
@@ -2543,14 +2543,14 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_12resume_wr
  */
     if (unlikely(__pyx_v_output == Py_None)) {
       PyErr_Format(PyExc_AttributeError, "'NoneType' object has no attribute '%.30s'", "pop");
-      __PYX_ERR(0, 77, __pyx_L1_error)
+      __PYX_ERR(0, 78, __pyx_L1_error)
     }
-    __pyx_t_1 = __Pyx_PyList_PopIndex(__pyx_v_output, __pyx_int_0, 0, 1, Py_ssize_t, PyInt_FromSsize_t); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 77, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyList_PopIndex(__pyx_v_output, __pyx_int_0, 0, 1, Py_ssize_t, PyInt_FromSsize_t); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 78, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_XDECREF_SET(__pyx_v_message, __pyx_t_1);
     __pyx_t_1 = 0;
 
-    /* "ZEO/asyncio/_smp.pyx":78
+    /* "ZEO/asyncio/_smp.pyx":79
  *         while output and not self.paused:
  *             message = output.pop(0)
  *             if type(message) is bytes:             # <<<<<<<<<<<<<<
@@ -2561,19 +2561,19 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_12resume_wr
     __pyx_t_3 = (__pyx_t_2 != 0);
     if (__pyx_t_3) {
 
-      /* "ZEO/asyncio/_smp.pyx":79
+      /* "ZEO/asyncio/_smp.pyx":80
  *             message = output.pop(0)
  *             if type(message) is bytes:
  *                 self._write_message(message)             # <<<<<<<<<<<<<<
  *             else:
  *                 it = message
  */
-      if (!(likely(PyBytes_CheckExact(__pyx_v_message))||((__pyx_v_message) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "bytes", Py_TYPE(__pyx_v_message)->tp_name), 0))) __PYX_ERR(0, 79, __pyx_L1_error)
-      __pyx_t_1 = ((struct __pyx_vtabstruct_3ZEO_7asyncio_4_smp_SizedMessageProtocol *)__pyx_v_self->__pyx_vtab)->_write_message(__pyx_v_self, ((PyObject*)__pyx_v_message)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 79, __pyx_L1_error)
+      if (!(likely(PyBytes_CheckExact(__pyx_v_message))||((__pyx_v_message) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "bytes", Py_TYPE(__pyx_v_message)->tp_name), 0))) __PYX_ERR(0, 80, __pyx_L1_error)
+      __pyx_t_1 = ((struct __pyx_vtabstruct_3ZEO_7asyncio_4_smp_SizedMessageProtocol *)__pyx_v_self->__pyx_vtab)->_write_message(__pyx_v_self, ((PyObject*)__pyx_v_message)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 80, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-      /* "ZEO/asyncio/_smp.pyx":78
+      /* "ZEO/asyncio/_smp.pyx":79
  *         while output and not self.paused:
  *             message = output.pop(0)
  *             if type(message) is bytes:             # <<<<<<<<<<<<<<
@@ -2583,7 +2583,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_12resume_wr
       goto __pyx_L7;
     }
 
-    /* "ZEO/asyncio/_smp.pyx":81
+    /* "ZEO/asyncio/_smp.pyx":82
  *                 self._write_message(message)
  *             else:
  *                 it = message             # <<<<<<<<<<<<<<
@@ -2594,7 +2594,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_12resume_wr
       __Pyx_INCREF(__pyx_v_message);
       __Pyx_XDECREF_SET(__pyx_v_it, __pyx_v_message);
 
-      /* "ZEO/asyncio/_smp.pyx":82
+      /* "ZEO/asyncio/_smp.pyx":83
  *             else:
  *                 it = message
  *                 for message in it:             # <<<<<<<<<<<<<<
@@ -2605,26 +2605,26 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_12resume_wr
         __pyx_t_1 = __pyx_v_it; __Pyx_INCREF(__pyx_t_1); __pyx_t_4 = 0;
         __pyx_t_5 = NULL;
       } else {
-        __pyx_t_4 = -1; __pyx_t_1 = PyObject_GetIter(__pyx_v_it); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 82, __pyx_L1_error)
+        __pyx_t_4 = -1; __pyx_t_1 = PyObject_GetIter(__pyx_v_it); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 83, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_1);
-        __pyx_t_5 = Py_TYPE(__pyx_t_1)->tp_iternext; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 82, __pyx_L1_error)
+        __pyx_t_5 = Py_TYPE(__pyx_t_1)->tp_iternext; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 83, __pyx_L1_error)
       }
       for (;;) {
         if (likely(!__pyx_t_5)) {
           if (likely(PyList_CheckExact(__pyx_t_1))) {
             if (__pyx_t_4 >= PyList_GET_SIZE(__pyx_t_1)) break;
             #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-            __pyx_t_6 = PyList_GET_ITEM(__pyx_t_1, __pyx_t_4); __Pyx_INCREF(__pyx_t_6); __pyx_t_4++; if (unlikely(0 < 0)) __PYX_ERR(0, 82, __pyx_L1_error)
+            __pyx_t_6 = PyList_GET_ITEM(__pyx_t_1, __pyx_t_4); __Pyx_INCREF(__pyx_t_6); __pyx_t_4++; if (unlikely(0 < 0)) __PYX_ERR(0, 83, __pyx_L1_error)
             #else
-            __pyx_t_6 = PySequence_ITEM(__pyx_t_1, __pyx_t_4); __pyx_t_4++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 82, __pyx_L1_error)
+            __pyx_t_6 = PySequence_ITEM(__pyx_t_1, __pyx_t_4); __pyx_t_4++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 83, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_6);
             #endif
           } else {
             if (__pyx_t_4 >= PyTuple_GET_SIZE(__pyx_t_1)) break;
             #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-            __pyx_t_6 = PyTuple_GET_ITEM(__pyx_t_1, __pyx_t_4); __Pyx_INCREF(__pyx_t_6); __pyx_t_4++; if (unlikely(0 < 0)) __PYX_ERR(0, 82, __pyx_L1_error)
+            __pyx_t_6 = PyTuple_GET_ITEM(__pyx_t_1, __pyx_t_4); __Pyx_INCREF(__pyx_t_6); __pyx_t_4++; if (unlikely(0 < 0)) __PYX_ERR(0, 83, __pyx_L1_error)
             #else
-            __pyx_t_6 = PySequence_ITEM(__pyx_t_1, __pyx_t_4); __pyx_t_4++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 82, __pyx_L1_error)
+            __pyx_t_6 = PySequence_ITEM(__pyx_t_1, __pyx_t_4); __pyx_t_4++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 83, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_6);
             #endif
           }
@@ -2634,7 +2634,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_12resume_wr
             PyObject* exc_type = PyErr_Occurred();
             if (exc_type) {
               if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-              else __PYX_ERR(0, 82, __pyx_L1_error)
+              else __PYX_ERR(0, 83, __pyx_L1_error)
             }
             break;
           }
@@ -2643,19 +2643,19 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_12resume_wr
         __Pyx_DECREF_SET(__pyx_v_message, __pyx_t_6);
         __pyx_t_6 = 0;
 
-        /* "ZEO/asyncio/_smp.pyx":83
+        /* "ZEO/asyncio/_smp.pyx":84
  *                 it = message
  *                 for message in it:
  *                     self._write_message(message)             # <<<<<<<<<<<<<<
  *                     if self.paused:
  *                         self.output.insert(0, it)
  */
-        if (!(likely(PyBytes_CheckExact(__pyx_v_message))||((__pyx_v_message) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "bytes", Py_TYPE(__pyx_v_message)->tp_name), 0))) __PYX_ERR(0, 83, __pyx_L1_error)
-        __pyx_t_6 = ((struct __pyx_vtabstruct_3ZEO_7asyncio_4_smp_SizedMessageProtocol *)__pyx_v_self->__pyx_vtab)->_write_message(__pyx_v_self, ((PyObject*)__pyx_v_message)); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 83, __pyx_L1_error)
+        if (!(likely(PyBytes_CheckExact(__pyx_v_message))||((__pyx_v_message) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "bytes", Py_TYPE(__pyx_v_message)->tp_name), 0))) __PYX_ERR(0, 84, __pyx_L1_error)
+        __pyx_t_6 = ((struct __pyx_vtabstruct_3ZEO_7asyncio_4_smp_SizedMessageProtocol *)__pyx_v_self->__pyx_vtab)->_write_message(__pyx_v_self, ((PyObject*)__pyx_v_message)); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 84, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_6);
         __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
 
-        /* "ZEO/asyncio/_smp.pyx":84
+        /* "ZEO/asyncio/_smp.pyx":85
  *                 for message in it:
  *                     self._write_message(message)
  *                     if self.paused:             # <<<<<<<<<<<<<<
@@ -2665,7 +2665,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_12resume_wr
         __pyx_t_3 = (__pyx_v_self->paused != 0);
         if (__pyx_t_3) {
 
-          /* "ZEO/asyncio/_smp.pyx":85
+          /* "ZEO/asyncio/_smp.pyx":86
  *                     self._write_message(message)
  *                     if self.paused:
  *                         self.output.insert(0, it)             # <<<<<<<<<<<<<<
@@ -2674,11 +2674,11 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_12resume_wr
  */
           if (unlikely(__pyx_v_self->output == Py_None)) {
             PyErr_Format(PyExc_AttributeError, "'NoneType' object has no attribute '%.30s'", "insert");
-            __PYX_ERR(0, 85, __pyx_L1_error)
+            __PYX_ERR(0, 86, __pyx_L1_error)
           }
-          __pyx_t_7 = PyList_Insert(__pyx_v_self->output, 0, __pyx_v_it); if (unlikely(__pyx_t_7 == ((int)-1))) __PYX_ERR(0, 85, __pyx_L1_error)
+          __pyx_t_7 = PyList_Insert(__pyx_v_self->output, 0, __pyx_v_it); if (unlikely(__pyx_t_7 == ((int)-1))) __PYX_ERR(0, 86, __pyx_L1_error)
 
-          /* "ZEO/asyncio/_smp.pyx":86
+          /* "ZEO/asyncio/_smp.pyx":87
  *                     if self.paused:
  *                         self.output.insert(0, it)
  *                         return             # <<<<<<<<<<<<<<
@@ -2690,7 +2690,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_12resume_wr
           __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
           goto __pyx_L0;
 
-          /* "ZEO/asyncio/_smp.pyx":84
+          /* "ZEO/asyncio/_smp.pyx":85
  *                 for message in it:
  *                     self._write_message(message)
  *                     if self.paused:             # <<<<<<<<<<<<<<
@@ -2699,7 +2699,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_12resume_wr
  */
         }
 
-        /* "ZEO/asyncio/_smp.pyx":82
+        /* "ZEO/asyncio/_smp.pyx":83
  *             else:
  *                 it = message
  *                 for message in it:             # <<<<<<<<<<<<<<
@@ -2712,7 +2712,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_12resume_wr
     __pyx_L7:;
   }
 
-  /* "ZEO/asyncio/_smp.pyx":73
+  /* "ZEO/asyncio/_smp.pyx":74
  *         self.paused = 1
  * 
  *     def resume_writing(self):             # <<<<<<<<<<<<<<
@@ -2737,7 +2737,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_12resume_wr
   return __pyx_r;
 }
 
-/* "ZEO/asyncio/_smp.pyx":96
+/* "ZEO/asyncio/_smp.pyx":97
  * 
  *     # protocol responsibilities
  *     def data_received(self, bytes data):             # <<<<<<<<<<<<<<
@@ -2754,7 +2754,7 @@ static PyObject *__pyx_pw_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_15data_rece
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("data_received (wrapper)", 0);
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_data), (&PyBytes_Type), 1, "data", 1))) __PYX_ERR(0, 96, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_data), (&PyBytes_Type), 1, "data", 1))) __PYX_ERR(0, 97, __pyx_L1_error)
   __pyx_r = __pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_received(((struct __pyx_obj_3ZEO_7asyncio_4_smp_SizedMessageProtocol *)__pyx_v_self), ((PyObject*)__pyx_v_data));
 
   /* function exit code */
@@ -2804,7 +2804,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("data_received", 0);
 
-  /* "ZEO/asyncio/_smp.pyx":97
+  /* "ZEO/asyncio/_smp.pyx":98
  *     # protocol responsibilities
  *     def data_received(self, bytes data):
  *         self.chunk_buffer.append(data)             # <<<<<<<<<<<<<<
@@ -2813,11 +2813,11 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
  */
   if (unlikely(__pyx_v_self->chunk_buffer == Py_None)) {
     PyErr_Format(PyExc_AttributeError, "'NoneType' object has no attribute '%.30s'", "append");
-    __PYX_ERR(0, 97, __pyx_L1_error)
+    __PYX_ERR(0, 98, __pyx_L1_error)
   }
-  __pyx_t_1 = __Pyx_PyList_Append(__pyx_v_self->chunk_buffer, __pyx_v_data); if (unlikely(__pyx_t_1 == ((int)-1))) __PYX_ERR(0, 97, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyList_Append(__pyx_v_self->chunk_buffer, __pyx_v_data); if (unlikely(__pyx_t_1 == ((int)-1))) __PYX_ERR(0, 98, __pyx_L1_error)
 
-  /* "ZEO/asyncio/_smp.pyx":98
+  /* "ZEO/asyncio/_smp.pyx":99
  *     def data_received(self, bytes data):
  *         self.chunk_buffer.append(data)
  *         self.received_count += len(data)             # <<<<<<<<<<<<<<
@@ -2826,12 +2826,12 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
  */
   if (unlikely(__pyx_v_data == Py_None)) {
     PyErr_SetString(PyExc_TypeError, "object of type 'NoneType' has no len()");
-    __PYX_ERR(0, 98, __pyx_L1_error)
+    __PYX_ERR(0, 99, __pyx_L1_error)
   }
-  __pyx_t_2 = PyBytes_GET_SIZE(__pyx_v_data); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 98, __pyx_L1_error)
+  __pyx_t_2 = PyBytes_GET_SIZE(__pyx_v_data); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 99, __pyx_L1_error)
   __pyx_v_self->received_count = (__pyx_v_self->received_count + __pyx_t_2);
 
-  /* "ZEO/asyncio/_smp.pyx":99
+  /* "ZEO/asyncio/_smp.pyx":100
  *         self.chunk_buffer.append(data)
  *         self.received_count += len(data)
  *         cdef unsigned wanted = self.read_wanted             # <<<<<<<<<<<<<<
@@ -2841,7 +2841,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
   __pyx_t_3 = __pyx_v_self->read_wanted;
   __pyx_v_wanted = __pyx_t_3;
 
-  /* "ZEO/asyncio/_smp.pyx":107
+  /* "ZEO/asyncio/_smp.pyx":108
  *         cdef unsigned ci
  *         cdef unsigned unprocessed, use, i
  *         while self.read_state and self.read_wanted <= self.received_count:             # <<<<<<<<<<<<<<
@@ -2859,7 +2859,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
     __pyx_L5_bool_binop_done:;
     if (!__pyx_t_4) break;
 
-    /* "ZEO/asyncio/_smp.pyx":108
+    /* "ZEO/asyncio/_smp.pyx":109
  *         cdef unsigned unprocessed, use, i
  *         while self.read_state and self.read_wanted <= self.received_count:
  *             wanted = self.read_wanted             # <<<<<<<<<<<<<<
@@ -2869,26 +2869,26 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
     __pyx_t_3 = __pyx_v_self->read_wanted;
     __pyx_v_wanted = __pyx_t_3;
 
-    /* "ZEO/asyncio/_smp.pyx":109
+    /* "ZEO/asyncio/_smp.pyx":110
  *         while self.read_state and self.read_wanted <= self.received_count:
  *             wanted = self.read_wanted
  *             tv = target = PyBytes_FromStringAndSize(<char *> NULL, wanted)             # <<<<<<<<<<<<<<
  *             tvi = 0
  *             while wanted:
  */
-    __pyx_t_6 = PyBytes_FromStringAndSize(((char *)NULL), __pyx_v_wanted); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 109, __pyx_L1_error)
+    __pyx_t_6 = PyBytes_FromStringAndSize(((char *)NULL), __pyx_v_wanted); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 110, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
     if (unlikely(__pyx_t_6 == Py_None)) {
       PyErr_SetString(PyExc_TypeError, "expected bytes, NoneType found");
-      __PYX_ERR(0, 109, __pyx_L1_error)
+      __PYX_ERR(0, 110, __pyx_L1_error)
     }
-    __pyx_t_7 = __Pyx_PyBytes_AsWritableUString(__pyx_t_6); if (unlikely((!__pyx_t_7) && PyErr_Occurred())) __PYX_ERR(0, 109, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyBytes_AsWritableUString(__pyx_t_6); if (unlikely((!__pyx_t_7) && PyErr_Occurred())) __PYX_ERR(0, 110, __pyx_L1_error)
     __pyx_v_tv = __pyx_t_7;
     __Pyx_INCREF(__pyx_t_6);
     __Pyx_XDECREF_SET(__pyx_v_target, ((PyObject*)__pyx_t_6));
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
 
-    /* "ZEO/asyncio/_smp.pyx":110
+    /* "ZEO/asyncio/_smp.pyx":111
  *             wanted = self.read_wanted
  *             tv = target = PyBytes_FromStringAndSize(<char *> NULL, wanted)
  *             tvi = 0             # <<<<<<<<<<<<<<
@@ -2897,7 +2897,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
  */
     __pyx_v_tvi = 0;
 
-    /* "ZEO/asyncio/_smp.pyx":111
+    /* "ZEO/asyncio/_smp.pyx":112
  *             tv = target = PyBytes_FromStringAndSize(<char *> NULL, wanted)
  *             tvi = 0
  *             while wanted:             # <<<<<<<<<<<<<<
@@ -2908,7 +2908,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
       __pyx_t_4 = (__pyx_v_wanted != 0);
       if (!__pyx_t_4) break;
 
-      /* "ZEO/asyncio/_smp.pyx":112
+      /* "ZEO/asyncio/_smp.pyx":113
  *             tvi = 0
  *             while wanted:
  *                 cv = chunk = self.chunk_buffer[0]             # <<<<<<<<<<<<<<
@@ -2917,18 +2917,18 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
  */
       if (unlikely(__pyx_v_self->chunk_buffer == Py_None)) {
         PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
-        __PYX_ERR(0, 112, __pyx_L1_error)
+        __PYX_ERR(0, 113, __pyx_L1_error)
       }
       __pyx_t_6 = PyList_GET_ITEM(__pyx_v_self->chunk_buffer, 0);
       __Pyx_INCREF(__pyx_t_6);
-      __pyx_t_8 = __Pyx_PyObject_AsUString(__pyx_t_6); if (unlikely((!__pyx_t_8) && PyErr_Occurred())) __PYX_ERR(0, 112, __pyx_L1_error)
-      if (!(likely(PyBytes_CheckExact(__pyx_t_6))||((__pyx_t_6) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "bytes", Py_TYPE(__pyx_t_6)->tp_name), 0))) __PYX_ERR(0, 112, __pyx_L1_error)
+      __pyx_t_8 = __Pyx_PyObject_AsUString(__pyx_t_6); if (unlikely((!__pyx_t_8) && PyErr_Occurred())) __PYX_ERR(0, 113, __pyx_L1_error)
+      if (!(likely(PyBytes_CheckExact(__pyx_t_6))||((__pyx_t_6) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "bytes", Py_TYPE(__pyx_t_6)->tp_name), 0))) __PYX_ERR(0, 113, __pyx_L1_error)
       __pyx_v_cv = __pyx_t_8;
       __Pyx_INCREF(__pyx_t_6);
       __Pyx_XDECREF_SET(__pyx_v_chunk, ((PyObject*)__pyx_t_6));
       __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
 
-      /* "ZEO/asyncio/_smp.pyx":113
+      /* "ZEO/asyncio/_smp.pyx":114
  *             while wanted:
  *                 cv = chunk = self.chunk_buffer[0]
  *                 ci = self.chunk_index             # <<<<<<<<<<<<<<
@@ -2938,7 +2938,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
       __pyx_t_3 = __pyx_v_self->chunk_index;
       __pyx_v_ci = __pyx_t_3;
 
-      /* "ZEO/asyncio/_smp.pyx":114
+      /* "ZEO/asyncio/_smp.pyx":115
  *                 cv = chunk = self.chunk_buffer[0]
  *                 ci = self.chunk_index
  *                 unprocessed = len(chunk) - ci             # <<<<<<<<<<<<<<
@@ -2947,12 +2947,12 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
  */
       if (unlikely(__pyx_v_chunk == Py_None)) {
         PyErr_SetString(PyExc_TypeError, "object of type 'NoneType' has no len()");
-        __PYX_ERR(0, 114, __pyx_L1_error)
+        __PYX_ERR(0, 115, __pyx_L1_error)
       }
-      __pyx_t_2 = PyBytes_GET_SIZE(__pyx_v_chunk); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 114, __pyx_L1_error)
+      __pyx_t_2 = PyBytes_GET_SIZE(__pyx_v_chunk); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 115, __pyx_L1_error)
       __pyx_v_unprocessed = (__pyx_t_2 - __pyx_v_ci);
 
-      /* "ZEO/asyncio/_smp.pyx":115
+      /* "ZEO/asyncio/_smp.pyx":116
  *                 ci = self.chunk_index
  *                 unprocessed = len(chunk) - ci
  *                 if unprocessed > wanted:             # <<<<<<<<<<<<<<
@@ -2962,7 +2962,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
       __pyx_t_4 = ((__pyx_v_unprocessed > __pyx_v_wanted) != 0);
       if (__pyx_t_4) {
 
-        /* "ZEO/asyncio/_smp.pyx":116
+        /* "ZEO/asyncio/_smp.pyx":117
  *                 unprocessed = len(chunk) - ci
  *                 if unprocessed > wanted:
  *                     use = wanted             # <<<<<<<<<<<<<<
@@ -2971,7 +2971,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
  */
         __pyx_v_use = __pyx_v_wanted;
 
-        /* "ZEO/asyncio/_smp.pyx":117
+        /* "ZEO/asyncio/_smp.pyx":118
  *                 if unprocessed > wanted:
  *                     use = wanted
  *                     self.chunk_index += wanted             # <<<<<<<<<<<<<<
@@ -2980,7 +2980,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
  */
         __pyx_v_self->chunk_index = (__pyx_v_self->chunk_index + __pyx_v_wanted);
 
-        /* "ZEO/asyncio/_smp.pyx":115
+        /* "ZEO/asyncio/_smp.pyx":116
  *                 ci = self.chunk_index
  *                 unprocessed = len(chunk) - ci
  *                 if unprocessed > wanted:             # <<<<<<<<<<<<<<
@@ -2990,7 +2990,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
         goto __pyx_L9;
       }
 
-      /* "ZEO/asyncio/_smp.pyx":119
+      /* "ZEO/asyncio/_smp.pyx":120
  *                     self.chunk_index += wanted
  *                 else:
  *                     use = unprocessed             # <<<<<<<<<<<<<<
@@ -3000,65 +3000,97 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
       /*else*/ {
         __pyx_v_use = __pyx_v_unprocessed;
 
-        /* "ZEO/asyncio/_smp.pyx":120
+        /* "ZEO/asyncio/_smp.pyx":121
  *                 else:
  *                     use = unprocessed
  *                     self.chunk_buffer.pop(0)             # <<<<<<<<<<<<<<
  *                     self.chunk_index = 0
- *                 for i in range(use):
+ *                 if use <= 4:
  */
         if (unlikely(__pyx_v_self->chunk_buffer == Py_None)) {
           PyErr_Format(PyExc_AttributeError, "'NoneType' object has no attribute '%.30s'", "pop");
-          __PYX_ERR(0, 120, __pyx_L1_error)
+          __PYX_ERR(0, 121, __pyx_L1_error)
         }
-        __pyx_t_6 = __Pyx_PyList_PopIndex(__pyx_v_self->chunk_buffer, __pyx_int_0, 0, 1, Py_ssize_t, PyInt_FromSsize_t); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 120, __pyx_L1_error)
+        __pyx_t_6 = __Pyx_PyList_PopIndex(__pyx_v_self->chunk_buffer, __pyx_int_0, 0, 1, Py_ssize_t, PyInt_FromSsize_t); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 121, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_6);
         __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
 
-        /* "ZEO/asyncio/_smp.pyx":121
+        /* "ZEO/asyncio/_smp.pyx":122
  *                     use = unprocessed
  *                     self.chunk_buffer.pop(0)
  *                     self.chunk_index = 0             # <<<<<<<<<<<<<<
- *                 for i in range(use):
- *                     tv[tvi + i] = cv[ci + i]
+ *                 if use <= 4:
+ *                     for i in range(use):
  */
         __pyx_v_self->chunk_index = 0;
       }
       __pyx_L9:;
 
-      /* "ZEO/asyncio/_smp.pyx":122
+      /* "ZEO/asyncio/_smp.pyx":123
  *                     self.chunk_buffer.pop(0)
  *                     self.chunk_index = 0
- *                 for i in range(use):             # <<<<<<<<<<<<<<
- *                     tv[tvi + i] = cv[ci + i]
- *                 tvi += use
+ *                 if use <= 4:             # <<<<<<<<<<<<<<
+ *                     for i in range(use):
+ *                         tv[tvi + i] = cv[ci + i]
  */
-      __pyx_t_3 = __pyx_v_use;
-      __pyx_t_9 = __pyx_t_3;
-      for (__pyx_t_10 = 0; __pyx_t_10 < __pyx_t_9; __pyx_t_10+=1) {
-        __pyx_v_i = __pyx_t_10;
+      __pyx_t_4 = ((__pyx_v_use <= 4) != 0);
+      if (__pyx_t_4) {
+
+        /* "ZEO/asyncio/_smp.pyx":124
+ *                     self.chunk_index = 0
+ *                 if use <= 4:
+ *                     for i in range(use):             # <<<<<<<<<<<<<<
+ *                         tv[tvi + i] = cv[ci + i]
+ *                 else:
+ */
+        __pyx_t_3 = __pyx_v_use;
+        __pyx_t_9 = __pyx_t_3;
+        for (__pyx_t_10 = 0; __pyx_t_10 < __pyx_t_9; __pyx_t_10+=1) {
+          __pyx_v_i = __pyx_t_10;
+
+          /* "ZEO/asyncio/_smp.pyx":125
+ *                 if use <= 4:
+ *                     for i in range(use):
+ *                         tv[tvi + i] = cv[ci + i]             # <<<<<<<<<<<<<<
+ *                 else:
+ *                     memcpy(&tv[tvi], &cv[ci], use)
+ */
+          (__pyx_v_tv[(__pyx_v_tvi + __pyx_v_i)]) = (__pyx_v_cv[(__pyx_v_ci + __pyx_v_i)]);
+        }
 
         /* "ZEO/asyncio/_smp.pyx":123
+ *                     self.chunk_buffer.pop(0)
  *                     self.chunk_index = 0
- *                 for i in range(use):
- *                     tv[tvi + i] = cv[ci + i]             # <<<<<<<<<<<<<<
+ *                 if use <= 4:             # <<<<<<<<<<<<<<
+ *                     for i in range(use):
+ *                         tv[tvi + i] = cv[ci + i]
+ */
+        goto __pyx_L10;
+      }
+
+      /* "ZEO/asyncio/_smp.pyx":127
+ *                         tv[tvi + i] = cv[ci + i]
+ *                 else:
+ *                     memcpy(&tv[tvi], &cv[ci], use)             # <<<<<<<<<<<<<<
  *                 tvi += use
  *                 wanted -= use
  */
-        (__pyx_v_tv[(__pyx_v_tvi + __pyx_v_i)]) = (__pyx_v_cv[(__pyx_v_ci + __pyx_v_i)]);
+      /*else*/ {
+        (void)(memcpy((&(__pyx_v_tv[__pyx_v_tvi])), (&(__pyx_v_cv[__pyx_v_ci])), __pyx_v_use));
       }
+      __pyx_L10:;
 
-      /* "ZEO/asyncio/_smp.pyx":124
- *                 for i in range(use):
- *                     tv[tvi + i] = cv[ci + i]
+      /* "ZEO/asyncio/_smp.pyx":128
+ *                 else:
+ *                     memcpy(&tv[tvi], &cv[ci], use)
  *                 tvi += use             # <<<<<<<<<<<<<<
  *                 wanted -= use
  *             self.received_count -= self.read_wanted
  */
       __pyx_v_tvi = (__pyx_v_tvi + __pyx_v_use);
 
-      /* "ZEO/asyncio/_smp.pyx":125
- *                     tv[tvi + i] = cv[ci + i]
+      /* "ZEO/asyncio/_smp.pyx":129
+ *                     memcpy(&tv[tvi], &cv[ci], use)
  *                 tvi += use
  *                 wanted -= use             # <<<<<<<<<<<<<<
  *             self.received_count -= self.read_wanted
@@ -3067,7 +3099,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
       __pyx_v_wanted = (__pyx_v_wanted - __pyx_v_use);
     }
 
-    /* "ZEO/asyncio/_smp.pyx":126
+    /* "ZEO/asyncio/_smp.pyx":130
  *                 tvi += use
  *                 wanted -= use
  *             self.received_count -= self.read_wanted             # <<<<<<<<<<<<<<
@@ -3076,7 +3108,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
  */
     __pyx_v_self->received_count = (__pyx_v_self->received_count - __pyx_v_self->read_wanted);
 
-    /* "ZEO/asyncio/_smp.pyx":127
+    /* "ZEO/asyncio/_smp.pyx":131
  *                 wanted -= use
  *             self.received_count -= self.read_wanted
  *             if self.read_state == process_size:             # <<<<<<<<<<<<<<
@@ -3086,7 +3118,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
     __pyx_t_4 = ((__pyx_v_self->read_state == __pyx_e_3ZEO_7asyncio_4_smp_process_size) != 0);
     if (__pyx_t_4) {
 
-      /* "ZEO/asyncio/_smp.pyx":128
+      /* "ZEO/asyncio/_smp.pyx":132
  *             self.received_count -= self.read_wanted
  *             if self.read_state == process_size:
  *                 self.read_state = process_message             # <<<<<<<<<<<<<<
@@ -3095,7 +3127,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
  */
       __pyx_v_self->read_state = __pyx_e_3ZEO_7asyncio_4_smp_process_message;
 
-      /* "ZEO/asyncio/_smp.pyx":129
+      /* "ZEO/asyncio/_smp.pyx":133
  *             if self.read_state == process_size:
  *                 self.read_state = process_message
  *                 self.read_wanted = unpack(">I", target)[0]             # <<<<<<<<<<<<<<
@@ -3118,7 +3150,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
       #if CYTHON_FAST_PYCALL
       if (PyFunction_Check(__pyx_t_11)) {
         PyObject *__pyx_temp[3] = {__pyx_t_12, __pyx_kp_u_I, __pyx_v_target};
-        __pyx_t_6 = __Pyx_PyFunction_FastCall(__pyx_t_11, __pyx_temp+1-__pyx_t_13, 2+__pyx_t_13); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 129, __pyx_L1_error)
+        __pyx_t_6 = __Pyx_PyFunction_FastCall(__pyx_t_11, __pyx_temp+1-__pyx_t_13, 2+__pyx_t_13); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 133, __pyx_L1_error)
         __Pyx_XDECREF(__pyx_t_12); __pyx_t_12 = 0;
         __Pyx_GOTREF(__pyx_t_6);
       } else
@@ -3126,13 +3158,13 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
       #if CYTHON_FAST_PYCCALL
       if (__Pyx_PyFastCFunction_Check(__pyx_t_11)) {
         PyObject *__pyx_temp[3] = {__pyx_t_12, __pyx_kp_u_I, __pyx_v_target};
-        __pyx_t_6 = __Pyx_PyCFunction_FastCall(__pyx_t_11, __pyx_temp+1-__pyx_t_13, 2+__pyx_t_13); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 129, __pyx_L1_error)
+        __pyx_t_6 = __Pyx_PyCFunction_FastCall(__pyx_t_11, __pyx_temp+1-__pyx_t_13, 2+__pyx_t_13); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 133, __pyx_L1_error)
         __Pyx_XDECREF(__pyx_t_12); __pyx_t_12 = 0;
         __Pyx_GOTREF(__pyx_t_6);
       } else
       #endif
       {
-        __pyx_t_14 = PyTuple_New(2+__pyx_t_13); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 129, __pyx_L1_error)
+        __pyx_t_14 = PyTuple_New(2+__pyx_t_13); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 133, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_14);
         if (__pyx_t_12) {
           __Pyx_GIVEREF(__pyx_t_12); PyTuple_SET_ITEM(__pyx_t_14, 0, __pyx_t_12); __pyx_t_12 = NULL;
@@ -3143,29 +3175,29 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
         __Pyx_INCREF(__pyx_v_target);
         __Pyx_GIVEREF(__pyx_v_target);
         PyTuple_SET_ITEM(__pyx_t_14, 1+__pyx_t_13, __pyx_v_target);
-        __pyx_t_6 = __Pyx_PyObject_Call(__pyx_t_11, __pyx_t_14, NULL); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 129, __pyx_L1_error)
+        __pyx_t_6 = __Pyx_PyObject_Call(__pyx_t_11, __pyx_t_14, NULL); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 133, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_6);
         __Pyx_DECREF(__pyx_t_14); __pyx_t_14 = 0;
       }
       __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
-      __pyx_t_11 = __Pyx_GetItemInt(__pyx_t_6, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 129, __pyx_L1_error)
+      __pyx_t_11 = __Pyx_GetItemInt(__pyx_t_6, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 133, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_11);
       __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-      __pyx_t_3 = __Pyx_PyInt_As_unsigned_int(__pyx_t_11); if (unlikely((__pyx_t_3 == (unsigned int)-1) && PyErr_Occurred())) __PYX_ERR(0, 129, __pyx_L1_error)
+      __pyx_t_3 = __Pyx_PyInt_As_unsigned_int(__pyx_t_11); if (unlikely((__pyx_t_3 == (unsigned int)-1) && PyErr_Occurred())) __PYX_ERR(0, 133, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
       __pyx_v_self->read_wanted = __pyx_t_3;
 
-      /* "ZEO/asyncio/_smp.pyx":127
+      /* "ZEO/asyncio/_smp.pyx":131
  *                 wanted -= use
  *             self.received_count -= self.read_wanted
  *             if self.read_state == process_size:             # <<<<<<<<<<<<<<
  *                 self.read_state = process_message
  *                 self.read_wanted = unpack(">I", target)[0]
  */
-      goto __pyx_L12;
+      goto __pyx_L13;
     }
 
-    /* "ZEO/asyncio/_smp.pyx":131
+    /* "ZEO/asyncio/_smp.pyx":135
  *                 self.read_wanted = unpack(">I", target)[0]
  *             else:  # read_state == process_message
  *                 try:             # <<<<<<<<<<<<<<
@@ -3182,7 +3214,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
         __Pyx_XGOTREF(__pyx_t_17);
         /*try:*/ {
 
-          /* "ZEO/asyncio/_smp.pyx":132
+          /* "ZEO/asyncio/_smp.pyx":136
  *             else:  # read_state == process_message
  *                 try:
  *                     self.receive(target)             # <<<<<<<<<<<<<<
@@ -3202,12 +3234,12 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
           }
           __pyx_t_11 = (__pyx_t_14) ? __Pyx_PyObject_Call2Args(__pyx_t_6, __pyx_t_14, __pyx_v_target) : __Pyx_PyObject_CallOneArg(__pyx_t_6, __pyx_v_target);
           __Pyx_XDECREF(__pyx_t_14); __pyx_t_14 = 0;
-          if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 132, __pyx_L13_error)
+          if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 136, __pyx_L14_error)
           __Pyx_GOTREF(__pyx_t_11);
           __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
           __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
 
-          /* "ZEO/asyncio/_smp.pyx":131
+          /* "ZEO/asyncio/_smp.pyx":135
  *                 self.read_wanted = unpack(">I", target)[0]
  *             else:  # read_state == process_message
  *                 try:             # <<<<<<<<<<<<<<
@@ -3218,14 +3250,14 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
         __Pyx_XDECREF(__pyx_t_15); __pyx_t_15 = 0;
         __Pyx_XDECREF(__pyx_t_16); __pyx_t_16 = 0;
         __Pyx_XDECREF(__pyx_t_17); __pyx_t_17 = 0;
-        goto __pyx_L20_try_end;
-        __pyx_L13_error:;
+        goto __pyx_L21_try_end;
+        __pyx_L14_error:;
         __Pyx_XDECREF(__pyx_t_11); __pyx_t_11 = 0;
         __Pyx_XDECREF(__pyx_t_12); __pyx_t_12 = 0;
         __Pyx_XDECREF(__pyx_t_14); __pyx_t_14 = 0;
         __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
 
-        /* "ZEO/asyncio/_smp.pyx":133
+        /* "ZEO/asyncio/_smp.pyx":137
  *                 try:
  *                     self.receive(target)
  *                 except Exception:             # <<<<<<<<<<<<<<
@@ -3235,32 +3267,32 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
         __pyx_t_13 = __Pyx_PyErr_ExceptionMatches(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])));
         if (__pyx_t_13) {
           __Pyx_AddTraceback("ZEO.asyncio._smp.SizedMessageProtocol.data_received", __pyx_clineno, __pyx_lineno, __pyx_filename);
-          if (__Pyx_GetException(&__pyx_t_11, &__pyx_t_6, &__pyx_t_14) < 0) __PYX_ERR(0, 133, __pyx_L15_except_error)
+          if (__Pyx_GetException(&__pyx_t_11, &__pyx_t_6, &__pyx_t_14) < 0) __PYX_ERR(0, 137, __pyx_L16_except_error)
           __Pyx_GOTREF(__pyx_t_11);
           __Pyx_GOTREF(__pyx_t_6);
           __Pyx_GOTREF(__pyx_t_14);
 
-          /* "ZEO/asyncio/_smp.pyx":134
+          /* "ZEO/asyncio/_smp.pyx":138
  *                     self.receive(target)
  *                 except Exception:
  *                     logger.exception("Processing message `%r` failed"             # <<<<<<<<<<<<<<
  *                                      % data)
  *                 if self.read_state:  # not yet closed
  */
-          __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_logger); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 134, __pyx_L15_except_error)
+          __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_logger); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 138, __pyx_L16_except_error)
           __Pyx_GOTREF(__pyx_t_18);
-          __pyx_t_19 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_exception); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 134, __pyx_L15_except_error)
+          __pyx_t_19 = __Pyx_PyObject_GetAttrStr(__pyx_t_18, __pyx_n_s_exception); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 138, __pyx_L16_except_error)
           __Pyx_GOTREF(__pyx_t_19);
           __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
 
-          /* "ZEO/asyncio/_smp.pyx":135
+          /* "ZEO/asyncio/_smp.pyx":139
  *                 except Exception:
  *                     logger.exception("Processing message `%r` failed"
  *                                      % data)             # <<<<<<<<<<<<<<
  *                 if self.read_state:  # not yet closed
  *                     self.read_state = process_size
  */
-          __pyx_t_18 = PyUnicode_Format(__pyx_kp_u_Processing_message_r_failed, __pyx_v_data); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 135, __pyx_L15_except_error)
+          __pyx_t_18 = PyUnicode_Format(__pyx_kp_u_Processing_message_r_failed, __pyx_v_data); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 139, __pyx_L16_except_error)
           __Pyx_GOTREF(__pyx_t_18);
           __pyx_t_20 = NULL;
           if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_19))) {
@@ -3275,19 +3307,19 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
           __pyx_t_12 = (__pyx_t_20) ? __Pyx_PyObject_Call2Args(__pyx_t_19, __pyx_t_20, __pyx_t_18) : __Pyx_PyObject_CallOneArg(__pyx_t_19, __pyx_t_18);
           __Pyx_XDECREF(__pyx_t_20); __pyx_t_20 = 0;
           __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-          if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 134, __pyx_L15_except_error)
+          if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 138, __pyx_L16_except_error)
           __Pyx_GOTREF(__pyx_t_12);
           __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
           __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
           __Pyx_XDECREF(__pyx_t_11); __pyx_t_11 = 0;
           __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
           __Pyx_XDECREF(__pyx_t_14); __pyx_t_14 = 0;
-          goto __pyx_L14_exception_handled;
+          goto __pyx_L15_exception_handled;
         }
-        goto __pyx_L15_except_error;
-        __pyx_L15_except_error:;
+        goto __pyx_L16_except_error;
+        __pyx_L16_except_error:;
 
-        /* "ZEO/asyncio/_smp.pyx":131
+        /* "ZEO/asyncio/_smp.pyx":135
  *                 self.read_wanted = unpack(">I", target)[0]
  *             else:  # read_state == process_message
  *                 try:             # <<<<<<<<<<<<<<
@@ -3299,15 +3331,15 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
         __Pyx_XGIVEREF(__pyx_t_17);
         __Pyx_ExceptionReset(__pyx_t_15, __pyx_t_16, __pyx_t_17);
         goto __pyx_L1_error;
-        __pyx_L14_exception_handled:;
+        __pyx_L15_exception_handled:;
         __Pyx_XGIVEREF(__pyx_t_15);
         __Pyx_XGIVEREF(__pyx_t_16);
         __Pyx_XGIVEREF(__pyx_t_17);
         __Pyx_ExceptionReset(__pyx_t_15, __pyx_t_16, __pyx_t_17);
-        __pyx_L20_try_end:;
+        __pyx_L21_try_end:;
       }
 
-      /* "ZEO/asyncio/_smp.pyx":136
+      /* "ZEO/asyncio/_smp.pyx":140
  *                     logger.exception("Processing message `%r` failed"
  *                                      % data)
  *                 if self.read_state:  # not yet closed             # <<<<<<<<<<<<<<
@@ -3316,7 +3348,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
  */
       if (__pyx_v_self->read_state) {
 
-        /* "ZEO/asyncio/_smp.pyx":137
+        /* "ZEO/asyncio/_smp.pyx":141
  *                                      % data)
  *                 if self.read_state:  # not yet closed
  *                     self.read_state = process_size             # <<<<<<<<<<<<<<
@@ -3325,7 +3357,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
  */
         __pyx_v_self->read_state = __pyx_e_3ZEO_7asyncio_4_smp_process_size;
 
-        /* "ZEO/asyncio/_smp.pyx":138
+        /* "ZEO/asyncio/_smp.pyx":142
  *                 if self.read_state:  # not yet closed
  *                     self.read_state = process_size
  *                     self.read_wanted = 4             # <<<<<<<<<<<<<<
@@ -3334,7 +3366,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
  */
         __pyx_v_self->read_wanted = 4;
 
-        /* "ZEO/asyncio/_smp.pyx":136
+        /* "ZEO/asyncio/_smp.pyx":140
  *                     logger.exception("Processing message `%r` failed"
  *                                      % data)
  *                 if self.read_state:  # not yet closed             # <<<<<<<<<<<<<<
@@ -3343,10 +3375,10 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
  */
       }
     }
-    __pyx_L12:;
+    __pyx_L13:;
   }
 
-  /* "ZEO/asyncio/_smp.pyx":96
+  /* "ZEO/asyncio/_smp.pyx":97
  * 
  *     # protocol responsibilities
  *     def data_received(self, bytes data):             # <<<<<<<<<<<<<<
@@ -3375,7 +3407,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_14data_rece
   return __pyx_r;
 }
 
-/* "ZEO/asyncio/_smp.pyx":140
+/* "ZEO/asyncio/_smp.pyx":144
  *                     self.read_wanted = 4
  * 
  *     def connection_made(self, transport):             # <<<<<<<<<<<<<<
@@ -3405,7 +3437,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_16connectio
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("connection_made", 0);
 
-  /* "ZEO/asyncio/_smp.pyx":141
+  /* "ZEO/asyncio/_smp.pyx":145
  * 
  *     def connection_made(self, transport):
  *         self.transport = transport             # <<<<<<<<<<<<<<
@@ -3418,14 +3450,14 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_16connectio
   __Pyx_DECREF(__pyx_v_self->transport);
   __pyx_v_self->transport = __pyx_v_transport;
 
-  /* "ZEO/asyncio/_smp.pyx":142
+  /* "ZEO/asyncio/_smp.pyx":146
  *     def connection_made(self, transport):
  *         self.transport = transport
  *         self.writelines = transport.writelines             # <<<<<<<<<<<<<<
  *         self.paused = 0
  *         self.output = []
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_transport, __pyx_n_s_writelines); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 142, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_transport, __pyx_n_s_writelines); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 146, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_GIVEREF(__pyx_t_1);
   __Pyx_GOTREF(__pyx_v_self->writelines);
@@ -3433,7 +3465,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_16connectio
   __pyx_v_self->writelines = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "ZEO/asyncio/_smp.pyx":143
+  /* "ZEO/asyncio/_smp.pyx":147
  *         self.transport = transport
  *         self.writelines = transport.writelines
  *         self.paused = 0             # <<<<<<<<<<<<<<
@@ -3442,14 +3474,14 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_16connectio
  */
   __pyx_v_self->paused = 0;
 
-  /* "ZEO/asyncio/_smp.pyx":144
+  /* "ZEO/asyncio/_smp.pyx":148
  *         self.writelines = transport.writelines
  *         self.paused = 0
  *         self.output = []             # <<<<<<<<<<<<<<
  *         self.read_state = process_size
  *         self.read_wanted = 4
  */
-  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 144, __pyx_L1_error)
+  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 148, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_GIVEREF(__pyx_t_1);
   __Pyx_GOTREF(__pyx_v_self->output);
@@ -3457,7 +3489,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_16connectio
   __pyx_v_self->output = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "ZEO/asyncio/_smp.pyx":145
+  /* "ZEO/asyncio/_smp.pyx":149
  *         self.paused = 0
  *         self.output = []
  *         self.read_state = process_size             # <<<<<<<<<<<<<<
@@ -3466,7 +3498,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_16connectio
  */
   __pyx_v_self->read_state = __pyx_e_3ZEO_7asyncio_4_smp_process_size;
 
-  /* "ZEO/asyncio/_smp.pyx":146
+  /* "ZEO/asyncio/_smp.pyx":150
  *         self.output = []
  *         self.read_state = process_size
  *         self.read_wanted = 4             # <<<<<<<<<<<<<<
@@ -3475,7 +3507,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_16connectio
  */
   __pyx_v_self->read_wanted = 4;
 
-  /* "ZEO/asyncio/_smp.pyx":147
+  /* "ZEO/asyncio/_smp.pyx":151
  *         self.read_state = process_size
  *         self.read_wanted = 4
  *         self.received_count = 0             # <<<<<<<<<<<<<<
@@ -3484,14 +3516,14 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_16connectio
  */
   __pyx_v_self->received_count = 0;
 
-  /* "ZEO/asyncio/_smp.pyx":148
+  /* "ZEO/asyncio/_smp.pyx":152
  *         self.read_wanted = 4
  *         self.received_count = 0
  *         self.chunk_buffer = []             # <<<<<<<<<<<<<<
  *         self.chunk_index = 0
  * 
  */
-  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 148, __pyx_L1_error)
+  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 152, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_GIVEREF(__pyx_t_1);
   __Pyx_GOTREF(__pyx_v_self->chunk_buffer);
@@ -3499,7 +3531,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_16connectio
   __pyx_v_self->chunk_buffer = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "ZEO/asyncio/_smp.pyx":149
+  /* "ZEO/asyncio/_smp.pyx":153
  *         self.received_count = 0
  *         self.chunk_buffer = []
  *         self.chunk_index = 0             # <<<<<<<<<<<<<<
@@ -3508,7 +3540,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_16connectio
  */
   __pyx_v_self->chunk_index = 0;
 
-  /* "ZEO/asyncio/_smp.pyx":140
+  /* "ZEO/asyncio/_smp.pyx":144
  *                     self.read_wanted = 4
  * 
  *     def connection_made(self, transport):             # <<<<<<<<<<<<<<
@@ -3529,7 +3561,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_16connectio
   return __pyx_r;
 }
 
-/* "ZEO/asyncio/_smp.pyx":152
+/* "ZEO/asyncio/_smp.pyx":156
  * 
  * 
  *     def connection_lost(self, exc):             # <<<<<<<<<<<<<<
@@ -3562,7 +3594,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_18connectio
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("connection_lost", 0);
 
-  /* "ZEO/asyncio/_smp.pyx":153
+  /* "ZEO/asyncio/_smp.pyx":157
  * 
  *     def connection_lost(self, exc):
  *         self.connection_lost_called = True             # <<<<<<<<<<<<<<
@@ -3575,17 +3607,17 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_18connectio
   __Pyx_DECREF(__pyx_v_self->connection_lost_called);
   __pyx_v_self->connection_lost_called = Py_True;
 
-  /* "ZEO/asyncio/_smp.pyx":154
+  /* "ZEO/asyncio/_smp.pyx":158
  *     def connection_lost(self, exc):
  *         self.connection_lost_called = True
  *         if self.__closed:             # <<<<<<<<<<<<<<
  *             return
  *         self.transport.close()
  */
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_self->__pyx___closed); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 154, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_self->__pyx___closed); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 158, __pyx_L1_error)
   if (__pyx_t_1) {
 
-    /* "ZEO/asyncio/_smp.pyx":155
+    /* "ZEO/asyncio/_smp.pyx":159
  *         self.connection_lost_called = True
  *         if self.__closed:
  *             return             # <<<<<<<<<<<<<<
@@ -3596,7 +3628,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_18connectio
     __pyx_r = Py_None; __Pyx_INCREF(Py_None);
     goto __pyx_L0;
 
-    /* "ZEO/asyncio/_smp.pyx":154
+    /* "ZEO/asyncio/_smp.pyx":158
  *     def connection_lost(self, exc):
  *         self.connection_lost_called = True
  *         if self.__closed:             # <<<<<<<<<<<<<<
@@ -3605,14 +3637,14 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_18connectio
  */
   }
 
-  /* "ZEO/asyncio/_smp.pyx":156
+  /* "ZEO/asyncio/_smp.pyx":160
  *         if self.__closed:
  *             return
  *         self.transport.close()             # <<<<<<<<<<<<<<
  * 
  *     def eof_received(self):
  */
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self->transport, __pyx_n_s_close); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 156, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_self->transport, __pyx_n_s_close); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 160, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_t_4 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_3))) {
@@ -3626,12 +3658,12 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_18connectio
   }
   __pyx_t_2 = (__pyx_t_4) ? __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_4) : __Pyx_PyObject_CallNoArg(__pyx_t_3);
   __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 156, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 160, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "ZEO/asyncio/_smp.pyx":152
+  /* "ZEO/asyncio/_smp.pyx":156
  * 
  * 
  *     def connection_lost(self, exc):             # <<<<<<<<<<<<<<
@@ -3654,7 +3686,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_18connectio
   return __pyx_r;
 }
 
-/* "ZEO/asyncio/_smp.pyx":158
+/* "ZEO/asyncio/_smp.pyx":162
  *         self.transport.close()
  * 
  *     def eof_received(self):             # <<<<<<<<<<<<<<
@@ -3679,14 +3711,14 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_20eof_recei
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("eof_received", 0);
 
-  /* "ZEO/asyncio/_smp.pyx":159
+  /* "ZEO/asyncio/_smp.pyx":163
  * 
  *     def eof_received(self):
  *         self.read_state = closed             # <<<<<<<<<<<<<<
  */
   __pyx_v_self->read_state = __pyx_e_3ZEO_7asyncio_4_smp_closed;
 
-  /* "ZEO/asyncio/_smp.pyx":158
+  /* "ZEO/asyncio/_smp.pyx":162
  *         self.transport.close()
  * 
  *     def eof_received(self):             # <<<<<<<<<<<<<<
@@ -3700,7 +3732,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_20eof_recei
   return __pyx_r;
 }
 
-/* "ZEO/asyncio/_smp.pyx":23
+/* "ZEO/asyncio/_smp.pyx":24
  * cdef class SizedMessageProtocol:
  *     cdef object __closed
  *     cdef public object receive  # callback for received messages             # <<<<<<<<<<<<<<
@@ -3795,7 +3827,7 @@ static int __pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_7receive_4__del__
   return __pyx_r;
 }
 
-/* "ZEO/asyncio/_smp.pyx":24
+/* "ZEO/asyncio/_smp.pyx":25
  *     cdef object __closed
  *     cdef public object receive  # callback for received messages
  *     cdef public object connection_lost_called             # <<<<<<<<<<<<<<
@@ -3890,7 +3922,7 @@ static int __pyx_pf_3ZEO_7asyncio_4_smp_20SizedMessageProtocol_22connection_lost
   return __pyx_r;
 }
 
-/* "ZEO/asyncio/_smp.pyx":33
+/* "ZEO/asyncio/_smp.pyx":34
  *         self.receive = receive
  * 
  *     cdef public object transport             # <<<<<<<<<<<<<<
@@ -5189,7 +5221,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {0, 0, 0, 0, 0, 0, 0}
 };
 static CYTHON_SMALL_CODE int __Pyx_InitCachedBuiltins(void) {
-  __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) __PYX_ERR(0, 122, __pyx_L1_error)
+  __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) __PYX_ERR(0, 124, __pyx_L1_error)
   return 0;
   __pyx_L1_error:;
   return -1;
@@ -5280,16 +5312,16 @@ static int __Pyx_modinit_type_init_code(void) {
   /*--- Type init code ---*/
   __pyx_vtabptr_3ZEO_7asyncio_4_smp_SizedMessageProtocol = &__pyx_vtable_3ZEO_7asyncio_4_smp_SizedMessageProtocol;
   __pyx_vtable_3ZEO_7asyncio_4_smp_SizedMessageProtocol._write_message = (PyObject *(*)(struct __pyx_obj_3ZEO_7asyncio_4_smp_SizedMessageProtocol *, PyObject *))__pyx_f_3ZEO_7asyncio_4_smp_20SizedMessageProtocol__write_message;
-  if (PyType_Ready(&__pyx_type_3ZEO_7asyncio_4_smp_SizedMessageProtocol) < 0) __PYX_ERR(0, 21, __pyx_L1_error)
+  if (PyType_Ready(&__pyx_type_3ZEO_7asyncio_4_smp_SizedMessageProtocol) < 0) __PYX_ERR(0, 22, __pyx_L1_error)
   #if PY_VERSION_HEX < 0x030800B1
   __pyx_type_3ZEO_7asyncio_4_smp_SizedMessageProtocol.tp_print = 0;
   #endif
   if ((CYTHON_USE_TYPE_SLOTS && CYTHON_USE_PYTYPE_LOOKUP) && likely(!__pyx_type_3ZEO_7asyncio_4_smp_SizedMessageProtocol.tp_dictoffset && __pyx_type_3ZEO_7asyncio_4_smp_SizedMessageProtocol.tp_getattro == PyObject_GenericGetAttr)) {
     __pyx_type_3ZEO_7asyncio_4_smp_SizedMessageProtocol.tp_getattro = __Pyx_PyObject_GenericGetAttr;
   }
-  if (__Pyx_SetVtable(__pyx_type_3ZEO_7asyncio_4_smp_SizedMessageProtocol.tp_dict, __pyx_vtabptr_3ZEO_7asyncio_4_smp_SizedMessageProtocol) < 0) __PYX_ERR(0, 21, __pyx_L1_error)
-  if (PyObject_SetAttr(__pyx_m, __pyx_n_s_SizedMessageProtocol, (PyObject *)&__pyx_type_3ZEO_7asyncio_4_smp_SizedMessageProtocol) < 0) __PYX_ERR(0, 21, __pyx_L1_error)
-  if (__Pyx_setup_reduce((PyObject*)&__pyx_type_3ZEO_7asyncio_4_smp_SizedMessageProtocol) < 0) __PYX_ERR(0, 21, __pyx_L1_error)
+  if (__Pyx_SetVtable(__pyx_type_3ZEO_7asyncio_4_smp_SizedMessageProtocol.tp_dict, __pyx_vtabptr_3ZEO_7asyncio_4_smp_SizedMessageProtocol) < 0) __PYX_ERR(0, 22, __pyx_L1_error)
+  if (PyObject_SetAttr(__pyx_m, __pyx_n_s_SizedMessageProtocol, (PyObject *)&__pyx_type_3ZEO_7asyncio_4_smp_SizedMessageProtocol) < 0) __PYX_ERR(0, 22, __pyx_L1_error)
+  if (__Pyx_setup_reduce((PyObject*)&__pyx_type_3ZEO_7asyncio_4_smp_SizedMessageProtocol) < 0) __PYX_ERR(0, 22, __pyx_L1_error)
   __pyx_ptype_3ZEO_7asyncio_4_smp_SizedMessageProtocol = &__pyx_type_3ZEO_7asyncio_4_smp_SizedMessageProtocol;
   __Pyx_RefNannyFinishContext();
   return 0;
@@ -5543,61 +5575,61 @@ if (!__Pyx_RefNanny) {
   if (__Pyx_patch_abc() < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   #endif
 
-  /* "ZEO/asyncio/_smp.pyx":6
- * from cpython.bytes cimport PyBytes_FromStringAndSize
+  /* "ZEO/asyncio/_smp.pyx":7
+ * from libc.string cimport memcpy
  * 
  * import logging             # <<<<<<<<<<<<<<
  * import struct
  * 
  */
-  __pyx_t_1 = __Pyx_Import(__pyx_n_s_logging, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 6, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_Import(__pyx_n_s_logging, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 7, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_logging, __pyx_t_1) < 0) __PYX_ERR(0, 6, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_logging, __pyx_t_1) < 0) __PYX_ERR(0, 7, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "ZEO/asyncio/_smp.pyx":7
+  /* "ZEO/asyncio/_smp.pyx":8
  * 
  * import logging
  * import struct             # <<<<<<<<<<<<<<
  * 
  * logger = logging.getLogger(__name__)
  */
-  __pyx_t_1 = __Pyx_Import(__pyx_n_s_struct, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 7, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_Import(__pyx_n_s_struct, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 8, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_struct, __pyx_t_1) < 0) __PYX_ERR(0, 7, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_struct, __pyx_t_1) < 0) __PYX_ERR(0, 8, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "ZEO/asyncio/_smp.pyx":9
+  /* "ZEO/asyncio/_smp.pyx":10
  * import struct
  * 
  * logger = logging.getLogger(__name__)             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_logging); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 9, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_logging); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 10, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_getLogger); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 9, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_getLogger); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 10, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_name); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 9, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_name); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 10, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 9, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 10, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_logger, __pyx_t_3) < 0) __PYX_ERR(0, 9, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_logger, __pyx_t_3) < 0) __PYX_ERR(0, 10, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "ZEO/asyncio/_smp.pyx":17
+  /* "ZEO/asyncio/_smp.pyx":18
  *     closed = 0
  * 
  * cdef object pack = struct.pack             # <<<<<<<<<<<<<<
  * cdef object unpack = struct.unpack
  * 
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_struct); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 17, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_struct); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 18, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_pack); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 17, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_pack); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 18, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_XGOTREF(__pyx_v_3ZEO_7asyncio_4_smp_pack);
@@ -5605,16 +5637,16 @@ if (!__Pyx_RefNanny) {
   __Pyx_GIVEREF(__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "ZEO/asyncio/_smp.pyx":18
+  /* "ZEO/asyncio/_smp.pyx":19
  * 
  * cdef object pack = struct.pack
  * cdef object unpack = struct.unpack             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_struct); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 18, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_struct); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 19, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_unpack); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 18, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_unpack); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 19, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_XGOTREF(__pyx_v_3ZEO_7asyncio_4_smp_unpack);

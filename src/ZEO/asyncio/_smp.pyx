@@ -2,6 +2,7 @@
 
 """``cython`` implementation for ``SizedMessageProtocol``."""
 from cpython.bytes cimport PyBytes_FromStringAndSize
+from libc.string cimport memcpy
 
 import logging
 import struct
@@ -119,8 +120,11 @@ cdef class SizedMessageProtocol:
                     use = unprocessed
                     self.chunk_buffer.pop(0)
                     self.chunk_index = 0
-                for i in range(use):
-                    tv[tvi + i] = cv[ci + i]
+                if use <= 4:
+                    for i in range(use):
+                        tv[tvi + i] = cv[ci + i]
+                else:
+                    memcpy(&tv[tvi], &cv[ci], use)
                 tvi += use
                 wanted -= use
             self.received_count -= self.read_wanted
