@@ -12,7 +12,7 @@ from asyncio.base_tasks import _task_repr_info
 from concurrent.futures import Future as ConcurrentFuture
 
 
-# ``Future`` states
+# ``Future`` states -- inlined below for speed
 PENDING = 0
 RESULT = 1
 EXCEPTION = 2
@@ -31,7 +31,7 @@ class Future:
 
     def __init__(self, loop=None):
         self.loop = loop if loop is not None else get_event_loop()
-        self.state = PENDING
+        self.state = 0  # PENDING
         self._result = None
         self.callbacks = []
         self._asyncio_future_blocking = False
@@ -48,29 +48,29 @@ class Future:
         """
         if self.state:
             return False
-        self.state = CANCELLED
+        self.state = 3  # CANCELLED
         self._result = CancelledError()
         self.call_callbacks()
         return True
 
     def cancelled(self):
-        return self.state == CANCELLED
+        return self.state == 3  # CANCELLED
 
     def done(self):
         return self.state
 
     def result(self):
-        if self.state == PENDING:
+        if self.state == 0:  # PENDING
             raise InvalidStateError("not done")
-        elif self.state == RESULT:
+        elif self.state == 1:  # RESULT
             return self._result
         else:
             raise self._result
 
     def exception(self):
-        if self.state == PENDING:
+        if self.state == 0:  # PENDING
             raise InvalidStateError("not done")
-        elif self.state == RESULT:
+        elif self.state == 1:  # RESULT
             return None
         else:
             return self._result
@@ -98,7 +98,7 @@ class Future:
     def set_result(self, result):
         if self.state:
             raise InvalidStateError("already done")
-        self.state = RESULT
+        self.state = 1  # RESULT
         self._result = result
         self.call_callbacks()
 
@@ -107,7 +107,7 @@ class Future:
             raise InvalidStateError("already done")
         if isinstance(exc, type):
             exc = exc()
-        self.state = EXCEPTION
+        self.state = 2  # EXCEPTION
         self._result = exc
         self.call_callbacks()
 
@@ -158,7 +158,7 @@ class CoroutineExecutor:
                 if isinstance(e, (KeyboardInterrupt, SystemExit)):
                     raise
         else:
-            assert getattr(result, '_asyncio_future_blocking', None)
+            assert getattr(result, "_asyncio_future_blocking", None)
             result._asyncio_future_blocking = False
             self.awaiting = result
 
