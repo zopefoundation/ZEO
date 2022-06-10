@@ -192,3 +192,10 @@ class SizedMessageProtocol(asyncio.Protocol):
         if self.__closed:
             return
         self.transport.close()
+
+
+# Use C implementation if available
+try:
+    from ._smp import SizedMessageProtocol  # noqa: F811, F401
+except ImportError:
+    pass
