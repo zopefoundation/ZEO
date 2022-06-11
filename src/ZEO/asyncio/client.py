@@ -670,7 +670,7 @@ class ClientIo(object):
     def call_sync(self, method, *args):
         return self.protocol.call_sync(method, *args)
 
-    def call_async(self, method, *args):
+    def call_async(self, method, args):
         return self.protocol.call_async(method, args)
 
     def call_async_iter(self, it):
@@ -915,10 +915,16 @@ class ClientRunner(object):
 
     def async_(self, method, *args):
         """call method named *method* with *args* asynchronously."""
-        return self._call_(self.call_async, method, *args, timeout=0)
+        client = self.client
+        if not client.operational:
+            raise ClientDisconnected
+        self.loop.call_soon_threadsafe(client.call_async, method, args)
 
     def async_iter(self, it):
-        return self._call_(self.call_async_iter, it, timeout=0)
+        client = self.client
+        if not client.operational:
+            raise ClientDisconnected
+        self.loop.call_soon_threadsafe(client.call_async_iter, method, it)
 
     def prefetch(self, oids, tid):
         oids = tuple(oids)  # avoid concurrency problems
