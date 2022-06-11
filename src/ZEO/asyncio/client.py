@@ -686,24 +686,11 @@ class ClientIO(object):
     def get_peername(self):
         return self.protocol.get_peername()
 
-    @coroutine
-    def call_async_co(self, method, args):
-        if not self.operational:
-            raise ClientDisconnected()
-        self.call_async(method, args)
-        return
-        yield
-
     def call_async(self, method, args):
         return self.protocol.call_async(method, args)
 
-    @coroutine
-    def call_async_iter_co(self, it):
-        if not self.operational:
-            raise ClientDisconnected()
-        self.protocol.call_async_iter(it)
-        return
-        yield
+    def call_async_iter(self, it):
+        return self.protocol.call_async_iter(it)
 
     @coroutine
     def await_operational_co(self, timeout, init_ok=False):
@@ -869,7 +856,6 @@ class ClientRunner(object):
         self.loop = loop
         self.client = ClientIO(loop, *self.__args, **self.__kwargs)
         self.call_sync_co = self.client.call_sync_co
-        self.call_async_co = self.client.call_async_co
 
         def io_call(coro, wait=True):
             """run coroutine *coro* in the IO thread.
@@ -907,10 +893,25 @@ class ClientRunner(object):
 
     def async_(self, method, *args):
         """call method named *method* with *args* asynchronously."""
-        return self.io_call(self.call_async_co(method, args), wait=False)
+        client = self.client
+        if not client.operational:
+            raise ClientDisconnected
+        # Potential race condition:
+        # We may lose the connection before the call is sent to the server.
+        # In this case, an exception is raised and handled by the
+        # loops exception handler (which logs the exception).
+        self.loop.call_soon_threadsafe(client.call_async, method, args)
 
     def async_iter(self, it):
-        return self.io_call(self.client.call_async_iter_co(it), wait=False)
+        client = self.client
+        if not client.operational:
+            raise ClientDisconnected
+        # Potential race condition:
+        # We may lose the connection before all messages are
+        # sent to the server.
+        # In this case, an exception is raised and handled by the
+        # loops exception handler (which logs the exception).
+        self.loop.call_soon_threadsafe(client.call_async_iter, it)
 
     def prefetch(self, oids, tid):
         return self.io_call(
