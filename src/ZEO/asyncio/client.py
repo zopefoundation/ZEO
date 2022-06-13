@@ -718,6 +718,9 @@ class ClientIO(object):
         """
         if not self.operational:
             yield self.await_operational_co(timeout)
+        # race condition potential:
+        # We have been operational but may meanwhile have lost the connection.
+        # This will result in an exception propagated to the caller
         _ = yield self.protocol.call_sync(method, args)
         return_(_)
 
@@ -758,6 +761,8 @@ class ClientIO(object):
             return_(data)
         if not self.operational:
             yield self.await_operational_co(timeout)
+        # Race condition potential
+        # -- see comment in ``call_sync_co``
         data = yield self.protocol.load_before(oid, tid)
         return_(data)
 
