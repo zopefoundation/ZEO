@@ -218,7 +218,7 @@ class Protocol(base.ZEOBaseProtocol):
         # the client.
         try:
             try:
-                server_tid = yield self.fut(
+                server_tid = yield self.server_call(
                     'register', self.storage_key,
                     (self.read_only if self.read_only is not Fallback
                      else False),
@@ -226,7 +226,7 @@ class Protocol(base.ZEOBaseProtocol):
             except ZODB.POSException.ReadOnlyError:
                 if self.read_only is Fallback:
                     self.read_only = True
-                    server_tid = yield self.fut(
+                    server_tid = yield self.server_call(
                         'register', self.storage_key, True, *credentials)
                 else:
                     raise
@@ -290,7 +290,7 @@ class Protocol(base.ZEOBaseProtocol):
         self.write_message(self.encode(self.message_id, False, method, args))
         return future
 
-    def fut(self, method, *args):
+    def server_call(self, method, *args):
         return self.call(Fut(), method, args)
 
     def load_before(self, oid, tid):
@@ -564,9 +564,10 @@ class ClientIO(object):
         self.verify_invalidation_queue = []  # See comment in init :(
 
         protocol = self.protocol
+        call = protocol.server_call
         try:
             if server_tid is None:
-                server_tid = yield protocol.fut('lastTransaction')
+                server_tid = yield call('lastTransaction')
 
             cache = self.cache
             if cache:
@@ -588,7 +589,7 @@ class ClientIO(object):
                 elif cache_tid == server_tid:
                     self.verify_result = "Cache up to date"
                 else:
-                    vdata = yield protocol.fut('getInvalidations', cache_tid)
+                    vdata = yield call('getInvalidations', cache_tid)
                     if vdata:
                         self.verify_result = "quick verification"
                         server_tid, oids = vdata
@@ -635,7 +636,7 @@ class ClientIO(object):
             self.ready = True
 
             try:
-                info = yield protocol.fut('get_info')
+                info = yield call('get_info')
             except Exception as exc:
                 # This is weird. We were connected and verified our cache, but
                 # Now we errored getting info.
@@ -753,7 +754,7 @@ class ClientIO(object):
     def tpc_finish_threadsafe(self, future, wait_operational, tid, updates, f):
         if self.operational:
             try:
-                tid = yield self.protocol.fut('tpc_finish', tid)
+                tid = yield self.protocol.server_call('tpc_finish', tid)
                 cache = self.cache
                 # The cache invalidation here and that in
                 # ``invalidateTransaction`` are both performed
