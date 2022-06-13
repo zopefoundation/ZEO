@@ -14,7 +14,7 @@ from ..Exceptions import ClientDisconnected, ProtocolError
 from .base import ZEOBaseProtocol, SizedMessageProtocol
 from .testing import Loop, FaithfulLoop
 from .client import ClientThread, Fallback
-from .optimize import Future, AsyncTask, ConcurrentTask
+from .futures import Future, AsyncTask, ConcurrentTask
 from .server import new_connection, best_protocol_version
 from .marshal import encoder, decoder
 
@@ -1224,7 +1224,7 @@ class SizedMessageProtocolTests(setupstack.TestCase):
         self.loop = loop = Loop()
         self.received = received = []
         loop.create_connection(
-            lambda: SizedMessageProtocol(loop, received.append), sock=True)
+            lambda: SizedMessageProtocol(received.append), sock=True)
         self.transport = loop.transport
         self.protocol = loop.protocol
 

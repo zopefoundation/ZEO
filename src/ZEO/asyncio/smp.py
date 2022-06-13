@@ -199,6 +199,6 @@ class SizedMessageProtocol(Protocol):
 
 # Use C implementation if available
 try:
-    from _smp import SizedMessageProtocol  # noqa: F811, F401
+    from ._smp import SizedMessageProtocol  # noqa: F811, F401
 except ImportError:
     pass

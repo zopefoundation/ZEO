@@ -1,44 +1,41 @@
-"""Optimized variants of ``asyncio``'s ``Future`` and ``Task``.
-
-``asyncio`` schedules callbacks to be executed in the next
-loop run. This increases the number of loop runs necessary to
-obtain the result of a ZEO server request and adds significant
-latency (+ 27% in some benchmarks).
-This module defines variants which run callbacks immediately.
-"""
+# cython: language_level=3
 
 from asyncio import CancelledError, InvalidStateError, get_event_loop
 from concurrent.futures import Future as ConcurrentFuture
 
 
-# ``Future`` states -- inlined below for speed
-PENDING = 0
-RESULT = 1
-EXCEPTION = 2
-CANCELLED = 3
+cdef enum State:
+    PENDING = 0
+    RESULT = 1
+    EXCEPTION = 2
+    CANCELLED = 3
 
 
-class Future:
-    """ Minimal mostly ``asyncio`` compatible future.
-
+cdef class Future:
+    """Minimal mostly ``asyncio`` compatible future.
+    
     In contrast to an ``asyncio`` future,
     callbacks are called immediately, not scheduled;
     their context is ignored.
     """
-    __slots__ = ("loop", "state", "_result", "callbacks",
-                 "_asyncio_future_blocking")
+    cdef public object _asyncio_future_blocking
+
+    cdef object loop
+    cdef State state
+    cdef object _result
+    cdef list callbacks
 
     def __init__(self, loop=None):
+        self._asyncio_future_blocking = False
         self.loop = loop if loop is not None else get_event_loop()
-        self.state = 0  # PENDING
+        self.state = PENDING
         self._result = None
         self.callbacks = []
-        self._asyncio_future_blocking = False
 
     def get_loop(self):
         return self.loop
 
-    def cancel(self, msg=None):
+    cpdef cancel(self, msg=None):
         """cancel the future if not done.
 
         Return ``True``, if really cancelled.
@@ -47,66 +44,66 @@ class Future:
         """
         if self.state:
             return False
-        self.state = 3  # CANCELLED
+        self.state = CANCELLED
         self._result = CancelledError()
         self.call_callbacks()
         return True
 
     def cancelled(self):
-        return self.state == 3  # CANCELLED
+        return self.state == CANCELLED
 
     def done(self):
         return self.state
 
-    def result(self):
-        if self.state == 0:  # PENDING
+    cpdef result(self):
+        if self.state == PENDING:
             raise InvalidStateError("not done")
-        elif self.state == 1:  # RESULT
+        elif self.state == RESULT:
             return self._result
         else:
             raise self._result
 
-    def exception(self):
-        if self.state == 0:  # PENDING
+    cpdef exception(self):
+        if self.state == PENDING:
             raise InvalidStateError("not done")
-        elif self.state == 1:  # RESULT
+        elif self.state == RESULT:
             return None
         else:
             return self._result
 
-    def add_done_callback(self, cb, context=None):
+    cpdef add_done_callback(self, cb, context=None):
         if not self.state or self.callbacks:
             self.callbacks.append(cb)
         else:
             cb(self)
 
-    def remove_done_callback(self, cb):
+    cpdef remove_done_callback(self, cb):
         if self.state and self.callbacks:
             raise NotImplementedError("cannot remove callbacks when done")
         flt = [c for c in self.callbacks if c != cb]
-        rv = len(self.callbacks) - len(flt)
+        cdef int rv = len(self.callbacks) - len(flt)
         if rv:
             self.callbacks[:] = flt
         return rv
 
-    def call_callbacks(self):
+    cdef call_callbacks(self):
         for cb in self.callbacks:  # allows ``callbacks`` to grow
             cb(self)
         del self.callbacks[:]
 
-    def set_result(self, result):
+    cpdef set_result(self, result):
         if self.state:
             raise InvalidStateError("already done")
-        self.state = 1  # RESULT
+        self.state = RESULT
         self._result = result
         self.call_callbacks()
 
-    def set_exception(self, exc):
+    cpdef set_exception(self, exc):
         if self.state:
             raise InvalidStateError("already done")
         if isinstance(exc, type):
             exc = exc()
-        self.state = 2  # EXCEPTION
+        self.state = EXCEPTION
         self._result = exc
         self.call_callbacks()
 
@@ -125,22 +122,19 @@ class Future:
                 self._result,
                 self.callbacks]
         return " ".join(str(x) for x in info)
-
-
-class CoroutineExecutor:
-    """Execute a coroutine on behalf of a task.
-
-    No context support.
-
-    No ``cancel`` support (for the moment).
-    """
-    slots = "coro", "task", "awaiting"
+        
+        
+cdef class CoroutineExecutor:
+    cdef object coro  # executed coroutine
+    cdef object task   # associated task
+    cdef object awaiting  # future we are waiting for
 
     def __init__(self, task, coro):
-        self.task = task  # likely creates a reference cycle
+        """execute *coro* on behalf of *task*."""
+        self.task = task  # likely introduces a reference cycle
         self.coro = coro
 
-    def step(self):
+    cpdef step(self):
         self.awaiting = None
         try:
             result = self.coro.send(None)
@@ -157,23 +151,24 @@ class CoroutineExecutor:
                 if isinstance(e, (KeyboardInterrupt, SystemExit)):
                     raise
         else:
+            assert getattr(result, '_asyncio_future_blocking', None)
             result._asyncio_future_blocking = False
             self.awaiting = result
-
-            @result.add_done_callback
-            def wakeup(unused, step=self.step):
-                step()
+            result.add_done_callback(self.wakeup)
+                
+    cpdef wakeup(self, unused):
+        self.step()
 
     def cancel(self):
         raise NotImplementedError
 
 
-class AsyncTask(Future):
+cdef class AsyncTask(Future):
     """Simplified ``asyncio.Task``.
 
     Steps are not scheduled but executed immediately.
     """
-    __slots__ = "executor",
+    cdef object executor
 
     def __init__(self, coro, loop=None):
         super().__init__(loop=loop)
@@ -181,12 +176,11 @@ class AsyncTask(Future):
         self.executor.step()
 
     def cancel(self, msg=None):
-        """external cancel request."""
         return self.executor.cancel()
 
     def _cancel(self):
-        """internal cancel request."""
         return super().cancel()
+
 
 
 class ConcurrentTask(ConcurrentFuture):
@@ -197,27 +191,14 @@ class ConcurrentTask(ConcurrentFuture):
 
     def __init__(self, coro, loop):
         super().__init__()
-        self.loop = loop
-        if coro is not None:
-            self.set_coroutine(coro)
-
-    def set_coroutine(self, coro):
         self.executor = CoroutineExecutor(self, coro)  # reference cycle
-        self.loop.call_soon_threadsafe(self.executor.step)
+        loop.call_soon_threadsafe(self.executor.step)
 
     def cancel(self, msg=None):
-        """external cancel request."""
         return self.executor.cancel()
 
     def _cancel(self):
-        """internal cancel request."""
         return super().cancel()
 
-
-# use C implementation if available
-try:
-    from ._futures import Future, AsyncTask, ConcurrentTask  # noqa: F401, F811
-except ImportError:
-    pass
 
 run_coroutine_threadsafe = ConcurrentTask
