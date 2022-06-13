@@ -863,15 +863,17 @@ class ClientRunner(object):
 
     def setup_delegation(self, loop):
         self.loop = loop
-        self.client = ClientIO(loop, *self.__args, **self.__kwargs)
-        self.call_sync_co = self.client.call_sync_co
+        self.client = client = ClientIO(loop, *self.__args, **self.__kwargs)
+        self.call_sync_co = client.call_sync_co
+        self.load_before_co = client.load_before_co
+        run_coroutine = run_coroutine_threadsafe
 
         def io_call(coro, wait=True):
             """run coroutine *coro* in the IO thread.
 
             If *wait*, return the result otherwise the future.
             """
-            future = run_coroutine_threadsafe(coro, loop)
+            future = run_coroutine(coro, loop)
             try:
                 return future.result() if wait else future
             finally:
@@ -946,7 +948,7 @@ class ClientRunner(object):
             self.client.prefetch_co(oids, tid), wait=False)
 
     def load_before(self, oid, tid):
-        return self.io_call(self.client.load_before_co(oid, tid, self.timeout))
+        return self.io_call(self.load_before_co(oid, tid, self.timeout))
 
     def tpc_finish(self, tid, updates, f, **kw):
         # ``kw`` for test only; supported ``wait``
