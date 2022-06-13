@@ -8,7 +8,6 @@ This module defines variants which run callbacks immediately.
 """
 
 from asyncio import CancelledError, InvalidStateError, get_event_loop
-from asyncio.base_tasks import _task_repr_info
 from concurrent.futures import Future as ConcurrentFuture
 
 
@@ -21,7 +20,7 @@ CANCELLED = 3
 
 class Future:
     """ Minimal mostly ``asyncio`` compatible future.
-    
+
     In contrast to an ``asyncio`` future,
     callbacks are called immediately, not scheduled;
     their context is ignored.
@@ -35,7 +34,7 @@ class Future:
         self._result = None
         self.callbacks = []
         self._asyncio_future_blocking = False
-        
+
     def get_loop(self):
         return self.loop
 
@@ -126,7 +125,7 @@ class Future:
                 self._result,
                 self.callbacks]
         return " ".join(str(x) for x in info)
-    
+
 
 class CoroutineExecutor:
     """Execute a coroutine on behalf of a task.
@@ -158,14 +157,13 @@ class CoroutineExecutor:
                 if isinstance(e, (KeyboardInterrupt, SystemExit)):
                     raise
         else:
-            assert getattr(result, "_asyncio_future_blocking", None)
             result._asyncio_future_blocking = False
             self.awaiting = result
 
             @result.add_done_callback
             def wakeup(unused, step=self.step):
                 step()
-                
+
     def cancel(self):
         raise NotImplementedError
 
@@ -183,9 +181,11 @@ class AsyncTask(Future):
         self.executor.step()
 
     def cancel(self, msg=None):
+        """external cancel request."""
         return self.executor.cancel()
 
     def _cancel(self):
+        """internal cancel request."""
         return super().cancel()
 
 
@@ -197,14 +197,27 @@ class ConcurrentTask(ConcurrentFuture):
 
     def __init__(self, coro, loop):
         super().__init__()
+        self.loop = loop
+        if coro is not None:
+            self.set_coroutine(coro)
+
+    def set_coroutine(self, coro):
         self.executor = CoroutineExecutor(self, coro)  # reference cycle
-        loop.call_soon_threadsafe(self.executor.step)
+        self.loop.call_soon_threadsafe(self.executor.step)
 
     def cancel(self, msg=None):
+        """external cancel request."""
         return self.executor.cancel()
 
     def _cancel(self):
+        """internal cancel request."""
         return super().cancel()
 
+
+# use C implementation if available
+try:
+    from _futures import Future, AsyncTask, ConcurrentTask  # noqa: F401, F811
+except ImportError:
+    pass
 
 run_coroutine_threadsafe = ConcurrentTask

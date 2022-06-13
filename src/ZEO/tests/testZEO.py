@@ -1140,7 +1140,7 @@ def client_has_newer_data_than_server():
     >>> db.close()
     >>> r = shutil.copyfile('Data.fs', 'Data.save')
     >>> addr, admin = start_server(keep=1)  # NOQA: F821 undefined
-    >>> db = ZEO.DB(addr, name='client', max_disconnect_poll=.01)
+    >>> db = ZEO.DB(addr, name='client')
     >>> wait_connected(db.storage)  # NOQA: F821 undefined
     >>> conn = db.open()
     >>> conn.root().x = 1
@@ -1164,9 +1164,11 @@ def client_has_newer_data_than_server():
     ...    len([x for x in handler.records
     ...         if x.levelname == 'CRITICAL' and
     ...            'Client cache is out of sync with the server.' in x.msg
-    ...         ]) >= 2)
+    ...         ]) >= 2, 30)
 
     Note that the errors repeat because the client keeps on trying to connect.
+    We have to wait rather long as the client waits about 10 s
+    before a retrial.
 
     >>> db.close()
     >>> handler.uninstall()

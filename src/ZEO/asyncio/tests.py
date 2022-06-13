@@ -113,14 +113,14 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
 
     def enter_future_mode(self):
         if self.future_mode is None:
-            self.future_mode = self._call_
+            self.future_mode = self.io_call
             # switch for most interface calls to future mode
             # exceptions are those that explicitly use ``wait=True`.
-            self._call_ = partial(self._call_, wait=False)
+            self.io_call = partial(self.io_call, wait=False)
 
     def exit_future_mode(self):
         if self.future_mode is not None:
-            self._call_ = self.future_mode  # back to synchronous mode
+            self.io_call = self.future_mode  # back to synchronous mode
             del self.future_mode
 
     def start(self,
@@ -717,7 +717,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
             finish_start=True)
         self.assertEqual(client.get_peername(), '1.2.3.4')
 
-    def test_ClientDisconnected_on_call_timeout(self):
+    def test_ClientDisconnected_onio_calltimeout(self):
         (wrapper, cache, loop, client, protocol,
          transport) = self.start(future_mode=False)
         self.assertRaises(ClientDisconnected, self.call, 'foo')

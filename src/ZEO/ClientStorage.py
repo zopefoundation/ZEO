@@ -453,7 +453,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             # Note: we cannot yet use ``_async`` (connection not yet
             # officially established) but can already use
             # ``ClientIo.call_async``
-            conn.call_async('set_client_label', self._client_label)
+            conn.call_async('set_client_label', (self._client_label,))
 
         self._info.update(info)
 

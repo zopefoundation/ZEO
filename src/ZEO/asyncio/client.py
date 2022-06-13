@@ -6,8 +6,9 @@ The client interface implementation is split into two parts:
 ``ClientIo`` methods in an ``asyncio`` context.
 
 ``ClientRunner`` calls ``ClientIo`` methods indirectly via
-``asyncio.run_coroutine_threadsafe``; methods designed for such
-calls have suffix ``_co``.
+either ``loop.call_soon_threadsafe`` (the async calls
+``call_async`` and ``call_async_iter``) or
+``run_coroutine_threadsafe`` (methods with suffix ``_co``).
 ``ClientIo`` does not call ``ClientRunner`` methods; however, it
 can call ``ClientStorage`` and ``ClientCache`` methods.
 Those methods must be thread safe.
@@ -20,7 +21,7 @@ A server connection is represented by a ``Protocol`` instance.
 
 The ``asyncio`` loop must be run in a separate thread.
 The loop management is the responsibility of ``ClientThread``,
-a tiny wrapper arount ``ClientRunner``.
+a tiny wrapper around ``ClientRunner``.
 """
 
 import asyncio
@@ -39,8 +40,7 @@ import ZEO.interfaces
 from . import base
 from .compat import new_event_loop
 from .marshal import encoder, decoder
-from .optimize import Future, AsyncTask as Task
-from .optimize import run_coroutine_threadsafe
+from .futures import Future, AsyncTask as Task, run_coroutine_threadsafe
 
 logger = logging.getLogger(__name__)
 
@@ -214,7 +214,7 @@ class Protocol(base.ZEOBaseProtocol):
         async with self.client.register_lock:
             try:
                 try:
-                    server_tid = await self.call_sync(
+                    server_tid = await self.server_call(
                         'register', self.storage_key,
                         self.read_only if self.read_only is not Fallback
                         else False,
@@ -222,7 +222,7 @@ class Protocol(base.ZEOBaseProtocol):
                 except ZODB.POSException.ReadOnlyError:
                     if self.read_only is Fallback:
                         self.read_only = True
-                        server_tid = await self.call_sync(
+                        server_tid = await self.server_call(
                             'register', self.storage_key, True)
                     else:
                         raise
@@ -282,7 +282,7 @@ class Protocol(base.ZEOBaseProtocol):
 
     message_id = 0
 
-    def call(self, future, method, args, message_id=None):
+    def call_sync(self, method, args, message_id=None, future=None):
         # The check below is important to handle a potential race
         # between a server call and ``close``.
         # In ``close``, all waiting futures get ``ClientDisconnected``
@@ -293,21 +293,23 @@ class Protocol(base.ZEOBaseProtocol):
         if message_id is None:
             self.message_id += 1
             message_id = self.message_id
+        future = future or  Future(loop=self.loop)  # noqa: E271
         self.futures[message_id] = future
         self.write_message(self.encode(message_id, False, method, args))
         return future
 
-    def call_sync(self, method, *args, message_id=None):
-        return self.call(Future(loop=self.loop), method, args, message_id)
+    def server_call(self, method, *args):
+        return self.call_sync(method, args)
 
     def load_before(self, oid, tid):
-        # Special-case loadBefore, so we collapse outstanding requests
+        # Special-case load_before, so we collapse outstanding requests
+        # and update the cache
         message_id = (oid, tid)
         future = self.futures.get(message_id)
         if future is None:
             future = Future(loop=self.loop)
             # Check whether the cache contains the information.
-            # I am not sure whether the cache lookup it really
+            # I am not sure whether the cache lookup is really
             # necessary at this place (it has already been
             # done in ``ClientStorage.loadBefore`` and therefore
             # will likely fail here).
@@ -331,7 +333,7 @@ class Protocol(base.ZEOBaseProtocol):
                         state, start, end = data
                         cache.store(oid, start, end, state)
 
-                self.call(future, 'loadBefore', message_id, message_id)
+                self.call_sync('loadBefore', message_id, message_id, future)
         return future
 
     # Methods called by the server.
@@ -409,8 +411,7 @@ unlogged_exceptions = (ZODB.POSException.POSKeyError,
 
 
 class ClientIo(object):
-    """asyncio low-level ZEO client interface
-    """
+    """asyncio low-level ZEO client interface."""
 
     # All of the code in this class runs in a single dedicated
     # thread. Thus, we can mostly avoid worrying about interleaved
@@ -569,7 +570,7 @@ class ClientIo(object):
     async def verify(self, server_tid):
         """cache verification and invalidation -- run as task."""
         protocol = self.protocol
-        call = protocol.call_sync
+        call = protocol.server_call
         try:
             if server_tid is None:
                 server_tid = await call('lastTransaction')
@@ -667,52 +668,40 @@ class ClientIo(object):
     def get_peername(self):
         return self.protocol.get_peername()
 
-    def call_sync(self, method, *args):
-        return self.protocol.call_sync(method, *args)
-
     def call_async(self, method, args):
         return self.protocol.call_async(method, args)
 
     def call_async_iter(self, it):
         return self.protocol.call_async_iter(it)
 
-    # methods called with ``run_coroutine_threadsafe``
-    # recognizable by their ``_co`` suffix
-    async def call_with_timeout_co(self, timeout, method, args=(),
-                                   init_ok=False):
-        """call *method* with *args* when ready.
+    async def await_operational_co(self, timeout, init_ok=False):
+        """Wait *timeout* for operational.
+
+        Fail immediately if ``ready is None`` unless ``init_ok``.
+        """
+        if not self.operational:
+            if timeout and (init_ok or self.ready is not None):
+                try:
+                    await asyncio.wait_for(asyncio.shield(self.connected),
+                                           timeout)
+                except (asyncio.TimeoutError, asyncio.CancelledError):
+                    raise ClientDisconnected
+            else:
+                raise ClientDisconnected
+
+    async def call_sync_co(self, method, args, timeout):
+        """call method named *method* with *args* and *task* when ready.
 
         Wait at most *timeout* for readyness.
-        Usually, we do not wait for the initial readyness
-        unless *init_ok*.
-
-        The *method* call is assumed to either return ``None``
-        or a future (or raise an exception).
-        If a future is returned, we wait for it and return its result.
         """
-        # Quick check for the normal case (already fully connected)
-        # Note: `ready` can be set before we are truely ready.
-        # We check it nevertheless because this is cheaper
-        # than `not self.connected.cancelled()`.
-        if self.operational:
-            result = method(*args)
-        elif timeout and (init_ok or self.ready is not None):
-            try:
-                await asyncio.wait_for(asyncio.shield(self.connected), timeout)
-            except (asyncio.TimeoutError, asyncio.CancelledError):
-                raise ClientDisconnected
-            # potential race condition: we have been connected
-            # but may meanwhile have lost the connection again.
-            result = method(*args)
-        else:
-            raise ClientDisconnected
-        try:
-            return result if result is None else await result
-        finally:
-            del result  # avoid reference cycle in case of exception
+        self.operational or await self.await_operational_co(timeout)
+        # race condition potential:
+        # We have been operational but may meanwhile have lost the connection.
+        # This will result in an exception propagated to the caller
+        return await self.protocol.call_sync(method, args)
 
     async def close_co(self):
-        # The following ``close`` deadlocked in isolated tests.
+        # The following ``close`` deadlocmc''ked in isolated tests.
         # Prevent this with a timeout and log information
         # to understand the bug.
         # await self.close()
@@ -745,10 +734,8 @@ class ClientIo(object):
 
     # Special methods because they update the cache.
 
-    async def load_before_co(self, timeout, oid, tid):
-        if self.operational:
-            future = self.protocol.load_before(oid, tid)
-        else:
+    async def load_before_co(self, oid, tid, timeout):
+        if not self.operational:
             # the following cache lookup is not necessary in
             # real life: ``ClientStorage.loadBefore`` has
             # already done it (and failed); we will fail, too --
@@ -757,27 +744,21 @@ class ClientIo(object):
             data = self.cache.loadBefore(oid, tid)
             if data:
                 return data
-            if timeout:
-                def callback():
-                    """helper to delay protocol access until readyness."""
-                    return self.protocol.load_before(oid, tid)
-                future = self.call_with_timeout_co(timeout, callback)
-            else:
-                raise ClientDisconnected
-        try:
-            return await future
-        finally:
-            del future  # avoid reference cycle in case of exception
+            await self.await_operational_co(timeout)
+        # Race condition potential
+        # -- see comment in ``call_sync_co``
+        return await self.protocol.load_before(oid, tid)
 
     async def prefetch_co(self, oids, tid):
         async def prefetch(oid):
             try:
-                await self.load_before_co(0, oid, tid)
+                await self.protocol.load_before(oid, tid)
             except ClientDisconnected:
                 return
             except Exception:
                 logger.exception("Exception for prefetch `%r` `%r`", oid, tid)
-        # we could optimize by `AsyncTask` wrapping
+        if not self.operational:
+            return
         await asyncio.gather(*(Task(prefetch(oid), loop=self.loop)
                                for oid in oids))
 
@@ -785,7 +766,7 @@ class ClientIo(object):
         if not self.operational:
             raise ClientDisconnected
         try:
-            tid = await self.protocol.call_sync('tpc_finish', tid)
+            tid = await self.protocol.call_sync('tpc_finish', (tid,))
             cache = self.cache
             # The cache invalidation here and that in
             # ``invalidateTransaction`` are both performed
@@ -869,33 +850,22 @@ class ClientRunner(object):
     def setup_delegation(self, loop):
         self.loop = loop
         self.client = client = ClientIo(loop, *self.__args, **self.__kwargs)
-        self.call_with_timeout = call_with_timeout = \
-            client.call_with_timeout_co
-        self.call_sync = client.call_sync
-        self.call_async = client.call_async
-        self.call_async_iter = client.call_async_iter
+        self.call_sync_co = client.call_sync_co
+        self.load_before_co = client.load_before_co
         run_coroutine = run_coroutine_threadsafe
 
-        def call(meth, *args,
-                 timeout=self.timeout, indirect=True, wait=True):
-            """call *meth* with arguments *args*.
-
-            If *indirect*, make the call indirectly via ``call_with_timeout``.
-            In this case, *meth* must return either ``None`` or
-            a future; in particular, it cannot be a coroutine function.
-            If not *indirect*, *meth* must be a coroutine function.
-            Coroutine functions are defined with ``async def``
-            and have a ``_co`` suffix.
+        def io_call(coro, wait=True):
+            """run coroutine *coro* in the IO thread.
 
             If *wait*, return the result otherwise the future.
             """
-            if indirect:
-                args = timeout, meth, args
-                meth = call_with_timeout
-            future = run_coroutine(meth(*args), loop)
-            return future.result() if wait else future
+            future = run_coroutine(coro, loop)
+            try:
+                return future.result() if wait else future
+            finally:
+                del future  # break reference cycle in case of exception
 
-        self._call_ = call  # creates reference cycle
+        self.io_call = io_call  # creates reference cycle
 
     def call(self, method, *args, **kw):
         """call method named *method* with *args*.
@@ -911,20 +881,34 @@ class ClientRunner(object):
              ``None`` is replaced by ``self.timeout`` (usually 30s)
              default: ``None``
         """
-        return self._call_(self.call_sync, method, *args, **kw)
+        timeout = kw.pop("timeout", None)
+        return self.io_call(
+            self.call_sync_co(
+                method, args,
+                timeout if timeout is not None else self.timeout),
+            **kw)
 
     def async_(self, method, *args):
         """call method named *method* with *args* asynchronously."""
         client = self.client
         if not client.operational:
             raise ClientDisconnected
+        # Potential race condition:
+        # We may lose the connection before the call is sent to the server.
+        # In this case, an exception is raised and handled by the
+        # loops exception handler (which logs the exception).
         self.loop.call_soon_threadsafe(client.call_async, method, args)
 
     def async_iter(self, it):
         client = self.client
         if not client.operational:
             raise ClientDisconnected
-        self.loop.call_soon_threadsafe(client.call_async_iter, method, it)
+        # Potential race condition:
+        # We may lose the connection before all messages are
+        # sent to the server.
+        # In this case, an exception is raised and handled by the
+        # loops exception handler (which logs the exception).
+        self.loop.call_soon_threadsafe(client.call_async_iter, it)
 
     def prefetch(self, oids, tid):
         oids = tuple(oids)  # avoid concurrency problems
@@ -939,17 +923,15 @@ class ClientRunner(object):
         # the garbage collector (it is referenced via callbacks).
         # It the IO thread is not fast enough, the complete
         # structure may be released during a garbage collection.
-        return self._call_(self.client.prefetch_co, oids, tid,
-                           indirect=False, wait=False)
+        return self.io_call(
+            self.client.prefetch_co(oids, tid), wait=False)
 
     def load_before(self, oid, tid):
-        return self._call_(self.client.load_before_co, self.timeout,
-                           oid, tid, indirect=False)
+        return self.io_call(self.load_before_co(oid, tid, self.timeout))
 
     def tpc_finish(self, tid, updates, f, **kw):
         # ``kw`` for test only; supported ``wait``
-        return self._call_(self.client.tpc_finish_co, tid, updates, f,
-                           indirect=False, **kw)
+        return self.io_call(self.client.tpc_finish_co(tid, updates, f), **kw)
 
     def is_connected(self):
         return self.client.operational
@@ -970,14 +952,14 @@ class ClientRunner(object):
         if self.__closed:
             return
         self.__closed = True
-        call = self._call_
-        self._call_ = self._call_after_closure
+        call = self.io_call
+        self.io_call = self._call_after_closure
         loop = self.loop
         if loop is None or loop.is_closed():  # pragma: no cover
             # this should not happen
             return
         if loop.is_running():
-            call(self.client.close_co, indirect=False, wait=True)
+            call(self.client.close_co())
         else:  # pragma: no cover
             # this should not happen
             loop.run_until_complete(self.client.close_co())
@@ -991,16 +973,13 @@ class ClientRunner(object):
     def new_addrs(self, addrs):
         # This usually doesn't have an immediate effect, since the
         # addrs aren't used until the client disconnects.xs
-        return self._call_(self.client.new_addrs_co, addrs, indirect=False)
+        return self.io_call(self.client.new_addrs_co(addrs))
 
     def wait(self, timeout=None):
         """wait for readyness"""
-        def noop():
-            return
-        return self._call_(self.client.call_with_timeout_co,
-                           self.timeout if timeout is None else timeout,
-                           noop, (), True,
-                           indirect=False)
+        return self.io_call(
+            self.client.await_operational_co(
+                self.timeout if timeout is None else timeout, True))
 
 
 class ClientThread(ClientRunner):
