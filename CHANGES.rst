@@ -12,6 +12,10 @@ Changelog
    - use standard ``asyncio`` features to implement timeouts
    - redesign the API of the class implementing the ZEO client protocol
    - significantly improve source documentation
+   - add optional ``cython`` based optimization;
+     it speeds up reads but slows down writes.
+     To use it, install ``cython`` (and its dependencies) and
+     run ``cythonize -i *.pyx`` in ``src/ZEO/asyncio``.
 
 - Drop credentials support: the corresponding ``ClientStorage.__init__``
   parameters (i.e. ``credentials``, ``username``, ``password``)
