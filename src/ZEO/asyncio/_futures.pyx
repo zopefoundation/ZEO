@@ -20,20 +20,20 @@ cdef class Future:
     """
     cdef public object _asyncio_future_blocking
 
-    cdef object loop
+    cdef public object _loop
     cdef State state
     cdef object _result
     cdef list callbacks
 
     def __init__(self, loop=None):
         self._asyncio_future_blocking = False
-        self.loop = loop if loop is not None else get_event_loop()
+        self._loop = loop if loop is not None else get_event_loop()
         self.state = PENDING
         self._result = None
         self.callbacks = []
 
     def get_loop(self):
-        return self.loop
+        return self._loop
 
     cpdef cancel(self, msg=None):
         """cancel the future if not done.

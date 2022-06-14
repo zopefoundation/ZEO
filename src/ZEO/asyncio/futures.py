@@ -25,18 +25,18 @@ class Future:
     callbacks are called immediately, not scheduled;
     their context is ignored.
     """
-    __slots__ = ("loop", "state", "_result", "callbacks",
+    __slots__ = ("_loop", "state", "_result", "callbacks",
                  "_asyncio_future_blocking")
 
     def __init__(self, loop=None):
-        self.loop = loop if loop is not None else get_event_loop()
+        self._loop = loop if loop is not None else get_event_loop()
         self.state = 0  # PENDING
         self._result = None
         self.callbacks = []
         self._asyncio_future_blocking = False
 
     def get_loop(self):
-        return self.loop
+        return self._loop
 
     def cancel(self, msg=None):
         """cancel the future if not done.

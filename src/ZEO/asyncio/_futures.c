@@ -943,7 +943,7 @@ enum __pyx_t_3ZEO_7asyncio_8_futures_State {
 };
 
 /* "ZEO/asyncio/_futures.pyx":38
- *         return self.loop
+ *         return self._loop
  * 
  *     cpdef cancel(self, msg=None):             # <<<<<<<<<<<<<<
  *         """cancel the future if not done.
@@ -977,7 +977,7 @@ struct __pyx_obj_3ZEO_7asyncio_8_futures_Future {
   PyObject_HEAD
   struct __pyx_vtabstruct_3ZEO_7asyncio_8_futures_Future *__pyx_vtab;
   PyObject *_asyncio_future_blocking;
-  PyObject *loop;
+  PyObject *_loop;
   enum __pyx_t_3ZEO_7asyncio_8_futures_State state;
   PyObject *_result;
   PyObject *callbacks;
@@ -1887,11 +1887,11 @@ static const char __pyx_k_pyx_unpickle_AsyncTask[] = "__pyx_unpickle_AsyncTask";
 static const char __pyx_k_asyncio_future_blocking[] = "_asyncio_future_blocking";
 static const char __pyx_k_run_coroutine_threadsafe[] = "run_coroutine_threadsafe";
 static const char __pyx_k_pyx_unpickle_CoroutineExecutor[] = "__pyx_unpickle_CoroutineExecutor";
-static const char __pyx_k_Incompatible_checksums_0x_x_vs_0[] = "Incompatible checksums (0x%x vs (0xd7de60d, 0xa47c369, 0x42f3a73) = (_asyncio_future_blocking, _result, callbacks, loop, state))";
+static const char __pyx_k_Incompatible_checksums_0x_x_vs_0[] = "Incompatible checksums (0x%x vs (0x761e088, 0xaa59b71, 0xef4274e) = (_asyncio_future_blocking, _loop, _result, callbacks, state))";
 static const char __pyx_k_Task_reporting_to_ConcurrentFutu[] = "Task reporting to ``ConcurrentFuture``.\n\n    Steps are not scheduled but executed immediately.\n    ";
 static const char __pyx_k_cannot_remove_callbacks_when_don[] = "cannot remove callbacks when done";
 static const char __pyx_k_Incompatible_checksums_0x_x_vs_0_2[] = "Incompatible checksums (0x%x vs (0x64fe8f9, 0xcc99639, 0x3b8448a) = (awaiting, coro, task))";
-static const char __pyx_k_Incompatible_checksums_0x_x_vs_0_3[] = "Incompatible checksums (0x%x vs (0x0aef1c9, 0x2789291, 0xd0b5b51) = (_asyncio_future_blocking, _result, callbacks, executor, loop, state))";
+static const char __pyx_k_Incompatible_checksums_0x_x_vs_0_3[] = "Incompatible checksums (0x%x vs (0x1c31b9a, 0xfe3558a, 0x20f433b) = (_asyncio_future_blocking, _loop, _result, callbacks, executor, state))";
 static PyObject *__pyx_n_s_AsyncTask;
 static PyObject *__pyx_n_s_BaseException;
 static PyObject *__pyx_n_u_CANCELLED;
@@ -2011,6 +2011,9 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_6Future_25__str__(struct __pyx
 static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_6Future_24_asyncio_future_blocking___get__(struct __pyx_obj_3ZEO_7asyncio_8_futures_Future *__pyx_v_self); /* proto */
 static int __pyx_pf_3ZEO_7asyncio_8_futures_6Future_24_asyncio_future_blocking_2__set__(struct __pyx_obj_3ZEO_7asyncio_8_futures_Future *__pyx_v_self, PyObject *__pyx_v_value); /* proto */
 static int __pyx_pf_3ZEO_7asyncio_8_futures_6Future_24_asyncio_future_blocking_4__del__(struct __pyx_obj_3ZEO_7asyncio_8_futures_Future *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_6Future_5_loop___get__(struct __pyx_obj_3ZEO_7asyncio_8_futures_Future *__pyx_v_self); /* proto */
+static int __pyx_pf_3ZEO_7asyncio_8_futures_6Future_5_loop_2__set__(struct __pyx_obj_3ZEO_7asyncio_8_futures_Future *__pyx_v_self, PyObject *__pyx_v_value); /* proto */
+static int __pyx_pf_3ZEO_7asyncio_8_futures_6Future_5_loop_4__del__(struct __pyx_obj_3ZEO_7asyncio_8_futures_Future *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_6Future_27__reduce_cython__(struct __pyx_obj_3ZEO_7asyncio_8_futures_Future *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_6Future_29__setstate_cython__(struct __pyx_obj_3ZEO_7asyncio_8_futures_Future *__pyx_v_self, PyObject *__pyx_v___pyx_state); /* proto */
 static int __pyx_pf_3ZEO_7asyncio_8_futures_17CoroutineExecutor___init__(struct __pyx_obj_3ZEO_7asyncio_8_futures_CoroutineExecutor *__pyx_v_self, PyObject *__pyx_v_task, PyObject *__pyx_v_coro); /* proto */
@@ -2036,15 +2039,15 @@ static PyObject *__pyx_tp_new_3ZEO_7asyncio_8_futures_AsyncTask(PyTypeObject *t,
 static PyObject *__pyx_tp_new_3ZEO_7asyncio_8_futures___pyx_scope_struct____await__(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
 static PyObject *__pyx_tp_new_3ZEO_7asyncio_8_futures___pyx_scope_struct_1___str__(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
 static PyObject *__pyx_tp_new_3ZEO_7asyncio_8_futures___pyx_scope_struct_2_genexpr(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
-static PyObject *__pyx_int_11465161;
-static PyObject *__pyx_int_41456273;
+static PyObject *__pyx_int_29563802;
+static PyObject *__pyx_int_34554683;
 static PyObject *__pyx_int_62407818;
-static PyObject *__pyx_int_70204019;
 static PyObject *__pyx_int_105900281;
-static PyObject *__pyx_int_172475241;
+static PyObject *__pyx_int_123854984;
+static PyObject *__pyx_int_178625393;
 static PyObject *__pyx_int_214537785;
-static PyObject *__pyx_int_218848081;
-static PyObject *__pyx_int_226354701;
+static PyObject *__pyx_int_250881870;
+static PyObject *__pyx_int_266556810;
 static PyObject *__pyx_tuple_;
 static PyObject *__pyx_tuple__3;
 static PyObject *__pyx_tuple__5;
@@ -2070,7 +2073,7 @@ static PyObject *__pyx_codeobj__20;
  * 
  *     def __init__(self, loop=None):             # <<<<<<<<<<<<<<
  *         self._asyncio_future_blocking = False
- *         self.loop = loop if loop is not None else get_event_loop()
+ *         self._loop = loop if loop is not None else get_event_loop()
  */
 
 /* Python wrapper */
@@ -2149,7 +2152,7 @@ static int __pyx_pf_3ZEO_7asyncio_8_futures_6Future___init__(struct __pyx_obj_3Z
  * 
  *     def __init__(self, loop=None):
  *         self._asyncio_future_blocking = False             # <<<<<<<<<<<<<<
- *         self.loop = loop if loop is not None else get_event_loop()
+ *         self._loop = loop if loop is not None else get_event_loop()
  *         self.state = PENDING
  */
   __Pyx_INCREF(Py_False);
@@ -2161,7 +2164,7 @@ static int __pyx_pf_3ZEO_7asyncio_8_futures_6Future___init__(struct __pyx_obj_3Z
   /* "ZEO/asyncio/_futures.pyx":30
  *     def __init__(self, loop=None):
  *         self._asyncio_future_blocking = False
- *         self.loop = loop if loop is not None else get_event_loop()             # <<<<<<<<<<<<<<
+ *         self._loop = loop if loop is not None else get_event_loop()             # <<<<<<<<<<<<<<
  *         self.state = PENDING
  *         self._result = None
  */
@@ -2191,14 +2194,14 @@ static int __pyx_pf_3ZEO_7asyncio_8_futures_6Future___init__(struct __pyx_obj_3Z
     __pyx_t_3 = 0;
   }
   __Pyx_GIVEREF(__pyx_t_1);
-  __Pyx_GOTREF(__pyx_v_self->loop);
-  __Pyx_DECREF(__pyx_v_self->loop);
-  __pyx_v_self->loop = __pyx_t_1;
+  __Pyx_GOTREF(__pyx_v_self->_loop);
+  __Pyx_DECREF(__pyx_v_self->_loop);
+  __pyx_v_self->_loop = __pyx_t_1;
   __pyx_t_1 = 0;
 
   /* "ZEO/asyncio/_futures.pyx":31
  *         self._asyncio_future_blocking = False
- *         self.loop = loop if loop is not None else get_event_loop()
+ *         self._loop = loop if loop is not None else get_event_loop()
  *         self.state = PENDING             # <<<<<<<<<<<<<<
  *         self._result = None
  *         self.callbacks = []
@@ -2206,7 +2209,7 @@ static int __pyx_pf_3ZEO_7asyncio_8_futures_6Future___init__(struct __pyx_obj_3Z
   __pyx_v_self->state = __pyx_e_3ZEO_7asyncio_8_futures_PENDING;
 
   /* "ZEO/asyncio/_futures.pyx":32
- *         self.loop = loop if loop is not None else get_event_loop()
+ *         self._loop = loop if loop is not None else get_event_loop()
  *         self.state = PENDING
  *         self._result = None             # <<<<<<<<<<<<<<
  *         self.callbacks = []
@@ -2238,7 +2241,7 @@ static int __pyx_pf_3ZEO_7asyncio_8_futures_6Future___init__(struct __pyx_obj_3Z
  * 
  *     def __init__(self, loop=None):             # <<<<<<<<<<<<<<
  *         self._asyncio_future_blocking = False
- *         self.loop = loop if loop is not None else get_event_loop()
+ *         self._loop = loop if loop is not None else get_event_loop()
  */
 
   /* function exit code */
@@ -2260,7 +2263,7 @@ static int __pyx_pf_3ZEO_7asyncio_8_futures_6Future___init__(struct __pyx_obj_3Z
  *         self.callbacks = []
  * 
  *     def get_loop(self):             # <<<<<<<<<<<<<<
- *         return self.loop
+ *         return self._loop
  * 
  */
 
@@ -2285,20 +2288,20 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_6Future_2get_loop(struct __pyx
   /* "ZEO/asyncio/_futures.pyx":36
  * 
  *     def get_loop(self):
- *         return self.loop             # <<<<<<<<<<<<<<
+ *         return self._loop             # <<<<<<<<<<<<<<
  * 
  *     cpdef cancel(self, msg=None):
  */
   __Pyx_XDECREF(__pyx_r);
-  __Pyx_INCREF(__pyx_v_self->loop);
-  __pyx_r = __pyx_v_self->loop;
+  __Pyx_INCREF(__pyx_v_self->_loop);
+  __pyx_r = __pyx_v_self->_loop;
   goto __pyx_L0;
 
   /* "ZEO/asyncio/_futures.pyx":35
  *         self.callbacks = []
  * 
  *     def get_loop(self):             # <<<<<<<<<<<<<<
- *         return self.loop
+ *         return self._loop
  * 
  */
 
@@ -2310,7 +2313,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_6Future_2get_loop(struct __pyx
 }
 
 /* "ZEO/asyncio/_futures.pyx":38
- *         return self.loop
+ *         return self._loop
  * 
  *     cpdef cancel(self, msg=None):             # <<<<<<<<<<<<<<
  *         """cancel the future if not done.
@@ -2475,7 +2478,7 @@ static PyObject *__pyx_f_3ZEO_7asyncio_8_futures_6Future_cancel(struct __pyx_obj
   goto __pyx_L0;
 
   /* "ZEO/asyncio/_futures.pyx":38
- *         return self.loop
+ *         return self._loop
  * 
  *     cpdef cancel(self, msg=None):             # <<<<<<<<<<<<<<
  *         """cancel the future if not done.
@@ -4747,7 +4750,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_6Future_25__str__(struct __pyx
  *     """
  *     cdef public object _asyncio_future_blocking             # <<<<<<<<<<<<<<
  * 
- *     cdef object loop
+ *     cdef public object _loop
  */
 
 /* Python wrapper */
@@ -4837,6 +4840,101 @@ static int __pyx_pf_3ZEO_7asyncio_8_futures_6Future_24_asyncio_future_blocking_4
   return __pyx_r;
 }
 
+/* "ZEO/asyncio/_futures.pyx":23
+ *     cdef public object _asyncio_future_blocking
+ * 
+ *     cdef public object _loop             # <<<<<<<<<<<<<<
+ *     cdef State state
+ *     cdef object _result
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_3ZEO_7asyncio_8_futures_6Future_5_loop_1__get__(PyObject *__pyx_v_self); /*proto*/
+static PyObject *__pyx_pw_3ZEO_7asyncio_8_futures_6Future_5_loop_1__get__(PyObject *__pyx_v_self) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__get__ (wrapper)", 0);
+  __pyx_r = __pyx_pf_3ZEO_7asyncio_8_futures_6Future_5_loop___get__(((struct __pyx_obj_3ZEO_7asyncio_8_futures_Future *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_6Future_5_loop___get__(struct __pyx_obj_3ZEO_7asyncio_8_futures_Future *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__get__", 0);
+  __Pyx_XDECREF(__pyx_r);
+  __Pyx_INCREF(__pyx_v_self->_loop);
+  __pyx_r = __pyx_v_self->_loop;
+  goto __pyx_L0;
+
+  /* function exit code */
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* Python wrapper */
+static int __pyx_pw_3ZEO_7asyncio_8_futures_6Future_5_loop_3__set__(PyObject *__pyx_v_self, PyObject *__pyx_v_value); /*proto*/
+static int __pyx_pw_3ZEO_7asyncio_8_futures_6Future_5_loop_3__set__(PyObject *__pyx_v_self, PyObject *__pyx_v_value) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__set__ (wrapper)", 0);
+  __pyx_r = __pyx_pf_3ZEO_7asyncio_8_futures_6Future_5_loop_2__set__(((struct __pyx_obj_3ZEO_7asyncio_8_futures_Future *)__pyx_v_self), ((PyObject *)__pyx_v_value));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static int __pyx_pf_3ZEO_7asyncio_8_futures_6Future_5_loop_2__set__(struct __pyx_obj_3ZEO_7asyncio_8_futures_Future *__pyx_v_self, PyObject *__pyx_v_value) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__set__", 0);
+  __Pyx_INCREF(__pyx_v_value);
+  __Pyx_GIVEREF(__pyx_v_value);
+  __Pyx_GOTREF(__pyx_v_self->_loop);
+  __Pyx_DECREF(__pyx_v_self->_loop);
+  __pyx_v_self->_loop = __pyx_v_value;
+
+  /* function exit code */
+  __pyx_r = 0;
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* Python wrapper */
+static int __pyx_pw_3ZEO_7asyncio_8_futures_6Future_5_loop_5__del__(PyObject *__pyx_v_self); /*proto*/
+static int __pyx_pw_3ZEO_7asyncio_8_futures_6Future_5_loop_5__del__(PyObject *__pyx_v_self) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__del__ (wrapper)", 0);
+  __pyx_r = __pyx_pf_3ZEO_7asyncio_8_futures_6Future_5_loop_4__del__(((struct __pyx_obj_3ZEO_7asyncio_8_futures_Future *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static int __pyx_pf_3ZEO_7asyncio_8_futures_6Future_5_loop_4__del__(struct __pyx_obj_3ZEO_7asyncio_8_futures_Future *__pyx_v_self) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__del__", 0);
+  __Pyx_INCREF(Py_None);
+  __Pyx_GIVEREF(Py_None);
+  __Pyx_GOTREF(__pyx_v_self->_loop);
+  __Pyx_DECREF(__pyx_v_self->_loop);
+  __pyx_v_self->_loop = Py_None;
+
+  /* function exit code */
+  __pyx_r = 0;
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
 /* "(tree fragment)":1
  * def __reduce_cython__(self):             # <<<<<<<<<<<<<<
  *     cdef tuple state
@@ -4876,7 +4974,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_6Future_27__reduce_cython__(st
   /* "(tree fragment)":5
  *     cdef object _dict
  *     cdef bint use_setstate
- *     state = (self._asyncio_future_blocking, self._result, self.callbacks, self.loop, self.state)             # <<<<<<<<<<<<<<
+ *     state = (self._asyncio_future_blocking, self._loop, self._result, self.callbacks, self.state)             # <<<<<<<<<<<<<<
  *     _dict = getattr(self, '__dict__', None)
  *     if _dict is not None:
  */
@@ -4887,15 +4985,15 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_6Future_27__reduce_cython__(st
   __Pyx_INCREF(__pyx_v_self->_asyncio_future_blocking);
   __Pyx_GIVEREF(__pyx_v_self->_asyncio_future_blocking);
   PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_v_self->_asyncio_future_blocking);
+  __Pyx_INCREF(__pyx_v_self->_loop);
+  __Pyx_GIVEREF(__pyx_v_self->_loop);
+  PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_v_self->_loop);
   __Pyx_INCREF(__pyx_v_self->_result);
   __Pyx_GIVEREF(__pyx_v_self->_result);
-  PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_v_self->_result);
+  PyTuple_SET_ITEM(__pyx_t_2, 2, __pyx_v_self->_result);
   __Pyx_INCREF(__pyx_v_self->callbacks);
   __Pyx_GIVEREF(__pyx_v_self->callbacks);
-  PyTuple_SET_ITEM(__pyx_t_2, 2, __pyx_v_self->callbacks);
-  __Pyx_INCREF(__pyx_v_self->loop);
-  __Pyx_GIVEREF(__pyx_v_self->loop);
-  PyTuple_SET_ITEM(__pyx_t_2, 3, __pyx_v_self->loop);
+  PyTuple_SET_ITEM(__pyx_t_2, 3, __pyx_v_self->callbacks);
   __Pyx_GIVEREF(__pyx_t_1);
   PyTuple_SET_ITEM(__pyx_t_2, 4, __pyx_t_1);
   __pyx_t_1 = 0;
@@ -4904,7 +5002,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_6Future_27__reduce_cython__(st
 
   /* "(tree fragment)":6
  *     cdef bint use_setstate
- *     state = (self._asyncio_future_blocking, self._result, self.callbacks, self.loop, self.state)
+ *     state = (self._asyncio_future_blocking, self._loop, self._result, self.callbacks, self.state)
  *     _dict = getattr(self, '__dict__', None)             # <<<<<<<<<<<<<<
  *     if _dict is not None:
  *         state += (_dict,)
@@ -4915,7 +5013,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_6Future_27__reduce_cython__(st
   __pyx_t_2 = 0;
 
   /* "(tree fragment)":7
- *     state = (self._asyncio_future_blocking, self._result, self.callbacks, self.loop, self.state)
+ *     state = (self._asyncio_future_blocking, self._loop, self._result, self.callbacks, self.state)
  *     _dict = getattr(self, '__dict__', None)
  *     if _dict is not None:             # <<<<<<<<<<<<<<
  *         state += (_dict,)
@@ -4948,12 +5046,12 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_6Future_27__reduce_cython__(st
  *         state += (_dict,)
  *         use_setstate = True             # <<<<<<<<<<<<<<
  *     else:
- *         use_setstate = self._asyncio_future_blocking is not None or self._result is not None or self.callbacks is not None or self.loop is not None
+ *         use_setstate = self._asyncio_future_blocking is not None or self._loop is not None or self._result is not None or self.callbacks is not None
  */
     __pyx_v_use_setstate = 1;
 
     /* "(tree fragment)":7
- *     state = (self._asyncio_future_blocking, self._result, self.callbacks, self.loop, self.state)
+ *     state = (self._asyncio_future_blocking, self._loop, self._result, self.callbacks, self.state)
  *     _dict = getattr(self, '__dict__', None)
  *     if _dict is not None:             # <<<<<<<<<<<<<<
  *         state += (_dict,)
@@ -4965,9 +5063,9 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_6Future_27__reduce_cython__(st
   /* "(tree fragment)":11
  *         use_setstate = True
  *     else:
- *         use_setstate = self._asyncio_future_blocking is not None or self._result is not None or self.callbacks is not None or self.loop is not None             # <<<<<<<<<<<<<<
+ *         use_setstate = self._asyncio_future_blocking is not None or self._loop is not None or self._result is not None or self.callbacks is not None             # <<<<<<<<<<<<<<
  *     if use_setstate:
- *         return __pyx_unpickle_Future, (type(self), 0xd7de60d, None), state
+ *         return __pyx_unpickle_Future, (type(self), 0x761e088, None), state
  */
   /*else*/ {
     __pyx_t_3 = (__pyx_v_self->_asyncio_future_blocking != Py_None);
@@ -4977,21 +5075,21 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_6Future_27__reduce_cython__(st
       __pyx_t_4 = __pyx_t_5;
       goto __pyx_L4_bool_binop_done;
     }
-    __pyx_t_5 = (__pyx_v_self->_result != Py_None);
+    __pyx_t_5 = (__pyx_v_self->_loop != Py_None);
     __pyx_t_3 = (__pyx_t_5 != 0);
     if (!__pyx_t_3) {
     } else {
       __pyx_t_4 = __pyx_t_3;
       goto __pyx_L4_bool_binop_done;
     }
-    __pyx_t_3 = (__pyx_v_self->callbacks != ((PyObject*)Py_None));
+    __pyx_t_3 = (__pyx_v_self->_result != Py_None);
     __pyx_t_5 = (__pyx_t_3 != 0);
     if (!__pyx_t_5) {
     } else {
       __pyx_t_4 = __pyx_t_5;
       goto __pyx_L4_bool_binop_done;
     }
-    __pyx_t_5 = (__pyx_v_self->loop != Py_None);
+    __pyx_t_5 = (__pyx_v_self->callbacks != ((PyObject*)Py_None));
     __pyx_t_3 = (__pyx_t_5 != 0);
     __pyx_t_4 = __pyx_t_3;
     __pyx_L4_bool_binop_done:;
@@ -5001,20 +5099,20 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_6Future_27__reduce_cython__(st
 
   /* "(tree fragment)":12
  *     else:
- *         use_setstate = self._asyncio_future_blocking is not None or self._result is not None or self.callbacks is not None or self.loop is not None
+ *         use_setstate = self._asyncio_future_blocking is not None or self._loop is not None or self._result is not None or self.callbacks is not None
  *     if use_setstate:             # <<<<<<<<<<<<<<
- *         return __pyx_unpickle_Future, (type(self), 0xd7de60d, None), state
+ *         return __pyx_unpickle_Future, (type(self), 0x761e088, None), state
  *     else:
  */
   __pyx_t_4 = (__pyx_v_use_setstate != 0);
   if (__pyx_t_4) {
 
     /* "(tree fragment)":13
- *         use_setstate = self._asyncio_future_blocking is not None or self._result is not None or self.callbacks is not None or self.loop is not None
+ *         use_setstate = self._asyncio_future_blocking is not None or self._loop is not None or self._result is not None or self.callbacks is not None
  *     if use_setstate:
- *         return __pyx_unpickle_Future, (type(self), 0xd7de60d, None), state             # <<<<<<<<<<<<<<
+ *         return __pyx_unpickle_Future, (type(self), 0x761e088, None), state             # <<<<<<<<<<<<<<
  *     else:
- *         return __pyx_unpickle_Future, (type(self), 0xd7de60d, state)
+ *         return __pyx_unpickle_Future, (type(self), 0x761e088, state)
  */
     __Pyx_XDECREF(__pyx_r);
     __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_pyx_unpickle_Future); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 13, __pyx_L1_error)
@@ -5024,9 +5122,9 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_6Future_27__reduce_cython__(st
     __Pyx_INCREF(((PyObject *)Py_TYPE(((PyObject *)__pyx_v_self))));
     __Pyx_GIVEREF(((PyObject *)Py_TYPE(((PyObject *)__pyx_v_self))));
     PyTuple_SET_ITEM(__pyx_t_2, 0, ((PyObject *)Py_TYPE(((PyObject *)__pyx_v_self))));
-    __Pyx_INCREF(__pyx_int_226354701);
-    __Pyx_GIVEREF(__pyx_int_226354701);
-    PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_int_226354701);
+    __Pyx_INCREF(__pyx_int_123854984);
+    __Pyx_GIVEREF(__pyx_int_123854984);
+    PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_int_123854984);
     __Pyx_INCREF(Py_None);
     __Pyx_GIVEREF(Py_None);
     PyTuple_SET_ITEM(__pyx_t_2, 2, Py_None);
@@ -5047,17 +5145,17 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_6Future_27__reduce_cython__(st
 
     /* "(tree fragment)":12
  *     else:
- *         use_setstate = self._asyncio_future_blocking is not None or self._result is not None or self.callbacks is not None or self.loop is not None
+ *         use_setstate = self._asyncio_future_blocking is not None or self._loop is not None or self._result is not None or self.callbacks is not None
  *     if use_setstate:             # <<<<<<<<<<<<<<
- *         return __pyx_unpickle_Future, (type(self), 0xd7de60d, None), state
+ *         return __pyx_unpickle_Future, (type(self), 0x761e088, None), state
  *     else:
  */
   }
 
   /* "(tree fragment)":15
- *         return __pyx_unpickle_Future, (type(self), 0xd7de60d, None), state
+ *         return __pyx_unpickle_Future, (type(self), 0x761e088, None), state
  *     else:
- *         return __pyx_unpickle_Future, (type(self), 0xd7de60d, state)             # <<<<<<<<<<<<<<
+ *         return __pyx_unpickle_Future, (type(self), 0x761e088, state)             # <<<<<<<<<<<<<<
  * def __setstate_cython__(self, __pyx_state):
  *     __pyx_unpickle_Future__set_state(self, __pyx_state)
  */
@@ -5070,9 +5168,9 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_6Future_27__reduce_cython__(st
     __Pyx_INCREF(((PyObject *)Py_TYPE(((PyObject *)__pyx_v_self))));
     __Pyx_GIVEREF(((PyObject *)Py_TYPE(((PyObject *)__pyx_v_self))));
     PyTuple_SET_ITEM(__pyx_t_2, 0, ((PyObject *)Py_TYPE(((PyObject *)__pyx_v_self))));
-    __Pyx_INCREF(__pyx_int_226354701);
-    __Pyx_GIVEREF(__pyx_int_226354701);
-    PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_int_226354701);
+    __Pyx_INCREF(__pyx_int_123854984);
+    __Pyx_GIVEREF(__pyx_int_123854984);
+    PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_int_123854984);
     __Pyx_INCREF(__pyx_v_state);
     __Pyx_GIVEREF(__pyx_v_state);
     PyTuple_SET_ITEM(__pyx_t_2, 2, __pyx_v_state);
@@ -5112,7 +5210,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_6Future_27__reduce_cython__(st
 
 /* "(tree fragment)":16
  *     else:
- *         return __pyx_unpickle_Future, (type(self), 0xd7de60d, state)
+ *         return __pyx_unpickle_Future, (type(self), 0x761e088, state)
  * def __setstate_cython__(self, __pyx_state):             # <<<<<<<<<<<<<<
  *     __pyx_unpickle_Future__set_state(self, __pyx_state)
  */
@@ -5140,7 +5238,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_6Future_29__setstate_cython__(
   __Pyx_RefNannySetupContext("__setstate_cython__", 0);
 
   /* "(tree fragment)":17
- *         return __pyx_unpickle_Future, (type(self), 0xd7de60d, state)
+ *         return __pyx_unpickle_Future, (type(self), 0x761e088, state)
  * def __setstate_cython__(self, __pyx_state):
  *     __pyx_unpickle_Future__set_state(self, __pyx_state)             # <<<<<<<<<<<<<<
  */
@@ -5151,7 +5249,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_6Future_29__setstate_cython__(
 
   /* "(tree fragment)":16
  *     else:
- *         return __pyx_unpickle_Future, (type(self), 0xd7de60d, state)
+ *         return __pyx_unpickle_Future, (type(self), 0x761e088, state)
  * def __setstate_cython__(self, __pyx_state):             # <<<<<<<<<<<<<<
  *     __pyx_unpickle_Future__set_state(self, __pyx_state)
  */
@@ -6854,7 +6952,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_9AsyncTask_6__reduce_cython__(
   /* "(tree fragment)":5
  *     cdef object _dict
  *     cdef bint use_setstate
- *     state = (self._asyncio_future_blocking, self._result, self.callbacks, self.executor, self.loop, self.state)             # <<<<<<<<<<<<<<
+ *     state = (self._asyncio_future_blocking, self._loop, self._result, self.callbacks, self.executor, self.state)             # <<<<<<<<<<<<<<
  *     _dict = getattr(self, '__dict__', None)
  *     if _dict is not None:
  */
@@ -6865,18 +6963,18 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_9AsyncTask_6__reduce_cython__(
   __Pyx_INCREF(__pyx_v_self->__pyx_base._asyncio_future_blocking);
   __Pyx_GIVEREF(__pyx_v_self->__pyx_base._asyncio_future_blocking);
   PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_v_self->__pyx_base._asyncio_future_blocking);
+  __Pyx_INCREF(__pyx_v_self->__pyx_base._loop);
+  __Pyx_GIVEREF(__pyx_v_self->__pyx_base._loop);
+  PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_v_self->__pyx_base._loop);
   __Pyx_INCREF(__pyx_v_self->__pyx_base._result);
   __Pyx_GIVEREF(__pyx_v_self->__pyx_base._result);
-  PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_v_self->__pyx_base._result);
+  PyTuple_SET_ITEM(__pyx_t_2, 2, __pyx_v_self->__pyx_base._result);
   __Pyx_INCREF(__pyx_v_self->__pyx_base.callbacks);
   __Pyx_GIVEREF(__pyx_v_self->__pyx_base.callbacks);
-  PyTuple_SET_ITEM(__pyx_t_2, 2, __pyx_v_self->__pyx_base.callbacks);
+  PyTuple_SET_ITEM(__pyx_t_2, 3, __pyx_v_self->__pyx_base.callbacks);
   __Pyx_INCREF(__pyx_v_self->executor);
   __Pyx_GIVEREF(__pyx_v_self->executor);
-  PyTuple_SET_ITEM(__pyx_t_2, 3, __pyx_v_self->executor);
-  __Pyx_INCREF(__pyx_v_self->__pyx_base.loop);
-  __Pyx_GIVEREF(__pyx_v_self->__pyx_base.loop);
-  PyTuple_SET_ITEM(__pyx_t_2, 4, __pyx_v_self->__pyx_base.loop);
+  PyTuple_SET_ITEM(__pyx_t_2, 4, __pyx_v_self->executor);
   __Pyx_GIVEREF(__pyx_t_1);
   PyTuple_SET_ITEM(__pyx_t_2, 5, __pyx_t_1);
   __pyx_t_1 = 0;
@@ -6885,7 +6983,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_9AsyncTask_6__reduce_cython__(
 
   /* "(tree fragment)":6
  *     cdef bint use_setstate
- *     state = (self._asyncio_future_blocking, self._result, self.callbacks, self.executor, self.loop, self.state)
+ *     state = (self._asyncio_future_blocking, self._loop, self._result, self.callbacks, self.executor, self.state)
  *     _dict = getattr(self, '__dict__', None)             # <<<<<<<<<<<<<<
  *     if _dict is not None:
  *         state += (_dict,)
@@ -6896,7 +6994,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_9AsyncTask_6__reduce_cython__(
   __pyx_t_2 = 0;
 
   /* "(tree fragment)":7
- *     state = (self._asyncio_future_blocking, self._result, self.callbacks, self.executor, self.loop, self.state)
+ *     state = (self._asyncio_future_blocking, self._loop, self._result, self.callbacks, self.executor, self.state)
  *     _dict = getattr(self, '__dict__', None)
  *     if _dict is not None:             # <<<<<<<<<<<<<<
  *         state += (_dict,)
@@ -6929,12 +7027,12 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_9AsyncTask_6__reduce_cython__(
  *         state += (_dict,)
  *         use_setstate = True             # <<<<<<<<<<<<<<
  *     else:
- *         use_setstate = self._asyncio_future_blocking is not None or self._result is not None or self.callbacks is not None or self.executor is not None or self.loop is not None
+ *         use_setstate = self._asyncio_future_blocking is not None or self._loop is not None or self._result is not None or self.callbacks is not None or self.executor is not None
  */
     __pyx_v_use_setstate = 1;
 
     /* "(tree fragment)":7
- *     state = (self._asyncio_future_blocking, self._result, self.callbacks, self.executor, self.loop, self.state)
+ *     state = (self._asyncio_future_blocking, self._loop, self._result, self.callbacks, self.executor, self.state)
  *     _dict = getattr(self, '__dict__', None)
  *     if _dict is not None:             # <<<<<<<<<<<<<<
  *         state += (_dict,)
@@ -6946,9 +7044,9 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_9AsyncTask_6__reduce_cython__(
   /* "(tree fragment)":11
  *         use_setstate = True
  *     else:
- *         use_setstate = self._asyncio_future_blocking is not None or self._result is not None or self.callbacks is not None or self.executor is not None or self.loop is not None             # <<<<<<<<<<<<<<
+ *         use_setstate = self._asyncio_future_blocking is not None or self._loop is not None or self._result is not None or self.callbacks is not None or self.executor is not None             # <<<<<<<<<<<<<<
  *     if use_setstate:
- *         return __pyx_unpickle_AsyncTask, (type(self), 0x0aef1c9, None), state
+ *         return __pyx_unpickle_AsyncTask, (type(self), 0x1c31b9a, None), state
  */
   /*else*/ {
     __pyx_t_3 = (__pyx_v_self->__pyx_base._asyncio_future_blocking != Py_None);
@@ -6958,28 +7056,28 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_9AsyncTask_6__reduce_cython__(
       __pyx_t_4 = __pyx_t_5;
       goto __pyx_L4_bool_binop_done;
     }
-    __pyx_t_5 = (__pyx_v_self->__pyx_base._result != Py_None);
+    __pyx_t_5 = (__pyx_v_self->__pyx_base._loop != Py_None);
     __pyx_t_3 = (__pyx_t_5 != 0);
     if (!__pyx_t_3) {
     } else {
       __pyx_t_4 = __pyx_t_3;
       goto __pyx_L4_bool_binop_done;
     }
-    __pyx_t_3 = (__pyx_v_self->__pyx_base.callbacks != ((PyObject*)Py_None));
+    __pyx_t_3 = (__pyx_v_self->__pyx_base._result != Py_None);
     __pyx_t_5 = (__pyx_t_3 != 0);
     if (!__pyx_t_5) {
     } else {
       __pyx_t_4 = __pyx_t_5;
       goto __pyx_L4_bool_binop_done;
     }
-    __pyx_t_5 = (__pyx_v_self->executor != Py_None);
+    __pyx_t_5 = (__pyx_v_self->__pyx_base.callbacks != ((PyObject*)Py_None));
     __pyx_t_3 = (__pyx_t_5 != 0);
     if (!__pyx_t_3) {
     } else {
       __pyx_t_4 = __pyx_t_3;
       goto __pyx_L4_bool_binop_done;
     }
-    __pyx_t_3 = (__pyx_v_self->__pyx_base.loop != Py_None);
+    __pyx_t_3 = (__pyx_v_self->executor != Py_None);
     __pyx_t_5 = (__pyx_t_3 != 0);
     __pyx_t_4 = __pyx_t_5;
     __pyx_L4_bool_binop_done:;
@@ -6989,20 +7087,20 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_9AsyncTask_6__reduce_cython__(
 
   /* "(tree fragment)":12
  *     else:
- *         use_setstate = self._asyncio_future_blocking is not None or self._result is not None or self.callbacks is not None or self.executor is not None or self.loop is not None
+ *         use_setstate = self._asyncio_future_blocking is not None or self._loop is not None or self._result is not None or self.callbacks is not None or self.executor is not None
  *     if use_setstate:             # <<<<<<<<<<<<<<
- *         return __pyx_unpickle_AsyncTask, (type(self), 0x0aef1c9, None), state
+ *         return __pyx_unpickle_AsyncTask, (type(self), 0x1c31b9a, None), state
  *     else:
  */
   __pyx_t_4 = (__pyx_v_use_setstate != 0);
   if (__pyx_t_4) {
 
     /* "(tree fragment)":13
- *         use_setstate = self._asyncio_future_blocking is not None or self._result is not None or self.callbacks is not None or self.executor is not None or self.loop is not None
+ *         use_setstate = self._asyncio_future_blocking is not None or self._loop is not None or self._result is not None or self.callbacks is not None or self.executor is not None
  *     if use_setstate:
- *         return __pyx_unpickle_AsyncTask, (type(self), 0x0aef1c9, None), state             # <<<<<<<<<<<<<<
+ *         return __pyx_unpickle_AsyncTask, (type(self), 0x1c31b9a, None), state             # <<<<<<<<<<<<<<
  *     else:
- *         return __pyx_unpickle_AsyncTask, (type(self), 0x0aef1c9, state)
+ *         return __pyx_unpickle_AsyncTask, (type(self), 0x1c31b9a, state)
  */
     __Pyx_XDECREF(__pyx_r);
     __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_pyx_unpickle_AsyncTask); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 13, __pyx_L1_error)
@@ -7012,9 +7110,9 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_9AsyncTask_6__reduce_cython__(
     __Pyx_INCREF(((PyObject *)Py_TYPE(((PyObject *)__pyx_v_self))));
     __Pyx_GIVEREF(((PyObject *)Py_TYPE(((PyObject *)__pyx_v_self))));
     PyTuple_SET_ITEM(__pyx_t_2, 0, ((PyObject *)Py_TYPE(((PyObject *)__pyx_v_self))));
-    __Pyx_INCREF(__pyx_int_11465161);
-    __Pyx_GIVEREF(__pyx_int_11465161);
-    PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_int_11465161);
+    __Pyx_INCREF(__pyx_int_29563802);
+    __Pyx_GIVEREF(__pyx_int_29563802);
+    PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_int_29563802);
     __Pyx_INCREF(Py_None);
     __Pyx_GIVEREF(Py_None);
     PyTuple_SET_ITEM(__pyx_t_2, 2, Py_None);
@@ -7035,17 +7133,17 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_9AsyncTask_6__reduce_cython__(
 
     /* "(tree fragment)":12
  *     else:
- *         use_setstate = self._asyncio_future_blocking is not None or self._result is not None or self.callbacks is not None or self.executor is not None or self.loop is not None
+ *         use_setstate = self._asyncio_future_blocking is not None or self._loop is not None or self._result is not None or self.callbacks is not None or self.executor is not None
  *     if use_setstate:             # <<<<<<<<<<<<<<
- *         return __pyx_unpickle_AsyncTask, (type(self), 0x0aef1c9, None), state
+ *         return __pyx_unpickle_AsyncTask, (type(self), 0x1c31b9a, None), state
  *     else:
  */
   }
 
   /* "(tree fragment)":15
- *         return __pyx_unpickle_AsyncTask, (type(self), 0x0aef1c9, None), state
+ *         return __pyx_unpickle_AsyncTask, (type(self), 0x1c31b9a, None), state
  *     else:
- *         return __pyx_unpickle_AsyncTask, (type(self), 0x0aef1c9, state)             # <<<<<<<<<<<<<<
+ *         return __pyx_unpickle_AsyncTask, (type(self), 0x1c31b9a, state)             # <<<<<<<<<<<<<<
  * def __setstate_cython__(self, __pyx_state):
  *     __pyx_unpickle_AsyncTask__set_state(self, __pyx_state)
  */
@@ -7058,9 +7156,9 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_9AsyncTask_6__reduce_cython__(
     __Pyx_INCREF(((PyObject *)Py_TYPE(((PyObject *)__pyx_v_self))));
     __Pyx_GIVEREF(((PyObject *)Py_TYPE(((PyObject *)__pyx_v_self))));
     PyTuple_SET_ITEM(__pyx_t_2, 0, ((PyObject *)Py_TYPE(((PyObject *)__pyx_v_self))));
-    __Pyx_INCREF(__pyx_int_11465161);
-    __Pyx_GIVEREF(__pyx_int_11465161);
-    PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_int_11465161);
+    __Pyx_INCREF(__pyx_int_29563802);
+    __Pyx_GIVEREF(__pyx_int_29563802);
+    PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_int_29563802);
     __Pyx_INCREF(__pyx_v_state);
     __Pyx_GIVEREF(__pyx_v_state);
     PyTuple_SET_ITEM(__pyx_t_2, 2, __pyx_v_state);
@@ -7100,7 +7198,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_9AsyncTask_6__reduce_cython__(
 
 /* "(tree fragment)":16
  *     else:
- *         return __pyx_unpickle_AsyncTask, (type(self), 0x0aef1c9, state)
+ *         return __pyx_unpickle_AsyncTask, (type(self), 0x1c31b9a, state)
  * def __setstate_cython__(self, __pyx_state):             # <<<<<<<<<<<<<<
  *     __pyx_unpickle_AsyncTask__set_state(self, __pyx_state)
  */
@@ -7128,7 +7226,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_9AsyncTask_8__setstate_cython_
   __Pyx_RefNannySetupContext("__setstate_cython__", 0);
 
   /* "(tree fragment)":17
- *         return __pyx_unpickle_AsyncTask, (type(self), 0x0aef1c9, state)
+ *         return __pyx_unpickle_AsyncTask, (type(self), 0x1c31b9a, state)
  * def __setstate_cython__(self, __pyx_state):
  *     __pyx_unpickle_AsyncTask__set_state(self, __pyx_state)             # <<<<<<<<<<<<<<
  */
@@ -7139,7 +7237,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_9AsyncTask_8__setstate_cython_
 
   /* "(tree fragment)":16
  *     else:
- *         return __pyx_unpickle_AsyncTask, (type(self), 0x0aef1c9, state)
+ *         return __pyx_unpickle_AsyncTask, (type(self), 0x1c31b9a, state)
  * def __setstate_cython__(self, __pyx_state):             # <<<<<<<<<<<<<<
  *     __pyx_unpickle_AsyncTask__set_state(self, __pyx_state)
  */
@@ -7711,9 +7809,9 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures___pyx_unpickle_Future(CYTHON_U
   /* "(tree fragment)":4
  *     cdef object __pyx_PickleError
  *     cdef object __pyx_result
- *     if __pyx_checksum not in (0xd7de60d, 0xa47c369, 0x42f3a73):             # <<<<<<<<<<<<<<
+ *     if __pyx_checksum not in (0x761e088, 0xaa59b71, 0xef4274e):             # <<<<<<<<<<<<<<
  *         from pickle import PickleError as __pyx_PickleError
- *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0xd7de60d, 0xa47c369, 0x42f3a73) = (_asyncio_future_blocking, _result, callbacks, loop, state))" % __pyx_checksum)
+ *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0x761e088, 0xaa59b71, 0xef4274e) = (_asyncio_future_blocking, _loop, _result, callbacks, state))" % __pyx_checksum)
  */
   __pyx_t_1 = __Pyx_PyInt_From_long(__pyx_v___pyx_checksum); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 4, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
@@ -7724,9 +7822,9 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures___pyx_unpickle_Future(CYTHON_U
 
     /* "(tree fragment)":5
  *     cdef object __pyx_result
- *     if __pyx_checksum not in (0xd7de60d, 0xa47c369, 0x42f3a73):
+ *     if __pyx_checksum not in (0x761e088, 0xaa59b71, 0xef4274e):
  *         from pickle import PickleError as __pyx_PickleError             # <<<<<<<<<<<<<<
- *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0xd7de60d, 0xa47c369, 0x42f3a73) = (_asyncio_future_blocking, _result, callbacks, loop, state))" % __pyx_checksum)
+ *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0x761e088, 0xaa59b71, 0xef4274e) = (_asyncio_future_blocking, _loop, _result, callbacks, state))" % __pyx_checksum)
  *     __pyx_result = Future.__new__(__pyx_type)
  */
     __pyx_t_1 = PyList_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 5, __pyx_L1_error)
@@ -7745,9 +7843,9 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures___pyx_unpickle_Future(CYTHON_U
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
     /* "(tree fragment)":6
- *     if __pyx_checksum not in (0xd7de60d, 0xa47c369, 0x42f3a73):
+ *     if __pyx_checksum not in (0x761e088, 0xaa59b71, 0xef4274e):
  *         from pickle import PickleError as __pyx_PickleError
- *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0xd7de60d, 0xa47c369, 0x42f3a73) = (_asyncio_future_blocking, _result, callbacks, loop, state))" % __pyx_checksum)             # <<<<<<<<<<<<<<
+ *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0x761e088, 0xaa59b71, 0xef4274e) = (_asyncio_future_blocking, _loop, _result, callbacks, state))" % __pyx_checksum)             # <<<<<<<<<<<<<<
  *     __pyx_result = Future.__new__(__pyx_type)
  *     if __pyx_state is not None:
  */
@@ -7780,15 +7878,15 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures___pyx_unpickle_Future(CYTHON_U
     /* "(tree fragment)":4
  *     cdef object __pyx_PickleError
  *     cdef object __pyx_result
- *     if __pyx_checksum not in (0xd7de60d, 0xa47c369, 0x42f3a73):             # <<<<<<<<<<<<<<
+ *     if __pyx_checksum not in (0x761e088, 0xaa59b71, 0xef4274e):             # <<<<<<<<<<<<<<
  *         from pickle import PickleError as __pyx_PickleError
- *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0xd7de60d, 0xa47c369, 0x42f3a73) = (_asyncio_future_blocking, _result, callbacks, loop, state))" % __pyx_checksum)
+ *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0x761e088, 0xaa59b71, 0xef4274e) = (_asyncio_future_blocking, _loop, _result, callbacks, state))" % __pyx_checksum)
  */
   }
 
   /* "(tree fragment)":7
  *         from pickle import PickleError as __pyx_PickleError
- *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0xd7de60d, 0xa47c369, 0x42f3a73) = (_asyncio_future_blocking, _result, callbacks, loop, state))" % __pyx_checksum)
+ *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0x761e088, 0xaa59b71, 0xef4274e) = (_asyncio_future_blocking, _loop, _result, callbacks, state))" % __pyx_checksum)
  *     __pyx_result = Future.__new__(__pyx_type)             # <<<<<<<<<<<<<<
  *     if __pyx_state is not None:
  *         __pyx_unpickle_Future__set_state(<Future> __pyx_result, __pyx_state)
@@ -7814,7 +7912,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures___pyx_unpickle_Future(CYTHON_U
   __pyx_t_4 = 0;
 
   /* "(tree fragment)":8
- *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0xd7de60d, 0xa47c369, 0x42f3a73) = (_asyncio_future_blocking, _result, callbacks, loop, state))" % __pyx_checksum)
+ *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0x761e088, 0xaa59b71, 0xef4274e) = (_asyncio_future_blocking, _loop, _result, callbacks, state))" % __pyx_checksum)
  *     __pyx_result = Future.__new__(__pyx_type)
  *     if __pyx_state is not None:             # <<<<<<<<<<<<<<
  *         __pyx_unpickle_Future__set_state(<Future> __pyx_result, __pyx_state)
@@ -7837,7 +7935,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures___pyx_unpickle_Future(CYTHON_U
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
     /* "(tree fragment)":8
- *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0xd7de60d, 0xa47c369, 0x42f3a73) = (_asyncio_future_blocking, _result, callbacks, loop, state))" % __pyx_checksum)
+ *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0x761e088, 0xaa59b71, 0xef4274e) = (_asyncio_future_blocking, _loop, _result, callbacks, state))" % __pyx_checksum)
  *     __pyx_result = Future.__new__(__pyx_type)
  *     if __pyx_state is not None:             # <<<<<<<<<<<<<<
  *         __pyx_unpickle_Future__set_state(<Future> __pyx_result, __pyx_state)
@@ -7850,7 +7948,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures___pyx_unpickle_Future(CYTHON_U
  *         __pyx_unpickle_Future__set_state(<Future> __pyx_result, __pyx_state)
  *     return __pyx_result             # <<<<<<<<<<<<<<
  * cdef __pyx_unpickle_Future__set_state(Future __pyx_result, tuple __pyx_state):
- *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._result = __pyx_state[1]; __pyx_result.callbacks = __pyx_state[2]; __pyx_result.loop = __pyx_state[3]; __pyx_result.state = __pyx_state[4]
+ *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._loop = __pyx_state[1]; __pyx_result._result = __pyx_state[2]; __pyx_result.callbacks = __pyx_state[3]; __pyx_result.state = __pyx_state[4]
  */
   __Pyx_XDECREF(__pyx_r);
   __Pyx_INCREF(__pyx_v___pyx_result);
@@ -7883,7 +7981,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures___pyx_unpickle_Future(CYTHON_U
  *         __pyx_unpickle_Future__set_state(<Future> __pyx_result, __pyx_state)
  *     return __pyx_result
  * cdef __pyx_unpickle_Future__set_state(Future __pyx_result, tuple __pyx_state):             # <<<<<<<<<<<<<<
- *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._result = __pyx_state[1]; __pyx_result.callbacks = __pyx_state[2]; __pyx_result.loop = __pyx_state[3]; __pyx_result.state = __pyx_state[4]
+ *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._loop = __pyx_state[1]; __pyx_result._result = __pyx_state[2]; __pyx_result.callbacks = __pyx_state[3]; __pyx_result.state = __pyx_state[4]
  *     if len(__pyx_state) > 5 and hasattr(__pyx_result, '__dict__'):
  */
 
@@ -7907,7 +8005,7 @@ static PyObject *__pyx_f_3ZEO_7asyncio_8_futures___pyx_unpickle_Future__set_stat
   /* "(tree fragment)":12
  *     return __pyx_result
  * cdef __pyx_unpickle_Future__set_state(Future __pyx_result, tuple __pyx_state):
- *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._result = __pyx_state[1]; __pyx_result.callbacks = __pyx_state[2]; __pyx_result.loop = __pyx_state[3]; __pyx_result.state = __pyx_state[4]             # <<<<<<<<<<<<<<
+ *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._loop = __pyx_state[1]; __pyx_result._result = __pyx_state[2]; __pyx_result.callbacks = __pyx_state[3]; __pyx_result.state = __pyx_state[4]             # <<<<<<<<<<<<<<
  *     if len(__pyx_state) > 5 and hasattr(__pyx_result, '__dict__'):
  *         __pyx_result.__dict__.update(__pyx_state[5])
  */
@@ -7929,6 +8027,17 @@ static PyObject *__pyx_f_3ZEO_7asyncio_8_futures___pyx_unpickle_Future__set_stat
   __pyx_t_1 = __Pyx_GetItemInt_Tuple(__pyx_v___pyx_state, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 12, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_GIVEREF(__pyx_t_1);
+  __Pyx_GOTREF(__pyx_v___pyx_result->_loop);
+  __Pyx_DECREF(__pyx_v___pyx_result->_loop);
+  __pyx_v___pyx_result->_loop = __pyx_t_1;
+  __pyx_t_1 = 0;
+  if (unlikely(__pyx_v___pyx_state == Py_None)) {
+    PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
+    __PYX_ERR(1, 12, __pyx_L1_error)
+  }
+  __pyx_t_1 = __Pyx_GetItemInt_Tuple(__pyx_v___pyx_state, 2, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 12, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __Pyx_GIVEREF(__pyx_t_1);
   __Pyx_GOTREF(__pyx_v___pyx_result->_result);
   __Pyx_DECREF(__pyx_v___pyx_result->_result);
   __pyx_v___pyx_result->_result = __pyx_t_1;
@@ -7937,24 +8046,13 @@ static PyObject *__pyx_f_3ZEO_7asyncio_8_futures___pyx_unpickle_Future__set_stat
     PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
     __PYX_ERR(1, 12, __pyx_L1_error)
   }
-  __pyx_t_1 = __Pyx_GetItemInt_Tuple(__pyx_v___pyx_state, 2, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 12, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_GetItemInt_Tuple(__pyx_v___pyx_state, 3, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 12, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   if (!(likely(PyList_CheckExact(__pyx_t_1))||((__pyx_t_1) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "list", Py_TYPE(__pyx_t_1)->tp_name), 0))) __PYX_ERR(1, 12, __pyx_L1_error)
   __Pyx_GIVEREF(__pyx_t_1);
   __Pyx_GOTREF(__pyx_v___pyx_result->callbacks);
   __Pyx_DECREF(__pyx_v___pyx_result->callbacks);
   __pyx_v___pyx_result->callbacks = ((PyObject*)__pyx_t_1);
-  __pyx_t_1 = 0;
-  if (unlikely(__pyx_v___pyx_state == Py_None)) {
-    PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
-    __PYX_ERR(1, 12, __pyx_L1_error)
-  }
-  __pyx_t_1 = __Pyx_GetItemInt_Tuple(__pyx_v___pyx_state, 3, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 12, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __Pyx_GIVEREF(__pyx_t_1);
-  __Pyx_GOTREF(__pyx_v___pyx_result->loop);
-  __Pyx_DECREF(__pyx_v___pyx_result->loop);
-  __pyx_v___pyx_result->loop = __pyx_t_1;
   __pyx_t_1 = 0;
   if (unlikely(__pyx_v___pyx_state == Py_None)) {
     PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
@@ -7968,7 +8066,7 @@ static PyObject *__pyx_f_3ZEO_7asyncio_8_futures___pyx_unpickle_Future__set_stat
 
   /* "(tree fragment)":13
  * cdef __pyx_unpickle_Future__set_state(Future __pyx_result, tuple __pyx_state):
- *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._result = __pyx_state[1]; __pyx_result.callbacks = __pyx_state[2]; __pyx_result.loop = __pyx_state[3]; __pyx_result.state = __pyx_state[4]
+ *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._loop = __pyx_state[1]; __pyx_result._result = __pyx_state[2]; __pyx_result.callbacks = __pyx_state[3]; __pyx_result.state = __pyx_state[4]
  *     if len(__pyx_state) > 5 and hasattr(__pyx_result, '__dict__'):             # <<<<<<<<<<<<<<
  *         __pyx_result.__dict__.update(__pyx_state[5])
  */
@@ -7990,7 +8088,7 @@ static PyObject *__pyx_f_3ZEO_7asyncio_8_futures___pyx_unpickle_Future__set_stat
   if (__pyx_t_3) {
 
     /* "(tree fragment)":14
- *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._result = __pyx_state[1]; __pyx_result.callbacks = __pyx_state[2]; __pyx_result.loop = __pyx_state[3]; __pyx_result.state = __pyx_state[4]
+ *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._loop = __pyx_state[1]; __pyx_result._result = __pyx_state[2]; __pyx_result.callbacks = __pyx_state[3]; __pyx_result.state = __pyx_state[4]
  *     if len(__pyx_state) > 5 and hasattr(__pyx_result, '__dict__'):
  *         __pyx_result.__dict__.update(__pyx_state[5])             # <<<<<<<<<<<<<<
  */
@@ -8025,7 +8123,7 @@ static PyObject *__pyx_f_3ZEO_7asyncio_8_futures___pyx_unpickle_Future__set_stat
 
     /* "(tree fragment)":13
  * cdef __pyx_unpickle_Future__set_state(Future __pyx_result, tuple __pyx_state):
- *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._result = __pyx_state[1]; __pyx_result.callbacks = __pyx_state[2]; __pyx_result.loop = __pyx_state[3]; __pyx_result.state = __pyx_state[4]
+ *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._loop = __pyx_state[1]; __pyx_result._result = __pyx_state[2]; __pyx_result.callbacks = __pyx_state[3]; __pyx_result.state = __pyx_state[4]
  *     if len(__pyx_state) > 5 and hasattr(__pyx_result, '__dict__'):             # <<<<<<<<<<<<<<
  *         __pyx_result.__dict__.update(__pyx_state[5])
  */
@@ -8035,7 +8133,7 @@ static PyObject *__pyx_f_3ZEO_7asyncio_8_futures___pyx_unpickle_Future__set_stat
  *         __pyx_unpickle_Future__set_state(<Future> __pyx_result, __pyx_state)
  *     return __pyx_result
  * cdef __pyx_unpickle_Future__set_state(Future __pyx_result, tuple __pyx_state):             # <<<<<<<<<<<<<<
- *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._result = __pyx_state[1]; __pyx_result.callbacks = __pyx_state[2]; __pyx_result.loop = __pyx_state[3]; __pyx_result.state = __pyx_state[4]
+ *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._loop = __pyx_state[1]; __pyx_result._result = __pyx_state[2]; __pyx_result.callbacks = __pyx_state[3]; __pyx_result.state = __pyx_state[4]
  *     if len(__pyx_state) > 5 and hasattr(__pyx_result, '__dict__'):
  */
 
@@ -8579,9 +8677,9 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_4__pyx_unpickle_AsyncTask(CYTH
   /* "(tree fragment)":4
  *     cdef object __pyx_PickleError
  *     cdef object __pyx_result
- *     if __pyx_checksum not in (0x0aef1c9, 0x2789291, 0xd0b5b51):             # <<<<<<<<<<<<<<
+ *     if __pyx_checksum not in (0x1c31b9a, 0xfe3558a, 0x20f433b):             # <<<<<<<<<<<<<<
  *         from pickle import PickleError as __pyx_PickleError
- *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0x0aef1c9, 0x2789291, 0xd0b5b51) = (_asyncio_future_blocking, _result, callbacks, executor, loop, state))" % __pyx_checksum)
+ *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0x1c31b9a, 0xfe3558a, 0x20f433b) = (_asyncio_future_blocking, _loop, _result, callbacks, executor, state))" % __pyx_checksum)
  */
   __pyx_t_1 = __Pyx_PyInt_From_long(__pyx_v___pyx_checksum); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 4, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
@@ -8592,9 +8690,9 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_4__pyx_unpickle_AsyncTask(CYTH
 
     /* "(tree fragment)":5
  *     cdef object __pyx_result
- *     if __pyx_checksum not in (0x0aef1c9, 0x2789291, 0xd0b5b51):
+ *     if __pyx_checksum not in (0x1c31b9a, 0xfe3558a, 0x20f433b):
  *         from pickle import PickleError as __pyx_PickleError             # <<<<<<<<<<<<<<
- *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0x0aef1c9, 0x2789291, 0xd0b5b51) = (_asyncio_future_blocking, _result, callbacks, executor, loop, state))" % __pyx_checksum)
+ *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0x1c31b9a, 0xfe3558a, 0x20f433b) = (_asyncio_future_blocking, _loop, _result, callbacks, executor, state))" % __pyx_checksum)
  *     __pyx_result = AsyncTask.__new__(__pyx_type)
  */
     __pyx_t_1 = PyList_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 5, __pyx_L1_error)
@@ -8613,9 +8711,9 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_4__pyx_unpickle_AsyncTask(CYTH
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
     /* "(tree fragment)":6
- *     if __pyx_checksum not in (0x0aef1c9, 0x2789291, 0xd0b5b51):
+ *     if __pyx_checksum not in (0x1c31b9a, 0xfe3558a, 0x20f433b):
  *         from pickle import PickleError as __pyx_PickleError
- *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0x0aef1c9, 0x2789291, 0xd0b5b51) = (_asyncio_future_blocking, _result, callbacks, executor, loop, state))" % __pyx_checksum)             # <<<<<<<<<<<<<<
+ *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0x1c31b9a, 0xfe3558a, 0x20f433b) = (_asyncio_future_blocking, _loop, _result, callbacks, executor, state))" % __pyx_checksum)             # <<<<<<<<<<<<<<
  *     __pyx_result = AsyncTask.__new__(__pyx_type)
  *     if __pyx_state is not None:
  */
@@ -8648,15 +8746,15 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_4__pyx_unpickle_AsyncTask(CYTH
     /* "(tree fragment)":4
  *     cdef object __pyx_PickleError
  *     cdef object __pyx_result
- *     if __pyx_checksum not in (0x0aef1c9, 0x2789291, 0xd0b5b51):             # <<<<<<<<<<<<<<
+ *     if __pyx_checksum not in (0x1c31b9a, 0xfe3558a, 0x20f433b):             # <<<<<<<<<<<<<<
  *         from pickle import PickleError as __pyx_PickleError
- *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0x0aef1c9, 0x2789291, 0xd0b5b51) = (_asyncio_future_blocking, _result, callbacks, executor, loop, state))" % __pyx_checksum)
+ *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0x1c31b9a, 0xfe3558a, 0x20f433b) = (_asyncio_future_blocking, _loop, _result, callbacks, executor, state))" % __pyx_checksum)
  */
   }
 
   /* "(tree fragment)":7
  *         from pickle import PickleError as __pyx_PickleError
- *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0x0aef1c9, 0x2789291, 0xd0b5b51) = (_asyncio_future_blocking, _result, callbacks, executor, loop, state))" % __pyx_checksum)
+ *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0x1c31b9a, 0xfe3558a, 0x20f433b) = (_asyncio_future_blocking, _loop, _result, callbacks, executor, state))" % __pyx_checksum)
  *     __pyx_result = AsyncTask.__new__(__pyx_type)             # <<<<<<<<<<<<<<
  *     if __pyx_state is not None:
  *         __pyx_unpickle_AsyncTask__set_state(<AsyncTask> __pyx_result, __pyx_state)
@@ -8682,7 +8780,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_4__pyx_unpickle_AsyncTask(CYTH
   __pyx_t_4 = 0;
 
   /* "(tree fragment)":8
- *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0x0aef1c9, 0x2789291, 0xd0b5b51) = (_asyncio_future_blocking, _result, callbacks, executor, loop, state))" % __pyx_checksum)
+ *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0x1c31b9a, 0xfe3558a, 0x20f433b) = (_asyncio_future_blocking, _loop, _result, callbacks, executor, state))" % __pyx_checksum)
  *     __pyx_result = AsyncTask.__new__(__pyx_type)
  *     if __pyx_state is not None:             # <<<<<<<<<<<<<<
  *         __pyx_unpickle_AsyncTask__set_state(<AsyncTask> __pyx_result, __pyx_state)
@@ -8705,7 +8803,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_4__pyx_unpickle_AsyncTask(CYTH
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
     /* "(tree fragment)":8
- *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0x0aef1c9, 0x2789291, 0xd0b5b51) = (_asyncio_future_blocking, _result, callbacks, executor, loop, state))" % __pyx_checksum)
+ *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0x1c31b9a, 0xfe3558a, 0x20f433b) = (_asyncio_future_blocking, _loop, _result, callbacks, executor, state))" % __pyx_checksum)
  *     __pyx_result = AsyncTask.__new__(__pyx_type)
  *     if __pyx_state is not None:             # <<<<<<<<<<<<<<
  *         __pyx_unpickle_AsyncTask__set_state(<AsyncTask> __pyx_result, __pyx_state)
@@ -8718,7 +8816,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_4__pyx_unpickle_AsyncTask(CYTH
  *         __pyx_unpickle_AsyncTask__set_state(<AsyncTask> __pyx_result, __pyx_state)
  *     return __pyx_result             # <<<<<<<<<<<<<<
  * cdef __pyx_unpickle_AsyncTask__set_state(AsyncTask __pyx_result, tuple __pyx_state):
- *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._result = __pyx_state[1]; __pyx_result.callbacks = __pyx_state[2]; __pyx_result.executor = __pyx_state[3]; __pyx_result.loop = __pyx_state[4]; __pyx_result.state = __pyx_state[5]
+ *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._loop = __pyx_state[1]; __pyx_result._result = __pyx_state[2]; __pyx_result.callbacks = __pyx_state[3]; __pyx_result.executor = __pyx_state[4]; __pyx_result.state = __pyx_state[5]
  */
   __Pyx_XDECREF(__pyx_r);
   __Pyx_INCREF(__pyx_v___pyx_result);
@@ -8751,7 +8849,7 @@ static PyObject *__pyx_pf_3ZEO_7asyncio_8_futures_4__pyx_unpickle_AsyncTask(CYTH
  *         __pyx_unpickle_AsyncTask__set_state(<AsyncTask> __pyx_result, __pyx_state)
  *     return __pyx_result
  * cdef __pyx_unpickle_AsyncTask__set_state(AsyncTask __pyx_result, tuple __pyx_state):             # <<<<<<<<<<<<<<
- *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._result = __pyx_state[1]; __pyx_result.callbacks = __pyx_state[2]; __pyx_result.executor = __pyx_state[3]; __pyx_result.loop = __pyx_state[4]; __pyx_result.state = __pyx_state[5]
+ *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._loop = __pyx_state[1]; __pyx_result._result = __pyx_state[2]; __pyx_result.callbacks = __pyx_state[3]; __pyx_result.executor = __pyx_state[4]; __pyx_result.state = __pyx_state[5]
  *     if len(__pyx_state) > 6 and hasattr(__pyx_result, '__dict__'):
  */
 
@@ -8775,7 +8873,7 @@ static PyObject *__pyx_f_3ZEO_7asyncio_8_futures___pyx_unpickle_AsyncTask__set_s
   /* "(tree fragment)":12
  *     return __pyx_result
  * cdef __pyx_unpickle_AsyncTask__set_state(AsyncTask __pyx_result, tuple __pyx_state):
- *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._result = __pyx_state[1]; __pyx_result.callbacks = __pyx_state[2]; __pyx_result.executor = __pyx_state[3]; __pyx_result.loop = __pyx_state[4]; __pyx_result.state = __pyx_state[5]             # <<<<<<<<<<<<<<
+ *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._loop = __pyx_state[1]; __pyx_result._result = __pyx_state[2]; __pyx_result.callbacks = __pyx_state[3]; __pyx_result.executor = __pyx_state[4]; __pyx_result.state = __pyx_state[5]             # <<<<<<<<<<<<<<
  *     if len(__pyx_state) > 6 and hasattr(__pyx_result, '__dict__'):
  *         __pyx_result.__dict__.update(__pyx_state[6])
  */
@@ -8797,6 +8895,17 @@ static PyObject *__pyx_f_3ZEO_7asyncio_8_futures___pyx_unpickle_AsyncTask__set_s
   __pyx_t_1 = __Pyx_GetItemInt_Tuple(__pyx_v___pyx_state, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 12, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_GIVEREF(__pyx_t_1);
+  __Pyx_GOTREF(__pyx_v___pyx_result->__pyx_base._loop);
+  __Pyx_DECREF(__pyx_v___pyx_result->__pyx_base._loop);
+  __pyx_v___pyx_result->__pyx_base._loop = __pyx_t_1;
+  __pyx_t_1 = 0;
+  if (unlikely(__pyx_v___pyx_state == Py_None)) {
+    PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
+    __PYX_ERR(1, 12, __pyx_L1_error)
+  }
+  __pyx_t_1 = __Pyx_GetItemInt_Tuple(__pyx_v___pyx_state, 2, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 12, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __Pyx_GIVEREF(__pyx_t_1);
   __Pyx_GOTREF(__pyx_v___pyx_result->__pyx_base._result);
   __Pyx_DECREF(__pyx_v___pyx_result->__pyx_base._result);
   __pyx_v___pyx_result->__pyx_base._result = __pyx_t_1;
@@ -8805,7 +8914,7 @@ static PyObject *__pyx_f_3ZEO_7asyncio_8_futures___pyx_unpickle_AsyncTask__set_s
     PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
     __PYX_ERR(1, 12, __pyx_L1_error)
   }
-  __pyx_t_1 = __Pyx_GetItemInt_Tuple(__pyx_v___pyx_state, 2, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 12, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_GetItemInt_Tuple(__pyx_v___pyx_state, 3, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 12, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   if (!(likely(PyList_CheckExact(__pyx_t_1))||((__pyx_t_1) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "list", Py_TYPE(__pyx_t_1)->tp_name), 0))) __PYX_ERR(1, 12, __pyx_L1_error)
   __Pyx_GIVEREF(__pyx_t_1);
@@ -8817,23 +8926,12 @@ static PyObject *__pyx_f_3ZEO_7asyncio_8_futures___pyx_unpickle_AsyncTask__set_s
     PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
     __PYX_ERR(1, 12, __pyx_L1_error)
   }
-  __pyx_t_1 = __Pyx_GetItemInt_Tuple(__pyx_v___pyx_state, 3, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 12, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_GetItemInt_Tuple(__pyx_v___pyx_state, 4, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 12, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_GIVEREF(__pyx_t_1);
   __Pyx_GOTREF(__pyx_v___pyx_result->executor);
   __Pyx_DECREF(__pyx_v___pyx_result->executor);
   __pyx_v___pyx_result->executor = __pyx_t_1;
-  __pyx_t_1 = 0;
-  if (unlikely(__pyx_v___pyx_state == Py_None)) {
-    PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
-    __PYX_ERR(1, 12, __pyx_L1_error)
-  }
-  __pyx_t_1 = __Pyx_GetItemInt_Tuple(__pyx_v___pyx_state, 4, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 12, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __Pyx_GIVEREF(__pyx_t_1);
-  __Pyx_GOTREF(__pyx_v___pyx_result->__pyx_base.loop);
-  __Pyx_DECREF(__pyx_v___pyx_result->__pyx_base.loop);
-  __pyx_v___pyx_result->__pyx_base.loop = __pyx_t_1;
   __pyx_t_1 = 0;
   if (unlikely(__pyx_v___pyx_state == Py_None)) {
     PyErr_SetString(PyExc_TypeError, "'NoneType' object is not subscriptable");
@@ -8847,7 +8945,7 @@ static PyObject *__pyx_f_3ZEO_7asyncio_8_futures___pyx_unpickle_AsyncTask__set_s
 
   /* "(tree fragment)":13
  * cdef __pyx_unpickle_AsyncTask__set_state(AsyncTask __pyx_result, tuple __pyx_state):
- *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._result = __pyx_state[1]; __pyx_result.callbacks = __pyx_state[2]; __pyx_result.executor = __pyx_state[3]; __pyx_result.loop = __pyx_state[4]; __pyx_result.state = __pyx_state[5]
+ *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._loop = __pyx_state[1]; __pyx_result._result = __pyx_state[2]; __pyx_result.callbacks = __pyx_state[3]; __pyx_result.executor = __pyx_state[4]; __pyx_result.state = __pyx_state[5]
  *     if len(__pyx_state) > 6 and hasattr(__pyx_result, '__dict__'):             # <<<<<<<<<<<<<<
  *         __pyx_result.__dict__.update(__pyx_state[6])
  */
@@ -8869,7 +8967,7 @@ static PyObject *__pyx_f_3ZEO_7asyncio_8_futures___pyx_unpickle_AsyncTask__set_s
   if (__pyx_t_3) {
 
     /* "(tree fragment)":14
- *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._result = __pyx_state[1]; __pyx_result.callbacks = __pyx_state[2]; __pyx_result.executor = __pyx_state[3]; __pyx_result.loop = __pyx_state[4]; __pyx_result.state = __pyx_state[5]
+ *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._loop = __pyx_state[1]; __pyx_result._result = __pyx_state[2]; __pyx_result.callbacks = __pyx_state[3]; __pyx_result.executor = __pyx_state[4]; __pyx_result.state = __pyx_state[5]
  *     if len(__pyx_state) > 6 and hasattr(__pyx_result, '__dict__'):
  *         __pyx_result.__dict__.update(__pyx_state[6])             # <<<<<<<<<<<<<<
  */
@@ -8904,7 +9002,7 @@ static PyObject *__pyx_f_3ZEO_7asyncio_8_futures___pyx_unpickle_AsyncTask__set_s
 
     /* "(tree fragment)":13
  * cdef __pyx_unpickle_AsyncTask__set_state(AsyncTask __pyx_result, tuple __pyx_state):
- *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._result = __pyx_state[1]; __pyx_result.callbacks = __pyx_state[2]; __pyx_result.executor = __pyx_state[3]; __pyx_result.loop = __pyx_state[4]; __pyx_result.state = __pyx_state[5]
+ *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._loop = __pyx_state[1]; __pyx_result._result = __pyx_state[2]; __pyx_result.callbacks = __pyx_state[3]; __pyx_result.executor = __pyx_state[4]; __pyx_result.state = __pyx_state[5]
  *     if len(__pyx_state) > 6 and hasattr(__pyx_result, '__dict__'):             # <<<<<<<<<<<<<<
  *         __pyx_result.__dict__.update(__pyx_state[6])
  */
@@ -8914,7 +9012,7 @@ static PyObject *__pyx_f_3ZEO_7asyncio_8_futures___pyx_unpickle_AsyncTask__set_s
  *         __pyx_unpickle_AsyncTask__set_state(<AsyncTask> __pyx_result, __pyx_state)
  *     return __pyx_result
  * cdef __pyx_unpickle_AsyncTask__set_state(AsyncTask __pyx_result, tuple __pyx_state):             # <<<<<<<<<<<<<<
- *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._result = __pyx_state[1]; __pyx_result.callbacks = __pyx_state[2]; __pyx_result.executor = __pyx_state[3]; __pyx_result.loop = __pyx_state[4]; __pyx_result.state = __pyx_state[5]
+ *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._loop = __pyx_state[1]; __pyx_result._result = __pyx_state[2]; __pyx_result.callbacks = __pyx_state[3]; __pyx_result.executor = __pyx_state[4]; __pyx_result.state = __pyx_state[5]
  *     if len(__pyx_state) > 6 and hasattr(__pyx_result, '__dict__'):
  */
 
@@ -8947,7 +9045,7 @@ static PyObject *__pyx_tp_new_3ZEO_7asyncio_8_futures_Future(PyTypeObject *t, CY
   p = ((struct __pyx_obj_3ZEO_7asyncio_8_futures_Future *)o);
   p->__pyx_vtab = __pyx_vtabptr_3ZEO_7asyncio_8_futures_Future;
   p->_asyncio_future_blocking = Py_None; Py_INCREF(Py_None);
-  p->loop = Py_None; Py_INCREF(Py_None);
+  p->_loop = Py_None; Py_INCREF(Py_None);
   p->_result = Py_None; Py_INCREF(Py_None);
   p->callbacks = ((PyObject*)Py_None); Py_INCREF(Py_None);
   return o;
@@ -8962,7 +9060,7 @@ static void __pyx_tp_dealloc_3ZEO_7asyncio_8_futures_Future(PyObject *o) {
   #endif
   PyObject_GC_UnTrack(o);
   Py_CLEAR(p->_asyncio_future_blocking);
-  Py_CLEAR(p->loop);
+  Py_CLEAR(p->_loop);
   Py_CLEAR(p->_result);
   Py_CLEAR(p->callbacks);
   (*Py_TYPE(o)->tp_free)(o);
@@ -8974,8 +9072,8 @@ static int __pyx_tp_traverse_3ZEO_7asyncio_8_futures_Future(PyObject *o, visitpr
   if (p->_asyncio_future_blocking) {
     e = (*v)(p->_asyncio_future_blocking, a); if (e) return e;
   }
-  if (p->loop) {
-    e = (*v)(p->loop, a); if (e) return e;
+  if (p->_loop) {
+    e = (*v)(p->_loop, a); if (e) return e;
   }
   if (p->_result) {
     e = (*v)(p->_result, a); if (e) return e;
@@ -8992,8 +9090,8 @@ static int __pyx_tp_clear_3ZEO_7asyncio_8_futures_Future(PyObject *o) {
   tmp = ((PyObject*)p->_asyncio_future_blocking);
   p->_asyncio_future_blocking = Py_None; Py_INCREF(Py_None);
   Py_XDECREF(tmp);
-  tmp = ((PyObject*)p->loop);
-  p->loop = Py_None; Py_INCREF(Py_None);
+  tmp = ((PyObject*)p->_loop);
+  p->_loop = Py_None; Py_INCREF(Py_None);
   Py_XDECREF(tmp);
   tmp = ((PyObject*)p->_result);
   p->_result = Py_None; Py_INCREF(Py_None);
@@ -9014,6 +9112,19 @@ static int __pyx_setprop_3ZEO_7asyncio_8_futures_6Future__asyncio_future_blockin
   }
   else {
     return __pyx_pw_3ZEO_7asyncio_8_futures_6Future_24_asyncio_future_blocking_5__del__(o);
+  }
+}
+
+static PyObject *__pyx_getprop_3ZEO_7asyncio_8_futures_6Future__loop(PyObject *o, CYTHON_UNUSED void *x) {
+  return __pyx_pw_3ZEO_7asyncio_8_futures_6Future_5_loop_1__get__(o);
+}
+
+static int __pyx_setprop_3ZEO_7asyncio_8_futures_6Future__loop(PyObject *o, PyObject *v, CYTHON_UNUSED void *x) {
+  if (v) {
+    return __pyx_pw_3ZEO_7asyncio_8_futures_6Future_5_loop_3__set__(o, v);
+  }
+  else {
+    return __pyx_pw_3ZEO_7asyncio_8_futures_6Future_5_loop_5__del__(o);
   }
 }
 
@@ -9038,6 +9149,7 @@ static PyMethodDef __pyx_methods_3ZEO_7asyncio_8_futures_Future[] = {
 
 static struct PyGetSetDef __pyx_getsets_3ZEO_7asyncio_8_futures_Future[] = {
   {(char *)"_asyncio_future_blocking", __pyx_getprop_3ZEO_7asyncio_8_futures_6Future__asyncio_future_blocking, __pyx_setprop_3ZEO_7asyncio_8_futures_6Future__asyncio_future_blocking, (char *)0, 0},
+  {(char *)"_loop", __pyx_getprop_3ZEO_7asyncio_8_futures_6Future__loop, __pyx_setprop_3ZEO_7asyncio_8_futures_6Future__loop, (char *)0, 0},
   {0, 0, 0, 0, 0}
 };
 
@@ -9926,17 +10038,17 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   /* "(tree fragment)":4
  *     cdef object __pyx_PickleError
  *     cdef object __pyx_result
- *     if __pyx_checksum not in (0xd7de60d, 0xa47c369, 0x42f3a73):             # <<<<<<<<<<<<<<
+ *     if __pyx_checksum not in (0x761e088, 0xaa59b71, 0xef4274e):             # <<<<<<<<<<<<<<
  *         from pickle import PickleError as __pyx_PickleError
- *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0xd7de60d, 0xa47c369, 0x42f3a73) = (_asyncio_future_blocking, _result, callbacks, loop, state))" % __pyx_checksum)
+ *         raise __pyx_PickleError("Incompatible checksums (0x%x vs (0x761e088, 0xaa59b71, 0xef4274e) = (_asyncio_future_blocking, _loop, _result, callbacks, state))" % __pyx_checksum)
  */
-  __pyx_tuple__5 = PyTuple_Pack(3, __pyx_int_226354701, __pyx_int_172475241, __pyx_int_70204019); if (unlikely(!__pyx_tuple__5)) __PYX_ERR(1, 4, __pyx_L1_error)
+  __pyx_tuple__5 = PyTuple_Pack(3, __pyx_int_123854984, __pyx_int_178625393, __pyx_int_250881870); if (unlikely(!__pyx_tuple__5)) __PYX_ERR(1, 4, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__5);
   __Pyx_GIVEREF(__pyx_tuple__5);
   __pyx_tuple__6 = PyTuple_Pack(3, __pyx_int_105900281, __pyx_int_214537785, __pyx_int_62407818); if (unlikely(!__pyx_tuple__6)) __PYX_ERR(1, 4, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__6);
   __Pyx_GIVEREF(__pyx_tuple__6);
-  __pyx_tuple__7 = PyTuple_Pack(3, __pyx_int_11465161, __pyx_int_41456273, __pyx_int_218848081); if (unlikely(!__pyx_tuple__7)) __PYX_ERR(1, 4, __pyx_L1_error)
+  __pyx_tuple__7 = PyTuple_Pack(3, __pyx_int_29563802, __pyx_int_266556810, __pyx_int_34554683); if (unlikely(!__pyx_tuple__7)) __PYX_ERR(1, 4, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__7);
   __Pyx_GIVEREF(__pyx_tuple__7);
 
@@ -10005,15 +10117,15 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
 
 static CYTHON_SMALL_CODE int __Pyx_InitGlobals(void) {
   if (__Pyx_InitStrings(__pyx_string_tab) < 0) __PYX_ERR(0, 1, __pyx_L1_error);
-  __pyx_int_11465161 = PyInt_FromLong(11465161L); if (unlikely(!__pyx_int_11465161)) __PYX_ERR(0, 1, __pyx_L1_error)
-  __pyx_int_41456273 = PyInt_FromLong(41456273L); if (unlikely(!__pyx_int_41456273)) __PYX_ERR(0, 1, __pyx_L1_error)
+  __pyx_int_29563802 = PyInt_FromLong(29563802L); if (unlikely(!__pyx_int_29563802)) __PYX_ERR(0, 1, __pyx_L1_error)
+  __pyx_int_34554683 = PyInt_FromLong(34554683L); if (unlikely(!__pyx_int_34554683)) __PYX_ERR(0, 1, __pyx_L1_error)
   __pyx_int_62407818 = PyInt_FromLong(62407818L); if (unlikely(!__pyx_int_62407818)) __PYX_ERR(0, 1, __pyx_L1_error)
-  __pyx_int_70204019 = PyInt_FromLong(70204019L); if (unlikely(!__pyx_int_70204019)) __PYX_ERR(0, 1, __pyx_L1_error)
   __pyx_int_105900281 = PyInt_FromLong(105900281L); if (unlikely(!__pyx_int_105900281)) __PYX_ERR(0, 1, __pyx_L1_error)
-  __pyx_int_172475241 = PyInt_FromLong(172475241L); if (unlikely(!__pyx_int_172475241)) __PYX_ERR(0, 1, __pyx_L1_error)
+  __pyx_int_123854984 = PyInt_FromLong(123854984L); if (unlikely(!__pyx_int_123854984)) __PYX_ERR(0, 1, __pyx_L1_error)
+  __pyx_int_178625393 = PyInt_FromLong(178625393L); if (unlikely(!__pyx_int_178625393)) __PYX_ERR(0, 1, __pyx_L1_error)
   __pyx_int_214537785 = PyInt_FromLong(214537785L); if (unlikely(!__pyx_int_214537785)) __PYX_ERR(0, 1, __pyx_L1_error)
-  __pyx_int_218848081 = PyInt_FromLong(218848081L); if (unlikely(!__pyx_int_218848081)) __PYX_ERR(0, 1, __pyx_L1_error)
-  __pyx_int_226354701 = PyInt_FromLong(226354701L); if (unlikely(!__pyx_int_226354701)) __PYX_ERR(0, 1, __pyx_L1_error)
+  __pyx_int_250881870 = PyInt_FromLong(250881870L); if (unlikely(!__pyx_int_250881870)) __PYX_ERR(0, 1, __pyx_L1_error)
+  __pyx_int_266556810 = PyInt_FromLong(266556810L); if (unlikely(!__pyx_int_266556810)) __PYX_ERR(0, 1, __pyx_L1_error)
   return 0;
   __pyx_L1_error:;
   return -1;
@@ -10549,7 +10661,7 @@ if (!__Pyx_RefNanny) {
  *         __pyx_unpickle_Future__set_state(<Future> __pyx_result, __pyx_state)
  *     return __pyx_result
  * cdef __pyx_unpickle_Future__set_state(Future __pyx_result, tuple __pyx_state):             # <<<<<<<<<<<<<<
- *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._result = __pyx_state[1]; __pyx_result.callbacks = __pyx_state[2]; __pyx_result.loop = __pyx_state[3]; __pyx_result.state = __pyx_state[4]
+ *     __pyx_result._asyncio_future_blocking = __pyx_state[0]; __pyx_result._loop = __pyx_state[1]; __pyx_result._result = __pyx_state[2]; __pyx_result.callbacks = __pyx_state[3]; __pyx_result.state = __pyx_state[4]
  *     if len(__pyx_state) > 5 and hasattr(__pyx_result, '__dict__'):
  */
   __pyx_t_2 = PyCFunction_NewEx(&__pyx_mdef_3ZEO_7asyncio_8_futures_3__pyx_unpickle_CoroutineExecutor, NULL, __pyx_n_s_ZEO_asyncio__futures); if (unlikely(!__pyx_t_2)) __PYX_ERR(1, 1, __pyx_L1_error)
