@@ -15,6 +15,7 @@ InvalidStateError = asyncio.InvalidStateError
 get_event_loop = asyncio.get_event_loop
 import inspect
 from threading import Event, Lock
+from time import sleep
 from ZEO._compat import get_ident
 
 
@@ -209,6 +210,7 @@ class ConcurrentFuture(Future):
         @self.add_done_callback
         def complete(self):
             self.completed.set()
+            switch_thread()
 
     def result(self, timeout=None):
         """result waits till the future is done and returns its result.
@@ -221,6 +223,10 @@ class ConcurrentFuture(Future):
         if not self.completed.wait(timeout):
             raise asyncio.TimeoutError()
         return Future.result(self)
+
+
+def switch_thread():
+    sleep(0)
 
 
 class CoroutineExecutor:
@@ -495,6 +501,7 @@ try:
     from ._futures import Future, ConcurrentFuture  # noqa: F401, F811
     from ._futures import AsyncTask, ConcurrentTask  # noqa: F401, F811
     from ._futures import return_, _GenReturn  # noqa: F401, F811
+    from ._futures import switch_thread  # noqa: F401, F811
 except ImportError:
     pass
 

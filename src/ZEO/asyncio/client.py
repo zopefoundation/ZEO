@@ -40,7 +40,7 @@ from .base import loop_run_forever, loop_run_until_complete
 from .compat import asyncio, new_event_loop
 from .marshal import encoder, decoder
 from .futures import Future, AsyncTask as Task, \
-     coroutine, return_, run_coroutine_threadsafe
+     coroutine, return_, run_coroutine_threadsafe, switch_thread
 
 logger = logging.getLogger(__name__)
 
@@ -906,6 +906,8 @@ class ClientRunner(object):
         # In this case, an exception is raised and handled by the
         # loops exception handler (which logs the exception).
         self.loop.call_soon_threadsafe(client.call_async, method, args)
+        # try to activate the IO thread as soon as possible
+        switch_thread()
 
     def async_iter(self, it):
         client = self.client
@@ -917,6 +919,8 @@ class ClientRunner(object):
         # In this case, an exception is raised and handled by the
         # loops exception handler (which logs the exception).
         self.loop.call_soon_threadsafe(client.call_async_iter, it)
+        # try to activate the IO thread as soon as possible
+        switch_thread()
 
     def prefetch(self, oids, tid):
         return self.io_call(

@@ -197,6 +197,7 @@ cdef class ConcurrentFuture(Future):
 
     cpdef _complete(self, unused):
         self.completed.set()
+        switch_thread()
 
     cpdef result(self, timeout=None):
         """result waits till the future is done and returns its result.
@@ -209,6 +210,11 @@ cdef class ConcurrentFuture(Future):
         if not self.completed.wait(timeout):
             raise asyncio.TimeoutError()
         return Future.result(self)
+
+
+cpdef switch_thread():
+    with nogil:
+        pass
 
 
 cdef class CoroutineExecutor:
