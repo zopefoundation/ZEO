@@ -1276,8 +1276,7 @@ def runzeo_without_configfile():
     --T INFO ZEO.asyncio... listening on ...
     testing exit immediately
     ------
-    --T INFO ZEO.StorageServer closing storage '1'
-    ...
+    --T INFO ZEO.StorageServer closing storage '1'...
 
     >>> proc.stdout.close()
     """
