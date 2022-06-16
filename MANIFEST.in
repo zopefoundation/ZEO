@@ -13,7 +13,6 @@ recursive-include docs Makefile
 
 recursive-include src *.py
 recursive-include src *.pyx
-recursive-include src *.c
 include *.py
 include COPYING
 include log.ini

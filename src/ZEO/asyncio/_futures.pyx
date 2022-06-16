@@ -2,6 +2,7 @@
 
 from asyncio import CancelledError, InvalidStateError, get_event_loop
 from threading import Event
+from time import sleep
 
 
 cdef enum State:
@@ -141,9 +142,22 @@ cdef class ConcurrentFuture(Future):
         switch_thread()
 
 
-cpdef switch_thread():
-    with nogil:
-        pass
+IF UNAME_SYSNAME == "Windows":
+    cpdef switch_thread():
+        sleep(1e-6)
+ELSE:
+    cdef extern from "<sys/select.h>" nogil:
+        ctypedef struct fd_set
+        cdef struct timeval:
+           long tv_sec
+           unsigned long tv_usec
+        int select(int no, fd_set *rd, fd_set *wr, fd_set *ex,
+                   timeval *to) nogil
+    cpdef switch_thread():
+        cdef timeval timeout
+        timeout.tv_sec = 0; timeout.tv_usec = 1
+        with nogil:
+            select(0, NULL, NULL, NULL, &timeout)
         
         
 cdef class CoroutineExecutor:

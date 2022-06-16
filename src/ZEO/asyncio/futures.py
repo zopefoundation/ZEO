@@ -147,7 +147,7 @@ class ConcurrentFuture(Future):
 
 
 def switch_thread():
-    sleep(0)
+    sleep(1e-6)
 
 
 class CoroutineExecutor:
@@ -237,7 +237,8 @@ class ConcurrentTask(ConcurrentFuture):
 
 # use C implementation if available
 try:
-    from ._futures import Future, AsyncTask, ConcurrentTask  # noqa: F401, F811
+    from ._futures import Future, ConcurrentFuture  # noqa: F401, F811
+    from ._futures import AsyncTask, ConcurrentTask  # noqa: F401, F811
     from ._futures import switch_thread  # noqa: F401, F811
 except ImportError:
     pass
