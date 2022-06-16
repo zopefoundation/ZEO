@@ -226,7 +226,7 @@ class ConcurrentFuture(Future):
 
 
 def switch_thread():
-    sleep(0)
+    sleep(1e-6)
 
 
 class CoroutineExecutor:

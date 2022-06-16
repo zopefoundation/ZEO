@@ -6,6 +6,7 @@ cdef object InvalidStateError = asyncio.InvalidStateError
 cdef object get_event_loop = asyncio.get_event_loop
 import inspect
 from threading import Event, Lock
+from time import sleep
 from ZEO._compat import get_ident
 
 from cpython cimport PY_MAJOR_VERSION
@@ -212,9 +213,22 @@ cdef class ConcurrentFuture(Future):
         return Future.result(self)
 
 
-cpdef switch_thread():
-    with nogil:
-        pass
+IF UNAME_SYSNAME == "Windows":
+    cpdef switch_thread():
+        sleep(1e-6)
+ELSE:
+    cdef extern from "<sys/select.h>" nogil:
+        ctypedef struct fd_set
+        cdef struct timeval:
+           long tv_sec
+           unsigned long tv_usec
+        int select(int no, fd_set *rd, fd_set *wr, fd_set *ex,
+                   timeval *to) nogil
+    cpdef switch_thread():
+        cdef timeval timeout
+        timeout.tv_sec = 0; timeout.tv_usec = 1
+        with nogil:
+            select(0, NULL, NULL, NULL, &timeout)
 
 
 cdef class CoroutineExecutor:
