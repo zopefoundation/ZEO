@@ -89,8 +89,8 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
     maxDiff = None
 
     def tearDown(self):
+        self.exit_future_mode()
         self.close()
-        self.future_mode = None
         super(ClientTests, self).tearDown()
         loop = self.loop
         if loop is not None:
@@ -717,7 +717,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
             finish_start=True)
         self.assertEqual(client.get_peername(), '1.2.3.4')
 
-    def test_ClientDisconnected_onio_calltimeout(self):
+    def test_ClientDisconnected_on_call_timeout(self):
         (wrapper, cache, loop, client, protocol,
          transport) = self.start(future_mode=False)
         self.assertRaises(ClientDisconnected, self.call, 'foo')
@@ -817,7 +817,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
             It records the state of ``f`` and therefore allows
             to check what is processed first.
             """
-            self.observed = f.done()
+            self.observed = bool(f.done())
 
         io.receiveBlobStop = observer
         # Emulate an async call to the client followed by the reply.
@@ -1200,6 +1200,10 @@ class ZEOBaseProtocolTests(setupstack.TestCase):
         loop.create_connection(lambda: ZEOBaseProtocol(loop, "proto"),
                                sock=True)
 
+    def tearDown(self):
+        self.loop.protocol.close()
+        self.loop.close()
+
     def test_write_message_iter(self):
         """test https://github.com/zopefoundation/ZEO/issues/150."""
         loop = self.loop
@@ -1371,13 +1375,15 @@ class FutureTests(OptimizeTestsBase, TestCase):
             def callback(unused):
                 li.append(i)
                 if not li[i]:
-                    mk_callback()  # add new callback
+                    # add new callback
+                    mk_callback()  # noqa: F821
 
         mk_callback()
         mk_callback()
         mk_callback()
         fut.set_result(None)
         self.assertEqual(li[4:], [0, 1, 2, 3, 4, 5])
+        del mk_callback  # break reference cycle
 
     def test_cancel(self):
         self.fut.cancel()

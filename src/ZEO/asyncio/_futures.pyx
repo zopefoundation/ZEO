@@ -1,7 +1,7 @@
 # cython: language_level=3
 
 from asyncio import CancelledError, InvalidStateError, get_event_loop
-from concurrent.futures import Future as ConcurrentFuture
+from threading import Event
 
 
 cdef enum State:
@@ -122,6 +122,28 @@ cdef class Future:
                 self._result,
                 self.callbacks]
         return " ".join(str(x) for x in info)
+
+
+cdef class ConcurrentFuture(Future):
+    cdef object completed
+
+    def __init__(self, loop=False):
+        Future.__init__(self, loop=loop)
+        self.completed = Event()
+        self.add_done_callback(self._complete)
+
+    cpdef result(self, timeout=None):
+        self.completed.wait(timeout)
+        return Future.result(self)
+
+    cpdef _complete(self, unused):
+        self.completed.set()
+        switch_thread()
+
+
+cpdef switch_thread():
+    with nogil:
+        pass
         
         
 cdef class CoroutineExecutor:
@@ -171,7 +193,7 @@ cdef class AsyncTask(Future):
     cdef object executor
 
     def __init__(self, coro, loop=None):
-        super().__init__(loop=loop)
+        Future.__init__(self, loop=loop)
         self.executor = CoroutineExecutor(self, coro)  # reference cycle
         self.executor.step()
 
@@ -179,26 +201,28 @@ cdef class AsyncTask(Future):
         return self.executor.cancel()
 
     def _cancel(self):
-        return super().cancel()
+        return Future.cancel(self)
 
 
-
-class ConcurrentTask(ConcurrentFuture):
+cdef class ConcurrentTask(ConcurrentFuture):
     """Task reporting to ``ConcurrentFuture``.
 
     Steps are not scheduled but executed immediately.
     """
+    cdef object executor
 
     def __init__(self, coro, loop):
-        super().__init__()
+        ConcurrentFuture.__init__(self, loop=loop)
         self.executor = CoroutineExecutor(self, coro)  # reference cycle
         loop.call_soon_threadsafe(self.executor.step)
+        # try to activate the IO thread as soon as possible
+        switch_thread()
 
     def cancel(self, msg=None):
         return self.executor.cancel()
 
     def _cancel(self):
-        return super().cancel()
+        return ConcurrentFuture.cancel(self)
 
 
 run_coroutine_threadsafe = ConcurrentTask

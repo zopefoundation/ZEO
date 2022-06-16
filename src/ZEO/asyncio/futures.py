@@ -8,7 +8,8 @@ This module defines variants which run callbacks immediately.
 """
 
 from asyncio import CancelledError, InvalidStateError, get_event_loop
-from concurrent.futures import Future as ConcurrentFuture
+from threading import Event
+from time import sleep
 
 
 # ``Future`` states -- inlined below for speed
@@ -127,6 +128,28 @@ class Future:
         return " ".join(str(x) for x in info)
 
 
+class ConcurrentFuture(Future):
+    """A future threads can wait on."""
+    __slots__ = "completed",
+
+    def __init__(self, loop=False):
+        Future.__init__(self, loop=loop)
+        self.completed = Event()
+
+        @self.add_done_callback
+        def complete(self):
+            self.completed.set()
+            switch_thread()
+
+    def result(self, timeout=None):
+        self.completed.wait(timeout)
+        return Future.result(self)
+
+
+def switch_thread():
+    sleep(0)
+
+
 class CoroutineExecutor:
     """Execute a coroutine on behalf of a task.
 
@@ -176,7 +199,7 @@ class AsyncTask(Future):
     __slots__ = "executor",
 
     def __init__(self, coro, loop=None):
-        super().__init__(loop=loop)
+        Future.__init__(self, loop=loop)
         self.executor = CoroutineExecutor(self, coro)  # reference cycle
         self.executor.step()
 
@@ -186,7 +209,7 @@ class AsyncTask(Future):
 
     def _cancel(self):
         """internal cancel request."""
-        return super().cancel()
+        return Future.cancel(self)
 
 
 class ConcurrentTask(ConcurrentFuture):
@@ -194,16 +217,14 @@ class ConcurrentTask(ConcurrentFuture):
 
     Steps are not scheduled but executed immediately.
     """
+    __slots__ = "executor",
 
     def __init__(self, coro, loop):
-        super().__init__()
-        self.loop = loop
-        if coro is not None:
-            self.set_coroutine(coro)
-
-    def set_coroutine(self, coro):
+        ConcurrentFuture.__init__(self, loop=loop)
         self.executor = CoroutineExecutor(self, coro)  # reference cycle
-        self.loop.call_soon_threadsafe(self.executor.step)
+        self._loop.call_soon_threadsafe(self.executor.step)
+        # try to activate the IO thread as soon as possible
+        switch_thread()
 
     def cancel(self, msg=None):
         """external cancel request."""
@@ -211,12 +232,13 @@ class ConcurrentTask(ConcurrentFuture):
 
     def _cancel(self):
         """internal cancel request."""
-        return super().cancel()
+        return ConcurrentFuture.cancel(self)
 
 
 # use C implementation if available
 try:
     from ._futures import Future, AsyncTask, ConcurrentTask  # noqa: F401, F811
+    from ._futures import switch_thread  # noqa: F401, F811
 except ImportError:
     pass
 

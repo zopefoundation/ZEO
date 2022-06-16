@@ -1277,7 +1277,7 @@ def runzeo_without_configfile():
     testing exit immediately
     ------
     --T INFO ZEO.StorageServer closing storage '1'
-    <BLANKLINE>
+    ...
 
     >>> proc.stdout.close()
     """
