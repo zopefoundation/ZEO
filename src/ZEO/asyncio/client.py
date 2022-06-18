@@ -899,8 +899,9 @@ class ClientRunner(object):
         # In this case, an exception is raised and handled by the
         # loops exception handler (which logs the exception).
         self.loop.call_soon_threadsafe(client.call_async, method, args)
-        # try to activate the IO thread as soon as possible
-        switch_thread()
+        # we do not suggest a thread switch here because continuing
+        # can reduce loop and switching overhead and utilize the
+        # transport more efficiently
 
     def async_iter(self, it):
         client = self.client
@@ -913,6 +914,8 @@ class ClientRunner(object):
         # loops exception handler (which logs the exception).
         self.loop.call_soon_threadsafe(client.call_async_iter, it)
         # try to activate the IO thread as soon as possible
+        # because we have likely a lot of data to transfer; not bad
+        # if this starts early
         switch_thread()
 
     def prefetch(self, oids, tid):
