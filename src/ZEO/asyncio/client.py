@@ -185,7 +185,7 @@ class Protocol(base.Protocol):
             self.client.disconnected(self)
 
     @future_generator
-    def finish_connect(self, protocol_version):
+    def finish_connection(self, protocol_version):
         """setup for *protocol_version* and verify the connection."""
         # the first byte of ``protocol_version`` specifies the coding type
         # the remaining bytes the version proper

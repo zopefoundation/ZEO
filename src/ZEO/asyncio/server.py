@@ -67,7 +67,7 @@ class ServerProtocol(base.Protocol):
     def stop(self):
         pass  # Might be replaced when running a thread per client
 
-    def finish_connect(self, protocol_version):
+    def finish_connection(self, protocol_version):
         if protocol_version == b'ruok':
             self.write_message(
                 json.dumps(self.zeo_storage.ruok()).encode("ascii"))
