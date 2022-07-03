@@ -11,10 +11,10 @@ especially, the messages wrote with ``write_message_iter``
 are received as contiguous messages.
 
 The first message transmits the protocol version.
-Its callback is ``finish_connect``.
+Its callback is ``finish_connection``.
 The first byte of the protocol version message identifies
 an encoding type; the remaining bytes specify the version.
-``finish_connect`` is expected to set up
+``finish_connection`` is expected to set up
 methods ``encode`` and ``decode`` corresponding to the
 encoding type.
 
@@ -167,7 +167,7 @@ class Protocol(asyncio.Protocol):
     def first_message_received(self, protocol_version):
         # Handler for first/handshake message, set up in __init__
         del self.message_received  # use default handler from here on
-        self.finish_connect(protocol_version)
+        self.finish_connection(protocol_version)
 
     def call_async(self, method, args):
         """call method named *method* asynchronously with *args*."""
