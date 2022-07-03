@@ -896,7 +896,7 @@ class ProtocolTests(setupstack.TestCase):
         self.loop = loop = Loop()
         loop.create_connection(lambda: Protocol(loop, None), sock=True)
 
-    def test_writeit(self):
+    def test_write_message_iter(self):
         """test https://github.com/zopefoundation/ZEO/issues/150."""
         loop = self.loop
         protocol, transport = loop.protocol, loop.transport
@@ -906,8 +906,8 @@ class ProtocolTests(setupstack.TestCase):
             yield tag
             yield tag
 
-        protocol._writeit(it(b"0"))
-        protocol._writeit(it(b"1"))
+        protocol.write_message_iter(it(b"0"))
+        protocol.write_message_iter(it(b"1"))
         for b in b"0011":
             l, t = transport.pop(2)
             self.assertEqual(l, b"\x00\x00\x00\x01")
