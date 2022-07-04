@@ -104,9 +104,13 @@ class SizedMessageProtocol(asyncio.Protocol):
         self.pause_writing = pause_writing
 
         # input handling
+        # the following implements a state machine with
+        # states ``process_size`` and ``process_message``
+        process_size = 1
+        process_message = 2
+        self.read_state = process_size  # current state
         self.got = 0
         self.want = 4
-        self.getting_size = True
         self.input = []  # Input buffer when assembling messages
         unpack = struct.unpack
 
@@ -137,14 +141,14 @@ class SizedMessageProtocol(asyncio.Protocol):
 
                 self.got = extra
 
-                if self.getting_size:
+                if self.read_state is process_size:
                     # we were recieving the message size
                     assert self.want == 4
                     self.want = unpack(">I", collected)[0]
-                    self.getting_size = False
-                else:
+                    self.read_state = process_message
+                else:  # ``read_state is process_message``
                     self.want = 4
-                    self.getting_size = True
+                    self.read_state = process_size
                     try:
                         self.receive(collected)
                     except Exception:
