@@ -44,6 +44,13 @@ class SizedMessageProtocol(asyncio.Protocol):
         append = output.append
         writelines = transport.writelines
 
+        def _write_message(message):
+            """hand the message over to the transport.
+
+            May set ``paused``.
+            """
+            writelines((pack(">I", len(message)), message))
+
         # Note: Outside ``resume_writing``
         # ``not paused`` implies ``not output``. This
         # allows to use ``if paused`` instead of
@@ -54,7 +61,7 @@ class SizedMessageProtocol(asyncio.Protocol):
             if paused:  # equivalent to ``paused or output``
                 append(message)
             else:
-                writelines((pack(">I", len(message)), message))
+                _write_message(message)
 
         self.write_message = write_message
 
@@ -64,7 +71,7 @@ class SizedMessageProtocol(asyncio.Protocol):
                 append(data)
                 return
             for message in data:
-                writelines((pack(">I", len(message)), message))
+                _write_message(message)
                 if paused:
                     append(data)
                     break
@@ -74,17 +81,16 @@ class SizedMessageProtocol(asyncio.Protocol):
         def resume_writing():
             # precondition: ``paused`` and "at least 1 message writable"
             del paused[:]
-            writelines = self.transport.writelines
             while output and not paused:
                 message = output.pop(0)
                 if isinstance(message, bytes):
                     # a message
-                    writelines((pack(">I", len(message)), message))
+                    _write_message(message)
                 else:
                     # an iterator
                     data = message
                     for message in data:
-                        writelines((pack(">I", len(message)), message))
+                        _write_message(message)
                         if paused:  # paused again. Put iter back.
                             output.insert(0, data)
                             break
