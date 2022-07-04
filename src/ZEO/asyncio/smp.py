@@ -125,31 +125,31 @@ class SizedMessageProtocol(asyncio.Protocol):
             self.got += len(data)
             self.input.append(data)
             while self.got >= self.want:
-                try:
-                    extra = self.got - self.want
-                    if extra == 0:
-                        collected = b''.join(self.input)
-                        self.input = []
-                    else:
-                        input = self.input
-                        self.input = [input[-1][-extra:]]
-                        input[-1] = input[-1][:-extra]
-                        collected = b''.join(input)
+                extra = self.got - self.want
+                if extra == 0:
+                    collected = b''.join(self.input)
+                    self.input = []
+                else:
+                    input = self.input
+                    self.input = [input[-1][-extra:]]
+                    input[-1] = input[-1][:-extra]
+                    collected = b''.join(input)
 
-                    self.got = extra
+                self.got = extra
 
-                    if self.getting_size:
-                        # we were recieving the message size
-                        assert self.want == 4
-                        self.want = unpack(">I", collected)[0]
-                        self.getting_size = False
-                    else:
-                        self.want = 4
-                        self.getting_size = True
+                if self.getting_size:
+                    # we were recieving the message size
+                    assert self.want == 4
+                    self.want = unpack(">I", collected)[0]
+                    self.getting_size = False
+                else:
+                    self.want = 4
+                    self.getting_size = True
+                    try:
                         self.receive(collected)
-                except Exception:
-                    logger.exception("data_received %s %s %s",
-                                     self.want, self.got, self.getting_size)
+                    except Exception:
+                        logger.exception("Processing message `%r` failed"
+                                         % collected)
 
         self.data_received = data_received
 
