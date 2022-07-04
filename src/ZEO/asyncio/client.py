@@ -117,10 +117,8 @@ class Protocol(base.Protocol):
 
     def close(self):
         if not self.closed:
-            self.closed = True
+            super(Protocol, self).close()  # will set ``closed``
             self._connecting.cancel()
-            if self.transport is not None:
-                self.transport.close()
             for future in self.pop_futures():
                 future.set_exception(ClientDisconnected("Closed"))
 
