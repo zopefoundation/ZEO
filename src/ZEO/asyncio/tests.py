@@ -5,6 +5,8 @@ if PY3:
         return bytes([i])
 else:
     def to_byte(b):
+        if isinstance(b, int):
+            b = chr(b)
         return b
 
 from zope.testing import setupstack
@@ -18,7 +20,7 @@ import unittest
 
 from ..Exceptions import ClientDisconnected, ProtocolError
 
-from .base import Protocol
+from .base import Protocol, SizedMessageProtocol
 from .testing import Loop
 from .client import ClientRunner, Fallback
 from .server import new_connection, best_protocol_version
@@ -923,6 +925,75 @@ class ProtocolTests(setupstack.TestCase):
             self.assertEqual(t, to_byte(b))
 
 
+class SizedMessageProtocolTests(setupstack.TestCase):
+    def setUp(self):
+        self.loop = loop = Loop()
+        self.received = received = []
+        loop.create_connection(
+            lambda: SizedMessageProtocol(received.append), sock=True)
+        self.transport = loop.transport
+        self.protocol = loop.protocol
+
+    def tearDown(self):
+        self.protocol.close()
+        self.loop.close()
+
+    def test_sm_write_message(self):
+        protocol, transport = self.protocol, self.transport
+        for i in range(2):
+            protocol.write_message(to_byte(i))
+        for i in range(2):
+            l, b = transport.pop(2)
+            self.assertEqual(l, b"\x00\x00\x00\x01")
+            self.assertEqual(b, to_byte(i))
+        protocol.write_message(b"12")
+        l, m = transport.pop(2)
+        self.assertEqual(l, b"\x00\x00\x00\x02")
+        self.assertEqual(m, b"12")
+
+    def test_sm_write_iter(self):
+        protocol, transport = self.protocol, self.transport
+        protocol.write_message_iter(to_byte(b) for b in b"0123")
+        for b in b"0123":
+            l, t = transport.pop(2)
+            self.assertEqual(l, b"\x00\x00\x00\x01")
+            self.assertEqual(t, to_byte(b))
+
+    def test_sm_receive(self):
+        protocol = self.protocol
+        msgs = b"0 11 222".split()
+        for msg in msgs:
+            protocol.data_received(sized(msg))
+        self.assertEqual(self.received, msgs)
+
+    def test_sm_data_received(self):
+        msg = b"a test message"
+        data = sized(msg) * 2
+        receive = self.protocol.data_received
+        expected = [msg] * 2
+
+        def check(*split_size):
+            idx = 0
+            for size in split_size:
+                nidx = idx + size
+                receive(data[idx:nidx])
+                idx = nidx
+            receive(data[idx:])
+            self.assertEqual(self.received, expected)
+            del self.received[:]
+
+        # single chunk; i.e. split chunk
+        check()
+        # individual messages
+        check(len(data) // 2)
+        # combine from 2 chunks
+        check(2, 2, 2)
+        # combine from 3 chunks
+        check(5, 2)
+        # optimal
+        check(4, len(msg), 4, len(msg))
+
+
 def test_suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(ClientTests))
@@ -930,4 +1001,5 @@ def test_suite():
     suite.addTest(unittest.makeSuite(MsgpackClientTests))
     suite.addTest(unittest.makeSuite(MsgpackServerTests))
     suite.addTest(unittest.makeSuite(ProtocolTests))
+    suite.addTest(unittest.makeSuite(SizedMessageProtocolTests))
     return suite

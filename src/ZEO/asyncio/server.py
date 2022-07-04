@@ -41,14 +41,10 @@ class ServerProtocol(base.Protocol):
           (b'M' if msgpack else b'Z') + best_protocol_version
         )
 
-    closed = False
-
     def close(self):
         logger.debug("Closing server protocol")
         if not self.closed:
-            self.closed = True
-            if self.transport is not None:
-                self.transport.close()
+            super(ServerProtocol, self).close()  # will set ``closed``
 
     connected = None  # for tests
 
