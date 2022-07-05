@@ -88,7 +88,7 @@ class Protocol(asyncio.Protocol):
                 sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, True)
 
         # set up lower level sized message protocol
-        smp = self.sm_protocol = SizedMessageProtocol(self.first_message_received)
+        smp = self.sm_protocol = SizedMessageProtocol(self._first_message)
         smp.connection_made(transport)  # takes over ``transport``
         self.data_received = smp.data_received
         self.pause_writing = smp.pause_writing
@@ -96,7 +96,8 @@ class Protocol(asyncio.Protocol):
         self.write_message = smp.write_message
         self.write_message_iter = smp.write_message_iter
 
-    def first_message_received(self, protocol_version):
+    # internal
+    def _first_message(self, protocol_version):
         self.sm_protocol.set_receive(self.message_received)
         self.finish_connection(protocol_version)
 
