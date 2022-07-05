@@ -75,6 +75,9 @@ class Protocol(asyncio.Protocol):
     def get_peername(self):
         return self.sm_protocol.transport.get_extra_info('peername')
 
+    def protocol_factory(self):
+        return self
+
     closed = False
     sm_protocol = None
 
