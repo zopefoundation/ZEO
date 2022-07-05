@@ -22,7 +22,6 @@ class ServerProtocol(base.Protocol):
 
     protocols = (b'5', )
 
-    name = 'server protocol'
     methods = set(('register', ))
 
     unlogged_exception_types = (
@@ -34,7 +33,8 @@ class ServerProtocol(base.Protocol):
     def __init__(self, loop, addr, zeo_storage, msgpack):
         """Create a server's client interface
         """
-        super(ServerProtocol, self).__init__(loop, addr)
+        super(ServerProtocol, self).__init__(loop, repr(addr))
+        self.addr = addr
         self.zeo_storage = zeo_storage
 
         self.announce_protocol = (

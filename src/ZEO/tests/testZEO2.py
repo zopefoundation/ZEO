@@ -226,7 +226,7 @@ We start a transaction and vote, this leads to getting the lock.
 
     >>> zs1 = ZEO.tests.servertesting.client(server, '1')
     ZEO.asyncio.base INFO
-    Connected server protocol
+    Connected ZEO.asyncio.server.ServerProtocol('test-addr-1')
     ZEO.asyncio.server INFO
     received handshake 'Z5'
     >>> tid1 = start_trans(zs1)
@@ -241,7 +241,7 @@ a delay will be returned:
 
     >>> zs2 = ZEO.tests.servertesting.client(server, '2')
     ZEO.asyncio.base INFO
-    Connected server protocol
+    Connected ZEO.asyncio.server.ServerProtocol('test-addr-2')
     ZEO.asyncio.server INFO
     received handshake 'Z5'
     >>> tid2 = start_trans(zs2)
@@ -304,55 +304,55 @@ increased, so does the logging level:
     ...     delay = client.vote(tid)
     ...     clients.append(client)
     ZEO.asyncio.base INFO
-    Connected server protocol
+    Connected ZEO.asyncio.server.ServerProtocol('test-addr-10')
     ZEO.asyncio.server INFO
     received handshake 'Z5'
     ZEO.StorageServer DEBUG
     (test-addr-10) ('1') queue lock: transactions waiting: 2
     ZEO.asyncio.base INFO
-    Connected server protocol
+    Connected ZEO.asyncio.server.ServerProtocol('test-addr-11')
     ZEO.asyncio.server INFO
     received handshake 'Z5'
     ZEO.StorageServer DEBUG
     (test-addr-11) ('1') queue lock: transactions waiting: 3
     ZEO.asyncio.base INFO
-    Connected server protocol
+    Connected ZEO.asyncio.server.ServerProtocol('test-addr-12')
     ZEO.asyncio.server INFO
     received handshake 'Z5'
     ZEO.StorageServer WARNING
     (test-addr-12) ('1') queue lock: transactions waiting: 4
     ZEO.asyncio.base INFO
-    Connected server protocol
+    Connected ZEO.asyncio.server.ServerProtocol('test-addr-13')
     ZEO.asyncio.server INFO
     received handshake 'Z5'
     ZEO.StorageServer WARNING
     (test-addr-13) ('1') queue lock: transactions waiting: 5
     ZEO.asyncio.base INFO
-    Connected server protocol
+    Connected ZEO.asyncio.server.ServerProtocol('test-addr-14')
     ZEO.asyncio.server INFO
     received handshake 'Z5'
     ZEO.StorageServer WARNING
     (test-addr-14) ('1') queue lock: transactions waiting: 6
     ZEO.asyncio.base INFO
-    Connected server protocol
+    Connected ZEO.asyncio.server.ServerProtocol('test-addr-15')
     ZEO.asyncio.server INFO
     received handshake 'Z5'
     ZEO.StorageServer WARNING
     (test-addr-15) ('1') queue lock: transactions waiting: 7
     ZEO.asyncio.base INFO
-    Connected server protocol
+    Connected ZEO.asyncio.server.ServerProtocol('test-addr-16')
     ZEO.asyncio.server INFO
     received handshake 'Z5'
     ZEO.StorageServer WARNING
     (test-addr-16) ('1') queue lock: transactions waiting: 8
     ZEO.asyncio.base INFO
-    Connected server protocol
+    Connected ZEO.asyncio.server.ServerProtocol('test-addr-17')
     ZEO.asyncio.server INFO
     received handshake 'Z5'
     ZEO.StorageServer WARNING
     (test-addr-17) ('1') queue lock: transactions waiting: 9
     ZEO.asyncio.base INFO
-    Connected server protocol
+    Connected ZEO.asyncio.server.ServerProtocol('test-addr-18')
     ZEO.asyncio.server INFO
     received handshake 'Z5'
     ZEO.StorageServer CRITICAL
@@ -458,7 +458,7 @@ ZEOStorage as closed and see if trying to get a lock cleans it up:
 
     >>> zs1 = ZEO.tests.servertesting.client(server, '1')
     ZEO.asyncio.base INFO
-    Connected server protocol
+    Connected ZEO.asyncio.server.ServerProtocol('test-addr-1')
     ZEO.asyncio.server INFO
     received handshake 'Z5'
     >>> tid1 = start_trans(zs1)
@@ -476,7 +476,7 @@ ZEOStorage as closed and see if trying to get a lock cleans it up:
 
     >>> zs2 = ZEO.tests.servertesting.client(server, '2')
     ZEO.asyncio.base INFO
-    Connected server protocol
+    Connected ZEO.asyncio.server.ServerProtocol('test-addr-2')
     ZEO.asyncio.server INFO
     received handshake 'Z5'
     >>> tid2 = start_trans(zs2)

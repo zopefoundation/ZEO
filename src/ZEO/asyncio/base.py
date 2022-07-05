@@ -57,9 +57,9 @@ class Protocol(asyncio.Protocol):
 
     protocol_version = None
 
-    def __init__(self, loop, addr):
+    def __init__(self, loop, name):
         self.loop = loop
-        self.addr = addr
+        self.name = name
 
     # API -- defined in ``connection_made``
     # write_message(message)
@@ -89,7 +89,9 @@ class Protocol(asyncio.Protocol):
                 self.sm_protocol.close()
 
     def __repr__(self):
-        return self.name
+        cls = self.__class__
+        return "%s.%s(%s)" % (
+            cls.__module__, cls.__name__, self.name)
 
     # to be defined by deriving classes
     # def finish_connection(protocol_version_message)
