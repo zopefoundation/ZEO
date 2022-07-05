@@ -100,11 +100,12 @@ class Protocol(base.Protocol):
 
         cache is a ZEO.interfaces.IClientCache.
         """
-        super(Protocol, self).__init__(loop, addr)
+        super(Protocol, self).__init__(
+            loop,
+            "%r, %r, %r" % (addr, storage_key, read_only))
+        self.addr = addr
         self.storage_key = storage_key
         self.read_only = read_only
-        self.name = "%s(%r, %r, %r)" % (
-            self.__class__.__name__, addr, storage_key, read_only)
         self.client = client
         self.connect_poll = connect_poll
         self.heartbeat_interval = heartbeat_interval

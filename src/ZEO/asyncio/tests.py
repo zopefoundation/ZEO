@@ -906,7 +906,8 @@ class ProtocolTests(setupstack.TestCase):
 
     def setUp(self):
         self.loop = loop = Loop()
-        loop.create_connection(lambda: Protocol(loop, None), sock=True)
+        loop.create_connection(lambda: Protocol(loop, "proto"),
+                               sock=True)
 
     def test_write_message_iter(self):
         """test https://github.com/zopefoundation/ZEO/issues/150."""
@@ -924,6 +925,9 @@ class ProtocolTests(setupstack.TestCase):
             l, t = transport.pop(2)
             self.assertEqual(l, b"\x00\x00\x00\x01")
             self.assertEqual(t, to_byte(b))
+
+    def test_repr(self):
+        repr(self.loop.protocol)  # satisfied if no exception
 
 
 class SizedMessageProtocolTests(setupstack.TestCase):
