@@ -20,7 +20,7 @@ import unittest
 
 from ..Exceptions import ClientDisconnected, ProtocolError
 
-from .base import Protocol, SizedMessageProtocol
+from .base import ZEOBaseProtocol, SizedMessageProtocol
 from .testing import Loop
 from .client import ClientRunner, Fallback
 from .server import new_connection, best_protocol_version
@@ -902,11 +902,11 @@ class Logging(object):
         logging.getLogger().setLevel(logging.NOTSET)
 
 
-class ProtocolTests(setupstack.TestCase):
+class ZEOBaseProtocolTests(setupstack.TestCase):
 
     def setUp(self):
         self.loop = loop = Loop()
-        loop.create_connection(lambda: Protocol(loop, "proto"),
+        loop.create_connection(lambda: ZEOBaseProtocol(loop, "proto"),
                                sock=True)
 
     def test_write_message_iter(self):
@@ -1005,6 +1005,6 @@ def test_suite():
     suite.addTest(unittest.makeSuite(ServerTests))
     suite.addTest(unittest.makeSuite(MsgpackClientTests))
     suite.addTest(unittest.makeSuite(MsgpackServerTests))
-    suite.addTest(unittest.makeSuite(ProtocolTests))
+    suite.addTest(unittest.makeSuite(ZEOBaseProtocolTests))
     suite.addTest(unittest.makeSuite(SizedMessageProtocolTests))
     return suite

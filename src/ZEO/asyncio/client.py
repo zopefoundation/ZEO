@@ -75,7 +75,7 @@ def future_generator(func):
     return call_generator
 
 
-class Protocol(base.Protocol):
+class Protocol(base.ZEOBaseProtocol):
     """asyncio connection to a single ZEO server.
     """
 
