@@ -130,9 +130,6 @@ class Protocol(base.Protocol):
         self.futures.clear()
         return futures
 
-    def protocol_factory(self):
-        return self
-
     def connect(self):
         if isinstance(self.addr, tuple):
             host, port = self.addr
