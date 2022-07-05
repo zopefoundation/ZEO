@@ -61,8 +61,19 @@ class Protocol(asyncio.Protocol):
         self.loop = loop
         self.addr = addr
 
-    def __repr__(self):
-        return self.name
+    # API -- defined in ``connection_made``
+    # write_message(message)
+    # write_message_iter(message_iter)
+    def call_async(self, method, args):
+        """call method named *method* asynchronously with *args*."""
+        self.write_message(self.encode(0, True, method, args))
+
+    def call_async_iter(self, it):
+        self.write_message_iter(self.encode(0, True, method, args)
+                                for method, args in it)
+
+    def get_peername(self):
+        return self.sm_protocol.transport.get_extra_info('peername')
 
     closed = False
     sm_protocol = None
@@ -73,6 +84,13 @@ class Protocol(asyncio.Protocol):
             # can get closed before ``sm_protocol`` set up
             if self.sm_protocol is not None:
                 self.sm_protocol.close()
+
+    def __repr__(self):
+        return self.name
+
+    # to be defined by deriving classes
+    # def finish_connection(protocol_version_message)
+    # def message_received(message)
 
     #  ``Protocol`` responsibilities -- defined in ``connection_made``
     # data_received
@@ -100,14 +118,3 @@ class Protocol(asyncio.Protocol):
     def _first_message(self, protocol_version):
         self.sm_protocol.set_receive(self.message_received)
         self.finish_connection(protocol_version)
-
-    def call_async(self, method, args):
-        """call method named *method* asynchronously with *args*."""
-        self.write_message(self.encode(0, True, method, args))
-
-    def call_async_iter(self, it):
-        self.write_message_iter(self.encode(0, True, method, args)
-                                for method, args in it)
-
-    def get_peername(self):
-        return self.sm_protocol.transport.get_extra_info('peername')
