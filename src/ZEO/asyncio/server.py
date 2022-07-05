@@ -16,7 +16,7 @@ from .marshal import server_decoder, encoder, reduce_exception
 logger = logging.getLogger(__name__)
 
 
-class ServerProtocol(base.Protocol):
+class ServerProtocol(base.ZEOBaseProtocol):
     """asyncio low-level ZEO server interface
     """
 

@@ -44,9 +44,8 @@ logger = logging.getLogger(__name__)
 INET_FAMILIES = socket.AF_INET, socket.AF_INET6
 
 
-class Protocol(asyncio.Protocol):
-    """asyncio low-level ZEO base interface
-    """
+class ZEOBaseProtocol(asyncio.Protocol):
+    """ZEO protocol base class for the common features."""
 
     # All of the code in this class runs in a single dedicated
     # thread. Thus, we can mostly avoid worrying about interleaved
