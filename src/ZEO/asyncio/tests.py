@@ -90,7 +90,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
 
     def tearDown(self):
         self.client.close()
-        super(ClientTests, self)
+        super(ClientTests, self).tearDown()
 
     def start(self,
               addrs=(('127.0.0.1', 8200), ), loop_addrs=None,
