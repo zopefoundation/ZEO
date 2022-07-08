@@ -121,6 +121,7 @@ class Protocol(base.ZEOBaseProtocol):
 
     def close(self):
         if not self.closed:
+            logger.debug('closing %s', self)
             super(Protocol, self).close()  # will set ``closed``
             self._connecting.cancel()
             for future in self.pop_futures():
@@ -166,11 +167,12 @@ class Protocol(base.ZEOBaseProtocol):
                     )
 
     def connection_made(self, transport):
+        logger.debug('connection_made %s', self)
         super(Protocol, self).connection_made(transport)
         self.heartbeat(write=False)
 
     def connection_lost(self, exc):
-        logger.debug('connection_lost %r', exc)
+        logger.debug('connection_lost %s: %r', self, exc)
         self.heartbeat_handle.cancel()
         if self.closed:
             for f in self.pop_futures():
@@ -457,6 +459,7 @@ class ClientIO(object):
 
     def close(self):
         if not self.closed:
+            logger.debug("closing %s", self)
             self.closed = True
             self.ready = False
             if self.protocol is not None:
@@ -492,7 +495,7 @@ class ClientIO(object):
         self._clear_protocols(protocol)
 
     def try_connecting(self):
-        logger.debug('try_connecting')
+        logger.debug('try_connecting %s', self)
         if not self.closed:
             self.protocols = [
                 Protocol(self.loop, addr, self,
@@ -699,7 +702,7 @@ class ClientIO(object):
         try:
             yield self.protocol.load_before(oid, tid)
         except Exception:
-            logger.exception("prefetch %r %r" % (oid, tid))
+            logger.exception("Exception for prefetch `%r` `%r`", oid, tid)
 
     def prefetch(self, future, wait_ready, oids, tid):
         if self.ready:
