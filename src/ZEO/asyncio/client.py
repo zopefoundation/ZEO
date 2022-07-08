@@ -99,9 +99,7 @@ class Protocol(base.ZEOBaseProtocol):
 
         addr is either a host,port tuple or a string file name.
 
-        client is a ClientStorage. It must be thread safe.
-
-        cache is a ZEO.interfaces.IClientCache.
+        client is a `ClientIO`.
         """
         super(Protocol, self).__init__(
             loop,
