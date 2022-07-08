@@ -1,15 +1,15 @@
 """ZEO client interface implementation.
 
 The client interface implementation is split into two parts:
-``ClientRunner`` and ``Client``.
+``ClientRunner`` and ``ClientIO``.
 
-``ClientRunner`` calls ``Client`` methods indirectly via
+``ClientRunner`` calls ``ClientIO`` methods indirectly via
 ``loop.call_soon_threadsafe``.
-``Client`` does not call ``ClientRunner`` methods; however, it
+``ClientIO`` does not call ``ClientRunner`` methods; however, it
 can call ``ClientStorage`` and ``ClientCache`` methods.
 Those methods must be thread safe.
 
-Logically, ``Client`` represents a connection to one ZEO
+Logically, ``ClientIO`` represents a connection to one ZEO
 server. However, initially, it can open connections to serveral
 servers and choose one of them depending on availability
 and required/provided capabilities (read_only/writable).
@@ -378,7 +378,7 @@ unlogged_exceptions = (ZODB.POSException.POSKeyError,
                        ZODB.POSException.ConflictError)
 
 
-class Client(object):
+class ClientIO(object):
     """asyncio low-level ZEO client interface
     """
 
@@ -793,7 +793,7 @@ class ClientRunner(object):
 
     def setup_delegation(self, loop):
         self.loop = loop
-        self.client = Client(loop, *self.__args, **self.__kwargs)
+        self.client = ClientIO(loop, *self.__args, **self.__kwargs)
         self.call_threadsafe = self.client.call_threadsafe
         self.call_async_threadsafe = self.client.call_async_threadsafe
 

@@ -79,10 +79,10 @@ class Base(object):
 
 
 class ClientTests(Base, setupstack.TestCase, ClientRunner):
-    """Test ``Client``.
+    """Test ``ClientIO``.
 
     The tests emulate a server and its responses to verify
-    that ``Client`` and ``client.Protocol`` instances behave
+    that ``ClientIO`` and ``client.Protocol`` instances behave
     as they should.
     """
 
