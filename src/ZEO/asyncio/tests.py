@@ -205,7 +205,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
 
         # Now we can make async calls:
         f2 = self.async_('bar', 3, 4)
-        self.assertTrue(f2.done() and f2.exception() is None)
+        self.assertTrue(f2.done())
+        self.assertIsNone(f2.exception())
         self.assertEqual(self.pop(), (0, True, 'bar', (3, 4)))
 
         # Loading objects gets special handling to leverage the cache.
@@ -309,14 +310,14 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         protocol.connection_lost(exc)
         wrapper.notify_disconnected.assert_called_with()
 
-        self.assertTrue(isinstance(loaded.exception(), ClientDisconnected))
+        self.assertIsInstance(loaded.exception(), ClientDisconnected)
         self.assertEqual(loaded.exception().args, (exc,))
-        self.assertTrue(isinstance(f1.exception(), ClientDisconnected))
+        self.assertIsInstance(f1.exception(), ClientDisconnected)
         self.assertEqual(f1.exception().args, (exc,))
 
         # Because we reconnected, a new protocol and transport were created:
-        self.assertTrue(protocol is not loop.protocol)
-        self.assertTrue(transport is not loop.transport)
+        self.assertIsNot(protocol, loop.protocol)
+        self.assertIsNot(transport, loop.transport)
         protocol = loop.protocol
         transport = loop.transport
 
@@ -430,7 +431,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
             addrs, ())
 
         # We haven't connected yet
-        self.assertTrue(protocol is None and transport is None)
+        self.assertIsNone(protocol)
+        self.assertIsNone(transport)
 
         # There are 2 connection attempts outstanding:
         self.assertEqual(sorted(loop.connecting), addrs)
@@ -478,8 +480,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertTrue(8 < delay < 10)
         self.assertEqual(len(loop.later), 1)  # first in later is heartbeat
         func(*args)  # connect again
-        self.assertFalse(protocol is loop.protocol)
-        self.assertFalse(transport is loop.transport)
+        self.assertIsNot(protocol, loop.protocol)
+        self.assertIsNot(transport, loop.transport)
         protocol = loop.protocol
         transport = loop.transport
         protocol.data_received(sized(self.enc + b'5'))
@@ -553,10 +555,10 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         # Now, the original protocol is closed, and the client is
         # no-longer ready:
         self.assertFalse(client.ready)
-        self.assertFalse(client.protocol is protocol)
+        self.assertIsNot(client.protocol, protocol)
         self.assertEqual(client.protocol, loop.protocol)
         self.assertEqual(protocol.closed, True)
-        self.assertTrue(client.connected is not connected)
+        self.assertIsNot(client.connected, connected)
         self.assertFalse(client.connected.done())
         protocol, transport = loop.protocol, loop.transport
         self.assertEqual(protocol.read_only, False)
@@ -582,8 +584,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
 
         # We'll disconnect:
         protocol.connection_lost(Exception("lost"))
-        self.assertTrue(protocol is not loop.protocol)
-        self.assertTrue(transport is not loop.transport)
+        self.assertIsNot(protocol, loop.protocol)
+        self.assertIsNot(transport, loop.transport)
         protocol = loop.protocol
         transport = loop.transport
 
@@ -636,7 +638,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         with mock.patch("ZEO.asyncio.client.logger.error") as error:
             self.assertFalse(error.called)
             protocol.data_received(sized(self.enc + b'200'))
-            self.assertTrue(isinstance(error.call_args[0][1], ProtocolError))
+            self.assertIsInstance(error.call_args[0][1], ProtocolError)
 
     def test_get_peername(self):
         wrapper, cache, loop, client, protocol, transport = self.start(
