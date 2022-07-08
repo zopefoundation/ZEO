@@ -2,24 +2,26 @@
 
 The client interface implementation is split into two parts:
 ``ClientRunner`` and ``ClientIO``.
+``ClientRunner`` methods are executed in the calling thread,
+``ClientIO`` methods in an ``asyncio`` context.
 
 ``ClientRunner`` calls ``ClientIO`` methods indirectly via
-``loop.call_soon_threadsafe``.
+``loop.call_soon_threadsafe`` (the async calls
+``call_async`` and ``call_async_iter``).
 ``ClientIO`` does not call ``ClientRunner`` methods; however, it
 can call ``ClientStorage`` and ``ClientCache`` methods.
 Those methods must be thread safe.
 
 Logically, ``ClientIO`` represents a connection to one ZEO
-server. However, initially, it can open connections to serveral
+server. However, initially, it can open connections to several
 servers and choose one of them depending on availability
 and required/provided capabilities (read_only/writable).
 A server connection is represented by a ``Protocol`` instance.
 
 The ``asyncio`` loop must be run in a separate thread.
 The loop management is the responsibility of ``ClientThread``,
-a tiny wrapper arount ``ClientRunner``.
+a tiny wrapper around ``ClientRunner``.
 """
-from ZEO.Exceptions import ClientDisconnected, ServerException
 import concurrent.futures
 import functools
 import logging
@@ -30,6 +32,7 @@ import ZODB.event
 import ZODB.POSException
 
 import ZEO.Exceptions
+from ZEO.Exceptions import ClientDisconnected, ServerException
 import ZEO.interfaces
 
 from . import base
@@ -174,7 +177,7 @@ class Protocol(base.ZEOBaseProtocol):
                 f.cancel()
         else:
             # We have to be careful processing the futures, because
-            # exception callbacks might modufy them.
+            # exception callbacks might modify them.
             for f in self.pop_futures():
                 f.set_exception(ClientDisconnected(exc or 'connection lost'))
             self.closed = True
@@ -283,7 +286,8 @@ class Protocol(base.ZEOBaseProtocol):
         return self.call(Fut(), method, args)
 
     def load_before(self, oid, tid):
-        # Special-case loadBefore, so we collapse outstanding requests
+        # Special-case load_before, so we collapse outstanding requests
+        # and update the cache
         message_id = (oid, tid)
         future = self.futures.get(message_id)
         if future is None:
@@ -306,7 +310,7 @@ class Protocol(base.ZEOBaseProtocol):
 
     # Methods called by the server.
     # WARNING WARNING we can't call methods that call back to us
-    # syncronously, as that would lead to DEADLOCK!
+    # synchronously, as that would lead to DEADLOCK!
 
     client_methods = (
         'invalidateTransaction', 'info',
@@ -379,8 +383,7 @@ unlogged_exceptions = (ZODB.POSException.POSKeyError,
 
 
 class ClientIO(object):
-    """asyncio low-level ZEO client interface
-    """
+    """asyncio low-level ZEO client interface."""
 
     # All of the code in this class runs in a single dedicated
     # thread. Thus, we can mostly avoid worrying about interleaved
@@ -606,7 +609,7 @@ class ClientIO(object):
                 # This is weird. We were connected and verified our cache, but
                 # Now we errored getting info.
 
-                # XXX Need a test fpr this. The lone before is what we
+                # XXX Need a test for this. The lone before is what we
                 # had, but it's wrong.
                 self.register_failed(self, exc)
 
@@ -754,6 +757,7 @@ class ClientIO(object):
         self.close()
         future.set_result(None)
 
+    # server callbacks
     def invalidateTransaction(self, tid, oids):
         if self.ready:
             # see the cache related comment in ``tpc_finish_threadsafe``
@@ -977,7 +981,9 @@ class ClientThread(ClientRunner):
             self.closed = True
             super(ClientThread, self).close()
             self.loop.call_soon_threadsafe(self.loop.stop)
-            self.thread.join(9)
+            # ``loop`` will be closed in the IO thread
+            # after stop processing
+            self.thread.join(9)  # wait for the IO thread to terminate
             if self.exception:
                 raise self.exception
 
