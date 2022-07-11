@@ -1108,8 +1108,12 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                 return self._iterator_gc(True)
             self._iterator_ids -= iids
 
-    def server_status(self):
-        return self._call('server_status')
+    def server_status(self, timeout=None):
+        """Retrieve status dictionary from the server.
+
+        (The timeout keyword argument is for tests)
+        """
+        return self._call('server_status', timeout=timeout)
 
 
 class TransactionIterator(object):

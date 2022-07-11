@@ -105,7 +105,7 @@ class CommitLockTests(object):
             t = WorkerThread(self, storage, txn)
             self._threads.append(t)
             t.start()
-            t.ready.wait()
+            t.ready.wait(2)  # fail if this takes unreasonably long
 
             # Close one of the connections abnormally to test server response
             if i == 0:

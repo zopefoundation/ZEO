@@ -121,7 +121,7 @@ invalidated:
     >>> stop_server(adminaddr0)
     >>> _ = start_server('<filestorage 1>\npath fs\n</filestorage>\n',
     ...                  port=port0)
-    >>> time.sleep(10) # get past startup / verification 
+    >>> time.sleep(1) # get past startup / verification
 
     >>> for i in range(1000):
     ...     c1.sync()

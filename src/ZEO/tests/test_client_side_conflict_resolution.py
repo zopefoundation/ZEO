@@ -116,7 +116,7 @@ class ClientSideConflictResolutionTests(zope.testing.setupstack.TestCase):
         path = tempfile.mkdtemp(prefix='zeo-test-')
         self.addCleanup(shutil.rmtree, path)
         addr, stop = ZEO.server(os.path.join(path, 'data.fs'), threaded=False)
-        db = ZEO.DB(addr)
+        db = ZEO.DB(addr, wait_timeout=2)
         with db.transaction() as conn:
             conn.root.len = Length(0)
         conn2 = db.open()

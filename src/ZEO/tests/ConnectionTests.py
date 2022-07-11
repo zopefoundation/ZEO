@@ -42,6 +42,14 @@ ZERO = '\0'*8
 
 class TestClientStorage(ClientStorage):
 
+    # most operations will wait for reconnection with
+    # ``wait_timeout`` (default: ``30``).
+    # This is bad for our tests: they will eventually succeed, but
+    # take a very long time. Use a timeout more adapted to tests.
+    def __init__(*args, **kw):
+        return ClientStorage.__init__(
+                *args, **(kw.update(dict(wait_timeout=0.5)) or kw))
+
     test_connection = False
 
     connection_count_for_tests = 0
@@ -194,7 +202,7 @@ class CommonSetupTearDown(StorageTestBase):
     def pollUp(self, timeout=30.0, storage=None):
         if storage is None:
             storage = self._storage
-        storage.server_status()
+        storage.server_status(timeout=timeout)
 
     def pollDown(self, timeout=30.0):
         # Poll until we're disconnected.
@@ -875,6 +883,14 @@ class ReconnectionTests(CommonSetupTearDown):
         with short_timeout(self):
             self.assertRaises(ClientDisconnected, self._storage.tpc_vote, txn)
         self.startServer(create=0)
+        # if we do not wait for reconnection,
+        # small timing variations in the reconnection process
+        # can cause occasional ``ClientDisconnected`` exceptions
+        # making the test prone to race conditions.
+        # Of course, in real life the followup operations
+        # could happen while reconnecting but ``ClientDisconnected``
+        # would be a good in those cases
+        self.pollUp(2)  # await reconnection
         self._storage.tpc_abort(txn)
         self._dostore()
 

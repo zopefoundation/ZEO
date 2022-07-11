@@ -1122,7 +1122,7 @@ def test_prefetch(self):
     But it is filled eventually:
 
     >>> from zope.testing.wait import wait
-    >>> wait(lambda: len(storage._cache) > count)
+    >>> wait((lambda: len(storage._cache) > count), 2)
 
     >>> loads = storage.server_status()['loads']
 
@@ -1169,9 +1169,11 @@ def client_has_newer_data_than_server():
     ...    len([x for x in handler.records
     ...         if x.levelname == 'CRITICAL' and
     ...            'Client cache is out of sync with the server.' in x.msg
-    ...         ]) >= 2)
+    ...         ]) >= 2, 30)
 
     Note that the errors repeat because the client keeps on trying to connect.
+    We have to wait rather long as the client waits about 10 s
+    before a retrial.
 
     >>> db.close()
     >>> handler.uninstall()
