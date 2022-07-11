@@ -1145,7 +1145,7 @@ def client_has_newer_data_than_server():
     >>> db.close()
     >>> r = shutil.copyfile('Data.fs', 'Data.save')
     >>> addr, admin = start_server(keep=1)  # NOQA: F821 undefined
-    >>> db = ZEO.DB(addr, name='client', max_disconnect_poll=.01)
+    >>> db = ZEO.DB(addr, name='client')
     >>> wait_connected(db.storage)  # NOQA: F821 undefined
     >>> conn = db.open()
     >>> conn.root().x = 1
