@@ -702,7 +702,7 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
             (delay, func, args, handle),
             (60, protocol.heartbeat, (), protocol.heartbeat_handle),
             )
-        self.assertFalse(loop.later or handle.cancelled)
+        self.assertFalse(loop.later or handle._cancelled)
 
         # The heartbeat function sends heartbeat data and reschedules itself.
         func()
@@ -714,11 +714,11 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
             (delay, func, args, handle),
             (60, protocol.heartbeat, (), protocol.heartbeat_handle),
             )
-        self.assertFalse(loop.later or handle.cancelled)
+        self.assertFalse(loop.later or handle._cancelled)
 
         # The heartbeat is cancelled when the protocol connection is lost:
         protocol.connection_lost(None)
-        self.assertTrue(handle.cancelled)
+        self.assertTrue(handle._cancelled)
 
 
 class MsgpackClientTests(ClientTests):

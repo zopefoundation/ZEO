@@ -94,10 +94,10 @@ class Loop(object):
 
 class Handle(object):
 
-    cancelled = False
+    _cancelled = False
 
     def cancel(self):
-        self.cancelled = True
+        self._cancelled = True
 
 
 class Transport(object):
