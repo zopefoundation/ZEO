@@ -805,7 +805,7 @@ class ClientRunner(object):
         from concurrent.futures import Future
         call_soon_threadsafe = loop.call_soon_threadsafe
 
-        def call(meth, *args, **kw):
+        def io_call(meth, *args, **kw):
             timeout = kw.pop('timeout', None)
             assert not kw
 
@@ -827,7 +827,7 @@ class ClientRunner(object):
                 else:
                     raise
 
-        self.__call = call
+        self.io_call = io_call
 
     def wait_for_result(self, future, timeout):
         try:
@@ -848,7 +848,7 @@ class ClientRunner(object):
              ``None`` is replaced by ``self.timeout`` (usually 30s)
              default: ``None``
         """
-        return self.__call(self.call_threadsafe, method, args, **kw)
+        return self.io_call(self.call_threadsafe, method, args, **kw)
 
     def call_future(self, method, *args):
         # for tests
@@ -859,19 +859,19 @@ class ClientRunner(object):
 
     def async_(self, method, *args):
         """call method named *method* with *args* asynchronously."""
-        return self.__call(self.call_async_threadsafe, method, args)
+        return self.io_call(self.call_async_threadsafe, method, args)
 
     def async_iter(self, it):
-        return self.__call(self.client.call_async_iter_threadsafe, it)
+        return self.io_call(self.client.call_async_iter_threadsafe, it)
 
     def prefetch(self, oids, tid):
-        return self.__call(self.client.prefetch, oids, tid)
+        return self.io_call(self.client.prefetch, oids, tid)
 
     def load_before(self, oid, tid):
-        return self.__call(self.client.load_before_threadsafe, oid, tid)
+        return self.io_call(self.client.load_before_threadsafe, oid, tid)
 
     def tpc_finish(self, tid, updates, f):
-        return self.__call(self.client.tpc_finish_threadsafe, tid, updates, f)
+        return self.io_call(self.client.tpc_finish_threadsafe, tid, updates, f)
 
     def is_connected(self):
         return self.client.ready
@@ -888,13 +888,13 @@ class ClientRunner(object):
                 return protocol.read_only
 
     def close(self):
-        self.__call(self.client.close_threadsafe)
+        self.io_call(self.client.close_threadsafe)
 
         # Short circuit from now on. We're closed.
         def call_closed(*a, **k):
             raise ClientDisconnected('closed')
 
-        self.__call = call_closed
+        self.io_call = call_closed
 
     def apply_threadsafe(self, future, wait_ready, func, *args):
         try:
@@ -905,7 +905,7 @@ class ClientRunner(object):
     def new_addrs(self, addrs):
         # This usually doesn't have an immediate effect, since the
         # addrs aren't used until the client disconnects.xs
-        self.__call(self.apply_threadsafe, self.client.new_addrs, addrs)
+        self.io_call(self.apply_threadsafe, self.client.new_addrs, addrs)
 
     def wait(self, timeout=None):
         """wait for readyness"""
