@@ -248,7 +248,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         self.assertEqual(self.pop(), (2, False, 'lastTransaction', ()))
 
         # We respond
-        self.respond(2, 'a'*8)
+        self.respond(2, b'a'*8)
 
         # After verification, the client requests info:
         self.assertEqual(self.pop(), (3, False, 'get_info', ()))
@@ -257,7 +257,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         # Now we're connected, the cache was initialized, and the
         # queued message has been sent:
         self.assertTrue(client.connected.done())
-        self.assertEqual(cache.getLastTid(), 'a'*8)
+        self.assertEqual(cache.getLastTid(), b'a'*8)
         self.assertEqual(self.pop(), (4, False, 'foo', (1, 2)))
 
         # The wrapper object (ClientStorage) has been notified:
