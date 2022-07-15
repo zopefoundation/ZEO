@@ -965,9 +965,9 @@ class ClientThread(ClientRunner):
             self.started.set()
             loop.run_forever()
         except Exception as exc:
-            raise
             logger.exception("Client thread")
             self.exception = exc
+            self.started.set()
         finally:
             if not self.closed:
                 self.closed = True
