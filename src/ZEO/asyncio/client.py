@@ -807,15 +807,22 @@ class ClientRunner(object):
 
         def io_call(meth, *args, **kw):
             timeout = kw.pop('timeout', None)
+            wait = kw.pop('wait', True)
             assert not kw
+            if timeout is not None:
+                assert wait
 
             # Some explanation of the code below.
             # Timeouts on Python 2 are expensive, so we try to avoid
             # them if we're connected.  The 3rd argument below is a
-            # wait flag.  If false, and we're disconnected, we fail
+            # wait_ready flag.  If false, and we're disconnected, we fail
             # immediately. If that happens, then we try again with the
             # wait flag set to True and wait with the default timeout.
             result = Future()
+            if not wait:
+                call_soon_threadsafe(meth, result, True, *args)
+                return result
+
             call_soon_threadsafe(meth, result, timeout is not None, *args)
             try:
                 return self.wait_for_result(result, timeout)
@@ -842,6 +849,10 @@ class ClientRunner(object):
         """call method named *method* with *args*.
 
         Supported keywords:
+
+          wait
+             false means return future rather than wait for result
+             default: ``True``
 
           timeout
              wait at most this long for readyness
@@ -887,6 +898,9 @@ class ClientRunner(object):
             else:
                 return protocol.read_only
 
+    # Some tests will set this to use an instrumented loop
+    loop = None
+
     def close(self):
         self.io_call(self.client.close_threadsafe)
 
@@ -931,7 +945,7 @@ class ClientThread(ClientRunner):
                          ssl=ssl, ssl_server_hostname=ssl_server_hostname,
                          credentials=credentials)
         self.thread = threading.Thread(
-            target=self.run,
+            target=self.run_io_thread,
             name="%s zeo client networking thread" % client.__name__,
             )
         self.thread.setDaemon(True)
@@ -943,10 +957,10 @@ class ClientThread(ClientRunner):
 
     exception = None
 
-    def run(self):
-        loop = None
+    def run_io_thread(self):
         try:
-            loop = new_event_loop()
+            loop = self.loop if self.loop is not None else new_event_loop()
+            asyncio.set_event_loop(loop)
             self.setup_delegation(loop)
             self.started.set()
             loop.run_forever()
@@ -964,8 +978,7 @@ class ClientThread(ClientRunner):
                 except AttributeError:
                     pass
                 logger.critical("Client loop stopped unexpectedly")
-            if loop is not None:
-                loop.close()
+            loop.close()
             logger.debug('Stopping client thread')
 
     closed = False
