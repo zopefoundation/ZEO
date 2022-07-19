@@ -1002,6 +1002,9 @@ class ClientThread(ClientRunner):
                 raise self.exception
 
 
+_missing = object()
+
+
 class Fut(object):
     """Lightweight future that calls it's callbacks immediately ...
 
@@ -1014,6 +1017,7 @@ class Fut(object):
     def add_done_callback(self, cb):
         self.cbv.append(cb)
 
+    _result = _missing
     exc = None
 
     def set_exception(self, exc):
@@ -1031,3 +1035,6 @@ class Fut(object):
             raise self.exc
         else:
             return self._result
+
+    def done(self):
+        return (self._result is not _missing) or (self.exc is not None)
