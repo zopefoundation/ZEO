@@ -26,6 +26,7 @@ import concurrent.futures
 import functools
 import logging
 import random
+import sys
 import threading
 
 import ZODB.event
@@ -44,6 +45,8 @@ logger = logging.getLogger(__name__)
 Fallback = object()
 
 local_random = random.Random()  # use separate generator to facilitate tests
+
+uvloop_used = "uvloop" in sys.modules
 
 
 def future_generator(func):
@@ -124,6 +127,7 @@ class Protocol(base.ZEOBaseProtocol):
         if not self.closed:
             self.closed = True
             logger.debug('closing %s: %s', self, exc)
+            connecting = not self._connecting.done()
             cancel_task(self._connecting)
             for future in self.pop_futures():
                 if not future.done():
@@ -138,6 +142,20 @@ class Protocol(base.ZEOBaseProtocol):
             cfs = self.client.closing_protocol_futures
             cfs.add(closing)
             closing.add_done_callback(cfs.remove)
+            # ``uvloop`` workaround:
+            # The closing logic relies an the ``asyncio``
+            # promise that ``connection_lost`` will be called
+            # exactly once after ``connection_made`` has been called.
+            # ``uvloop`` may not fulfill this promise when the
+            # connecting process has been cancelled.
+            # To avoid ``close`` to deadlock, we pretend that
+            # closing has finished in this case. This might cause
+            # the closing process to terminate too early and
+            # leave resources (collected with the next garbage collection).
+            if uvloop_used and connecting:
+                if not closing.done():
+                    closing.set_result(True)
+
 
     def pop_futures(self):
         # Remove and return futures from self.futures.  The caller
@@ -793,12 +811,31 @@ class ClientIO(object):
             future.set_exception(ClientDisconnected())
 
     def close_threadsafe(self, future, _):
+        # The following ``close`` deadlock''ked in isolated tests.
+        # Prevent this with a timeout and log information
+        # to understand the bug.
         closing = self.close()
-        @closing.add_done_callback
+        # the ``shield`` is necessary to keep the state unchanged
+        twait = self.loop.create_task(
+                    asyncio.wait_for(asyncio.shield(closing), 3))
+
+        @twait.add_done_callback
         def _(f):
             if f.cancelled():
                 future.cancel()
             elif f.exception() is not None:
+                if isinstance(f.exception(), asyncio.TimeoutError):
+                    from pprint import pformat
+                    info = {"client": pformat(vars(self))}
+                    if self.protocol is not None:
+                        info["protocol"] = pformat(vars(self.protocol))
+                    if self.protocols:
+                        info["protocols"] = pformat([pformat(vars(p))
+                                                     for p in self.protocols])
+                    logger.error(
+                       "closing did not finish within a reasonable time.\n"
+                       "Please report this as a bug with the following info:\n"
+                       "%s", pformat(info))
                 future.set_exception(f.exception())
             else:
                 future.set_result(None)
