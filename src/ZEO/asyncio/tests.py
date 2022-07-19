@@ -530,6 +530,8 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         transport = loop.transport
         protocol.data_received(sized(self.enc + b'5'))
         self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'5')
+        # cancel the heartbeat to make debugging easier
+        protocol.heartbeat_handle.cancel()
         self.respond(1, None)
 
         # Now, when the first connection fails, it won't be retried,

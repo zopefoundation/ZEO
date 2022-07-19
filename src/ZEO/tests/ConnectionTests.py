@@ -992,6 +992,7 @@ class TimeoutTests(CommonSetupTearDown):
             else:
                 self.fail('bad logging')
 
+        storage.tpc_abort(txn)
         storage.close()
 
     def checkTimeoutOnAbort(self):
@@ -1038,6 +1039,7 @@ class TimeoutTests(CommonSetupTearDown):
         # Load should fail since the object should not be in either the cache
         # or the server.
         self.assertRaises(KeyError, storage.load, oid, '')
+        storage.tpc_abort(t)
 
 
 class MSTThread(threading.Thread):

@@ -155,6 +155,8 @@ class IterationTests(object):
         # calling tpc_abort implicitly.
         self._storage.notify_disconnected()
         self.assertEqual(0, len(self._storage._iterator_ids))
+        # maybe, ``notify_disconnected`` should automatically clean up
+        self._storage.tpc_abort(t)  # avoid ``ResourceWarning``
 
     def checkIteratorParallel(self):
         self._dostore()

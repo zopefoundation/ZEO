@@ -85,10 +85,12 @@ class Test_convenience_functions(unittest.TestCase):
         import ZEO
 
         client_thread = mock.Mock(
-            spec=['call', 'async', 'async_iter', 'wait'])
+            spec=['call', 'async', 'async_iter', 'wait', 'close'])
         client = ZEO.client(
             8001, wait=False, _client_factory=client_thread)
         self.assertIsInstance(client, ClientStorage)
+        client.close()
+        client._cache.close()  # client thread responsibility
 
     def test_ZEO_DB_convenience_ok(self):
         import mock
@@ -766,6 +768,7 @@ class CommonBlobTests(object):
         self._storage.tpc_begin(t)
         self._storage.storeBlob(
           oid, ZODB.utils.z64, 'foo', 'blob_file', '', t)
+        self._storage.tpc_abort(t)
         self._storage.close()
 
 
