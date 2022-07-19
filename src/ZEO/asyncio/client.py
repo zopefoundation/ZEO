@@ -117,13 +117,27 @@ class Protocol(base.ZEOBaseProtocol):
 
         self.connect()
 
-    def close(self):
+    closed = False  # actively closed
+
+    def close(self, exc=None):
+        """schedule closing; register closing with the client."""
         if not self.closed:
-            logger.debug('closing %s', self)
-            super(Protocol, self).close()  # will set ``closed``
+            self.closed = True
+            logger.debug('closing %s: %s', self, exc)
             self._connecting.cancel()
             for future in self.pop_futures():
-                future.set_exception(ClientDisconnected("Closed"))
+                if not future.done():
+                    future.set_exception(ClientDisconnected(exc or "Closed"))
+            # Note: it is important (at least for the tests) that
+            # the following call comes after the future cleanup (above).
+            # The ``close`` below will close the transport which
+            # will call ``connection_lost`` but without the ``exc``
+            # information -- therefore, the futures would get the wrong
+            # exception
+            closing = super(Protocol, self).close()
+            cfs = self.client.closing_protocol_futures
+            cfs.add(closing)
+            closing.add_done_callback(cfs.remove)
 
     def pop_futures(self):
         # Remove and return futures from self.futures.  The caller
@@ -171,16 +185,15 @@ class Protocol(base.ZEOBaseProtocol):
 
     def connection_lost(self, exc):
         logger.debug('connection_lost %s: %r', self, exc)
+        super(Protocol, self).connection_lost(exc)
+        assert self.closing.done()
         self.heartbeat_handle.cancel()
-        if self.closed:
+        if self.closed:  # ``connection_lost`` was expected
             for f in self.pop_futures():
-                f.cancel()
+                if not f.done():
+                    f.set_exception(ClientDisconnected(exc or "Closed"))
         else:
-            # We have to be careful processing the futures, because
-            # exception callbacks might modify them.
-            for f in self.pop_futures():
-                f.set_exception(ClientDisconnected(exc or 'connection lost'))
-            self.closed = True
+            self.close(exc or "Connection lost")
             self.client.disconnected(self)
 
     @future_generator
@@ -277,6 +290,13 @@ class Protocol(base.ZEOBaseProtocol):
     message_id = 0
 
     def call(self, future, method, args):
+        # The check below is important to handle a potential race
+        # between a server call and ``close``.
+        # In ``close``, all waiting futures get ``ClientDisconnected``
+        # set, but if the call is processed after ``close``,
+        # this does not happen there and needs to be handled here.
+        if self.closed:
+            raise ClientDisconnected("closed")
         self.message_id += 1
         self.futures[self.message_id] = future
         self.write_message(self.encode(self.message_id, False, method, args))
@@ -431,6 +451,7 @@ class ClientIO(object):
             setattr(self, name, getattr(client, name))
         self.cache = cache
         self.protocols = ()
+        self.closing_protocol_futures = set()  # closing futures
         self.disconnected(None)
 
         # Protection against potentially odd behavior of a ZEO server: if it
@@ -456,20 +477,34 @@ class ClientIO(object):
     closed = False
 
     def close(self):
+        """schedule closing and return closed future."""
         if not self.closed:
-            logger.debug("closing %s", self)
             self.closed = True
+            logger.debug("closing %s", self)
             self.ready = False
+            self.connected.cancel()
             if self.protocol is not None:
                 self.protocol.close()
             self.cache.close()
             self._clear_protocols()
+        return asyncio.gather(*self.closing_protocol_futures)
 
     def _clear_protocols(self, protocol=None):
         for p in self.protocols:
             if p is not protocol:
                 p.close()
         self.protocols = ()
+
+    connected = None
+
+    def manage_connected(self):
+        """manage the future ``connected``.
+
+        It is used to implement the connection timeout.
+        """
+        if self.connected is not None:
+            self.connected.cancel()  # cancel waiters
+        self.connected = base.create_future(self.loop)
 
     def disconnected(self, protocol=None):
         logger.debug('disconnected %r %r', self, protocol)
@@ -478,7 +513,7 @@ class ClientIO(object):
                 self.client.notify_disconnected()
             if self.ready:
                 self.ready = False
-            self.connected = concurrent.futures.Future()
+            self.manage_connected()
             self.protocol = None
             self._clear_protocols()
 
@@ -487,7 +522,7 @@ class ClientIO(object):
 
     def upgrade(self, protocol):
         self.ready = False
-        self.connected = concurrent.futures.Future()
+        self.manage_connected()
         self.protocol.close()
         self.protocol = protocol
         self._clear_protocols(protocol)
@@ -657,6 +692,9 @@ class ClientIO(object):
         else:
             @self.connected.add_done_callback
             def done(future):
+                if future.cancelled():
+                    result_future.set_exception(ClientDisconnected())
+                    return
                 e = future.exception()
                 if e is not None:
                     future.set_exception(e)
@@ -755,8 +793,15 @@ class ClientIO(object):
             future.set_exception(ClientDisconnected())
 
     def close_threadsafe(self, future, _):
-        self.close()
-        future.set_result(None)
+        closing = self.close()
+        @closing.add_done_callback
+        def _(f):
+            if f.cancelled():
+                future.cancel()
+            elif f.exception() is not None:
+                future.set_exception(f.exception())
+            else:
+                future.set_result(None)
 
     # server callbacks
     def invalidateTransaction(self, tid, oids):
@@ -901,14 +946,31 @@ class ClientRunner(object):
     # Some tests will set this to use an instrumented loop
     loop = None
 
+    __closed = False
+
     def close(self):
-        self.io_call(self.client.close_threadsafe)
+        # Small race condition risk if ``close`` is called concurrently
+        if self.__closed:
+            return
+        self.__closed = True
+        call = self.io_call
+        self.io_call = self._io_call_after_closure
+        loop = self.loop
+        if loop is None or loop.is_closed():  # pragma: no cover
+            # this should not happen
+            return
+        if loop.is_running():
+            call(self.client.close_threadsafe, wait=True)
+        else:  # pragma: no cover
+            # this should not happen
+            f = base.create_future(loop)
+            self.client.close_threadsafe(f, False)
+            loop.run_until_complete(f)
 
-        # Short circuit from now on. We're closed.
-        def call_closed(*a, **k):
-            raise ClientDisconnected('closed')
-
-        self.io_call = call_closed
+    @staticmethod
+    def _io_call_after_closure(*args, **kw):
+        """auxiliary method to be used as `io_call` after closure."""
+        raise ClientDisconnected('closed')
 
     def apply_threadsafe(self, future, wait_ready, func, *args):
         try:
@@ -925,7 +987,17 @@ class ClientRunner(object):
         """wait for readyness"""
         if timeout is None:
             timeout = self.timeout
-        self.wait_for_result(self.client.connected, timeout)
+
+        def _(future, _):
+            @self.client.connected.add_done_callback
+            def _(fconn):
+                if fconn.cancelled():
+                    future.cancel()
+                elif fconn.exception() is not None:
+                    future.set_exception(fconn.exception())
+                else:
+                    future.set_result(None)
+        self.io_call(_, timeout=timeout)
 
 
 class ClientThread(ClientRunner):
@@ -969,19 +1041,13 @@ class ClientThread(ClientRunner):
             self.exception = exc
             self.started.set()
         finally:
-            if not self.closed:
-                self.closed = True
-                try:
-                    if self.client.ready:
-                        self.client.ready = False
-                        self.client.client.notify_disconnected()
-                except AttributeError:
-                    pass
+            if not self.__closed:
+                super(ClientThread, self).close()
                 logger.critical("Client loop stopped unexpectedly")
             loop.close()
             logger.debug('Stopping client thread')
 
-    closed = False
+    __closed = False
 
     def close(self):
         """close the server connection and release resources.
@@ -991,15 +1057,23 @@ class ClientThread(ClientRunner):
         not have an effect. Most other calls will raise
         a ``ClientDisconnected`` exception.
         """
-        if not self.closed:
-            self.closed = True
+        if not self.__closed:
+            self.__closed = True
+            loop = self.loop
+            if loop is None:  # pragma no cover
+                # we have never been connected
+                return
             super(ClientThread, self).close()
-            self.loop.call_soon_threadsafe(self.loop.stop)
-            # ``loop`` will be closed in the IO thread
-            # after stop processing
+            if loop.is_running():
+                loop.call_soon_threadsafe(loop.stop)
+                # ``loop`` will be closed in the IO thread
+                # after stop processing
             self.thread.join(9)  # wait for the IO thread to terminate
             if self.exception:
                 raise self.exception
+
+    def is_closed(self):
+        return self.__closed
 
 
 _missing = object()

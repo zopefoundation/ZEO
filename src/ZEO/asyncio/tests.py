@@ -17,6 +17,7 @@ import collections
 import logging
 import struct
 import unittest
+from time import sleep
 from functools import partial
 
 from ..Exceptions import ClientDisconnected, ProtocolError
@@ -99,6 +100,9 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         self.exit_future_mode()
         self.close()
         super(ClientTests, self).tearDown()
+        loop = self.loop
+        if loop is not None:
+            self.assertEqual(loop.exceptions, [])
 
     # For normal operation all (server) interface calls are synchronous:
     # they wait for the result.
@@ -193,6 +197,9 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
     def sync_call(self, meth, *args):
         """call future returning *meth* with *args* and wait for result."""
         return meth(*args).result(2)
+
+    def observe(self, f, *args):
+        self.observed = f(*args)
 
     def testClientBasics(self):
 
@@ -378,7 +385,9 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
 
         # Because we reconnected, a new protocol and transport were created:
         self.assertIsNot(protocol, loop.protocol)
+        self.assertTrue(protocol.closed)
         self.assertIsNot(transport, loop.transport)
+        self.assertTrue(transport.closed)
         protocol = loop.protocol
         transport = loop.transport
 
@@ -411,7 +420,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         # The close method closes the connection and cache:
         loop.call_soon_threadsafe(client.close)
         loop.run_until_inactive()
-        self.assertTrue(transport.closed and cache.closed)
+        self.assertTrue(transport.closed and cache.closed and protocol.closed)
 
         # The client doesn't reconnect
         self.assertEqual(loop.protocol, protocol)
@@ -792,6 +801,145 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         protocol.connection_lost(None)
         self.assertTrue(handle._cancelled)
 
+    def test_close_with_running_loop(self):
+        storage_mock, cache, loop, io, protocol, transport = self.start(
+            finish_start=True)
+        self.close()
+        self.assertFalse(io.ready)
+        self.assertTrue(self.is_closed())
+        self.assertTrue(loop.is_closed())
+        self.close()  # subsequent calls do not have an effect
+
+    def test_close_with_stopped_loop(self):
+        storage_mock, cache, loop, io, protocol, transport = self.start(
+            finish_start=True)
+        loop.call_soon_threadsafe(loop.stop)  # schedule loop stop
+        # risks race condition as the loop is going to be closed during
+        # stop processing
+        # loop.run_until_inactive()
+        sleep(0.1)  # give the loop time to stop
+        self.close()
+        self.assertFalse(io.ready)
+        self.assertTrue(self.is_closed())
+        self.assertTrue(loop.is_closed())
+        self.close()  # subsequent calls do not have an effect
+
+    def test_io_close(self):
+        storage_mock, cache, loop, io, protocol, transport = self.start(
+            finish_start=True)
+        tf = self.call("test")
+        loop.call_soon_threadsafe(self.observe, io.close)
+        loop.run_until_inactive()
+        self.assertTrue(self.observed.done())
+        self.assertTrue(protocol.closed)
+        self.assertTrue(tf.done())
+        self.assertIsInstance(tf.exception(), ClientDisconnected)
+
+    def test_io_close_after_connection_loss(self):
+        storage_mock, cache, loop, io, protocol, transport = self.start(
+            finish_start=True)
+        tf1 = self.call("test")
+        loop.run_until_inactive()
+        # With the following 2 lines, ``connection_lost`` will
+        # effectively overtake the call: i.e. it appears as
+        # if the connection were lost before the call.
+        # This means that the call will start waiting for a reconnection.
+        # Further down, we verify that ``close`` cleans up the state;
+        # this is necessary as the closing prevents a reconnection.
+        tf2 = self.call("test")
+        protocol.connection_lost(None)
+        loop.call_soon_threadsafe(self.observe, io.close)
+        loop.run_until_inactive()
+        self.assertTrue(self.observed.done())
+        self.assertTrue(protocol.closed)
+        self.assertTrue(tf1.done())
+        self.assertIsInstance(tf1.exception(), ClientDisconnected)
+        self.assertTrue(tf2.done())
+        self.assertIsInstance(tf2.exception(), ClientDisconnected)
+
+    def test_io_close_before_connection(self):
+        storage_mock, cache, loop, io, protocol, transport = self.start(
+            loop_addrs=(),  # prevent auto connection
+            finish_start=False)
+        loop.call_soon_threadsafe(self.observe, io.close)
+        loop.run_until_inactive()
+        self.assertTrue(self.observed.done())
+
+    def test_io_close_after_register_exception(self):
+        storage_mock, cache, loop, io, protocol, transport = self.start(
+            finish_start=False)
+        protocol.data_received(sized(self.enc + b'5'))
+        # let the register call fail
+        self.respond(1, ("Exception", "register_failed"), async_=True)
+        loop.call_soon_threadsafe(self.observe, io.close)
+        loop.run_until_inactive()
+        self.assertTrue(self.observed.done())
+        self.assertTrue(protocol.closed)
+
+    def test_io_close_after_register_exception_before_reconnection(self):
+        addr = ('127.0.0.1', 8200)
+        storage_mock, cache, loop, io, protocol, transport = self.start(
+            addrs=(addr,),
+            loop_addrs=(),  # prevent auto connection
+            finish_start=False)
+        loop.call_soon_threadsafe(loop.connect_connecting, addr)  # connect
+        loop.run_until_inactive()
+        loop.protocol.data_received(sized(self.enc + b'5'))
+        # let the register call fail
+        self.respond(1, ("Exception", "register_failed"), async_=True)
+        # check "reconnection called for"
+        try_reconnecting = loop.later[1]  # entry 0 is "heartbeat"
+        connect = try_reconnecting[1]
+        self.assertEqual(connect.__func__.__name__,
+                         "try_connecting")
+        loop.call_soon_threadsafe(connect)
+        loop.call_soon_threadsafe(self.observe, io.close)
+        loop.run_until_inactive()
+        self.assertTrue(self.observed.done())
+        self.assertTrue(loop.protocol.closed)
+
+    def test_io_close_after_register_exception_after_reconnection(self):
+        addr = ('127.0.0.1', 8200)
+        storage_mock, cache, loop, io, protocol, transport = self.start(
+            addrs=(addr,),
+            loop_addrs=(),  # prevent auto connection
+            finish_start=False)
+        loop.call_soon_threadsafe(loop.connect_connecting, addr)  # connect
+        loop.run_until_inactive()
+        loop.protocol.data_received(sized(self.enc + b'5'))
+        # let the register call fail
+        self.respond(1, ("Exception", "register_failed"), async_=True)
+        # check "reconnection called for"
+        try_reconnecting = loop.later[1]  # entry 0 is "heartbeat"
+        connect = try_reconnecting[1]
+        self.assertEqual(connect.__func__.__name__,
+                         "try_connecting")
+        loop.call_soon_threadsafe(connect)
+        loop.call_soon_threadsafe(loop.connect_connecting, addr)  # connect
+        loop.run_until_inactive()
+        loop.protocol.data_received(sized(self.enc + b'5'))
+        loop.call_soon_threadsafe(self.observe, io.close)
+        loop.run_until_inactive()
+        self.assertTrue(self.observed.done())
+        self.assertTrue(loop.protocol.closed)
+
+    def test_io_close_after_register_exception_after_connection_lost(self):
+        addr = ('127.0.0.1', 8200)
+        storage_mock, cache, loop, io, protocol, transport = self.start(
+            addrs=(addr,),
+            loop_addrs=(),  # prevent auto connection
+            finish_start=False)
+        loop.call_soon_threadsafe(loop.connect_connecting, addr)  # connect
+        loop.run_until_inactive()
+        loop.protocol.data_received(sized(self.enc + b'5'))
+        # let the register call fail
+        self.respond(1, ("Exception", "register_failed"), async_=True)
+        loop.protocol.connection_lost("disconnected")
+        loop.call_soon_threadsafe(self.observe, io.close)
+        loop.run_until_inactive()
+        self.assertTrue(self.observed.done())
+        self.assertTrue(loop.protocol.closed)
+
 
 class MsgpackClientTests(ClientTests):
     enc = b'M'
@@ -983,6 +1131,10 @@ class ZEOBaseProtocolTests(setupstack.TestCase):
         self.loop = loop = Loop()
         loop.create_connection(lambda: ZEOBaseProtocol(loop, "proto"),
                                sock=True)
+
+    def tearDown(self):
+        self.loop.protocol.close()
+        self.loop.close()
 
     def test_write_message_iter(self):
         """test https://github.com/zopefoundation/ZEO/issues/150."""

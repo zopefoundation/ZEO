@@ -167,3 +167,17 @@ class SizedMessageProtocol(asyncio.Protocol):
             return
         self.__closed = True
         self.transport.close()
+
+    # We define ``connection_lost`` to close the transport
+    # in order to avoid a ``ResourceWarning``
+    # about an unclosed SSL transport -- it should not be necessary
+    # as the transport informed us about the lost connection.
+    # It also helps for some tests which call ``connection_lost``
+    # without transport intervention.
+    connection_lost_called = False  # for tests
+
+    def connection_lost(self, exc):
+        self.connection_lost_called = True
+        if self.__closed:
+            return
+        self.transport.close()

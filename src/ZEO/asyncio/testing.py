@@ -88,6 +88,9 @@ class Loop(object):
     def close(self):
         self.closed = True
 
+    def create_future(self):
+        return asyncio.Future(loop=self)
+
     stopped = False
 
     def stop(self):
@@ -241,7 +244,14 @@ class Transport(object):
     closed = False
 
     def close(self):
+        if self.closed:
+            return
         self.closed = True
+        # honor the ``asyncio.Protocol`` obligation:
+        # if ``connection_made`` has been called, there will
+        # be exactly one ``connection_lost`` call.
+        if not self.protocol.connection_lost_called:
+            self.protocol.connection_lost(None)
 
     def get_extra_info(self, name):
         return self.extra[name]
@@ -282,4 +292,4 @@ class ClientRunner(object):
         pass
 
     def close(self):
-        pass
+        self.cache.close()  # client responsibility

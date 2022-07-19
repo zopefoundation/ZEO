@@ -41,6 +41,8 @@ class ServerProtocol(base.ZEOBaseProtocol):
           (b'M' if msgpack else b'Z') + best_protocol_version
         )
 
+    closed = False
+
     def close(self):
         logger.debug("Closing server protocol")
         if not self.closed:
@@ -54,10 +56,12 @@ class ServerProtocol(base.ZEOBaseProtocol):
         self.write_message(self.announce_protocol)
 
     def connection_lost(self, exc):
+        super(ServerProtocol, self).connection_lost(exc)
         self.connected = False
         if exc:
             logger.error("Disconnected %s:%s", exc.__class__.__name__, exc)
-        self.zeo_storage.notify_disconnected()
+        if not self.closed:  # unanticipated connection loss
+            self.zeo_storage.notify_disconnected()
         self.stop()
 
     def stop(self):

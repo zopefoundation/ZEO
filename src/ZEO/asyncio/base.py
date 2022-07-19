@@ -77,15 +77,25 @@ class ZEOBaseProtocol(asyncio.Protocol):
     def protocol_factory(self):
         return self
 
-    closed = False
+    closing = None  # ``None`` or closed future
     sm_protocol = None
 
     def close(self):
-        if not self.closed:
-            self.closed = True
+        """schedule closing, return closed future."""
+        # with ``asyncio``, ``close`` only schedules the closing;
+        # close completion is signalled via a call to ``connection_lost``.
+        closing = self.closing
+        if closing is None:
+            closing = self.closing = create_future(self.loop)
             # can get closed before ``sm_protocol`` set up
             if self.sm_protocol is not None:
+                # will eventually cause ``connection_lost``
                 self.sm_protocol.close()
+            else:
+                closing.set_result(True)
+        elif self.sm_protocol is not None:
+            self.sm_protocol.close()  # no problem if repeated
+        return closing
 
     def __repr__(self):
         cls = self.__class__
@@ -118,6 +128,25 @@ class ZEOBaseProtocol(asyncio.Protocol):
         self.write_message = smp.write_message
         self.write_message_iter = smp.write_message_iter
 
+    # In real life ``connection_lost`` is only called by
+    # the transport and ``asyncio.Protocol`` guarantees that
+    # it is called exactly once (if ``connection_made`` has
+    # been called) or not at all.
+    # Some tests, however, call ``connection_lost`` themselves.
+    # The following attribute helps to ensure that ``connection_lost``
+    # is called exactly once.
+    connection_lost_called = False
+
+    def connection_lost(self, exc):
+        """The call signals close completion."""
+        self.connection_lost_called = True
+        self.sm_protocol.connection_lost(exc)
+        closing = self.closing
+        if closing is None:
+            closing = self.closing = create_future(self.loop)
+        if not closing.done():
+            closing.set_result(True)
+
     # internal
     def _first_message(self, protocol_version):
         self.sm_protocol.set_receive(self.message_received)
@@ -131,3 +160,11 @@ class ZEOBaseProtocol(asyncio.Protocol):
     # The method below is overridden in ``connection_made``.
     def data_received(self, data):
         self.data_received(data)  # not an infinite loop, because overridden
+
+
+def create_future(loop):
+    mkf = getattr(loop, 'create_future', None)  # py3.5+
+    if mkf is not None:
+        return mkf()
+    else:
+        return asyncio.Future(loop=loop)        # py2
