@@ -124,7 +124,7 @@ class Protocol(base.ZEOBaseProtocol):
         if not self.closed:
             self.closed = True
             logger.debug('closing %s: %s', self, exc)
-            self._connecting.cancel()
+            cancel_task(self._connecting)
             for future in self.pop_futures():
                 if not future.done():
                     future.set_exception(ClientDisconnected(exc or "Closed"))
@@ -1112,3 +1112,11 @@ class Fut(object):
 
     def done(self):
         return (self._result is not _missing) or (self.exc is not None)
+
+
+def cancel_task(task):
+    task.cancel()
+    # With Python before 3.8, cancelation is not sufficient to
+    # ignore a potential exception -- eat it in a done callback
+    task.add_done_callback(
+        lambda future: future.cancelled() or future.exception())
