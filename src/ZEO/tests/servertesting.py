@@ -74,6 +74,7 @@ def client(server, name='client'):
         pr_close()
         zs.notify_disconnected()
         protocol.loop.close()
+        del protocol.close  # break reference cycle
 
     protocol.close = close  # install proper closing
     zs.notify_connected(protocol)

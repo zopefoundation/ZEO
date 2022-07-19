@@ -383,6 +383,8 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         if self._check_blob_size_thread is not None:
             self._check_blob_size_thread.join()
 
+        self.ping = self.sync = None  # break reference cycles
+
     _check_blob_size_thread = None
 
     def _check_blob_size(self, bytes=None):

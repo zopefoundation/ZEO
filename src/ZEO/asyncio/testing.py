@@ -18,9 +18,8 @@ class Loop(object):
     it does not check calls to non threadsafe methods.
     """
 
-    protocol = transport = None
-
     def __init__(self, addrs=(), debug=True):
+        self.protocol = self.transport = None
         self.addrs = addrs
         self.get_debug = lambda: debug
         self.connecting = {}
@@ -86,6 +85,8 @@ class Loop(object):
     closed = False
 
     def close(self):
+        # break reference cycles
+        Loop.__init__(self)
         self.closed = True
 
     def create_future(self):
@@ -252,6 +253,7 @@ class Transport(object):
         # be exactly one ``connection_lost`` call.
         if not self.protocol.connection_lost_called:
             self.protocol.connection_lost(None)
+        self.protocol = None  # break reference cycle
 
     def get_extra_info(self, name):
         return self.extra[name]

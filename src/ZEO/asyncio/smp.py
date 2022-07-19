@@ -155,6 +155,7 @@ class SizedMessageProtocol(asyncio.Protocol):
                         logger.exception("Processing message `%r` failed"
                                          % collected)
 
+        # the following introduces a reference cycle broken in ``close``
         self.data_received = data_received
 
     def set_receive(self, receive):
@@ -167,6 +168,8 @@ class SizedMessageProtocol(asyncio.Protocol):
             return
         self.__closed = True
         self.transport.close()
+        # break reference cycles
+        self.transport = self.receive = self.data_received = None
 
     # We define ``connection_lost`` to close the transport
     # in order to avoid a ``ResourceWarning``

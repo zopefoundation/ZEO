@@ -120,6 +120,7 @@ class ZEOBaseProtocol(asyncio.Protocol):
                 sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, True)
 
         # set up lower level sized message protocol
+        # creates reference cycle
         smp = self.sm_protocol = SizedMessageProtocol(self._first_message)
         smp.connection_made(transport)  # takes over ``transport``
         self.data_received = smp.data_received

@@ -939,6 +939,8 @@ class StorageServer(object):
         if self.__thread is not None:
             self.__thread.join(join_timeout)
 
+        self.acceptor = self.loop = None  # break reference cycles
+
     def close_conn(self, zeo_storage):
         """Remove the given zeo_storage from self.zeo_storages_by_storage_id.
 

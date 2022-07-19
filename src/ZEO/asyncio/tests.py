@@ -103,6 +103,8 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         loop = self.loop
         if loop is not None:
             self.assertEqual(loop.exceptions, [])
+        # ``mock`` creates cyclic structures; break the cycles
+        _break_mock_cycles(self.target)
 
     # For normal operation all (server) interface calls are synchronous:
     # they wait for the result.
@@ -1226,6 +1228,18 @@ class SizedMessageProtocolTests(setupstack.TestCase):
         check(5, 2)
         # optimal
         check(4, len(msg), 4, len(msg))
+
+
+def _break_mock_cycles(m):
+    """break (``mock`` introduced) cycles in mock *m*.
+
+    Do not break cycles due to mock calling.
+    """
+    m._mock_parent = m._mock_new_parent = None
+    for c in m._mock_children.values():
+        _break_mock_cycles(c)
+    if isinstance(m._mock_return_value, mock.Mock):
+        _break_mock_cycles(m._mock_return_value)
 
 
 def test_suite():

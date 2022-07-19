@@ -129,6 +129,7 @@ class Protocol(base.ZEOBaseProtocol):
             logger.debug('closing %s: %s', self, exc)
             connecting = not self._connecting.done()
             cancel_task(self._connecting)
+            self._connecting = None  # break reference cycle
             for future in self.pop_futures():
                 if not future.done():
                     future.set_exception(ClientDisconnected(exc or "Closed"))
@@ -155,7 +156,7 @@ class Protocol(base.ZEOBaseProtocol):
             if uvloop_used and connecting:
                 if not closing.done():
                     closing.set_result(True)
-
+            self.client = None  # break reference cycle
 
     def pop_futures(self):
         # Remove and return futures from self.futures.  The caller
@@ -211,8 +212,10 @@ class Protocol(base.ZEOBaseProtocol):
                 if not f.done():
                     f.set_exception(ClientDisconnected(exc or "Closed"))
         else:
+            client = self.client
+            # will set ``self.client = None``
             self.close(exc or "Connection lost")
-            self.client.disconnected(self)
+            client.disconnected(self)
 
     @future_generator
     def finish_connection(self, protocol_version):
@@ -839,6 +842,10 @@ class ClientIO(object):
                 future.set_exception(f.exception())
             else:
                 future.set_result(None)
+            # break reference cycles
+            for name in Protocol.client_delegated:
+                delattr(self, name)
+            self.client = self.cache = None
 
     # server callbacks
     def invalidateTransaction(self, tid, oids):
@@ -915,8 +922,10 @@ class ClientRunner(object):
                     return self.wait_for_result(result, self.timeout)
                 else:
                     raise
+            finally:
+                del result  # break reference cycle in case of exception
 
-        self.io_call = io_call
+        self.io_call = io_call  # creates reference cycle
 
     def wait_for_result(self, future, timeout):
         try:
@@ -1003,6 +1012,7 @@ class ClientRunner(object):
             f = base.create_future(loop)
             self.client.close_threadsafe(f, False)
             loop.run_until_complete(f)
+        self.__args = None  # break reference cycle
 
     @staticmethod
     def _io_call_after_closure(*args, **kw):
@@ -1106,8 +1116,11 @@ class ClientThread(ClientRunner):
                 # ``loop`` will be closed in the IO thread
                 # after stop processing
             self.thread.join(9)  # wait for the IO thread to terminate
-            if self.exception:
+        if self.exception:
+            try:
                 raise self.exception
+            finally:
+                self.exception = None  # break reference cycle
 
     def is_closed(self):
         return self.__closed
