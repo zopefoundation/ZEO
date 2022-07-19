@@ -917,7 +917,7 @@ class ServerTests(Base, setupstack.TestCase):
         self.call('register', False, expect=None)
 
         # It does other things, like, send hearbeats:
-        protocol.data_received(sized(b'(J\xff\xff\xff\xffK\x00U\x06.replyNt.'))
+        protocol.data_received(sized(self.encode(-1, 0, '.reply', None)))
 
         # The client can make async calls:
         self.send('register')
