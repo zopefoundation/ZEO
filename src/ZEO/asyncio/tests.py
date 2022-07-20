@@ -1234,6 +1234,19 @@ class SizedMessageProtocolTests(setupstack.TestCase):
         # optimal
         check(4, len(msg), 4, len(msg))
 
+        # check message processing closed the protocol
+        # once closed, no further data is processed
+        proto = self.protocol
+        old_receive = proto.receive
+
+        def close(msg):
+            proto.close()
+            proto.set_receive(old_receive)
+
+        proto.set_receive(close)
+        receive(data)
+        self.assertEqual(self.received, [])
+
 
 def _break_mock_cycles(m):
     """break (``mock`` introduced) cycles in mock *m*.

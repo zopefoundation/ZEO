@@ -105,9 +105,10 @@ class SizedMessageProtocol(asyncio.Protocol):
 
         # input handling
         # the following implements a state machine with
-        # states ``process_size`` and ``process_message``
+        # states ``process_size``, ``process_message`` and ``closed``
         process_size = 1
         process_message = 2
+        closed = None
         self.read_state = process_size  # current state
         self.got = 0
         self.want = 4
@@ -128,7 +129,8 @@ class SizedMessageProtocol(asyncio.Protocol):
 
             self.got += len(data)
             self.input.append(data)
-            while self.got >= self.want:
+            # ``not self.read_state`` means "closed"
+            while self.read_state and self.got >= self.want:
                 extra = self.got - self.want
                 if extra == 0:
                     collected = b''.join(self.input)
@@ -147,16 +149,22 @@ class SizedMessageProtocol(asyncio.Protocol):
                     self.want = unpack(">I", collected)[0]
                     self.read_state = process_message
                 else:  # ``read_state is process_message``
-                    self.want = 4
-                    self.read_state = process_size
                     try:
-                        self.receive(collected)
+                        self.receive(collected)  # may close: `not read_state`
                     except Exception:
                         logger.exception("Processing message `%r` failed"
                                          % collected)
+                    if self.read_state:  # not yet closed
+                        self.read_state = process_size
+                        self.want = 4
 
         # the following introduces a reference cycle broken in ``close``
         self.data_received = data_received
+
+        def eof_received():
+            self.read_state = closed
+
+        self.eof_received = eof_received
 
     def set_receive(self, receive):
         self.receive = receive
@@ -167,6 +175,7 @@ class SizedMessageProtocol(asyncio.Protocol):
         if self.__closed:
             return
         self.__closed = True
+        self.eof_received()
         self.transport.close()
         # break reference cycles
         self.transport = self.receive = self.data_received = None

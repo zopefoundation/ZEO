@@ -107,6 +107,7 @@ class ZEOBaseProtocol(asyncio.Protocol):
 
     #  ``Protocol`` responsibilities -- defined in ``connection_made``
     # data_received
+    # eof_received
     # pause_writing
     # resume_writing
     def connection_made(self, transport):
@@ -123,6 +124,7 @@ class ZEOBaseProtocol(asyncio.Protocol):
         smp = self.sm_protocol = SizedMessageProtocol(self._first_message)
         smp.connection_made(transport)  # takes over ``transport``
         self.data_received = smp.data_received
+        self.eof_received = smp.eof_received
         self.pause_writing = smp.pause_writing
         self.resume_writing = smp.resume_writing
         self.write_message = smp.write_message
