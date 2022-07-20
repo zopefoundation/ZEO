@@ -864,15 +864,8 @@ class ClientIO(object):
         return self.protocol.protocol_version
 
     def is_read_only(self):
-        try:
-            protocol = self.protocol
-        except AttributeError:
-            return self.read_only
-        else:
-            if protocol is None:
-                return self.read_only
-            else:
-                return protocol.read_only
+        protocol = self.protocol
+        return self.read_only if protocol is None else protocol.read_only
 
 
 class ClientRunner(object):
@@ -979,15 +972,10 @@ class ClientRunner(object):
         return self.client.ready
 
     def is_read_only(self):
-        try:
-            protocol = self.client.protocol
-        except AttributeError:
+        protocol = self.client.protocol
+        if protocol is None:
             return True
-        else:
-            if protocol is None:
-                return True
-            else:
-                return protocol.read_only
+        return protocol.read_only
 
     # Some tests will set this to use an instrumented loop
     loop = None
