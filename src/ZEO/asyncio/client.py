@@ -242,7 +242,6 @@ class Protocol(base.ZEOBaseProtocol):
         self.encode = encoder(protocol_version)
         self.decode = decoder(protocol_version)
         self.heartbeat_bytes = self.encode(-1, 0, '.reply', None)
-
         self.write_message(self.protocol_version)
 
         credentials = (self.credentials,) if self.credentials else ()
@@ -1055,7 +1054,7 @@ class ClientThread(ClientRunner):
             target=self.run_io_thread,
             name="%s zeo client networking thread" % client.__name__,
             )
-        self.thread.setDaemon(True)
+        self.thread.daemon = True
         self.started = threading.Event()
         self.thread.start()
         self.started.wait()

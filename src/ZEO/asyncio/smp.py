@@ -74,7 +74,7 @@ class SizedMessageProtocol(asyncio.Protocol):
                 _write_message(message)
                 if paused:
                     append(data)
-                    break
+                    return
 
         self.write_message_iter = write_message_iter
 

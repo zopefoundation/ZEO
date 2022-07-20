@@ -782,7 +782,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
 
             # Ask the server to send it to us.  When this function
             # returns, it will have been sent. (The recieving will
-            # have been handled by the asyncore thread.)
+            # have been handled by the IO thread.)
 
             self._call('sendBlob', oid, serial)
 

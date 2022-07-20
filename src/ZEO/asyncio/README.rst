@@ -8,7 +8,7 @@ somewhat RPC-like API.
 Notes
 =====
 
-Sending data immediately: ayncio vs asyncore
+Sending data immediately: asyncio vs asyncore
 --------------------------------------------
 
 The previous ZEO networking implementation used the ``asyncore`` library.

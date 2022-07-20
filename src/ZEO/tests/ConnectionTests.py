@@ -144,7 +144,8 @@ class CommonSetupTearDown(StorageTestBase):
 
     def openClientStorage(self, cache=None, cache_size=200000, wait=1,
                           read_only=0, read_only_fallback=0,
-                          username=None, password=None, realm=None):
+                          username=None, password=None, realm=None,
+                          client_label=None):
         if cache is None:
             cache = str(self.__class__.cache_id)
             self.__class__.cache_id += 1
@@ -157,6 +158,7 @@ class CommonSetupTearDown(StorageTestBase):
                                     min_disconnect_poll=0.1,
                                     read_only=read_only,
                                     read_only_fallback=read_only_fallback,
+                                    client_label=client_label,
                                     **self._client_options())
         storage.registerDB(DummyDB())
         return storage
@@ -892,7 +894,7 @@ class ReconnectionTests(CommonSetupTearDown):
         # would be a good in those cases
         self.pollUp(2)  # await reconnection
         self._storage.tpc_abort(txn)
-        self._dostore()
+        self._dostore()  # stores in a new transaction
 
         # This test is supposed to cover the following error, although
         # I don't have much confidence that it does.  The likely

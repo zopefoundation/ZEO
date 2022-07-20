@@ -104,6 +104,7 @@ class CommitLockTests(object):
         # set it's ready event.
         self._storages = []
         self._threads = []
+        self._exc = None
 
         for i in range(self.NUM_CLIENTS):
             storage = self._new_storage_client()
@@ -113,7 +114,11 @@ class CommitLockTests(object):
             t = WorkerThread(self, storage, txn)
             self._threads.append(t)
             t.start()
-            t.ready.wait(2)  # fail if this takes unreasonably long
+            try:
+                t.ready.wait(2)  # fail if this takes unreasonably long
+            except Exception as exc:
+                self._exc = exc
+                return
 
             # Close one of the connections abnormally to test server response
             if i == 0:
@@ -138,6 +143,7 @@ class CommitLockVoteTests(CommitLockTests):
         self._storage.tpc_vote(txn)
 
         self._begin_threads()
+        self.assertIsNone(self._exc)
 
         self._storage.tpc_finish(txn)
         self._storage.load(oid, '')
@@ -152,6 +158,7 @@ class CommitLockVoteTests(CommitLockTests):
         self._storage.tpc_vote(txn)
 
         self._begin_threads()
+        self.assertIsNone(self._exc)
 
         self._storage.tpc_abort(txn)
 
@@ -165,6 +172,7 @@ class CommitLockVoteTests(CommitLockTests):
         self._storage.tpc_vote(txn)
 
         self._begin_threads()
+        self.assertIsNone(self._exc)
 
         self._storage.close()
 

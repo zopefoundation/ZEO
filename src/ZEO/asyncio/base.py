@@ -38,7 +38,6 @@ import sys
 from .compat import asyncio
 from .smp import SizedMessageProtocol
 
-
 logger = logging.getLogger(__name__)
 
 INET_FAMILIES = socket.AF_INET, socket.AF_INET6

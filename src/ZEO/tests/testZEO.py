@@ -1271,17 +1271,24 @@ def runzeo_without_configfile():
     ...     )
     >>> proc.wait()
     0
-    >>> print(re.sub(br'\d\d+|[:]', b'', proc.stdout.read()).decode('ascii'))
-    ... # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+
+    # Note: the heuristic to determine the "instance home" can fail
+    # causing an initial error message in the process output.
+    # We check for this and remove it in this case.
+    >>> output = re.sub(br'\d\d+|[:]', b'', proc.stdout.read()).decode('ascii')
+    >>> if "ERROR" in output.splitlines()[1]:
+    ...    output = "\n".join(output.splitlines()[2:])
+    >>> print(output) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     ------
     --T INFO ZEO.runzeo () opening storage '1' using FileStorage
     ------
-    --T INFO ZEO.StorageServer StorageServer created RW with storages 1RWt
+    --T INFO ZEO.StorageServer StorageServer created RW with storages 1RWt...
     ------
     --T INFO ZEO.asyncio... listening on ...
     testing exit immediately
     ------
-    --T INFO ZEO.StorageServer closing storage '1'
+    --T INFO ZEO.StorageServer closing storage '1'...
+
     >>> proc.stdout.close()
     """
 

@@ -29,8 +29,10 @@ from .server import new_connection, best_protocol_version
 from .marshal import encoder, decoder
 
 
-class Base(object):
+logger = logging.getLogger(__name__)
 
+
+class Base(object):
     enc = b'Z'
     seq_type = list
 
@@ -288,7 +290,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
                           False,
                           'loadBefore',
                           (b'1'*8, maxtid)))
-        # Note load_before uses the oid as the message id.
+        # Note load_before uses ``(oid, tid)`` as message id.
         self.respond((b'1'*8, maxtid), (b'data', b'a'*8, None))
         self.assertEqual(loaded.result(), (b'data', b'a'*8, None))
 
@@ -1003,6 +1005,8 @@ class MemoryCache(object):
         return self.last_tid
 
     def setLastTid(self, tid):
+        if self.last_tid is not None and tid < self.last_tid:
+            raise ValueError("tids must increase")
         self.last_tid = tid
 
 
@@ -1152,6 +1156,7 @@ class ZEOBaseProtocolTests(setupstack.TestCase):
 
         protocol.write_message_iter(it(b"0"))
         protocol.write_message_iter(it(b"1"))
+
         for b in b"0011":
             l, t = transport.pop(2)
             self.assertEqual(l, b"\x00\x00\x00\x01")

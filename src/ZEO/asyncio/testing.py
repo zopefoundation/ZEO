@@ -2,7 +2,6 @@ from .compat import asyncio
 from ZEO._compat import thread
 from time import sleep
 
-
 try:
     ConnectionRefusedError
 except NameError:
