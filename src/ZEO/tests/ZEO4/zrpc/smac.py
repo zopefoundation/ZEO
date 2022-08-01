@@ -286,7 +286,7 @@ class SizedMessageAsyncConnection(asyncore.dispatcher):
                     except StopIteration:
                         messages.pop(0)
                     else:
-                        assert(isinstance(message, six.binary_type))
+                        assert isinstance(message, six.binary_type)
                         size += self.__message_output(message, output)
 
             v = b"".join(output)
