@@ -1005,7 +1005,9 @@ class ClientThread(ClientRunner):
 
 
 class Fut(object):
-    """Lightweight future that calls it's callbacks immediately rather than soon
+    """Lightweight future that calls it's callbacks immediately ...
+
+    rather than soon.
     """
 
     def __init__(self):

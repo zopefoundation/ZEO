@@ -730,8 +730,8 @@ class CommonBlobTests(object):
         filename = self._storage.loadBlob(oid, serial)
         with open(filename, 'rb') as f:
             self.assertEqual(somedata, f.read())
-        self.assertTrue(not(os.stat(filename).st_mode & stat.S_IWRITE))
-        self.assertTrue((os.stat(filename).st_mode & stat.S_IREAD))
+        self.assertTrue(not (os.stat(filename).st_mode & stat.S_IWRITE))
+        self.assertTrue(os.stat(filename).st_mode & stat.S_IREAD)
 
     def checkTemporaryDirectory(self):
         self.assertEqual(os.path.join(self.blob_cache_dir, 'tmp'),
