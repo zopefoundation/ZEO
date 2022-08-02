@@ -672,7 +672,7 @@ class ClientIO(object):
         else:
             future.set_exception(ClientDisconnected())
 
-    def call_async_from_same_thread(self, method, *args):
+    def call_async(self, method, args):
         return self.protocol.call_async(method, args)
 
     def call_async_iter_threadsafe(self, future, wait_operational, it):

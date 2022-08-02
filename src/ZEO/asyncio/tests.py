@@ -734,14 +734,14 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
             finish_start=True)
         self.assertEqual(client.get_peername(), '1.2.3.4')
 
-    def test_call_async_from_same_thread(self):
+    def test_call_async(self):
         # There are a few (1?) cases where we call into client storage
         # where it needs to call back asyncronously. Because we're
         # calling from the same thread, we don't need to use a futurte.
         wrapper, cache, loop, client, protocol, transport = self.start(
             finish_start=True)
 
-        client.call_async_from_same_thread('foo', 1)
+        client.call_async('foo', (1, ))
         self.assertEqual(self.pop(), (0, True, 'foo', (1, )))
 
     def test_ClientDisconnected_on_call_timeout(self):
