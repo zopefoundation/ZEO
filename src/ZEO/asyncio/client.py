@@ -277,7 +277,7 @@ class Protocol(base.ZEOBaseProtocol):
 
     message_id = 0
 
-    def call(self, future, method, args):
+    def call_sync(self, method, args, message_id=None, future=None):
         # The check below is important to handle a potential race
         # between a server call and ``close``.
         # In ``close``, all waiting futures get ``ClientDisconnected``
@@ -285,13 +285,16 @@ class Protocol(base.ZEOBaseProtocol):
         # this does not happen there and needs to be handled here.
         if self.closed:
             raise ClientDisconnected("closed")
-        self.message_id += 1
-        self.futures[self.message_id] = future
-        self.write_message(self.encode(self.message_id, False, method, args))
+        if message_id is None:
+            self.message_id += 1
+            message_id = self.message_id
+        future = future or  Future(loop=self.loop)  # noqa: E271
+        self.futures[message_id] = future
+        self.write_message(self.encode(message_id, False, method, args))
         return future
 
     def server_call(self, method, *args):
-        return self.call(Future(loop=self.loop), method, args)
+        return self.call_sync(method, args)
 
     def load_before(self, oid, tid):
         # Special-case load_before, so we collapse outstanding requests
@@ -300,9 +303,7 @@ class Protocol(base.ZEOBaseProtocol):
         future = self.futures.get(message_id)
         if future is None:
             future = Future(loop=self.loop)
-            self.futures[message_id] = future
-            self.write_message(
-                self.encode(message_id, False, 'loadBefore', (oid, tid)))
+            self.call_sync('loadBefore', message_id, message_id, future)
 
             @future.add_done_callback
             def _(future):
@@ -705,7 +706,7 @@ class ClientIO(object):
 
     def call_threadsafe(self, future, wait_operational, method, args):
         if self.operational:
-            self.protocol.call(future, method, args)
+            self.protocol.call_sync(method, args, None, future)
         elif wait_operational:
             self._when_operational(
                 self.call_threadsafe, future, wait_operational, method, args)
