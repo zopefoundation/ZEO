@@ -704,12 +704,12 @@ class ClientIO(object):
                     else:
                         self._when_operational(func, result_future, *args)
 
-    def call_threadsafe(self, future, wait_operational, method, args):
+    def call_sync_threadsafe(self, future, wait_operational, method, args):
         if self.operational:
             self.protocol.call_sync(method, args, None, future)
         elif wait_operational:
             self._when_operational(
-                self.call_threadsafe, future, wait_operational, method, args)
+                self.call_sync_threadsafe, future, wait_operational, method, args)
         else:
             future.set_exception(ClientDisconnected())
 
@@ -866,7 +866,7 @@ class ClientRunner(object):
     def setup_delegation(self, loop):
         self.loop = loop
         self.client = ClientIO(loop, *self.__args, **self.__kwargs)
-        self.call_threadsafe = self.client.call_threadsafe
+        self.call_sync_threadsafe = self.client.call_sync_threadsafe
         self.call_async_threadsafe = self.client.call_async_threadsafe
 
         from concurrent.futures import Future as ConcurrentFuture
@@ -928,7 +928,7 @@ class ClientRunner(object):
              ``None`` is replaced by ``self.timeout`` (usually 30s)
              default: ``None``
         """
-        return self.io_call(self.call_threadsafe, method, args, **kw)
+        return self.io_call(self.call_sync_threadsafe, method, args, **kw)
 
     def async_(self, method, *args):
         """call method named *method* with *args* asynchronously."""
