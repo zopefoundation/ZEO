@@ -713,6 +713,40 @@ class ClientIO(object):
         else:
             future.set_exception(ClientDisconnected())
 
+    def close_threadsafe(self, future, _):
+        # The following ``close`` deadlock''ked in isolated tests.
+        # Prevent this with a timeout and log information
+        # to understand the bug.
+        closing = self.close()
+        # the ``shield`` is necessary to keep the state unchanged
+        twait = self.loop.create_task(
+                    asyncio.wait_for(asyncio.shield(closing), 3))
+
+        @twait.add_done_callback
+        def _(f):
+            if f.cancelled():
+                future.cancel()
+            elif f.exception() is not None:
+                if isinstance(f.exception(), asyncio.TimeoutError):
+                    from pprint import pformat
+                    info = {"client": pformat(vars(self))}
+                    if self.protocol is not None:
+                        info["protocol"] = pformat(vars(self.protocol))
+                    if self.protocols:
+                        info["protocols"] = pformat([pformat(vars(p))
+                                                     for p in self.protocols])
+                    logger.error(
+                       "closing did not finish within a reasonable time.\n"
+                       "Please report this as a bug with the following info:\n"
+                       "%s", pformat(info))
+                future.set_exception(f.exception())
+            else:
+                future.set_result(None)
+            # break reference cycles
+            for name in Protocol.client_delegated:
+                delattr(self, name)
+            self.client = self.cache = None
+
     # Special methods because they update the cache.
 
     @future_generator
@@ -792,40 +826,6 @@ class ClientIO(object):
                 self.disconnected(self.protocol)
         else:
             future.set_exception(ClientDisconnected())
-
-    def close_threadsafe(self, future, _):
-        # The following ``close`` deadlock''ked in isolated tests.
-        # Prevent this with a timeout and log information
-        # to understand the bug.
-        closing = self.close()
-        # the ``shield`` is necessary to keep the state unchanged
-        twait = self.loop.create_task(
-                    asyncio.wait_for(asyncio.shield(closing), 3))
-
-        @twait.add_done_callback
-        def _(f):
-            if f.cancelled():
-                future.cancel()
-            elif f.exception() is not None:
-                if isinstance(f.exception(), asyncio.TimeoutError):
-                    from pprint import pformat
-                    info = {"client": pformat(vars(self))}
-                    if self.protocol is not None:
-                        info["protocol"] = pformat(vars(self.protocol))
-                    if self.protocols:
-                        info["protocols"] = pformat([pformat(vars(p))
-                                                     for p in self.protocols])
-                    logger.error(
-                       "closing did not finish within a reasonable time.\n"
-                       "Please report this as a bug with the following info:\n"
-                       "%s", pformat(info))
-                future.set_exception(f.exception())
-            else:
-                future.set_result(None)
-            # break reference cycles
-            for name in Protocol.client_delegated:
-                delattr(self, name)
-            self.client = self.cache = None
 
     # server callbacks
     def invalidateTransaction(self, tid, oids):
