@@ -16,9 +16,9 @@ with-sphinx-doctests = false
 use-flake8 = true
 testenv-commands = [
     "# Run unit tests first.",
-    "zope-testrunner -u --test-path=src {posargs:-vc}",
+    "zope-testrunner -u --test-path=src --all {posargs:-vc}",
     "# Only run functional tests if unit tests pass.",
-    "zope-testrunner -f --test-path=src {posargs:-vc}",
+    "zope-testrunner -f --test-path=src --all {posargs:-vc}",
     ]
 testenv-deps = [
     "!zodbmaster: ZODB >= 4.2.0b1",
