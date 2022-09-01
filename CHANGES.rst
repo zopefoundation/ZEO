@@ -4,6 +4,13 @@ Changelog
 5.4.0 (unreleased)
 ------------------
 
+- Remove ``asyncio/mtacceptor`` module. It turned out that multi-threaded ZEO5
+  server has concurrency issues that lead to data corruption. Multi-threaded
+  server mode was already deprecated and scheduled for removal, so the fix is
+  to finally remove it. From now on ZEO server is always single-threaded.
+
+  See `issue 209 <https://github.com/zopefoundation/ZEO/issues/209>` for details.
+
 - Test ZEO only with the following storages
   ``FileStorage`` with server side blobs,
   ``FileStorage`` with shared blob directory,
