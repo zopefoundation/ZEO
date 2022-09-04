@@ -511,6 +511,27 @@ class FileStorageClientHexTests(FileStorageHexTests):
         return ZODB.tests.hexstorage.HexStorage(client)
 
 
+class FileStorageLoadDelayedTests(FileStorageTests):
+    """Test ZEO backed by a FileStorage with delayes injected after load
+       operations.
+
+       This catches e.g. races in between loads and invalidations.
+       See https://github.com/zopefoundation/ZEO/issues/209 for details.
+    """
+
+    level = 10  # very long test
+
+    def getConfig(self):
+        return """\
+        %import ZEO.tests
+        <loaddelayed_storage>
+        <filestorage 1>
+        path Data.fs
+        </filestorage>
+        </loaddelayed_storage>
+        """
+
+
 class ClientConflictResolutionTests(
         GenericTestBase,
         ConflictResolution.ConflictResolvingStorage):
@@ -1748,6 +1769,7 @@ slow_test_classes = [
     # DemoStorageTests,
     # FileStorageTests,
     # FileStorageHexTests, FileStorageClientHexTests,
+    FileStorageLoadDelayedTests,
     ]
 if not forker.ZEO4_SERVER:
     slow_test_classes.append(FileStorageSSLTests)

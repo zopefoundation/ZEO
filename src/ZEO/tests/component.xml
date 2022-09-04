@@ -1,0 +1,11 @@
+<component>
+  <import package="ZODB"/>
+
+  <sectiontype
+     name="loaddelayed_storage"
+     datatype="ZEO.tests.racetest.ZConfigLoadDelayed"
+     implements="ZODB.storage"
+     >
+    <section type="ZODB.storage" name="*" attribute="base" required="yes" />
+  </sectiontype>
+</component>
