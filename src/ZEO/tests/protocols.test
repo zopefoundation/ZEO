@@ -1,184 +1,35 @@
-Test that multiple protocols are supported
-==========================================
+Test that old protocols are not supported
+=========================================
 
-A full test of all protocols isn't practical.  But we'll do a limited
-test that at least the current and previous protocols are supported in
-both directions.
+ZEO5 client used to support both ZEO5 and ZEO4 servers. Later support for
+ZEO5.client-ZEO4.server interoperability was found to be subject to data
+corruptions and removed. Here we verify that current ZEO client rejects
+connecting to old ZEO server.
 
 Let's start a Z4 server
 
     >>> storage_conf = '''
-    ... <blobstorage>
-    ...    blob-dir server-blobs
-    ...    <filestorage>
-    ...       path Data.fs
-    ...    </filestorage>
-    ... </blobstorage>
+    ... <filestorage>
+    ...    path Data.fs
+    ... </filestorage>
     ... '''
 
     >>> addr, stop = start_server(
-    ...    storage_conf, dict(invalidation_queue_size=5), protocol=b'4')
+    ...    storage_conf, {'msgpack': 'false'}, protocol=b'4')
 
-A current client should be able to connect to a old server:
+A current client should not be able to connect to an old server:
 
-    >>> import ZEO, ZODB.blob, transaction
-    >>> db = ZEO.DB(addr, client='client', blob_dir='blobs')
-    >>> wait_connected(db.storage)
-    >>> str(db.storage.protocol_version.decode('ascii'))[1:]
-    '4'
+    >>> import ZEO, logging, zope.testing.loggingsupport
+    >>> hlog = zope.testing.loggingsupport.InstalledHandler(
+    ...     'ZEO.asyncio.client', level=logging.ERROR)
+    >>> logging.getLogger('ZEO.asyncio.client').addHandler(hlog)
+    >>> ZEO.client(addr, client='client', wait_timeout=2)
+    Traceback (most recent call last):
+      ...
+    ClientDisconnected: timed out waiting for connection
 
-    >>> conn = db.open()
-    >>> conn.root().x = 0
-    >>> transaction.commit()
-    >>> len(db.history(conn.root()._p_oid, 99))
-    2
+    >>> print(hlog)
+    ZEO.asyncio.client ERROR
+      Registration or cache validation failed, Z4
 
-    >>> conn.root()['blob1'] = ZODB.blob.Blob()
-    >>> with conn.root()['blob1'].open('w') as f:
-    ...     r = f.write(b'blob data 1')
-    >>> transaction.commit()
-
-    >>> db2 = ZEO.DB(addr, blob_dir='server-blobs', shared_blob_dir=True)
-    >>> wait_connected(db2.storage)
-    >>> conn2 = db2.open()
-    >>> for i in range(5):
-    ...     conn2.root().x += 1
-    ...     transaction.commit()
-    >>> conn2.root()['blob2'] = ZODB.blob.Blob()
-    >>> with conn2.root()['blob2'].open('w') as f:
-    ...    r = f.write(b'blob data 2')
-    >>> transaction.commit()
-
-    >>> @wait_until("Get the new data")
-    ... def f():
-    ...     conn.sync()
-    ...     return conn.root().x == 5
-
-    >>> db.close()
-
-    >>> for i in range(2):
-    ...     conn2.root().x += 1
-    ...     transaction.commit()
-
-    >>> db = ZEO.DB(addr, client='client', blob_dir='blobs')
-    >>> wait_connected(db.storage)
-    >>> conn = db.open()
-    >>> conn.root().x
-    7
-
-    >>> db.close()
-
-    >>> for i in range(10):
-    ...     conn2.root().x += 1
-    ...     transaction.commit()
-
-    >>> db = ZEO.DB(addr, client='client', blob_dir='blobs')
-    >>> wait_connected(db.storage)
-    >>> conn = db.open()
-    >>> conn.root().x
-    17
-
-    >>> with conn.root()['blob1'].open() as f:
-    ...    f.read()
-    b'blob data 1'
-    >>> with conn.root()['blob2'].open() as f:
-    ...    f.read()
-    b'blob data 2'
-
-    >>> db2.close()
-    >>> db.close()
-    >>> stop_server(stop)
-
-    >>> import os, zope.testing.setupstack
-    >>> os.remove('client-1.zec')
-    >>> zope.testing.setupstack.rmtree('blobs')
-    >>> zope.testing.setupstack.rmtree('server-blobs')
-
-#############################################################################
-# Note that the ZEO 5.0 server only supports clients that use the Z5 protocol
-
-# And the other way around:
-
-#     >>> addr, _ = start_server(storage_conf, dict(invalidation_queue_size=5))
-
-# Note that we'll have to pull some hijinks:
-
-#     >>> db = ZEO.DB(addr, client='client', blob_dir='blobs')
-#     >>> str(db.storage.protocol_version.decode('ascii'))
-#     'Z4'
-#     >>> wait_connected(db.storage)
-#     >>> conn = db.open()
-#     >>> conn.root().x = 0
-#     >>> transaction.commit()
-#     >>> len(db.history(conn.root()._p_oid, 99))
-#     2
-
-#     >>> db = ZEO.DB(addr, client='client', blob_dir='blobs')
-#     >>> db.storage.protocol_version
-#     b'Z4'
-#     >>> wait_connected(db.storage)
-#     >>> conn = db.open()
-#     >>> conn.root().x = 0
-#     >>> transaction.commit()
-#     >>> len(db.history(conn.root()._p_oid, 99))
-#     2
-
-#     >>> conn.root()['blob1'] = ZODB.blob.Blob()
-#     >>> with conn.root()['blob1'].open('w') as f:
-#     ...    r = f.write(b'blob data 1')
-#     >>> transaction.commit()
-
-#     >>> db2 = ZEO.DB(addr, blob_dir='server-blobs', shared_blob_dir=True)
-#     >>> wait_connected(db2.storage)
-#     >>> conn2 = db2.open()
-#     >>> for i in range(5):
-#     ...     conn2.root().x += 1
-#     ...     transaction.commit()
-#     >>> conn2.root()['blob2'] = ZODB.blob.Blob()
-#     >>> with conn2.root()['blob2'].open('w') as f:
-#     ...    r = f.write(b'blob data 2')
-#     >>> transaction.commit()
-
-
-#     >>> @wait_until()
-#     ... def x_to_be_5():
-#     ...     conn.sync()
-#     ...     return conn.root().x == 5
-
-#     >>> db.close()
-
-#     >>> for i in range(2):
-#     ...     conn2.root().x += 1
-#     ...     transaction.commit()
-
-#     >>> db = ZEO.DB(addr, client='client', blob_dir='blobs')
-#     >>> wait_connected(db.storage)
-#     >>> conn = db.open()
-#     >>> conn.root().x
-#     7
-
-#     >>> db.close()
-
-#     >>> for i in range(10):
-#     ...     conn2.root().x += 1
-#     ...     transaction.commit()
-
-#     >>> db = ZEO.DB(addr, client='client', blob_dir='blobs')
-#     >>> wait_connected(db.storage)
-#     >>> conn = db.open()
-#     >>> conn.root().x
-#     17
-
-#     >>> with conn.root()['blob1'].open() as f:
-#     ...    f.read()
-#     b'blob data 1'
-#     >>> with conn.root()['blob2'].open() as f:
-#     ...    f.read()
-#     b'blob data 2'
-
-#     >>> db2.close()
-#     >>> db.close()
-
-# Undo the hijinks:
-
-#     >>> ZEO.asyncio.client.Protocol.protocols = old_protocols
+    >>> hlog.uninstall()

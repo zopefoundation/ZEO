@@ -58,7 +58,7 @@ class FakeServer(object):
 
 
 class FakeConnection(object):
-    protocol_version = b'Z4'
+    protocol_version = b'Z5'
     addr = 'test'
 
     def call_soon_threadsafe(f, *a):

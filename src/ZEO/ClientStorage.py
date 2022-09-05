@@ -219,15 +219,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             Wait for server connection, defaulting to true.
 
         credentials
-            [Experimental] Credentials object for additional authentication to
-            server.
-        username
-        password
-        realm
-            [ZEO4 only] Credentials for basic authentication to server.
-            In ZEO5 support for basic authentication has been dropped in favor
-            of SSL. Basic authentication support is scheduled to be removed in
-            `ZEO6`.
+            [Experimental] Credentials object for authentication to server.
 
         server_sync
             Whether sync() should make a server round trip, thus causing client
@@ -255,6 +247,9 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
 
             Defaults to false.
 
+        username
+        password
+        realm
         disconnect_poll
         min_disconnect_poll
         max_disconnect_poll
@@ -265,8 +260,6 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         and is detected by the ClientStorage upon connecting (see
         testConnection() and doAuth() for details).
         """
-
-        assert not username or password or realm
 
         if isinstance(addr, int):
             addr = ('127.0.0.1', addr)
@@ -1047,11 +1040,6 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         self._async('restorea', oid, serial, data, prev_txn, id(transaction))
 
     # Below are methods invoked by the StorageServer
-
-    def serialnos(self, args):
-        """Server callback to pass a list of changed (oid, serial) pairs.
-        """
-        self._tbuf.serialnos(args)
 
     def info(self, dict):
         """Server callback to update the info dictionary."""

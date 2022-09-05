@@ -10,7 +10,6 @@ from ..Exceptions import ClientDisconnected
 from .. import runzeo
 
 from .testConfig import ZEOConfigTestBase
-from . import forker
 from .threaded import threaded_server_tests
 
 here = os.path.dirname(__file__)
@@ -22,7 +21,6 @@ client_cert = os.path.join(here, 'client.pem')
 client_key = os.path.join(here, 'client_key.pem')
 
 
-@unittest.skipIf(forker.ZEO4_SERVER, "ZEO4 servers don't support SSL")
 class SSLConfigTest(ZEOConfigTestBase):
 
     def test_ssl_basic(self):
@@ -119,7 +117,6 @@ class SSLConfigTest(ZEOConfigTestBase):
         stop()
 
 
-@unittest.skipIf(forker.ZEO4_SERVER, "ZEO4 servers don't support SSL")
 @mock.patch(('asyncio' if PY3 else 'trollius') + '.ensure_future')
 @mock.patch(('asyncio' if PY3 else 'trollius') + '.set_event_loop')
 @mock.patch(('asyncio' if PY3 else 'trollius') + '.new_event_loop')

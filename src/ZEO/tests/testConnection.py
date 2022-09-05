@@ -102,9 +102,8 @@ test_classes = [FileStorageConnectionTests,
                 FileStorageTimeoutTests,
                 MappingStorageConnectionTests,
                 MappingStorageTimeoutTests,
+                SSLConnectionTests,
                 ]
-if not forker.ZEO4_SERVER:
-    test_classes.append(SSLConnectionTests)
 
 
 def invalidations_while_connecting():

@@ -112,8 +112,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         transport = loop.transport
 
         if finish_start:
-            protocol.data_received(sized(self.enc + b'3101'))
-            self.assertEqual(self.pop(2, False), self.enc + b'3101')
+            protocol.data_received(sized(self.enc + b'5'))
+            self.assertEqual(self.pop(2, False), self.enc + b'5')
             self.respond(1, None)
             self.respond(2, 'a'*8)
             self.pop(4)
@@ -323,8 +323,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         # This time we'll send a lower protocol version.  The client
         # will send it back, because it's lower than the client's
         # protocol:
-        protocol.data_received(sized(self.enc + b'310'))
-        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'310')
+        protocol.data_received(sized(self.enc + b'5'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'5')
         self.assertEqual(self.pop(), (1, False, 'register', ('TEST', False)))
         self.assertFalse(wrapper.notify_connected.called)
 
@@ -359,8 +359,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         cache.store(b'2'*8, b'a'*8, None, '2 data')
 
         self.assertFalse(client.connected.done() or transport.data)
-        protocol.data_received(sized(self.enc + b'3101'))
-        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'3101')
+        protocol.data_received(sized(self.enc + b'5'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'5')
         self.respond(1, None)
         self.respond(2, b'e'*8)
         self.pop(4)
@@ -395,8 +395,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertTrue(cache)
 
         self.assertFalse(client.connected.done() or transport.data)
-        protocol.data_received(sized(self.enc + b'3101'))
-        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'3101')
+        protocol.data_received(sized(self.enc + b'5'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'5')
         self.respond(1, None)
         self.respond(2, b'e'*8)
         self.pop(4)
@@ -447,8 +447,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertEqual(sorted(loop.connecting), addrs[:1])
         protocol = loop.protocol
         transport = loop.transport
-        protocol.data_received(sized(self.enc + b'3101'))
-        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'3101')
+        protocol.data_received(sized(self.enc + b'5'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'5')
         self.respond(1, None)
 
         # Now, when the first connection fails, it won't be retried,
@@ -465,8 +465,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         wrapper, cache, loop, client, protocol, transport = self.start()
         cache.store(b'4'*8, b'a'*8, None, '4 data')
         cache.setLastTid('b'*8)
-        protocol.data_received(sized(self.enc + b'3101'))
-        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'3101')
+        protocol.data_received(sized(self.enc + b'5'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'5')
         self.respond(1, None)
         self.respond(2, 'a'*8)
         self.pop()
@@ -479,8 +479,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         self.assertFalse(transport is loop.transport)
         protocol = loop.protocol
         transport = loop.transport
-        protocol.data_received(sized(self.enc + b'3101'))
-        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'3101')
+        protocol.data_received(sized(self.enc + b'5'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'5')
         self.respond(1, None)
         self.respond(2, 'b'*8)
         self.pop(4)
@@ -499,8 +499,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
         # We'll treat the first address as read-only and we'll let it connect:
         loop.connect_connecting(addrs[0])
         protocol, transport = loop.protocol, loop.transport
-        protocol.data_received(sized(self.enc + b'3101'))
-        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'3101')
+        protocol.data_received(sized(self.enc + b'5'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'5')
         # We see that the client tried a writable connection:
         self.assertEqual(self.pop(),
                          (1, False, 'register', ('TEST', False)))
@@ -531,9 +531,9 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
 
         # We connect the second address:
         loop.connect_connecting(addrs[1])
-        loop.protocol.data_received(sized(self.enc + b'3101'))
+        loop.protocol.data_received(sized(self.enc + b'5'))
         self.assertEqual(self.unsized(loop.transport.pop(2)),
-                         self.enc + b'3101')
+                         self.enc + b'5')
         self.assertEqual(self.parse(loop.transport.pop()),
                          (1, False, 'register', ('TEST', False)))
         self.assertTrue(self.is_read_only())
@@ -567,8 +567,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
     def test_invalidations_while_verifying(self):
         # While we're verifying, invalidations are ignored
         wrapper, cache, loop, client, protocol, transport = self.start()
-        protocol.data_received(sized(self.enc + b'3101'))
-        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'3101')
+        protocol.data_received(sized(self.enc + b'5'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'5')
         self.respond(1, None)
         self.pop(4)
         self.send('invalidateTransaction', b'b'*8, [b'1'*8], called=False)
@@ -586,8 +586,8 @@ class ClientTests(Base, setupstack.TestCase, ClientRunner):
 
         # Similarly, invalidations aren't processed while reconnecting:
 
-        protocol.data_received(sized(self.enc + b'3101'))
-        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'3101')
+        protocol.data_received(sized(self.enc + b'5'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'5')
         self.respond(1, None)
         self.pop(4)
         self.send('invalidateTransaction', b'd'*8, [b'1'*8], called=False)

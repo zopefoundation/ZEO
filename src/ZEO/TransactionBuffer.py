@@ -91,15 +91,3 @@ class TransactionBuffer(object):
         for oid in server_resolved:
             if oid not in seen:
                 yield oid, None, True
-
-    # Support ZEO4:
-    def serialnos(self, args):
-        for oid in args:
-            if isinstance(oid, bytes):
-                self.server_resolved.add(oid)
-            else:
-                oid, serial = oid
-                if isinstance(serial, Exception):
-                    self.exception = serial
-                elif serial == b'rs':
-                    self.server_resolved.add(oid)
