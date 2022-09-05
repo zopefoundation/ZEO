@@ -30,6 +30,6 @@ A current client should not be able to connect to an old server:
 
     >>> print(hlog)
     ZEO.asyncio.client ERROR
-      Registration or cache validation failed, Z4
+      Registration or cache validation failed, b'Z4'
 
     >>> hlog.uninstall()

@@ -1827,6 +1827,8 @@ def test_suite():
         (re.compile("ZODB.POSException.POSKeyError"), "POSKeyError"),
         (re.compile("ZEO.Exceptions.ClientStorageError"),
          "ClientStorageError"),
+        (re.compile("ZEO.Exceptions.ClientDisconnected"),
+         "ClientDisconnected"),
         (re.compile(r"\[Errno \d+\]"), '[Errno N]'),
         (re.compile(r"loads=\d+\.\d+"), 'loads=42.42'),
         # Python 3 drops the u prefix
@@ -1836,6 +1838,7 @@ def test_suite():
     if not PY3:
         patterns.append((re.compile("^'(blob[^']*)'"), r"b'\1'"))
         patterns.append((re.compile("^'Z308'"), "b'Z308'"))
+        patterns.append((re.compile(r" Z4$"), " b'Z4'"))
     zeo.addTest(doctest.DocTestSuite(
         setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
         checker=renormalizing.RENormalizing(patterns),
