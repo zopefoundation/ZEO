@@ -169,6 +169,7 @@ def _main(args=None, prog=None):
     if not server_found:
         error("Cannot connect to any of the configured ZEO servers.")
 
+
 def main(*args):
     root_logger = logging.getLogger()
     old_level = root_logger.getEffectiveLevel()
