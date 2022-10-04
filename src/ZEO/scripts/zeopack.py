@@ -167,7 +167,7 @@ def _main(args=None, prog=None):
             error("Error packing storage %s in %r" % (name, addr))
 
     if not server_found:
-        error("No servers found.")
+        error("Cannot connect to any of the configured ZEO servers.")
 
 def main(*args):
     root_logger = logging.getLogger()
