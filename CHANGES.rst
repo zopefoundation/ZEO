@@ -4,6 +4,9 @@ Changelog
 5.4.0 (unreleased)
 ------------------
 
+- If the ``zeopack`` script cannot connect to a server it sets exit status 1
+  See `#214 <https://github.com/zopefoundation/ZEO/issues/214>`_.
+
 - Remove ``asyncio/mtacceptor`` module. It turned out that multi-threaded ZEO5
   server has concurrency issues that lead to data corruption. Multi-threaded
   server mode was already deprecated and scheduled for removal, so the fix is
