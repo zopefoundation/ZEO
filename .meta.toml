@@ -28,7 +28,6 @@ testenv-deps = [
 testenv-setenv = [
     "!py27-!pypy: PYTHONWARNINGS=ignore::ResourceWarning",
     "msgpack1: ZEO_MSGPACK=1",
-    "zeo4: ZEO4_SERVER=1",
     ]
 
 [coverage]
@@ -50,7 +49,6 @@ additional-rules = [
 [github-actions]
 additional-config = [
     "- [\"2.7\",   \"py27-msgpack1\"]",
-    "- [\"2.7\",   \"py27-zeo4\"]",
     "- [\"2.7\",   \"py27-zodbmaster\"]",
     "- [\"3.7\",   \"py37-msgpack1\"]",
     "- [\"3.7\",   \"py37-uvloop\"]",

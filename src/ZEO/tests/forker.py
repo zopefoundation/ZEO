@@ -35,15 +35,6 @@ logger = logging.getLogger('ZEO.tests.forker')
 
 DEBUG = _forker.DEBUG
 
-ZEO4_SERVER = _forker.ZEO4_SERVER
-
-skip_if_testing_client_against_zeo4 = (
-    (lambda func: None)
-    if ZEO4_SERVER else
-    (lambda func: func)
-    )
-
-
 ZEOConfig = _forker.ZEOConfig
 
 

@@ -4,13 +4,6 @@ from .. import server, client
 
 from ZEO import _forker as forker
 
-if forker.ZEO4_SERVER:
-    server_ping_method = 'lastTransaction'
-    server_zss = 'connections'
-else:
-    server_ping_method = 'ping'
-    server_zss = 'zeo_storages_by_storage_id'
-
 
 class SyncTests(setupstack.TestCase):
 
@@ -19,14 +12,14 @@ class SyncTests(setupstack.TestCase):
 
         server = getattr(forker, self.__name + '_server')
 
-        [zs] = getattr(server.server, server_zss)['1']
-        orig_ping = getattr(zs, server_ping_method)
+        [zs] = getattr(server.server, 'zeo_storages_by_storage_id')['1']
+        orig_ping = getattr(zs, 'ping')
 
         def ping():
             self.__ping_calls += 1
             return orig_ping()
 
-        setattr(zs, server_ping_method, ping)
+        setattr(zs, 'ping', ping)
 
     def test_server_sync(self):
         self.__name = 's%s' % id(self)

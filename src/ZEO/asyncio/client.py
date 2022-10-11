@@ -86,7 +86,7 @@ class Protocol(base.Protocol):
     # One place where special care was required was in cache setup on
     # connect. See finish connect below.
 
-    protocols = b'309', b'310', b'3101', b'4', b'5'
+    protocols = b'5',
 
     def __init__(self, loop,
                  addr, client, storage_key, read_only, connect_poll=1,
@@ -313,11 +313,11 @@ class Protocol(base.Protocol):
     # syncronously, as that would lead to DEADLOCK!
 
     client_methods = (
-        'invalidateTransaction', 'serialnos', 'info',
+        'invalidateTransaction', 'info',
         'receiveBlobStart', 'receiveBlobChunk', 'receiveBlobStop',
         # plus: notify_connected, notify_disconnected
         )
-    client_delegated = client_methods[2:]
+    client_delegated = client_methods[1:]
 
     def heartbeat(self, write=True):
         if write:
@@ -434,10 +434,10 @@ class Client(object):
         self.protocols = ()
         self.disconnected(None)
 
-        # Work around odd behavior of ZEO4 server. It may send
-        # invalidations for transactions later than the result of
-        # getInvalidations.  While we support ZEO 4 servers, we'll
-        # need to keep an invalidation queue. :(
+        # Protection against potentially odd behavior of a ZEO server: if it
+        # may send invalidations for transactions later than the result of
+        # getInvalidations, without queueing, client's cache might get out of
+        # sync wrt data on the server.
         self.verify_invalidation_queue = []
 
     def new_addrs(self, addrs):
@@ -598,7 +598,7 @@ class Client(object):
             self.cache.setLastTid(server_tid)
             self.ready = True
 
-            # Gaaaa, ZEO 4 work around. See comment in __init__. :(
+            # See comment in __init__. :(
             for tid, oids in self.verify_invalidation_queue:
                 if tid > server_tid:
                     self.invalidateTransaction(tid, oids)
@@ -768,24 +768,6 @@ class Client(object):
             self.cache.setLastTid(tid)
         else:
             self.verify_invalidation_queue.append((tid, oids))
-
-    def serialnos(self, serials):
-        # Method called by ZEO4 storage servers.
-
-        # Before delegating, check for errors (likely ConflictErrors)
-        # and invalidate the oids they're associated with.  In the
-        # past, this was done by the client, but now we control the
-        # cache and this is our last chance, as the client won't call
-        # back into us when there's an error.
-        for oid in serials:
-            if isinstance(oid, bytes):
-                self.cache.invalidate(oid, None)
-            else:
-                oid, serial = oid
-                if isinstance(serial, Exception) or serial == b'rs':
-                    self.cache.invalidate(oid, None)
-
-        self.client.serialnos(serials)
 
     @property
     def protocol_version(self):

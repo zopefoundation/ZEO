@@ -511,6 +511,27 @@ class FileStorageClientHexTests(FileStorageHexTests):
         return ZODB.tests.hexstorage.HexStorage(client)
 
 
+class FileStorageLoadDelayedTests(FileStorageTests):
+    """Test ZEO backed by a FileStorage with delayes injected after load
+       operations.
+
+       This catches e.g. races in between loads and invalidations.
+       See https://github.com/zopefoundation/ZEO/issues/209 for details.
+    """
+
+    level = 10  # very long test
+
+    def getConfig(self):
+        return """\
+        %import ZEO.tests
+        <loaddelayed_storage>
+        <filestorage 1>
+        path Data.fs
+        </filestorage>
+        </loaddelayed_storage>
+        """
+
+
 class ClientConflictResolutionTests(
         GenericTestBase,
         ConflictResolution.ConflictResolvingStorage):
@@ -834,11 +855,8 @@ class FauxConn(object):
     protocol_version = ZEO.asyncio.server.best_protocol_version
     peer_protocol_version = protocol_version
 
-    serials = []
-
     def async_(self, method, *args):
-        if method == 'serialnos':
-            self.serials.extend(args[0])
+        pass
 
     call_soon_threadsafe = async_threadsafe = async_
 
@@ -870,10 +888,7 @@ class StorageServerWrapper(object):
         self.server.tpc_begin(id(transaction), '', '', {}, None, ' ')
 
     def tpc_vote(self, transaction):
-        result = self.server.vote(id(transaction))
-        assert result == self.server.connection.serials[:]
-        del self.server.connection.serials[:]
-        return result
+        return self.server.vote(id(transaction))
 
     def store(self, oid, serial, data, version_ignored, transaction):
         self.server.storea(oid, serial, data, id(transaction))
@@ -1305,7 +1320,6 @@ def convenient_to_pass_port_to_client_and_ZEO_dot_client():
     """
 
 
-@forker.skip_if_testing_client_against_zeo4
 def test_server_status():
     """
     You can get server status using the server_status method.
@@ -1332,7 +1346,6 @@ def test_server_status():
     """
 
 
-@forker.skip_if_testing_client_against_zeo4
 def test_ruok():
     """
     You can also get server status using the ruok protocol.
@@ -1614,35 +1627,34 @@ def ClientDisconnected_errors_are_TransientErrors():
     """
 
 
-if not os.environ.get('ZEO4_SERVER'):
-    if os.environ.get('ZEO_MSGPACK'):
-        def test_runzeo_msgpack_support():
-            """
-            >>> import ZEO
+if os.environ.get('ZEO_MSGPACK'):
+    def test_runzeo_msgpack_support():
+        """
+        >>> import ZEO
 
-            >>> a, s = ZEO.server(threaded=False)
-            >>> conn = ZEO.connection(a)
-            >>> str(conn.db().storage.protocol_version.decode('ascii'))
-            'M5'
-            >>> conn.close(); s()
-            """
-    else:
-        def test_runzeo_msgpack_support():
-            """
-            >>> import ZEO
+        >>> a, s = ZEO.server(threaded=False)
+        >>> conn = ZEO.connection(a)
+        >>> str(conn.db().storage.protocol_version.decode('ascii'))
+        'M5'
+        >>> conn.close(); s()
+        """
+else:
+    def test_runzeo_msgpack_support():
+        """
+        >>> import ZEO
 
-            >>> a, s = ZEO.server(threaded=False)
-            >>> conn = ZEO.connection(a)
-            >>> str(conn.db().storage.protocol_version.decode('ascii'))
-            'Z5'
-            >>> conn.close(); s()
+        >>> a, s = ZEO.server(threaded=False)
+        >>> conn = ZEO.connection(a)
+        >>> str(conn.db().storage.protocol_version.decode('ascii'))
+        'Z5'
+        >>> conn.close(); s()
 
-            >>> a, s = ZEO.server(zeo_conf=dict(msgpack=True), threaded=False)
-            >>> conn = ZEO.connection(a)
-            >>> str(conn.db().storage.protocol_version.decode('ascii'))
-            'M5'
-            >>> conn.close(); s()
-            """
+        >>> a, s = ZEO.server(zeo_conf=dict(msgpack=True), threaded=False)
+        >>> conn = ZEO.connection(a)
+        >>> str(conn.db().storage.protocol_version.decode('ascii'))
+        'M5'
+        >>> conn.close(); s()
+        """
 
 if WIN:
     del runzeo_logrotate_on_sigusr2
@@ -1688,7 +1700,6 @@ class MultiprocessingTests(unittest.TestCase):
         zope.testing.setupstack.tearDown(self)
 
 
-@forker.skip_if_testing_client_against_zeo4
 def quick_close_doesnt_kill_server():
     r"""
 
@@ -1748,9 +1759,9 @@ slow_test_classes = [
     # DemoStorageTests,
     # FileStorageTests,
     # FileStorageHexTests, FileStorageClientHexTests,
+    FileStorageLoadDelayedTests,
+    FileStorageSSLTests,
     ]
-if not forker.ZEO4_SERVER:
-    slow_test_classes.append(FileStorageSSLTests)
 
 quick_test_classes = [FileStorageRecoveryTests, ZRPCConnectionTests]
 
@@ -1816,6 +1827,8 @@ def test_suite():
         (re.compile("ZODB.POSException.POSKeyError"), "POSKeyError"),
         (re.compile("ZEO.Exceptions.ClientStorageError"),
          "ClientStorageError"),
+        (re.compile("ZEO.Exceptions.ClientDisconnected"),
+         "ClientDisconnected"),
         (re.compile(r"\[Errno \d+\]"), '[Errno N]'),
         (re.compile(r"loads=\d+\.\d+"), 'loads=42.42'),
         # Python 3 drops the u prefix
@@ -1825,6 +1838,7 @@ def test_suite():
     if not PY3:
         patterns.append((re.compile("^'(blob[^']*)'"), r"b'\1'"))
         patterns.append((re.compile("^'Z308'"), "b'Z308'"))
+        patterns.append((re.compile(r" Z4$"), " b'Z4'"))
     zeo.addTest(doctest.DocTestSuite(
         setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
         checker=renormalizing.RENormalizing(patterns),
@@ -1837,9 +1851,7 @@ def test_suite():
                      "ClientDisconnected"),
                     )),
             ))
-    if not forker.ZEO4_SERVER:
-        # ZEO 4 doesn't support client-side conflict resolution
-        zeo.addTest(unittest.makeSuite(ClientConflictResolutionTests, 'check'))
+    zeo.addTest(unittest.makeSuite(ClientConflictResolutionTests, 'check'))
     zeo.layer = ZODB.tests.util.MininalTestLayer('testZeo-misc')
     suite.addTest(zeo)
 
@@ -1892,16 +1904,15 @@ def test_suite():
     suite.addTest(ZODB.tests.testblob.storage_reusable_suite(
         'ClientStorageSharedBlobs', create_storage_shared))
 
-    if not forker.ZEO4_SERVER:
-        from .threaded import threaded_server_tests
-        dynamic_server_ports_suite = doctest.DocFileSuite(
-            'dynamic_server_ports.test',
-            setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
-            checker=renormalizing.RENormalizing(patterns),
-            globs={'print_function': print_function},
-            )
-        dynamic_server_ports_suite.layer = threaded_server_tests
-        suite.addTest(dynamic_server_ports_suite)
+    from .threaded import threaded_server_tests
+    dynamic_server_ports_suite = doctest.DocFileSuite(
+        'dynamic_server_ports.test',
+        setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
+        checker=renormalizing.RENormalizing(patterns),
+        globs={'print_function': print_function},
+        )
+    dynamic_server_ports_suite.layer = threaded_server_tests
+    suite.addTest(dynamic_server_ports_suite)
 
     return suite
 
