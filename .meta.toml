@@ -2,7 +2,7 @@
 # https://github.com/zopefoundation/meta/tree/master/config/pure-python
 [meta]
 template = "pure-python"
-commit-id = "0c07a1cfd78d28a07aebd23383ed16959f166574"
+commit-id = "931ebd36c89bffdc929019c5080086ed7a45b5d6"
 
 [python]
 with-windows = false
@@ -11,9 +11,10 @@ with-future-python = false
 with-legacy-python = true
 with-docs = true
 with-sphinx-doctests = false
+with-macos = false
 
 [tox]
-use-flake8 = true
+use-flake8 = false
 testenv-commands = [
     "# Run unit tests first.",
     "zope-testrunner -u --test-path=src -a 1000 {posargs:-vc}",
