@@ -2,7 +2,7 @@
 # https://github.com/zopefoundation/meta/tree/master/config/pure-python
 [meta]
 template = "pure-python"
-commit-id = "931ebd36c89bffdc929019c5080086ed7a45b5d6"
+commit-id = "200573eb414d2228d463da3de7d71a6d6335a704"
 
 [python]
 with-windows = false
@@ -23,7 +23,7 @@ testenv-commands = [
     ]
 testenv-deps = [
     "!zodbmaster: ZODB >= 4.2.0b1",
-    "zodbmaster: -e git+https://github.com/zopefoundation/ZODB.git@master#egg=ZODB",
+    "zodbmaster: -e git+https://github.com/zopefoundation/ZODB.git@master\\#egg=ZODB",
     "uvloop: uvloop",
     ]
 testenv-setenv = [
