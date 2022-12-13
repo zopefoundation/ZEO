@@ -50,7 +50,6 @@ additional-rules = [
 [github-actions]
 additional-config = [
     "- [\"2.7\",   \"py27-msgpack1\"]",
-    "- [\"2.7\",   \"py27-zodbmaster\"]",
     "- [\"3.7\",   \"py37-msgpack1\"]",
     "- [\"3.7\",   \"py37-uvloop\"]",
     "- [\"3.7\",   \"py37-zodbmaster\"]",
@@ -60,5 +59,8 @@ additional-config = [
     "- [\"3.9\",   \"py39-uvloop\"]",
     "- [\"3.10\",  \"py310-msgpack1\"]",
     "- [\"3.10\",  \"py310-uvloop\"]",
+    "- [\"3.10\",  \"py310-zodbmaster\"]",
+    "- [\"3.11\",  \"py311-msgpack1\"]",
+    "- [\"3.11\",  \"py311-uvloop\"]",
     "- [\"pypy-3.7\", \"pypy3-msgpack1\"]",
     ]
