@@ -37,7 +37,7 @@ Changelog
 
 - Lint the code with flake8
 
-- Add support for Python 3.10.
+- Add support for Python 3.10, 3.11.
 
 - Add ``ConflictError`` to the list of unlogged server exceptions
   (the client/its application should determine whether it wants

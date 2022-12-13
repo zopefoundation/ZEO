@@ -2,7 +2,7 @@
 # https://github.com/zopefoundation/meta/tree/master/config/pure-python
 [meta]
 template = "pure-python"
-commit-id = "0c07a1cfd78d28a07aebd23383ed16959f166574"
+commit-id = "200573eb414d2228d463da3de7d71a6d6335a704"
 
 [python]
 with-windows = false
@@ -11,9 +11,10 @@ with-future-python = false
 with-legacy-python = true
 with-docs = true
 with-sphinx-doctests = false
+with-macos = false
 
 [tox]
-use-flake8 = true
+use-flake8 = false
 testenv-commands = [
     "# Run unit tests first.",
     "zope-testrunner -u --test-path=src -a 1000 {posargs:-vc}",
@@ -22,7 +23,7 @@ testenv-commands = [
     ]
 testenv-deps = [
     "!zodbmaster: ZODB >= 4.2.0b1",
-    "zodbmaster: -e git+https://github.com/zopefoundation/ZODB.git@master#egg=ZODB",
+    "zodbmaster: -e git+https://github.com/zopefoundation/ZODB.git@master\\#egg=ZODB",
     "uvloop: uvloop",
     ]
 testenv-setenv = [
@@ -49,7 +50,6 @@ additional-rules = [
 [github-actions]
 additional-config = [
     "- [\"2.7\",   \"py27-msgpack1\"]",
-    "- [\"2.7\",   \"py27-zodbmaster\"]",
     "- [\"3.7\",   \"py37-msgpack1\"]",
     "- [\"3.7\",   \"py37-uvloop\"]",
     "- [\"3.7\",   \"py37-zodbmaster\"]",
@@ -59,5 +59,8 @@ additional-config = [
     "- [\"3.9\",   \"py39-uvloop\"]",
     "- [\"3.10\",  \"py310-msgpack1\"]",
     "- [\"3.10\",  \"py310-uvloop\"]",
+    "- [\"3.10\",  \"py310-zodbmaster\"]",
+    "- [\"3.11\",  \"py311-msgpack1\"]",
+    "- [\"3.11\",  \"py311-uvloop\"]",
     "- [\"pypy-3.7\", \"pypy3-msgpack1\"]",
     ]
