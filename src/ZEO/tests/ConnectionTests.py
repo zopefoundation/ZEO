@@ -48,7 +48,7 @@ class TestClientStorage(ClientStorage):
     # take a very long time. Use a timeout more adapted to tests.
     def __init__(*args, **kw):
         return ClientStorage.__init__(
-                *args, **(kw.update(dict(wait_timeout=0.5)) or kw))
+                *args, **(kw.update(dict(wait_timeout=2)) or kw))
 
     test_connection = False
 
