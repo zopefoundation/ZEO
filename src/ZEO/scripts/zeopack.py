@@ -144,12 +144,14 @@ def _main(args=None, prog=None):
     if not servers:
         error("No servers specified.")
 
+    server_found = False
     for addr, name in servers:
         try:
             cs = ZEO.ClientStorage.ClientStorage(
                 addr, storage=name, wait=False, read_only=1)
             for i in range(60):
                 if cs.is_connected():
+                    server_found = True
                     break
                 time.sleep(1)
             else:
@@ -162,6 +164,9 @@ def _main(args=None, prog=None):
         except:  # NOQA: E722 bare except
             traceback.print_exception(*(sys.exc_info()+(99, sys.stderr)))
             error("Error packing storage %s in %r" % (name, addr))
+
+    if not server_found:
+        error("Cannot connect to any of the configured ZEO servers.")
 
 
 def main(*args):

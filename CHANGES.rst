@@ -4,6 +4,25 @@ Changelog
 5.4.0 (unreleased)
 ------------------
 
+- Remove support for interoperability with ZEO4 server. It turned out that ZEO5
+  client, contrary to interoperability with ZEO5 server, implements support for
+  interoperability with ZEO4 server incorrectly with concurrency bugs that lead
+  to data corruption. The fix is not trivial and we believe that in 2022 noone
+  actually uses ZEO5.client-ZEO4.server configuration. That's why support for
+  ZEO4 server was dropped rather than fixed.
+
+  See `issue 209 <https://github.com/zopefoundation/ZEO/issues/209>` for details.
+
+- If the ``zeopack`` script cannot connect to a server it sets exit status 1
+  See `#214 <https://github.com/zopefoundation/ZEO/issues/214>`_.
+
+- Remove ``asyncio/mtacceptor`` module. It turned out that multi-threaded ZEO5
+  server has concurrency issues that lead to data corruption. Multi-threaded
+  server mode was already deprecated and scheduled for removal, so the fix is
+  to finally remove it. From now on ZEO server is always single-threaded.
+
+  See `issue 209 <https://github.com/zopefoundation/ZEO/issues/209>` for details.
+
 - Test ZEO only with the following storages
   ``FileStorage`` with server side blobs,
   ``FileStorage`` with shared blob directory,
@@ -18,7 +37,7 @@ Changelog
 
 - Lint the code with flake8
 
-- Add support for Python 3.10.
+- Add support for Python 3.10, 3.11.
 
 - Add ``ConflictError`` to the list of unlogged server exceptions
   (the client/its application should determine whether it wants
