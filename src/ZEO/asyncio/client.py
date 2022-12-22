@@ -720,7 +720,7 @@ class ClientIO(object):
         closing = self.close()
         # the ``shield`` is necessary to keep the state unchanged
         twait = self.loop.create_task(
-                    asyncio.wait_for(asyncio.shield(closing), 3))
+                    asyncio.wait_for(asyncio.shield(closing), 10))
 
         @twait.add_done_callback
         def _(f):
