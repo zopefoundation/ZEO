@@ -27,7 +27,6 @@ from ZEO._compat import StringIO
 
 logger = logging.getLogger('ZEO.tests.forker')
 DEBUG = os.environ.get('ZEO_TEST_SERVER_DEBUG')
-ZEO4_SERVER = os.environ.get('ZEO4_SERVER')
 
 
 class ZEOConfig(object):
@@ -112,13 +111,7 @@ def runner(config, qin, qout, timeout=None,
 
     try:
         import threading
-
-        if ZEO4_SERVER:
-            # XXX: test dependency. In practice this is
-            # probably ok
-            from ZEO.tests.ZEO4 import runzeo
-        else:
-            from . import runzeo
+        from . import runzeo
 
         options = runzeo.ZEOOptions()
         options.realize(['-C', config])
@@ -128,10 +121,7 @@ def runner(config, qin, qout, timeout=None,
         server.clear_socket()
         server.create_server()
         logger.debug('SERVER CREATED')
-        if ZEO4_SERVER:
-            qout.put(server.server.addr)
-        else:
-            qout.put(server.server.acceptor.addr)
+        qout.put(server.server.acceptor.addr)
         logger.debug('ADDRESS SENT')
         thread = threading.Thread(
             target=server.server.loop, kwargs=dict(timeout=.2),

@@ -25,22 +25,6 @@ Now, let's create some client storages that connect to these:
     >>> import os, ZEO, ZODB.blob, ZODB.POSException, transaction
 
     >>> db0 = ZEO.DB(port0, blob_dir='cb0')
-
-XXX Work around a ZEO4 server bug (that was fixed in the ZEO5 server)
-which prevents sending invalidations, and thus tids for transactions
-that only add objects.  This doesn't matter for ZODB4/ZEO4 but does
-for ZODB5/ZEO5, with it's greater reliance on MVCC.  This mainly
-affects creation of the database root object, which is typically the
-only transaction that only adds objects.  Exacerbating this further is
-that previously, databases didn't really use MVCC when checking for
-the root object, but now they do because they go through a connection.
-
-    >>> with db0.transaction() as conn:
-    ...     conn.root.work_around_zeo4_server_bug = 1
-    >>> with db0.transaction() as conn:
-    ...     del conn.root.work_around_zeo4_server_bug
-
-
     >>> db1 = ZEO.DB(addr1, blob_dir='cb1')
     >>> tm1 = transaction.TransactionManager()
     >>> c1 = db1.open(transaction_manager=tm1)

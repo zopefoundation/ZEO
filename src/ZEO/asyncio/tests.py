@@ -148,8 +148,8 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         transport = loop.transport
 
         if finish_start:
-            protocol.data_received(sized(self.enc + b'3101'))
-            self.assertEqual(self.pop(2, False), self.enc + b'3101')
+            protocol.data_received(sized(self.enc + b'5'))
+            self.assertEqual(self.pop(2, False), self.enc + b'5')
             self.respond(1, None)
             self.respond(2, 'a'*8)
             self.pop(4)
@@ -388,8 +388,8 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         # This time we'll send a lower protocol version.  The client
         # will send it back, because it's lower than the client's
         # protocol:
-        protocol.data_received(sized(self.enc + b'310'))
-        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'310')
+        protocol.data_received(sized(self.enc + b'5'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'5')
         self.assertEqual(self.pop(), (1, False, 'register', ('TEST', False)))
         self.assertFalse(wrapper.notify_connected.called)
 
@@ -425,8 +425,8 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         cache.store(b'2'*8, b'a'*8, None, '2 data')
 
         self.assertFalse(client.connected.done() or transport.data)
-        protocol.data_received(sized(self.enc + b'3101'))
-        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'3101')
+        protocol.data_received(sized(self.enc + b'5'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'5')
         self.respond(1, None)
         self.respond(2, b'e'*8)
         self.pop(4)
@@ -461,8 +461,8 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         self.assertTrue(cache)
 
         self.assertFalse(client.connected.done() or transport.data)
-        protocol.data_received(sized(self.enc + b'3101'))
-        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'3101')
+        protocol.data_received(sized(self.enc + b'5'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'5')
         self.respond(1, None)
         self.respond(2, b'e'*8)
         self.pop(4)
@@ -518,8 +518,8 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         self.assertEqual(sorted(loop.connecting), addrs[:1])
         protocol = loop.protocol
         transport = loop.transport
-        protocol.data_received(sized(self.enc + b'3101'))
-        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'3101')
+        protocol.data_received(sized(self.enc + b'5'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'5')
         # cancel the heartbeat to make debugging easier
         protocol.heartbeat_handle.cancel()
         self.respond(1, None)
@@ -539,8 +539,8 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         wrapper, cache, loop, client, protocol, transport = self.start()
         cache.store(b'4'*8, b'a'*8, None, '4 data')
         cache.setLastTid('b'*8)
-        protocol.data_received(sized(self.enc + b'3101'))
-        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'3101')
+        protocol.data_received(sized(self.enc + b'5'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'5')
         self.respond(1, None)
         self.respond(2, 'a'*8)
         self.pop()
@@ -554,8 +554,8 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         self.assertIsNot(transport, loop.transport)
         protocol = loop.protocol
         transport = loop.transport
-        protocol.data_received(sized(self.enc + b'3101'))
-        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'3101')
+        protocol.data_received(sized(self.enc + b'5'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'5')
         self.respond(1, None)
         self.respond(2, 'b'*8)
         self.pop(4)
@@ -575,8 +575,8 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         loop.call_soon_threadsafe(loop.connect_connecting, addrs[0])
         self.loop.run_until_inactive()
         protocol, transport = loop.protocol, loop.transport
-        protocol.data_received(sized(self.enc + b'3101'))
-        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'3101')
+        protocol.data_received(sized(self.enc + b'5'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'5')
         # We see that the client tried a writable connection:
         self.assertEqual(self.pop(),
                          (1, False, 'register', ('TEST', False)))
@@ -608,9 +608,9 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         # We connect the second address:
         loop.call_soon_threadsafe(loop.connect_connecting, addrs[1])
         self.loop.run_until_inactive()
-        loop.protocol.data_received(sized(self.enc + b'3101'))
+        loop.protocol.data_received(sized(self.enc + b'5'))
         self.assertEqual(self.unsized(loop.transport.pop(2)),
-                         self.enc + b'3101')
+                         self.enc + b'5')
         self.assertEqual(self.parse(loop.transport.pop()),
                          (1, False, 'register', ('TEST', False)))
         self.assertTrue(self.is_read_only())
@@ -644,8 +644,8 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
     def test_invalidations_while_verifying(self):
         # While we're verifying, invalidations are ignored
         wrapper, cache, loop, client, protocol, transport = self.start()
-        protocol.data_received(sized(self.enc + b'3101'))
-        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'3101')
+        protocol.data_received(sized(self.enc + b'5'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'5')
         self.respond(1, None)
         self.pop(4)
         self.send('invalidateTransaction', b'b'*8, [b'1'*8], called=False)
@@ -663,8 +663,8 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
 
         # Similarly, invalidations aren't processed while reconnecting:
 
-        protocol.data_received(sized(self.enc + b'3101'))
-        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'3101')
+        protocol.data_received(sized(self.enc + b'5'))
+        self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'5')
         self.respond(1, None)
         self.pop(4)
         self.send('invalidateTransaction', b'd'*8, [b'1'*8], called=False)
@@ -845,13 +845,13 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         # verify not locked
         self.assertFalse(io.register_lock.locked())
         # start the first protocol
-        protocol_1.data_received(sized(self.enc + b'3101'))
+        protocol_1.data_received(sized(self.enc + b'5'))
         self.assertTrue(io.register_lock.locked())
-        self.assertEqual(self.unsized(transport_1.pop(2)), self.enc + b'3101')
+        self.assertEqual(self.unsized(transport_1.pop(2)), self.enc + b'5')
         self.assertEqual(len(transport_1.data), 2)  # register call
         # start the second protocol
-        protocol_2.data_received(sized(self.enc + b'3101'))
-        self.assertEqual(self.unsized(transport_2.pop(2)), self.enc + b'3101')
+        protocol_2.data_received(sized(self.enc + b'5'))
+        self.assertEqual(self.unsized(transport_2.pop(2)), self.enc + b'5')
         self.assertEqual(len(transport_2.data), 0)  # waits for lock
         self.assertFalse(io.connected.done())
         # finish first protocol connection
@@ -934,7 +934,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
     def test_io_close_after_register_exception(self):
         storage_mock, cache, loop, io, protocol, transport = self.start(
             finish_start=False)
-        protocol.data_received(sized(self.enc + b'3101'))
+        protocol.data_received(sized(self.enc + b'5'))
         # let the register call fail
         self.respond(1, ("Exception", "register_failed"), async_=True)
         loop.call_soon_threadsafe(self.observe, io.close)
@@ -950,7 +950,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
             finish_start=False)
         loop.call_soon_threadsafe(loop.connect_connecting, addr)  # connect
         loop.run_until_inactive()
-        loop.protocol.data_received(sized(self.enc + b'3101'))
+        loop.protocol.data_received(sized(self.enc + b'5'))
         # let the register call fail
         self.respond(1, ("Exception", "register_failed"), async_=True)
         # check "reconnection called for"
@@ -972,7 +972,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
             finish_start=False)
         loop.call_soon_threadsafe(loop.connect_connecting, addr)  # connect
         loop.run_until_inactive()
-        loop.protocol.data_received(sized(self.enc + b'3101'))
+        loop.protocol.data_received(sized(self.enc + b'5'))
         # let the register call fail
         self.respond(1, ("Exception", "register_failed"), async_=True)
         # check "reconnection called for"
@@ -983,7 +983,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         loop.call_soon_threadsafe(connect)
         loop.call_soon_threadsafe(loop.connect_connecting, addr)  # connect
         loop.run_until_inactive()
-        loop.protocol.data_received(sized(self.enc + b'3101'))
+        loop.protocol.data_received(sized(self.enc + b'5'))
         loop.call_soon_threadsafe(self.observe, io.close)
         loop.run_until_inactive()
         self.assertTrue(self.observed.done())
@@ -997,7 +997,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
             finish_start=False)
         loop.call_soon_threadsafe(loop.connect_connecting, addr)  # connect
         loop.run_until_inactive()
-        loop.protocol.data_received(sized(self.enc + b'3101'))
+        loop.protocol.data_received(sized(self.enc + b'5'))
         # let the register call fail
         self.respond(1, ("Exception", "register_failed"), async_=True)
         loop.protocol.connection_lost("disconnected")

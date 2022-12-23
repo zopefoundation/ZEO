@@ -36,7 +36,7 @@ import zope.interface
 
 from ZEO._compat import Pickler, Unpickler
 from ZEO.monitor import StorageStats
-from ZEO.asyncio.server import Delay, MTDelay, Result
+from ZEO.asyncio.server import Delay, MTDelay, Result, Acceptor
 from ZODB.Connection import TransactionMetaData
 from ZODB.loglevels import BLATHER
 from ZODB.POSException import StorageError, StorageTransactionError
@@ -44,13 +44,15 @@ from ZODB.POSException import TransactionError, ReadOnlyError, ConflictError
 from ZODB.serialize import referencesf
 from ZODB.utils import p64, u64, z64, Lock, RLock
 
-# BBB mtacceptor is unused and will be removed in ZEO version 6
-if os.environ.get("ZEO_MTACCEPTOR"):  # mainly for tests
-    warnings.warn('The mtacceptor module is deprecated and will be removed '
-                  'in ZEO version 6.', DeprecationWarning)
-    from .asyncio.mtacceptor import Acceptor
-else:
-    from .asyncio.server import Acceptor
+# multi-threaded acceptor was opt-in option, but later was deprecated and
+# removed. Warn users that try to activate multi-threaded server mode to
+# explicitly let them know they no longer get it and why.
+if os.environ.get("ZEO_MTACCEPTOR"):
+    warnings.warn('The mtacceptor module is no longer supported because it '
+                  'was subject to data corruption bugs. $ZEO_MTACCEPTOR no '
+                  'longer has any effect. Please see '
+                  'github.com/zopefoundation/ZEO/issues/209 for details.',
+                  DeprecationWarning)
 
 logger = logging.getLogger('ZEO.StorageServer')
 

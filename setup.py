@@ -40,24 +40,6 @@ tests_require = [
     'zope.testrunner',
 ]
 
-classifiers = """
-Intended Audience :: Developers
-License :: OSI Approved :: Zope Public License
-Programming Language :: Python :: 3
-Programming Language :: Python :: 3.6
-Programming Language :: Python :: 3.7
-Programming Language :: Python :: 3.8
-Programming Language :: Python :: 3.9
-Programming Language :: Python :: 3.10
-Programming Language :: Python :: Implementation :: CPython
-Programming Language :: Python :: Implementation :: PyPy
-Topic :: Database
-Topic :: Software Development :: Libraries :: Python Modules
-Operating System :: Microsoft :: Windows
-Operating System :: Unix
-Framework :: ZODB
-""".strip().split('\n')
-
 
 def _modname(path, base, name=''):
     if path == base:
@@ -133,7 +115,27 @@ setup(name="ZEO",
       package_dir={'': 'src'},
       license="ZPL 2.1",
       platforms=["any"],
-      classifiers=classifiers,
+      classifiers=[
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: Zope Public License",
+        "Programming Language :: Python :: 2",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: Implementation :: CPython",
+        "Programming Language :: Python :: Implementation :: PyPy",
+        "Topic :: Database",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+        "Operating System :: Microsoft :: Windows",
+        "Operating System :: Unix",
+        "Framework :: ZODB",
+      ],
       test_suite="__main__.alltests",  # to support "setup.py test"
       tests_require=tests_require,
       extras_require={

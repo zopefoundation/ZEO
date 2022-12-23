@@ -8,11 +8,9 @@ import unittest
 
 import ZEO.StorageServer
 
-# from . import forker
 from .threaded import threaded_server_tests
 
 
-# @unittest.skipIf(forker.ZEO4_SERVER, "ZEO4 servers don't support SSL")
 @unittest.skipIf(True, "credentials support has been dropped")
 class ClientAuthTests(setupstack.TestCase):
 

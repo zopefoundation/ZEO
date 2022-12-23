@@ -37,16 +37,10 @@ operation and has to wake up an event loop to process it.
 Server threading
 ----------------
 
-There are currently two server implementations, an implementation that
-used a thread per client (and a thread to listen for connections),
-``ZEO.asyncio.mtacceptor.Acceptor``, and an implementation that uses a
-single networking thread, ``ZEO.asyncio.server.Acceptor``. The
-implementation is selected by changing an import in
-``ZEO.StorageServer``. The currently-used implementation is
-``ZEO.asyncio.server.Acceptor``, although this sentance is likely to
-rot, so check the import to be sure. (Maybe this should be configurable.)
+ZEO server implementation always uses single networking thread that serves all
+clients. In other words the server is single-threaded.
 
-ZEO switched to a multi-threaded implementation several years ago
+Historically ZEO switched to a multi-threaded implementation several years ago
 because it was found to improve performance for large databases using
 magnetic disks. Because client threads are always working on behalf of
 a single client, there's not really an issue with making blocking
@@ -59,7 +53,7 @@ added because ``create_connection`` sets up SSL conections as client
 connections, and doesn't provide an option to create server
 connections.
 
-In response, I created an ``asyncio.Server``-based implementation.
+In response, Jim created an ``asyncio.Server``-based implementation.
 This required using a single thread.  This was a pretty trivial
 change, however, it led to the tests becoming unstable to the point
 that it was impossible to run all tests without some failing.  One
@@ -75,4 +69,12 @@ multi-threaded implementation was updated to use a monkey patch to
 allow it to create SSL server connections.  Aside from the real risk of a
 monkey patch, this works very well.
 
-Both implementations seem to perform about the same.
+Both implementations seemed to perform about the same.
+
+Over the time single-threaded server mode became the default, and, given that
+multi-threaded implementation did not provide any speed advantages, it was
+eventually deprecated and scheduled for removal to ease maintenance burden.
+
+Finally, the multi-threaded server mode was removed, when it was found that this
+mode had concurrency bugs that lead to data corruptions. See `issue 209
+<https://github.com/zopefoundation/ZEO/issues/209>` for details.

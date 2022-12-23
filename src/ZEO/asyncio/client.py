@@ -63,7 +63,7 @@ class Protocol(base.ZEOBaseProtocol):
     # One place where special care was required was in cache setup on
     # connect. See finish connect below.
 
-    protocols = b'309', b'310', b'3101', b'4', b'5'
+    protocols = b'5',
 
     def __init__(self, loop,
                  addr, client, storage_key, read_only, connect_poll=1,
@@ -342,11 +342,11 @@ class Protocol(base.ZEOBaseProtocol):
     # syncronously, as that would lead to DEADLOCK!
 
     client_methods = (
-        'invalidateTransaction', 'serialnos', 'info',
+        'invalidateTransaction', 'info',
         'receiveBlobStart', 'receiveBlobChunk', 'receiveBlobStop',
         # plus: notify_connected, notify_disconnected
         )
-    client_delegated = client_methods[2:]
+    client_delegated = client_methods[1:]
 
     def heartbeat(self, write=True):
         if write:
@@ -810,24 +810,6 @@ class ClientIo(object):
             self.cache.invalidate(oid, tid)
         self.client.invalidateTransaction(tid, oids)
         self.cache.setLastTid(tid)
-
-    def serialnos(self, serials):
-        # Method called by ZEO4 storage servers.
-
-        # Before delegating, check for errors (likely ConflictErrors)
-        # and invalidate the oids they're associated with.  In the
-        # past, this was done by the client, but now we control the
-        # cache and this is our last chance, as the client won't call
-        # back into us when there's an error.
-        for oid in serials:
-            if isinstance(oid, bytes):
-                self.cache.invalidate(oid, None)
-            else:
-                oid, serial = oid
-                if isinstance(serial, Exception) or serial == b'rs':
-                    self.cache.invalidate(oid, None)
-
-        self.client.serialnos(serials)
 
     @property
     def protocol_version(self):

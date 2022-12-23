@@ -1054,11 +1054,6 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
 
     # Below are methods invoked by the StorageServer
 
-    def serialnos(self, args):
-        """Server callback to pass a list of changed (oid, serial) pairs.
-        """
-        self._tbuf.serialnos(args)
-
     def info(self, dict):
         """Server callback to update the info dictionary."""
         self._info.update(dict)

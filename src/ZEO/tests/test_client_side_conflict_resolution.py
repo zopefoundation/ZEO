@@ -12,7 +12,6 @@ from ZODB.broken import find_global
 
 import ZEO
 
-from . import forker
 from .utils import StorageServer
 
 
@@ -22,7 +21,6 @@ class Var(object):
         return True
 
 
-@unittest.skipIf(forker.ZEO4_SERVER, "ZEO4 servers don't support SSL")
 class ClientSideConflictResolutionTests(zope.testing.setupstack.TestCase):
 
     def test_server_side(self):
