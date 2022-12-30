@@ -27,7 +27,7 @@ from ..Exceptions import ClientDisconnected, ProtocolError
 from .base import ZEOBaseProtocol, SizedMessageProtocol
 from .testing import Loop, FaithfulLoop
 from .client import ClientThread, Fallback
-from .futures import Future
+from .futures import Future, ConcurrentFuture
 from .server import new_connection, best_protocol_version
 from .marshal import encoder, decoder
 
@@ -1308,7 +1308,7 @@ def _break_mock_cycles(m):
         _break_mock_cycles(m._mock_return_value)
 
 
-class OptimizeTestsBase:
+class OptimizeTestsBase(object):
     def setUp(self):
         self.loop = FaithfulLoop()
 
@@ -1316,10 +1316,10 @@ class OptimizeTestsBase:
         self.loop.close()
 
 
-class FutureTests(OptimizeTestsBase, TestCase):
+class FutureTestsBase(OptimizeTestsBase):
     def setUp(self):
-        super(FutureTests, self).setUp()
-        self.fut = fut = Future(loop=self.loop)
+        super(FutureTestsBase, self).setUp()
+        self.fut = fut = self.make_future(self.loop)
         self.callback = cb = mock.Mock()
         fut.add_done_callback(cb)
 
@@ -1328,7 +1328,7 @@ class FutureTests(OptimizeTestsBase, TestCase):
         fut.cancel()
         self.assertEqual(self.loop.exceptions, [])
         _break_mock_cycles(self.callback)
-        super(FutureTests, self).tearDown()
+        super(FutureTestsBase, self).tearDown()
 
     def test_set_result(self):
         self.fut.set_result(1)
@@ -1384,6 +1384,15 @@ class FutureTests(OptimizeTestsBase, TestCase):
         self.assertEqual(len(self.loop._ready), 0)
 
 
+class FutureTests(FutureTestsBase, TestCase):
+    def make_future(self, loop):
+        return Future(loop=self.loop)
+
+class ConcurrentFutureTests(FutureTestsBase, TestCase):
+    def make_future(self, loop):
+        return ConcurrentFuture(loop=loop)
+
+
 def test_suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(ClientTests))
@@ -1393,4 +1402,5 @@ def test_suite():
     suite.addTest(unittest.makeSuite(ZEOBaseProtocolTests))
     suite.addTest(unittest.makeSuite(SizedMessageProtocolTests))
     suite.addTest(unittest.makeSuite(FutureTests))
+    suite.addTest(unittest.makeSuite(ConcurrentFutureTests))
     return suite

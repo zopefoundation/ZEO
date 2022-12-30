@@ -4,7 +4,7 @@
 loop run. This increases the number of loop runs necessary to
 obtain the result of a ZEO server request and adds significant
 latency (+ 27% in some benchmarks).
-This module defines variant which run callbacks immediately.
+This module defines variants which run callbacks immediately.
 """
 
 from .compat import asyncio
@@ -13,6 +13,7 @@ import six
 CancelledError = asyncio.CancelledError
 InvalidStateError = asyncio.InvalidStateError
 get_event_loop = asyncio.get_event_loop
+from threading import Event
 
 
 # ``Future`` states -- inlined below for speed
@@ -139,6 +140,23 @@ class Future(object):
                 self._result,
                 self.callbacks]
         return " ".join(str(x) for x in info)
+
+
+class ConcurrentFuture(Future):
+    """A future threads can wait on."""
+    __slots__ = "completed",
+
+    def __init__(self, loop=False):
+        Future.__init__(self, loop=loop)
+        self.completed = Event()
+
+        @self.add_done_callback
+        def complete(self):
+            self.completed.set()
+
+    def result(self, timeout=None):
+        self.completed.wait(timeout)
+        return Future.result(self)
 
 
 def future_generator(func):
