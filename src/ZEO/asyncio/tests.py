@@ -1372,6 +1372,44 @@ class FutureTestsBase(OptimizeTestsBase):
         self.assertEqual(li[4:], [0, 1, 2, 3, 4, 5])
         mk_callback = None  # break reference cycle
 
+    def test_exception_in_callback(self):
+        fut = self.fut
+        l = []
+
+        def f(_): l.append('f')
+        def g(_): l.append('g'); raise RuntimeError('g')
+        def h(_): l.append('h')
+        def i(_): l.append('i'); raise RuntimeError('i')
+        def j(_): l.append('j')
+
+        for x in f,g,h,i,j:
+            fut.add_done_callback(x)
+
+        self.assertEqual(self.loop.exceptions, [])
+        fut.set_result(None)
+        self.assertTrue(fut.done())
+        self.assertEqual(l, ['f','g','h','i','j'])
+
+        self.assertEqual(len(self.loop.exceptions), 2)
+        e0 = self.loop.exceptions[0]
+        e1 = self.loop.exceptions[1]
+        self.assertIs(type(e0), dict)
+        self.assertIs(type(e1), dict)
+        self.assertEqual(set(e0.keys()), {'message', 'exception'})
+        self.assertEqual(set(e1.keys()), {'message', 'exception'})
+        assertRe = self.assertRegex if PY3 else \
+                   self.assertRegexpMatches
+        assertRe(e0['message'], r'Exception in callback .*\bg\b')
+        assertRe(e1['message'], r'Exception in callback .*\bi\b')
+        # RuntimeError('x') != RuntimeError('x')  -> compare by hand
+        x0 = e0['exception']
+        x1 = e1['exception']
+        self.assertIs(type(x0), RuntimeError)
+        self.assertIs(type(x1), RuntimeError)
+        self.assertEqual(x0.args, ('g',))
+        self.assertEqual(x1.args, ('i',))
+        self.loop.exceptions = []
+
     def test_cancel(self):
         self.fut.cancel()
         self.assertTrue(self.fut.cancelled())

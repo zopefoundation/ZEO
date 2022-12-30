@@ -96,7 +96,16 @@ class Future(object):
 
     def call_callbacks(self):
         for cb in self.callbacks:  # allows ``callbacks`` to grow
-            cb(self)
+            try:
+                cb(self)
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except BaseException as exc:
+                self._loop.call_exception_handler({
+                        'message': 'Exception in callback %s' % (cb,),
+                        'exception': exc,
+                    })
+
         del self.callbacks[:]
 
     def set_result(self, result):
