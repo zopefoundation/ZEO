@@ -1,4 +1,5 @@
 from .._compat import PY3
+from .compat import asyncio
 
 if PY3:
     def to_byte(i):
@@ -19,7 +20,8 @@ from itertools import count
 import logging
 import struct
 import unittest
-from time import sleep
+import threading
+from time import time, sleep
 from functools import partial
 
 from ..Exceptions import ClientDisconnected, ProtocolError
@@ -27,7 +29,7 @@ from ..Exceptions import ClientDisconnected, ProtocolError
 from .base import ZEOBaseProtocol, SizedMessageProtocol
 from .testing import Loop, FaithfulLoop
 from .client import ClientThread, Fallback
-from .futures import Future, ConcurrentFuture, AsyncTask, ConcurrentTask
+from .futures import Future, ConcurrentFuture, AsyncTask, ConcurrentTask, coroutine, return_
 from .server import new_connection, best_protocol_version
 from .marshal import encoder, decoder
 
@@ -1311,9 +1313,12 @@ def _break_mock_cycles(m):
 class OptimizeTestsBase(object):
     def setUp(self):
         self.loop = FaithfulLoop()
+        asyncio.set_event_loop(self.loop)
 
     def tearDown(self):
         self.loop.close()
+        asyncio.set_event_loop(None)
+        self.assertEqual(self.loop.exceptions, [])
 
 
 class FutureTestsBase(OptimizeTestsBase):
@@ -1439,8 +1444,10 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
 
     def test_noop(self):
 
-        async def noop():
-            pass
+        @coroutine
+        def noop():
+            return
+            yield
 
         t = self.make_task(noop)
         self.assertTrue(t.done())
@@ -1451,8 +1458,10 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
 
     def test_repr(self):
 
-        async def noop():
-            pass
+        @coroutine
+        def noop():
+            return
+            yield
 
         t = self.make_task(noop)
         repr(t)  # satisfied if no exception
@@ -1462,8 +1471,10 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
 
     def check_future(self, fut, run_loop=False):
 
-        async def wait():
-            return await fut
+        @coroutine
+        def wait():
+            _ = yield fut
+            return_(_)
 
         t = self.make_task(wait)
         self.assertFalse(t.done())
@@ -1476,8 +1487,9 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
     def test_exception(self):
         fut = Future(loop=self.loop)
 
-        async def exc():
-            return await fut
+        @coroutine
+        def exc():
+            yield fut
 
         t = self.make_task(exc)
         exc = Exception()
@@ -1490,11 +1502,12 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
 
         fut = Future(loop=self.loop)
 
-        async def exc():
+        @coroutine
+        def exc():
             try:
-                return await fut
+                yield fut
             except Exception:
-                return 1
+                return_(1)
 
         t = self.make_task(exc)
         exc = Exception()
@@ -1506,13 +1519,96 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
     def test_cancel_future(self):
         fut = Future(loop=self.loop)
 
-        async def exc():
-            return await fut
+        @coroutine
+        def exc():
+            yield fut
 
         t = self.make_task(exc)
         fut.cancel()
         self.assertTrue(t.done())
         self.assertTrue(t.cancelled())
+
+
+    def test_nested_coro(self):
+        l = []
+
+        @coroutine
+        def f():
+            yield g('a')
+            yield g('b')
+
+        @coroutine
+        def g(s):
+            yield h(s, 1)
+            yield h(s, 2)
+            yield h(s, 3)
+
+        @coroutine
+        def h(s, n):
+            for i in range(1,n+1):
+                l.append(s*i)
+                yield
+
+        t = self.make_task(f)
+        self.assertTrue(t.done())
+        self.assertEqual(l, ['a', 'a','aa', 'a','aa','aaa', 'b', 'b','bb', 'b','bb','bbb'])
+
+    def test_nest_to_async_coro(self):
+        go = Future(loop=self.loop)
+
+        @coroutine
+        def f():
+            yield go  # wait for loop to start before running into asyncio.sleep
+            _ = yield asyncio.sleep(1, 'zzz')
+            return_(_)
+
+        tstart = time()
+        t = self.make_task(f)
+        self.assertFalse(t.done())
+        self.loop.call_soon(lambda: go.set_result(None))
+        self.loop.run_until_complete(t)
+        tend = time()
+        self.assertTrue(t.done())
+        self.assertEqual(t.result(), 'zzz')
+        self.assertGreaterEqual(tend - tstart, 1)
+
+    def test_return_(self):
+
+        # plain return
+        @coroutine
+        def f():
+            return_(123)
+            yield
+
+        t = self.make_task(f)
+        self.assertTrue(t.done())
+        self.assertEqual(t.result(), 123)
+
+        # nested returns
+        @coroutine
+        def g():
+            x = yield f()
+            return_(1000 + x)
+            yield
+
+        t = self.make_task(g)
+        self.assertTrue(t.done())
+        self.assertEqual(t.result(), 1123)
+
+        # verify that return can go through `except Exception`
+        # (but not through `except BaseException`)
+        @coroutine
+        def h():
+            try:
+                return_(456)
+                raise Exception('aaa')
+            except Exception:
+                raise
+            yield
+
+        t = self.make_task(h)
+        self.assertTrue(t.done())
+        self.assertEqual(t.result(), 456)
 
 
 class AsyncTaskTests(CoroutineExecutorTestsBase, TestCase):

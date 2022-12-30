@@ -13,6 +13,7 @@ import six
 CancelledError = asyncio.CancelledError
 InvalidStateError = asyncio.InvalidStateError
 get_event_loop = asyncio.get_event_loop
+import inspect
 from threading import Event
 
 
@@ -95,18 +96,29 @@ class Future(object):
         return rv
 
     def call_callbacks(self):
+        exc_stop = None
         for cb in self.callbacks:  # allows ``callbacks`` to grow
             try:
                 cb(self)
             except (SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as exc:
+                if six.PY2:
+                    # trollius stops the loop by raising _StopError
+                    # we delay loop stopping till after all callbacks are invoked
+                    # this goes in line with py3 behaviour
+                    if isinstance(exc, asyncio.base_events._StopError):
+                        exc_stop = exc
+                        continue
+
                 self._loop.call_exception_handler({
                         'message': 'Exception in callback %s' % (cb,),
                         'exception': exc,
                     })
 
         del self.callbacks[:]
+        if exc_stop is not None:
+            raise exc_stop
 
     def set_result(self, result):
         if self.state:
@@ -123,6 +135,14 @@ class Future(object):
         self.state = 2  # EXCEPTION
         self._result = exc
         self.call_callbacks()
+
+    # trollius accesses ._exception directly
+    if six.PY2:
+        @property
+        def _exception(self):
+            if self.state != 2:  # EXCEPTION
+                return None
+            return self._result
 
     if six.PY3:
         # return from generator raises SyntaxError on py2
@@ -149,6 +169,17 @@ class Future(object):
                 self._result,
                 self.callbacks]
         return " ".join(str(x) for x in info)
+
+# py3: asyncio.isfuture checks ._asyncio_future_blocking
+# py2: trollius does isinstace(_FUTURE_CLASSES)
+# -> register our Future so that it is recognized as such by trollius
+if six.PY2:
+    _ = asyncio.futures._FUTURE_CLASSES
+    if not isinstance(_, tuple):
+        _ = (_,)
+    _ += (Future,)
+    asyncio.futures._FUTURE_CLASSES = _
+    del _
 
 
 class ConcurrentFuture(Future):
@@ -180,17 +211,37 @@ class CoroutineExecutor:
     def __init__(self, task, coro):
         self.task = task  # likely creates a reference cycle
         self.coro = coro
+        self.awaiting = None
 
     def step(self):
-        self.awaiting = None
+        await_result = None  # with what to wakeup suspended await
+        await_resexc = False # is it exception?
+        awaiting = self.awaiting
+        if awaiting is not None:
+            self.awaiting = None
+            assert awaiting.done()
+            try:
+                await_result = awaiting.result()
+            except BaseException as e:
+                await_result = e
+                await_resexc = True
         try:
-            result = self.coro.send(None)
+            if not await_resexc:
+                result = self.coro.send(await_result)
+            else:
+                result = self.coro.throw(await_result)
         except BaseException as e:
             # we are done
             task = self.task
             self.task = None  # break reference cycle
-            if isinstance(e, StopIteration):
-                task.set_result(e.value)
+            if isinstance(e, (StopIteration, _GenReturn)):
+                if six.PY2:
+                    v = getattr(e, 'value', None)  # e.g. no .value on plain return
+                    if hasattr(e, 'raised'):  # coroutines implemented inside trollius raise Return
+                        e.raised = True       # which checks it has been caught and complains if not
+                else:
+                    v = e.value
+                task.set_result(v)
             elif isinstance(e, CancelledError):
                 task._cancel()
             else:
@@ -198,12 +249,52 @@ class CoroutineExecutor:
                 if isinstance(e, (KeyboardInterrupt, SystemExit)):
                     raise
         else:
-            result._asyncio_future_blocking = False
-            self.awaiting = result
+            await_next = None
+            # yielded Future - wait on it
+            blocking = getattr(result, '_asyncio_future_blocking', None)
+            if blocking is not None:
+                result._asyncio_future_blocking = False
+                await_next = result
+            elif six.PY2 and isinstance(result, asyncio.Future):
+                await_next = result  # trollius predates ._asyncio_future_blocking
 
-            @result.add_done_callback
+            # `yield coro` - handle as if it was `yield from coro`
+            elif _iscoroutine(result):
+                # NOTE - always AsyncTask even if we are originally under ConcurrentTask
+                await_next = AsyncTask(result, self.task.get_loop())
+
+            else:
+                # object with __await__ - e.g. @cython.iterable_coroutine used by uvloop
+                risawaitable = True
+                try:
+                    rawait = result.__await__()
+                except AttributeError:
+                    risawaitable = False
+                else:
+                    # cython.iterable_coroutine returns `coroutine_wrapper` that mimics
+                    # iterator/generator but does not inherit from types.GeneratorType .
+                    await_next = AsyncTask(rawait, self.task.get_loop())
+
+                if not risawaitable:
+                    # bare yield
+                    if result is None:
+                        await_next = Future(self.task.get_loop())
+                        await_next.set_result(None)
+
+                    # bad yield
+                    else:
+                        await_next = Future(self.task.get_loop())
+                        await_next.set_exception(
+                                RuntimeError("Task got bad yield: %r" % (result,)))
+
+            self.awaiting = await_next
+
+            @await_next.add_done_callback
             def wakeup(unused, step=self.step):
                 step()
+
+            awaiting = None
+            await_next = None
 
     def cancel(self):
         raise NotImplementedError
@@ -251,6 +342,53 @@ class ConcurrentTask(ConcurrentFuture):
         return ConcurrentFuture.cancel(self)
 
 
+def coroutine(func):
+    """@coroutine should be used to decorate coroutine functions.
+
+    The following is semantically equivalent:
+
+        @coroutine                     |
+        def f():                       |    async def f():
+            yield g()                  |        await g()
+            return_(123)               |        return 123
+                                       |
+        @coroutine                     |
+        def g():                       |    async def g():
+            yield asyncio.sleep(1)     |        await asyncio.sleep(1)
+
+    Coroutines should be executed via task classes provided by hereby module:
+    via AsyncTask or ConcurrentTask.
+
+    See also: return_ .
+    """
+    if not inspect.isgeneratorfunction(func):
+        raise TypeError("@coroutine: %r must be generator function" % (func,))
+    return func
+
+def _iscoroutine(obj):
+    """_iscoroutine checks whether obj is coroutine object."""
+    if inspect.isgenerator(obj) or asyncio.iscoroutine(obj):
+        return True
+    else:
+        return False
+
+def return_(x):
+    """return_(x) should be used instead of ``return x`` in coroutine functions.
+
+    It exists to support Python2 where ``return x`` is rejected inside generators.
+    """
+    # py3:     disallows to explicitly raise StopIteration from inside generator
+    # py2/py3: StopIteration inherits from Exception (not from BaseException)
+    # -> use our own exception type, that mimics StopIteration, but that can be
+    #    raised from inside generator and that is not caught by `except Exception`.
+    e = _GenReturn(x)
+    e.value = x
+    raise e
+
+class _GenReturn(BaseException):  # note: base != Exception to prevent catching
+    __slots__ = "value"           # returns inside `except Exception` in the same function
+
+
 def future_generator(func):
     """Decorates a generator that generates futures
     """
@@ -287,6 +425,7 @@ def future_generator(func):
 try:
     from ._futures import Future, ConcurrentFuture  # noqa: F401, F811
     from ._futures import AsyncTask, ConcurrentTask  # noqa: F401, F811
+    from ._futures import return_, _GenReturn  # noqa: F401, F811
 except ImportError:
     pass
 
