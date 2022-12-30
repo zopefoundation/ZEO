@@ -353,10 +353,10 @@ cdef _cancel_future(fut, msg):
     try:
         return fut.cancel(msg)
     except TypeError:
-        if PY_MAJOR_VERSION < 3:  # on trollius Future.cancel does not accept msg
-            _ = fut.cancel()
-            fut._xasyncio_cancel_msg = msg
-            return _
+        # on trollius and py3 < 3.9 Future.cancel does not accept msg
+        _ = fut.cancel()
+        fut._xasyncio_cancel_msg = msg
+        return _
 
 
 cdef class AsyncTask(Future):

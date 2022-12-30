@@ -361,10 +361,10 @@ def _cancel_future(fut, msg):
     try:
         return fut.cancel(msg)
     except TypeError:
-        if six.PY2:  # on trollius Future.cancel does not accept msg
-            _ = fut.cancel()
-            fut._xasyncio_cancel_msg = msg
-            return _
+        # on trollius and py3 < 3.9 Future.cancel does not accept msg
+        _ = fut.cancel()
+        fut._xasyncio_cancel_msg = msg
+        return _
 
 
 class AsyncTask(Future):
