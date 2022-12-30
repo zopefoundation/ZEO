@@ -859,7 +859,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
 
     def test_close_with_running_loop(self):
         storage_mock, cache, loop, io, protocol, transport = self.start(
-            finish_start=True)
+            finish_start=True, future_mode=False)
         self.close()
         self.assertFalse(io.ready)
         self.assertTrue(self.is_closed())
@@ -868,7 +868,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
 
     def test_close_with_stopped_loop(self):
         storage_mock, cache, loop, io, protocol, transport = self.start(
-            finish_start=True)
+            finish_start=True, future_mode=False)
         loop.call_soon_threadsafe(loop.stop)  # schedule loop stop
         # risks race condition as the loop is going to be closed during
         # stop processing
