@@ -5,8 +5,8 @@ cdef object CancelledError = asyncio.CancelledError
 cdef object InvalidStateError = asyncio.InvalidStateError
 cdef object get_event_loop = asyncio.get_event_loop
 import inspect
-from threading import Event
-from time import sleep
+from threading import Event, Lock
+from ZEO._compat import get_ident
 
 from cpython cimport PY_MAJOR_VERSION
 
@@ -48,13 +48,12 @@ cdef class Future:
         """cancel the future if not done.
 
         Return ``True``, if really cancelled.
-
-        *msg* is ignored.
         """
         if self.state:
             return False
         self.state = CANCELLED
-        self._result = CancelledError()
+        self._result = CancelledError()  if msg is None  else \
+                       CancelledError(msg)
         self.call_callbacks()
         return True
 
@@ -217,18 +216,20 @@ cdef class CoroutineExecutor:
     """Execute a coroutine on behalf of a task.
 
     No context support.
-
-    No ``cancel`` support (for the moment).
     """
     cdef object coro  # executed coroutine
     cdef object task   # associated task
     cdef object awaiting  # future we are waiting for
+    cdef bint   cancel_requested  # request to be canceled from .cancel
+    cdef object cancel_msg  # ^^^ cancellation message
 
     def __init__(self, task, coro):
         """execute *coro* on behalf of *task*."""
         self.task = task  # likely introduces a reference cycle
         self.coro = coro
         self.awaiting = None
+        self.cancel_requested = False
+        self.cancel_msg = None
 
     cpdef step(self):
         await_result = None  # with what to wakeup suspended await
@@ -242,6 +243,12 @@ cdef class CoroutineExecutor:
             except BaseException as e:
                 await_result = e
                 await_resexc = True
+        if self.cancel_requested:
+            await_result = CancelledError()  if self.cancel_msg is None  else \
+                           CancelledError(self.cancel_msg)
+            await_resexc = True
+            self.cancel_requested = False
+            self.cancel_msg = None
         try:
             if not await_resexc:
                 result = self.coro.send(await_result)
@@ -260,7 +267,13 @@ cdef class CoroutineExecutor:
                     v = e.value
                 task.set_result(v)
             elif isinstance(e, CancelledError):
-                task._cancel()
+                if len(e.args) == 0:
+                    msg = getattr(awaiting, '_xasyncio_cancel_msg', None)  # see _cancel_future
+                elif len(e.args) == 1:
+                    msg = e.args[0]
+                else:
+                    msg = e.args
+                task._cancel(msg)
             else:
                 task.set_exception(e)
                 if isinstance(e, (KeyboardInterrupt, SystemExit)):
@@ -304,6 +317,11 @@ cdef class CoroutineExecutor:
                         await_next.set_exception(
                                 RuntimeError("Task got bad yield: %r" % (result,)))
 
+            if self.cancel_requested:
+                _cancel_future(await_next, self.cancel_msg)
+                self.cancel_requested = False
+                self.cancel_msg = None
+
             self.awaiting = await_next
             await_next.add_done_callback(self.wakeup)
 
@@ -313,8 +331,32 @@ cdef class CoroutineExecutor:
     cpdef wakeup(self, unused):
         self.step()
 
-    def cancel(self):
-        raise NotImplementedError
+    cpdef cancel(self, msg):
+        """cancel requests cancellation of the coroutine.
+
+        It is safe to call cancel only from the same thread where coroutine is executed.
+        """
+        awaiting = self.awaiting
+        if awaiting is not None:
+            if _cancel_future(awaiting, msg):
+                return True
+        self.cancel_msg = msg
+        self.cancel_requested = True
+        task = self.task
+        if task is None or task.done():
+            return False
+        return True
+
+# _cancel_future cancels future fut with message msg.
+# if fut does not support cancelling with message, the message is saved in fut._xasyncio_cancel_msg .
+cdef _cancel_future(fut, msg):
+    try:
+        return fut.cancel(msg)
+    except TypeError:
+        if PY_MAJOR_VERSION < 3:  # on trollius Future.cancel does not accept msg
+            _ = fut.cancel()
+            fut._xasyncio_cancel_msg = msg
+            return _
 
 
 cdef class AsyncTask(Future):
@@ -322,37 +364,81 @@ cdef class AsyncTask(Future):
 
     Steps are not scheduled but executed immediately.
     """
-    cdef object executor
+    cdef CoroutineExecutor executor
 
     def __init__(self, coro, loop=None):
         Future.__init__(self, loop=loop)
         self.executor = CoroutineExecutor(self, coro)  # reference cycle
         self.executor.step()
 
-    def cancel(self, msg=None):
-        return self.executor.cancel()
+    cpdef cancel(self, msg=None):
+        """external cancel request."""
+        return self.executor.cancel(msg)
 
-    def _cancel(self):
-        return Future.cancel(self)
+    def _cancel(self, msg):
+        """internal cancel request."""
+        return Future.cancel(self, msg)
 
 
 cdef class ConcurrentTask(ConcurrentFuture):
     """Task reporting to ``ConcurrentFuture``.
 
     Steps are not scheduled but executed immediately.
+    Cancel can be used from any thread.
     """
-    cdef object executor
+    cdef CoroutineExecutor executor
+    cdef long loop_thread_id
 
     def __init__(self, coro, loop):
         ConcurrentFuture.__init__(self, loop=loop)
         self.executor = CoroutineExecutor(self, coro)  # reference cycle
-        loop.call_soon_threadsafe(self.executor.step)
+        self.loop_thread_id = -1
+        loop.call_soon_threadsafe(self._start)
 
-    def cancel(self, msg=None):
-        return self.executor.cancel()
+    cpdef _start(self):
+        # asyncio.Loop has ._thread_id, but uvloop does not expose it
+        self.loop_thread_id = get_ident()  # with gil
+        self.executor.step()
 
-    def _cancel(self):
-        return ConcurrentFuture.cancel(self)
+    cpdef cancel(self, msg=None):
+        """external cancel request.
+
+        cancel requests cancellation of the task.
+        it is safe to call cancel from any thread.
+        """
+        # invoke CoroutineExecutor.cancel on the loop thread and wait for its result.
+        # but run it directly to avoid deadlock if we are already on the loop thread.
+        if get_ident() == self.loop_thread_id:  # with gil
+            return self.executor.cancel(msg)
+        self._cancel_via_loopthread(msg)
+
+    def _cancel_via_loopthread(self, msg):  # cpdef does not allow to use closures
+        sema = Lock()
+        sema.acquire()
+        res = [None]
+        def _():
+            try:
+                x = self.executor.cancel(msg)
+            except BaseException as e:
+                x = e
+                if PY_MAJOR_VERSION < 3: # trollius stops the loop by raising _StopError
+                    if isinstance(e, asyncio.base_events._StopError):
+                        x = True
+                        raise
+            finally:
+                res[0] = x
+                sema.release()
+        self._loop.call_soon_threadsafe(_)
+        sema.acquire() # wait for the call to complete
+        r = res[0]
+        if isinstance(r, BaseException):
+            raise r
+        return r
+
+
+    def _cancel(self, msg):
+        """internal cancel request."""
+        return ConcurrentFuture.cancel(self, msg)
 
 
 # @coroutine - only py implementtion

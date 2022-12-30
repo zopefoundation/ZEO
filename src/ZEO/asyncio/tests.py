@@ -1416,8 +1416,11 @@ class FutureTestsBase(OptimizeTestsBase):
         self.loop.exceptions = []
 
     def test_cancel(self):
-        self.fut.cancel()
+        self.fut.cancel('zzz')
         self.assertTrue(self.fut.cancelled())
+        with self.assertRaises(asyncio.CancelledError) as e:
+            self.fut.result()
+        self.assertEqual(e.exception.args, ('zzz',))
         self.check_called_not_scheduled()
 
     def check_called_not_scheduled(self):
@@ -1530,9 +1533,83 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
             yield fut
 
         t = self.make_task(exc)
-        fut.cancel()
+        fut.cancel('zzz')
         self.assertTrue(t.done())
         self.assertTrue(t.cancelled())
+        with self.assertRaises(asyncio.CancelledError) as e:
+            t.result()
+        self.assertEqual(e.exception.args, ('zzz',))
+
+    def test_cancel_task_while_blocked_on_optimized_future(self):
+        self._test_cancel_task_while_blocked(Future(loop=self.loop))
+
+    def test_cancel_task_while_blocked_on_async_future(self):
+        self._test_cancel_task_while_blocked(asyncio.Future(loop=self.loop))
+
+    def _test_cancel_task_while_blocked(self, blocked_on):
+        l = []
+        go = Future(loop=self.loop)
+        waitready = Future(loop=self.loop)
+        waiting = blocked_on
+
+        @coroutine
+        def f():
+            yield go  # wait for loop to start
+            l.append(1)
+            l.append(2)
+            waitready.set_result(None)
+            yield waiting
+            l.append(3)
+
+        t = self.make_task(f)
+        self.assertFalse(t.done())
+
+        @waitready.add_done_callback
+        def _(_):
+            t.cancel('zzz')
+
+        self.loop.call_soon(lambda: go.set_result(None))
+        with self.assertRaises(asyncio.CancelledError):
+            self.loop.run_until_complete(t)
+        self.assertTrue(t.done())
+        self.assertTrue(t.cancelled())
+        with self.assertRaises(asyncio.CancelledError) as e:
+            t.result()
+        self.assertEqual(e.exception.args, ('zzz',))
+        self.assertTrue(waiting.done())
+        self.assertTrue(waiting.cancelled())
+        self.assertEqual(l, [1,2])
+        _ = t.cancel()
+        self.assertFalse(_)
+
+
+    def test_cancel_task_while_running(self):
+        l = []
+        t = None
+        go = Future(loop=self.loop)
+        waiting = Future(loop=self.loop)
+
+        @coroutine
+        def f():
+            yield go
+            l.append(1)
+            l.append(2)
+            t.cancel('zzz')
+            l.append(3)
+            yield waiting
+            l.append(4)
+
+        t = self.make_task(f)
+        self.assertFalse(t.done())
+        go.set_result(None)
+        self.assertTrue(t.done())
+        self.assertTrue(t.cancelled())
+        with self.assertRaises(asyncio.CancelledError) as e:
+            t.result()
+        self.assertEqual(e.exception.args, ('zzz',))
+        self.assertTrue(waiting.done())
+        self.assertTrue(waiting.cancelled())
+        self.assertEqual(l, [1,2,3])
 
 
     def test_nested_coro(self):
@@ -1628,6 +1705,44 @@ class ConcurrentTaskTests(CoroutineExecutorTestsBase, TestCase):
         t = ConcurrentTask(coro(), loop)
         self.run_loop()
         return t
+
+    def test_cancel_from_another_thread(self):
+        l = []
+        waitready = threading.Event()
+        waiting = Future(loop=self.loop)
+
+        @coroutine
+        def f():
+            l.append(1)
+            l.append(2)
+            waitready.set()
+            yield waiting
+            l.append(3)
+
+        t = self.make_task(f)
+        self.assertFalse(t.done())
+
+        def Tcancel():
+            waitready.wait()
+            t.cancel('zzz')
+        tcancel = threading.Thread(target=Tcancel)
+        tcancel.setDaemon(True)
+        tcancel.start()
+
+        with self.assertRaises(asyncio.CancelledError):
+            self.loop.run_until_complete(t)
+        tcancel.join(9)
+        self.assertFalse(tcancel.is_alive())
+        self.assertTrue(t.done())
+        self.assertTrue(t.cancelled())
+        with self.assertRaises(asyncio.CancelledError) as e:
+            t.result()
+        self.assertEqual(e.exception.args, ('zzz',))
+        self.assertTrue(waiting.done())
+        self.assertTrue(waiting.cancelled())
+        self.assertEqual(l, [1,2])
+        _ = t.cancel()
+        self.assertFalse(_)
 
 
 def test_suite():
