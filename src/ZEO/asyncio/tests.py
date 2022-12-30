@@ -342,7 +342,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
 
         # When committing transactions, we need to update the cache
         # with committed data.  To do this, we pass a (oid, data, resolved)
-        # iteratable to tpc_finish_threadsafe.
+        # iteratable to tpc_finish_co.
 
         tids = []
 

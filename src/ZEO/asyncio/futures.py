@@ -491,38 +491,6 @@ class _GenReturn(BaseException):  # note: base != Exception to prevent catching
     __slots__ = "value"           # returns inside `except Exception` in the same function
 
 
-def future_generator(func):
-    """Decorates a generator that generates futures
-    """
-
-    @functools.wraps(func)
-    def call_generator(*args, **kw):
-        gen = func(*args, **kw)
-        try:
-            f = next(gen)
-        except StopIteration:
-            gen.close()
-        else:
-            def store(gen, future):
-                @future.add_done_callback
-                def _(future):
-                    try:
-                        try:
-                            result = future.result()
-                        except Exception as exc:
-                            f = gen.throw(exc)
-                        else:
-                            f = gen.send(result)
-                    except StopIteration:
-                        gen.close()
-                    else:
-                        store(gen, f)
-
-            store(gen, f)
-
-    return call_generator
-
-
 # use C implementation if available
 try:
     from ._futures import Future, ConcurrentFuture  # noqa: F401, F811
