@@ -31,6 +31,7 @@ cdef class Future:
     cdef State state
     cdef object _result
     cdef list callbacks
+    cdef bint _result_retrieved
 
     def __init__(self, loop=None):
         self._asyncio_future_blocking = False
@@ -38,6 +39,7 @@ cdef class Future:
         self.state = PENDING
         self._result = None
         self.callbacks = []
+        self._result_retrieved = False
 
     def get_loop(self):
         return self._loop
@@ -65,7 +67,8 @@ cdef class Future:
     cpdef result(self):
         if self.state == PENDING:
             raise InvalidStateError("not done")
-        elif self.state == RESULT:
+        self._result_retrieved = True
+        if self.state == RESULT:
             return self._result
         else:
             raise self._result
@@ -73,7 +76,8 @@ cdef class Future:
     cpdef exception(self):
         if self.state == PENDING:
             raise InvalidStateError("not done")
-        elif self.state == RESULT:
+        self._result_retrieved = True
+        if self.state == RESULT:
             return None
         else:
             return self._result
@@ -157,6 +161,15 @@ cdef class Future:
                 self._result,
                 self.callbacks]
         return " ".join(str(x) for x in info)
+
+    if PY_MAJOR_VERSION >= 3:  # py3-only because cyclic garbage with __del__ is not collected on py2
+        def __del__(self):
+            if self.state == EXCEPTION  and  not self._result_retrieved:
+                self._loop.call_exception_handler({
+                    'message': "%s exception was never retrieved" % self.__class__.__name__,
+                    'exception': self._result,
+                    'future': self,
+                })
 
 # py3: asyncio.isfuture checks ._asyncio_future_blocking
 # py2: trollius does isinstace(_FUTURE_CLASSES)

@@ -32,7 +32,7 @@ class Future(object):
     their context is ignored.
     """
     __slots__ = ("_loop", "state", "_result", "callbacks",
-                 "_asyncio_future_blocking")
+                 "_asyncio_future_blocking", "_result_retrieved")
 
     def __init__(self, loop=None):
         self._loop = loop if loop is not None else get_event_loop()
@@ -40,6 +40,7 @@ class Future(object):
         self._result = None
         self.callbacks = []
         self._asyncio_future_blocking = False
+        self._result_retrieved = False
 
     def get_loop(self):
         return self._loop
@@ -67,7 +68,8 @@ class Future(object):
     def result(self):
         if self.state == 0:  # PENDING
             raise InvalidStateError("not done")
-        elif self.state == 1:  # RESULT
+        self._result_retrieved = True
+        if self.state == 1:  # RESULT
             return self._result
         else:
             raise self._result
@@ -75,7 +77,8 @@ class Future(object):
     def exception(self):
         if self.state == 0:  # PENDING
             raise InvalidStateError("not done")
-        elif self.state == 1:  # RESULT
+        self._result_retrieved = True
+        if self.state == 1:  # RESULT
             return None
         else:
             return self._result
@@ -169,6 +172,15 @@ class Future(object):
                 self._result,
                 self.callbacks]
         return " ".join(str(x) for x in info)
+
+    if six.PY3:  # py3-only because cyclic garbage with __del__ is not collected on py2
+        def __del__(self):
+            if self.state == 2  and  not self._result_retrieved:  # EXCEPTION
+                self._loop.call_exception_handler({
+                    'message': "%s exception was never retrieved" % self.__class__.__name__,
+                    'exception': self._result,
+                    'future': self,
+                })
 
 # py3: asyncio.isfuture checks ._asyncio_future_blocking
 # py2: trollius does isinstace(_FUTURE_CLASSES)
