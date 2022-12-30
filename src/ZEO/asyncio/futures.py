@@ -183,7 +183,12 @@ if six.PY2:
 
 
 class ConcurrentFuture(Future):
-    """A future threads can wait on."""
+    """A future threads can wait on.
+
+    Note: this differs from concurrent.future.Future - hereby ConcurrentFuture
+    is generally _not_ concurrent - only .result() is allowed to be called from
+    different threads and provides semantic similar to concurrent.future.Future.
+    """
     __slots__ = "completed",
 
     def __init__(self, loop=False):
@@ -195,7 +200,15 @@ class ConcurrentFuture(Future):
             self.completed.set()
 
     def result(self, timeout=None):
-        self.completed.wait(timeout)
+        """result waits till the future is done and returns its result.
+
+        If the future isn't done in specified time TimeoutError(*) is raised.
+
+        (*) NOTE: it is asyncio.TimeoutError, not concurrent.futures.TimeoutError,
+            which is raised for uniformity.
+        """
+        if not self.completed.wait(timeout):
+            raise asyncio.TimeoutError()
         return Future.result(self)
 
 

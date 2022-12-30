@@ -1435,6 +1435,12 @@ class ConcurrentFutureTests(FutureTestsBase, TestCase):
     def make_future(self, loop):
         return ConcurrentFuture(loop=loop)
 
+    def test_result_timeout(self):
+        self.assertFalse(self.fut.done())
+        with self.assertRaises(asyncio.TimeoutError):
+            self.fut.result(0.1)  # should timeout - noone set result on .fut
+        self.assertFalse(self.fut.done())
+
 
 class CoroutineExecutorTestsBase(OptimizeTestsBase):
     def run_loop(self):
