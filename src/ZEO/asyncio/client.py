@@ -38,7 +38,8 @@ import ZEO.interfaces
 from . import base
 from .compat import asyncio, new_event_loop
 from .marshal import encoder, decoder
-from .futures import Future, future_generator
+from .futures import Future, future_generator, AsyncTask as Task, \
+     coroutine
 
 logger = logging.getLogger(__name__)
 
@@ -137,33 +138,31 @@ class Protocol(base.ZEOBaseProtocol):
     def connect(self):
         if isinstance(self.addr, tuple):
             host, port = self.addr
-            cr = self.loop.create_connection(
+            cr = lambda: self.loop.create_connection(  # noqa: E731
                 self.protocol_factory, host or '127.0.0.1', port,
                 ssl=self.ssl, server_hostname=self.ssl_server_hostname)
         else:
-            cr = self.loop.create_unix_connection(
+            cr = lambda: self.loop.create_unix_connection(  # noqa: E731
                 self.protocol_factory, self.addr, ssl=self.ssl)
 
-        # an ``asyncio.Future``
-        self._connecting = cr = asyncio.ensure_future(cr, loop=self.loop)
+        @coroutine
+        def connect():
+            while 1:
+                try:
+                    yield cr()
+                    return
+                except asyncio.CancelledError:
+                    logger.info("Connection to %r cancelled", self.addr)
+                    raise
+                except Exception as exc:
+                    logger.info("Connection to %r failed, %s",
+                                self.addr, exc)
+                # keep trying
+                if not self.closed:
+                    yield asyncio.sleep(self.connect_poll + local_random.random())
+                    logger.info("retry connecting %r", self.addr)
 
-        @cr.add_done_callback
-        def done_connecting(future):
-            if future.cancelled():
-                logger.info("Connection to %r cancelled", self.addr)
-            elif future.exception() is not None:
-                logger.info("Connection to %r failed, %s",
-                            self.addr, future.exception())
-            else:
-                return
-
-            # keep trying
-            if not self.closed:
-                logger.info("retry connecting %r", self.addr)
-                self.loop.call_later(
-                    self.connect_poll + local_random.random(),
-                    self.connect,
-                    )
+        self._connecting = Task(connect(), self.loop)
 
     def connection_made(self, transport):
         logger.debug('connection_made %s', self)
