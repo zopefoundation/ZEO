@@ -1010,7 +1010,7 @@ class ClientThread(ClientRunner):
             loop = self.loop if self.loop is not None else new_event_loop()
             asyncio.set_event_loop(loop)
             self.setup_delegation(loop)
-            self.started.set()
+            loop.call_soon(self.started.set)
             loop_run_forever(loop)
         except Exception as exc:
             logger.exception("Client thread")
