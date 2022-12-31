@@ -36,6 +36,7 @@ from ZEO.Exceptions import ClientDisconnected, ServerException
 import ZEO.interfaces
 
 from . import base
+from .base import loop_run_forever, loop_run_until_complete
 from .compat import asyncio, new_event_loop
 from .marshal import encoder, decoder
 from .futures import Future, AsyncTask as Task, \
@@ -948,7 +949,7 @@ class ClientRunner(object):
             #       calls hereby close with already stopped event loop.
             # Note: run_coroutine_threadsafe - not Task - is used to protect
             #       from executing coro steps while loop is not yet running.
-            loop.run_until_complete(
+            loop_run_until_complete(loop,
                     run_coroutine_threadsafe(self.client.close_co(), loop))
         self.__args = None  # break reference cycle
 
@@ -1010,7 +1011,7 @@ class ClientThread(ClientRunner):
             asyncio.set_event_loop(loop)
             self.setup_delegation(loop)
             self.started.set()
-            loop.run_forever()
+            loop_run_forever(loop)
         except Exception as exc:
             logger.exception("Client thread")
             self.exception = exc

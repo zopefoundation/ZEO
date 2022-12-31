@@ -9,6 +9,7 @@ import ZODB.POSException
 from ..shortrepr import short_repr
 
 from . import base
+from .base import loop_run_forever, loop_run_until_complete
 from .compat import asyncio, new_event_loop
 from .marshal import server_decoder, encoder, reduce_exception
 
@@ -249,7 +250,7 @@ class Acceptor(object):
             cr = loop.create_unix_server(self.factory, addr, ssl=ssl)
 
         f = asyncio.ensure_future(cr, loop=loop)
-        server = loop.run_until_complete(f)
+        server = loop_run_until_complete(loop, f)
 
         self.server = server
         if isinstance(addr, tuple) and addr[1] == 0:
@@ -274,7 +275,7 @@ class Acceptor(object):
         return protocol
 
     def loop(self, timeout=None):
-        self.event_loop.run_forever()
+        loop_run_forever(self.event_loop)
         self.event_loop.close()
 
     closed = False

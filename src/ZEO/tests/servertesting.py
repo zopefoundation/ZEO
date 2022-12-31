@@ -33,6 +33,7 @@ from __future__ import print_function
 import ZEO.asyncio.tests
 import ZEO.StorageServer
 import ZODB.MappingStorage
+from ZEO.asyncio.base import loop_run_forever
 
 
 class StorageServer(ZEO.StorageServer.StorageServer):
@@ -51,7 +52,7 @@ class StorageServer(ZEO.StorageServer.StorageServer):
         if loop.is_running():
             return super(StorageServer, self).close()
         loop.call_soon_threadsafe(super(StorageServer, self).close)
-        loop.run_forever()  # will stop automatically
+        loop_run_forever(loop)  # will stop automatically
         loop.close()
 
     def get_loop(self):
