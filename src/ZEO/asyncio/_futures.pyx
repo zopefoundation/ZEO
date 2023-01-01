@@ -137,13 +137,12 @@ cdef class Future:
         self._result = exc
         self.call_callbacks()
 
-    # trollius accesses ._exception directly
-    if PY_MAJOR_VERSION < 3:
-        @property
-        def _exception(self):
-            if self.state != EXCEPTION:
-                return None
-            return self._result
+    # trollius and py3 < py3.7 access ._exception directly
+    @property
+    def _exception(self):
+        if self.state != EXCEPTION:
+            return None
+        return self._result
 
     def __await__(self):
         if not self.state:

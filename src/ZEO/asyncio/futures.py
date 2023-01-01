@@ -139,13 +139,12 @@ class Future(object):
         self._result = exc
         self.call_callbacks()
 
-    # trollius accesses ._exception directly
-    if six.PY2:
-        @property
-        def _exception(self):
-            if self.state != 2:  # EXCEPTION
-                return None
-            return self._result
+    # trollius and py3 < py3.7 access ._exception directly
+    @property
+    def _exception(self):
+        if self.state != 2:  # EXCEPTION
+            return None
+        return self._result
 
     if six.PY3:
         # return from generator raises SyntaxError on py2
