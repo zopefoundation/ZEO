@@ -115,6 +115,10 @@ class FaithfulLoop(Loop, AsyncioLoop):
         self.later.append((delay, func, args, th))
         return th
 
+    def call_exception_handler(self, context):
+        Loop.call_exception_handler(self, context)
+        AsyncioLoop.call_exception_handler(self, context)  # log exception
+
     def _connect(self, future, protocol_factory):
         """a real ``asyncio`` loop checks that non threadsafe
         functions are only called from the ``asyncio`` context.
