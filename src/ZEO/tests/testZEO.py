@@ -16,6 +16,7 @@ from __future__ import print_function
 import multiprocessing
 
 from ZEO.ClientStorage import ClientStorage
+from ZEO.Exceptions import ClientDisconnected
 from ZEO.tests import forker, Cache, CommitLockTests, ThreadTests
 from ZEO.tests import IterationTests
 from ZEO._compat import PY3
@@ -606,15 +607,12 @@ class ZRPCConnectionTests(ZEO.tests.ConnectionTests.CommonSetupTearDown):
         # how to break it.  We'll just stop it instead for now.
         self._storage._server.loop.call_soon_threadsafe(
             self._storage._server.loop.stop)
-
-        forker.wait_until(
-            'disconnected',
-            lambda: not self._storage.is_connected()
-            )
-
+        # We wait for the client thread to stop (to avoid a race condition)
+        self._storage._server.thread.join(1)
         log = str(handler)
         handler.uninstall()
         self.assertTrue("Client loop stopped unexpectedly" in log)
+        self.assertRaises(ClientDisconnected, self._storage.ping)
 
     def checkExceptionLogsAtError(self):
         # Test the exceptions are logged at error
