@@ -60,7 +60,7 @@ class Protocol(base.ZEOBaseProtocol):
     # operations.
 
     # One place where special care was required was in cache setup on
-    # connect. See finish connect below.
+    # connect. See finish_connection below.
 
     protocols = b'5',
 
