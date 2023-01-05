@@ -858,6 +858,45 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         self.assertEqual(loop.exceptions, [])
         self.assertIs(self.observed, False)
 
+    def test_serialized_registration(self):
+        addrs = [('1.2.3.4', 8200), ('2.2.3.4', 8200)]
+        wrapper, cache, loop, io, protocol, transport = self.start(
+            addrs, ())
+        # connect to the first address
+        loop.call_soon_threadsafe(loop.connect_connecting, addrs[0])
+        self.loop.run_until_inactive()
+        protocol_1 = loop.protocol
+        transport_1 = loop.transport
+        # connect to the second address
+        loop.call_soon_threadsafe(loop.connect_connecting, addrs[1])
+        self.loop.run_until_inactive()
+        protocol_2 = loop.protocol
+        transport_2 = loop.transport
+        # verify not locked
+        self.assertFalse(io.register_lock.locked())
+        # start the first protocol
+        protocol_1.data_received(sized(self.enc + b'5'))
+        self.assertTrue(io.register_lock.locked())
+        self.assertEqual(self.unsized(transport_1.pop(2)), self.enc + b'5')
+        self.assertEqual(len(transport_1.data), 2)  # register call
+        # start the second protocol
+        protocol_2.data_received(sized(self.enc + b'5'))
+        self.assertEqual(self.unsized(transport_2.pop(2)), self.enc + b'5')
+        self.assertEqual(len(transport_2.data), 0)  # waits for lock
+        self.assertFalse(io.connected.done())
+        # finish first protocol connection
+        self.respond(1, None, protocol=protocol_1)  # register
+        self.respond(2, b"a"*8, protocol=protocol_1)  # lastTransaction
+        self.assertTrue(io.ready)
+        self.assertFalse(io.connected.done())
+        self.respond(3, {}, protocol=protocol_1)  # get_info
+        # the second protocol has got the lock but released it immediately
+        # because it was closed due to the accepted protocol 1
+        self.assertFalse(io.register_lock.locked())
+        self.assertTrue(protocol_2._protocol.closed)
+        self.assertTrue(io.ready)
+        self.assertTrue(io.connected.done())
+
     def test_close_with_running_loop(self):
         storage_mock, cache, loop, io, protocol, transport = self.start(
             finish_start=True, future_mode=False)

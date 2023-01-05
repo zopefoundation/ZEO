@@ -229,27 +229,34 @@ class Protocol(base.ZEOBaseProtocol):
         """
         credentials = (self.credentials,) if self.credentials else ()
 
+        # we do not want that several servers concurrently
+        # update the cache -- lock
+        register_lock = self.client.register_lock
+        yield register_lock.acquire()
         try:
             try:
-                server_tid = yield self.server_call(
-                    'register', self.storage_key,
-                    (self.read_only if self.read_only is not Fallback
-                     else False),
-                    *credentials)
-            except ZODB.POSException.ReadOnlyError:
-                if self.read_only is Fallback:
-                    self.read_only = True
+                try:
                     server_tid = yield self.server_call(
-                        'register', self.storage_key, True, *credentials)
+                        'register', self.storage_key,
+                        (self.read_only if self.read_only is not Fallback
+                         else False),
+                        *credentials)
+                except ZODB.POSException.ReadOnlyError:
+                    if self.read_only is Fallback:
+                        self.read_only = True
+                        server_tid = yield self.server_call(
+                            'register', self.storage_key, True, *credentials)
+                    else:
+                        raise
                 else:
-                    raise
+                    if self.read_only is Fallback:
+                        self.read_only = False
+            except Exception as exc:
+                self.client.register_failed(self, exc)
             else:
-                if self.read_only is Fallback:
-                    self.read_only = False
-        except Exception as exc:
-            self.client.register_failed(self, exc)
-        else:
-            yield self.client.register(self, server_tid)
+                yield self.client.register(self, server_tid)
+        finally:
+            register_lock.release()
 
     exception_type_type = type(Exception)
 
@@ -454,6 +461,7 @@ class ClientIO(object):
             setattr(self, name, getattr(client, name))
         self.cache = cache
         self.protocols = ()
+        self.register_lock = asyncio.Lock()
         self.closing_protocol_futures = set()  # closing futures
         self.disconnected(None)
 
