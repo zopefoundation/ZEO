@@ -1067,5 +1067,6 @@ def cancel_task(task):
     task.cancel()
     # With Python before 3.8, cancelation is not sufficient to
     # ignore a potential exception -- eat it in a done callback
-    task.add_done_callback(
-        lambda future: future.cancelled() or future.exception())
+    if sys.version_info < (3,9):
+        task.add_done_callback(
+            lambda future: future.cancelled() or future.exception())
