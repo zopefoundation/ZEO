@@ -4,6 +4,18 @@ Changelog
 5.4.0 (unreleased)
 ------------------
 
+- Reimplement and streamline the ``asyncio`` part of the ``ClientStorage``
+  implementation:
+   - switch from futures with explicit callbacks to `async/await`-like style
+   - use standard ``asyncio`` features to implement timeouts
+   - redesign the API of the class implementing the ZEO client protocol
+   - significantly improve source documentation and tests
+   - fix several concurrency bugs
+   - add optional ``cython`` based optimization;
+     it speeds up reads but slows down writes.
+     To use it, install ``cython`` (and its dependencies) and
+     run ``cythonize -i *.pyx`` in ``src/ZEO/asyncio``.
+
 - Remove support for interoperability with ZEO4 server. It turned out that ZEO5
   client, contrary to interoperability with ZEO5 server, implements support for
   interoperability with ZEO4 server incorrectly with concurrency bugs that lead
