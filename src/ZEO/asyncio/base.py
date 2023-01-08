@@ -155,32 +155,3 @@ class ZEOBaseProtocol(asyncio.Protocol):
     # The method below is overridden in ``connection_made``.
     def data_received(self, data):
         self.data_received(data)  # not an infinite loop, because overridden
-
-
-
-def loop_run_forever(loop):
-    """loop_run_forever runs loop.run_forever() with setting loop to be the
-    default loop for current thread during the run.
-
-    It is needed so that functions like asyncio.sleep, asyncio.wait_for, ...
-    work correctly without loop argument.
-
-    py3 handles this correctly out of the box (see get_running_loop), but
-    trollius does not. Anyway better be safe than sorry.
-    """
-    asyncio.set_event_loop(loop)
-    try:
-        return loop.run_forever()
-    finally:
-        asyncio.set_event_loop(None)
-
-
-def loop_run_until_complete(loop, fut):
-    """loop_run_until_complete is similar to loop_run_forever, but applies to
-    loop.run_until_complete.
-    """
-    asyncio.set_event_loop(loop)
-    try:
-        return loop.run_until_complete(fut)
-    finally:
-        asyncio.set_event_loop(None)

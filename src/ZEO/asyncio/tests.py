@@ -16,8 +16,7 @@ from functools import partial
 
 from ..Exceptions import ClientDisconnected, ProtocolError
 
-from .base import ZEOBaseProtocol, SizedMessageProtocol, \
-        loop_run_forever, loop_run_until_complete
+from .base import ZEOBaseProtocol, SizedMessageProtocol
 from .testing import Loop, FaithfulLoop
 from .client import ClientThread, Fallback
 from .futures import Future, ConcurrentFuture, AsyncTask, ConcurrentTask
@@ -1482,7 +1481,7 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
     def run_loop(self):
         loop = self.loop
         loop.call_soon(loop.stop)
-        loop_run_forever(loop)
+        loop.run_forever()
 
     def test_noop(self):
 
@@ -1593,7 +1592,7 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
 
         self.loop.call_soon(lambda: go.set_result(None))
         with self.assertRaises(asyncio.CancelledError):
-            loop_run_until_complete(self.loop, t)
+            self.loop.run_until_complete(t)
         self.assertTrue(t.done())
         self.assertTrue(t.cancelled())
         with self.assertRaises(asyncio.CancelledError) as e:
@@ -1666,7 +1665,7 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
         t = self.make_task(f)
         self.assertFalse(t.done())
         self.loop.call_soon(lambda: go.set_result(None))
-        loop_run_until_complete(self.loop, t)
+        self.loop.run_until_complete(t)
         tend = time()
         self.assertTrue(t.done())
         self.assertEqual(t.result(), 'zzz')
@@ -1740,7 +1739,7 @@ class ConcurrentTaskTests(CoroutineExecutorTestsBase, TestCase):
         tcancel.start()
 
         with self.assertRaises(asyncio.CancelledError):
-            loop_run_until_complete(self.loop, t)
+            self.loop.run_until_complete(t)
         tcancel.join(9)
         self.assertFalse(tcancel.is_alive())
         self.assertTrue(t.done())
