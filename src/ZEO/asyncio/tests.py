@@ -180,11 +180,8 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         if check_exc:
             self.assertEqual(self.loop.exceptions, [])
 
-    def server_async_call(self, method, *args, **kw):
-        check_exc = kw.pop('check_exc', True)
-        return_msg = kw.pop('return_msg', False)
-        assert not kw
-
+    def server_async_call(self, method, *args,
+                          check_exc=True, return_msg=False):
         msg = sized(self.encode(0, True, method, args))
         if return_msg:
             return msg
