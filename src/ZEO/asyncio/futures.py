@@ -375,7 +375,7 @@ def _cancel_future(fut, msg):
 class AsyncTask(Future):
     """Simplified ``asyncio.Task``.
 
-    Steps are not scheduled but executed immediately.
+    Steps are not scheduled but executed immediately; the context is ignored.
     """
     __slots__ = "executor",
 
@@ -396,7 +396,7 @@ class AsyncTask(Future):
 class ConcurrentTask(ConcurrentFuture):
     """Task reporting to ``ConcurrentFuture``.
 
-    Steps are not scheduled but executed immediately.
+    Steps are not scheduled but executed immediately; the context is ignored.
     Cancel can be used from any thread.
     """
     __slots__ = "executor", "loop_thread_id"

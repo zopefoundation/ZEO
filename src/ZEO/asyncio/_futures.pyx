@@ -381,7 +381,7 @@ cdef _cancel_future(fut, msg):
 cdef class AsyncTask(Future):
     """Simplified ``asyncio.Task``.
 
-    Steps are not scheduled but executed immediately.
+    Steps are not scheduled but executed immediately; the context is ignored.
     """
     cdef CoroutineExecutor executor
 
@@ -402,7 +402,7 @@ cdef class AsyncTask(Future):
 cdef class ConcurrentTask(ConcurrentFuture):
     """Task reporting to ``ConcurrentFuture``.
 
-    Steps are not scheduled but executed immediately.
+    Steps are not scheduled but executed immediately; the context is ignored.
     Cancel can be used from any thread.
     """
     cdef CoroutineExecutor executor
