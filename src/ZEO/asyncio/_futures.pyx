@@ -287,7 +287,7 @@ cdef class CoroutineExecutor:
                 task.set_result(v)
             elif isinstance(e, CancelledError):
                 if len(e.args) == 0:
-                    msg = getattr(awaiting, '_xasyncio_cancel_msg', None)  # see _cancel_future
+                    msg = getattr(awaiting, '_cancel_message', None)  # see _cancel_future
                 elif len(e.args) == 1:
                     msg = e.args[0]
                 else:
@@ -367,14 +367,14 @@ cdef class CoroutineExecutor:
         return True
 
 # _cancel_future cancels future fut with message msg.
-# if fut does not support cancelling with message, the message is saved in fut._xasyncio_cancel_msg .
+# if fut does not support cancelling with message, the message is saved in fut._cancel_message .
 cdef _cancel_future(fut, msg):
     try:
         return fut.cancel(msg)
     except TypeError:
         # on trollius and py3 < 3.9 Future.cancel does not accept msg
         _ = fut.cancel()
-        fut._xasyncio_cancel_msg = msg
+        fut._cancel_message = msg
         return _
 
 
