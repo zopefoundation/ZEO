@@ -1456,7 +1456,8 @@ class FutureTestsBase(OptimizeTestsBase):
         self.loop.exceptions = []
 
     def test_cancel(self):
-        self.fut.cancel('zzz')
+        _ = self.fut.cancel('zzz')
+        self.assertTrue(_)
         self.assertTrue(self.fut.cancelled())
         with self.assertRaises(asyncio.CancelledError) as e:
             self.fut.result()
@@ -1573,7 +1574,8 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
             yield fut
 
         t = self.make_task(exc)
-        fut.cancel('zzz')
+        _ = fut.cancel('zzz')
+        self.assertTrue(_)
         self.assertTrue(t.done())
         self.assertTrue(t.cancelled())
         with self.assertRaises(asyncio.CancelledError) as e:
@@ -1606,7 +1608,8 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
 
         @waitready.add_done_callback
         def _(_):
-            t.cancel('zzz')
+            _ = t.cancel('zzz')
+            self.assertTrue(_)
 
         self.loop.call_soon(lambda: go.set_result(None))
         with self.assertRaises(asyncio.CancelledError):
@@ -1634,7 +1637,8 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
             yield go
             l.append(1)
             l.append(2)
-            t.cancel('zzz')
+            _ = t.cancel('zzz')
+            self.assertTrue(_)
             l.append(3)
             yield waiting
             l.append(4)
@@ -1764,7 +1768,10 @@ class ConcurrentTaskTests(CoroutineExecutorTestsBase, TestCase):
 
         def Tcancel():
             waitready.wait()
-            t.cancel('zzz')
+            _ = t.cancel('zzz')
+            self.assertTrue(_)
+            Tcancel.ok = True
+        Tcancel.ok = False
         tcancel = threading.Thread(target=Tcancel)
         tcancel.setDaemon(True)
         tcancel.start()
@@ -1773,6 +1780,7 @@ class ConcurrentTaskTests(CoroutineExecutorTestsBase, TestCase):
             loop_run_until_complete(self.loop, t)
         tcancel.join(9)
         self.assertFalse(tcancel.is_alive())
+        self.assertTrue(Tcancel.ok)
         self.assertTrue(t.done())
         self.assertTrue(t.cancelled())
         with self.assertRaises(asyncio.CancelledError) as e:

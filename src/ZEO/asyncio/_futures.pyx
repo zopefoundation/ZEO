@@ -429,7 +429,7 @@ cdef class ConcurrentTask(ConcurrentFuture):
         # but run it directly to avoid deadlock if we are already on the loop thread.
         if get_ident() == self.loop_thread_id:  # with gil
             return self.executor.cancel(msg)
-        self._cancel_via_loopthread(msg)
+        return self._cancel_via_loopthread(msg)
 
     def _cancel_via_loopthread(self, msg):  # cpdef does not allow to use closures
         sema = Lock()
