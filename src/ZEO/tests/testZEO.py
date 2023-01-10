@@ -1936,7 +1936,3 @@ def test_suite():
     suite.addTest(dynamic_server_ports_suite)
 
     return suite
-
-
-if __name__ == "__main__":
-    unittest.main(defaultTest="test_suite")

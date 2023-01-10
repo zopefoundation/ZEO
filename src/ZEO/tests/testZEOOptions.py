@@ -106,7 +106,3 @@ def test_suite():
     for cls in [TestZEOOptions]:
         suite.addTest(unittest.makeSuite(cls))
     return suite
-
-
-if __name__ == "__main__":
-    unittest.main(defaultTest='test_suite')
