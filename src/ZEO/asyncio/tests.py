@@ -1791,18 +1791,3 @@ class ConcurrentTaskTests(CoroutineExecutorTestsBase, TestCase):
         self.assertEqual(l, [1,2])
         _ = t.cancel()
         self.assertFalse(_)
-
-
-def test_suite():
-    suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(ClientTests))
-    suite.addTest(unittest.makeSuite(ServerTests))
-    suite.addTest(unittest.makeSuite(MsgpackClientTests))
-    suite.addTest(unittest.makeSuite(MsgpackServerTests))
-    suite.addTest(unittest.makeSuite(ZEOBaseProtocolTests))
-    suite.addTest(unittest.makeSuite(SizedMessageProtocolTests))
-    suite.addTest(unittest.makeSuite(FutureTests))
-    suite.addTest(unittest.makeSuite(ConcurrentFutureTests))
-    suite.addTest(unittest.makeSuite(AsyncTaskTests))
-    suite.addTest(unittest.makeSuite(ConcurrentTaskTests))
-    return suite
