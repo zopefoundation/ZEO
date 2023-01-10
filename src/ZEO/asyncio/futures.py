@@ -14,7 +14,7 @@ CancelledError = asyncio.CancelledError
 InvalidStateError = asyncio.InvalidStateError
 get_event_loop = asyncio.get_event_loop
 import inspect
-from threading import Event, Lock
+from threading import Event
 from time import sleep
 from ZEO._compat import get_ident
 
@@ -422,27 +422,20 @@ class ConcurrentTask(ConcurrentFuture):
         if get_ident() == self.loop_thread_id:  # with gil
             return self.executor.cancel(msg)
 
-        sema = Lock()
-        sema.acquire()
-        res = [None]
+        res = ConcurrentFuture()
         def _():
             try:
                 x = self.executor.cancel(msg)
             except BaseException as e:
-                x = e
                 if six.PY2: # trollius stops the loop by raising _StopError
                     if isinstance(e, asyncio.base_events._StopError):
-                        x = True
+                        res.set_result(True)
                         raise
-            finally:
-                res[0] = x
-                sema.release()
+                res.set_exception(e)
+            else:
+                res.set_result(x)
         self._loop.call_soon_threadsafe(_)
-        sema.acquire() # wait for the call to complete
-        r = res[0]
-        if isinstance(r, BaseException):
-            raise r
-        return r
+        return res.result()  # wait for the call to complete
 
     def _cancel(self, msg):
         """internal cancel request."""
