@@ -420,6 +420,9 @@ cdef class ConcurrentTask(ConcurrentFuture):
         cancel requests cancellation of the task.
         it is safe to call cancel from any thread.
         """
+        if self.done():
+            # we are in a stable state; cancelation will not change it
+            return False
         # invoke CoroutineExecutor.cancel on the loop thread and wait for its result.
         # but run it directly to avoid deadlock if we are already on the loop thread.
         try:
