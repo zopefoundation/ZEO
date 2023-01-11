@@ -7,7 +7,6 @@ cdef object get_event_loop = asyncio.get_event_loop
 import inspect
 from threading import Event
 from time import sleep
-from ZEO._compat import get_ident
 
 from cpython cimport PY_MAJOR_VERSION
 
@@ -406,17 +405,13 @@ cdef class ConcurrentTask(ConcurrentFuture):
     Cancel can be used from any thread.
     """
     cdef CoroutineExecutor executor
-    cdef long loop_thread_id
 
     def __init__(self, coro, loop):
         ConcurrentFuture.__init__(self, loop=loop)
         self.executor = CoroutineExecutor(self, coro)  # reference cycle
-        self.loop_thread_id = -1
         loop.call_soon_threadsafe(self._start)
 
     cpdef _start(self):
-        # asyncio.Loop has ._thread_id, but uvloop does not expose it
-        self.loop_thread_id = get_ident()  # with gil
         self.executor.step()
 
     cpdef cancel(self, msg=None):
@@ -427,7 +422,11 @@ cdef class ConcurrentTask(ConcurrentFuture):
         """
         # invoke CoroutineExecutor.cancel on the loop thread and wait for its result.
         # but run it directly to avoid deadlock if we are already on the loop thread.
-        if get_ident() == self.loop_thread_id:  # with gil
+        try:
+            loop = get_event_loop()
+        except RuntimeError:
+            loop = None
+        if loop is self._loop:
             return self.executor.cancel(msg)
         return self._cancel_via_loopthread(msg)
 

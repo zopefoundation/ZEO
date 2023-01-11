@@ -16,7 +16,6 @@ get_event_loop = asyncio.get_event_loop
 import inspect
 from threading import Event
 from time import sleep
-from ZEO._compat import get_ident
 
 
 # ``Future`` states -- inlined below for speed
@@ -345,7 +344,7 @@ class CoroutineExecutor:
 
 
     def cancel(self, msg):
-        """cancel requests cancellation of the coroutine.
+        """request cancellation of the coroutine.
 
         It is safe to call cancel only from the same thread where coroutine is executed.
         """
@@ -399,17 +398,12 @@ class ConcurrentTask(ConcurrentFuture):
     Steps are not scheduled but executed immediately; the context is ignored.
     Cancel can be used from any thread.
     """
-    __slots__ = "executor", "loop_thread_id"
+    __slots__ = "executor",
 
     def __init__(self, coro, loop):
         ConcurrentFuture.__init__(self, loop=loop)
         self.executor = CoroutineExecutor(self, coro)  # reference cycle
-        self.loop_thread_id = None
-        def _():
-            # asyncio.Loop has ._thread_id, but uvloop does not expose it
-            self.loop_thread_id = get_ident()  # with gil
-            self.executor.step()
-        self._loop.call_soon_threadsafe(_)
+        self._loop.call_soon_threadsafe(self.executor.step)
 
     def cancel(self, msg=None):
         """external cancel request.
@@ -417,9 +411,16 @@ class ConcurrentTask(ConcurrentFuture):
         cancel requests cancellation of the task.
         it is safe to call cancel from any thread.
         """
+        if self.done():
+            # we are in a stable state; cancelation will not change it
+            return False
         # invoke CoroutineExecutor.cancel on the loop thread and wait for its result.
         # but run it directly to avoid deadlock if we are already on the loop thread.
-        if get_ident() == self.loop_thread_id:  # with gil
+        try:
+            loop = get_event_loop()
+        except RuntimeError:
+            loop = None
+        if loop is self._loop:
             return self.executor.cancel(msg)
 
         res = ConcurrentFuture()
