@@ -396,7 +396,7 @@ class ConcurrentTask(ConcurrentFuture):
     """Task reporting to ``ConcurrentFuture``.
 
     Steps are not scheduled but executed immediately; the context is ignored.
-    Cancel can be used from any thread.
+    Cancel can be used only from IO thread.
     """
     __slots__ = "executor",
 
@@ -409,34 +409,9 @@ class ConcurrentTask(ConcurrentFuture):
         """external cancel request.
 
         cancel requests cancellation of the task.
-        it is safe to call cancel from any thread.
+        it is safe to call cancel only from IO thread.
         """
-        if self.done():
-            # we are in a stable state; cancelation will not change it
-            return False
-        # invoke CoroutineExecutor.cancel on the loop thread and wait for its result.
-        # but run it directly to avoid deadlock if we are already on the loop thread.
-        try:
-            loop = get_event_loop()
-        except RuntimeError:
-            loop = None
-        if loop is self._loop:
-            return self.executor.cancel(msg)
-
-        res = ConcurrentFuture()
-        def _():
-            try:
-                x = self.executor.cancel(msg)
-            except BaseException as e:
-                if six.PY2: # trollius stops the loop by raising _StopError
-                    if isinstance(e, asyncio.base_events._StopError):
-                        res.set_result(True)
-                        raise
-                res.set_exception(e)
-            else:
-                res.set_result(x)
-        self._loop.call_soon_threadsafe(_)
-        return res.result()  # wait for the call to complete
+        return self.executor.cancel(msg)
 
     def _cancel(self, msg):
         """internal cancel request."""
