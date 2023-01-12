@@ -1748,9 +1748,6 @@ class ConcurrentTaskTests(CoroutineExecutorTestsBase, TestCase):
         loop = self.loop
         t = ConcurrentTask(coro(), loop)
         self.run_loop()
-        # `run_loop` resets the event loop.
-        # The `cancelation` tests, however, rely on the loop kept intact
-        asyncio.set_event_loop(loop)
         return t
 
     def test_cancel_from_another_thread(self):

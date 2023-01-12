@@ -173,13 +173,14 @@ def loop_run_forever(loop):
     work correctly without loop argument.
 
     py3 handles this correctly out of the box (see get_running_loop), but
-    trollius does not. Anyway better be safe than sorry.
+    trollius does not. Better be safe than sorry.
     """
     asyncio.set_event_loop(loop)
-    try:
-        return loop.run_forever()
-    finally:
-        asyncio.set_event_loop(None)
+    return loop.run_forever()
+    # leave the loop set as the default - don't do `asyncio.set_event_loop(None)`
+    # an IO thread typically gets its loop early and uses it until its death.
+    # There can be several `run_loop*` calls (example, the "closing" logic) and it
+    # is unnatural to reset the loop in between those calls.
 
 
 def loop_run_until_complete(loop, fut):
@@ -187,7 +188,5 @@ def loop_run_until_complete(loop, fut):
     loop.run_until_complete.
     """
     asyncio.set_event_loop(loop)
-    try:
-        return loop.run_until_complete(fut)
-    finally:
-        asyncio.set_event_loop(None)
+    return loop.run_until_complete(fut)
+    # don't do `asyncio.set_event_loop(None)` - see comment in loop_run_forever
