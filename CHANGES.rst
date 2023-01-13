@@ -73,6 +73,10 @@ Changelog
 
   See `issue 156 <https://github.com/zopefoundation/ZEO/issues/156>`_.
 
+- Remove support for ``python setup.py test``. It hadn't been working
+  for some time. From now the only supported way to run tests is via
+  ``zope-testrunner``.
+
 
 5.3.0 (2022-03-24)
 ------------------

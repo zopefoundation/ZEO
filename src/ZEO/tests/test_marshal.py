@@ -26,9 +26,3 @@ class MarshalTests(unittest.TestCase):
             repr(pickle_server_decode(encode(*args))),
             repr(args)
         )
-
-
-def test_suite():
-    suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(MarshalTests))
-    return suite

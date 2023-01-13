@@ -914,7 +914,7 @@ class ClientRunner:
         # future representing a server response, referenced globally.
         # Such a future protects the return value from
         # the garbage collector (it is referenced via callbacks).
-        # It the IO thread is not fast enough, the complete
+        # If the IO thread is not fast enough, the complete
         # structure may be released during a garbage collection.
         return self.io_call(
             self.client.prefetch_co(oids, tid), wait=False)

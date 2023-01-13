@@ -153,7 +153,3 @@ class ClientSideConflictResolutionTests(zope.testing.setupstack.TestCase):
 
         db.close()
         stop()
-
-
-def test_suite():
-    return unittest.makeSuite(ClientSideConflictResolutionTests)

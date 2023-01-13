@@ -9,7 +9,7 @@ This module defines variants which run callbacks immediately.
 
 import asyncio
 from asyncio import CancelledError, InvalidStateError, get_event_loop
-from threading import Event, Lock, get_ident
+from threading import Event
 from time import sleep
 
 
@@ -235,7 +235,7 @@ class CoroutineExecutor:
                 task.set_result(e.value)
             elif isinstance(e, CancelledError):
                 if len(e.args) == 0:
-                    msg = getattr(awaiting, '_xasyncio_cancel_msg', None)  # see _cancel_future
+                    msg = getattr(awaiting, '_cancel_message', None)  # see _cancel_future
                 elif len(e.args) == 1:
                     msg = e.args[0]
                 else:
@@ -293,7 +293,7 @@ class CoroutineExecutor:
 
 
     def cancel(self, msg):
-        """cancel requests cancellation of the coroutine.
+        """request cancellation of the coroutine.
 
         It is safe to call cancel only from the same thread where coroutine is executed.
         """
@@ -309,21 +309,21 @@ class CoroutineExecutor:
         return True
 
 # _cancel_future cancels future fut with message msg.
-# if fut does not support cancelling with message, the message is saved in fut._xasyncio_cancel_msg .
+# if fut does not support cancelling with message, the message is saved in fut._cancel_message .
 def _cancel_future(fut, msg):
     try:
         return fut.cancel(msg)
     except TypeError:
         # on py3 < 3.9 Future.cancel does not accept msg
         _ = fut.cancel()
-        fut._xasyncio_cancel_msg = msg
+        fut._cancel_message = msg
         return _
 
 
 class AsyncTask(Future):
     """Simplified ``asyncio.Task``.
 
-    Steps are not scheduled but executed immediately.
+    Steps are not scheduled but executed immediately; the context is ignored.
     """
     __slots__ = "executor",
 
@@ -344,49 +344,23 @@ class AsyncTask(Future):
 class ConcurrentTask(ConcurrentFuture):
     """Task reporting to ``ConcurrentFuture``.
 
-    Steps are not scheduled but executed immediately.
-    Cancel can be used from any thread.
+    Steps are not scheduled but executed immediately; the context is ignored.
+    Cancel can be used only from IO thread.
     """
-    __slots__ = "executor", "loop_thread_id"
+    __slots__ = "executor",
 
     def __init__(self, coro, loop):
         ConcurrentFuture.__init__(self, loop=loop)
         self.executor = CoroutineExecutor(self, coro)  # reference cycle
-        self.loop_thread_id = None
-        def _():
-            # asyncio.Loop has ._thread_id, but uvloop does not expose it
-            self.loop_thread_id = get_ident()  # with gil
-            self.executor.step()
-        self._loop.call_soon_threadsafe(_)
+        self._loop.call_soon_threadsafe(self.executor.step)
 
     def cancel(self, msg=None):
         """external cancel request.
 
         cancel requests cancellation of the task.
-        it is safe to call cancel from any thread.
+        it is safe to call cancel only from IO thread.
         """
-        # invoke CoroutineExecutor.cancel on the loop thread and wait for its result.
-        # but run it directly to avoid deadlock if we are already on the loop thread.
-        if get_ident() == self.loop_thread_id:  # with gil
-            return self.executor.cancel(msg)
-
-        sema = Lock()
-        sema.acquire()
-        res = [None]
-        def _():
-            try:
-                x = self.executor.cancel(msg)
-            except BaseException as e:
-                x = e
-            finally:
-                res[0] = x
-                sema.release()
-        self._loop.call_soon_threadsafe(_)
-        sema.acquire() # wait for the call to complete
-        r = res[0]
-        if isinstance(r, BaseException):
-            raise r
-        return r
+        return self.executor.cancel(msg)
 
     def _cancel(self, msg):
         """internal cancel request."""

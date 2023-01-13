@@ -13,7 +13,6 @@
 ##############################################################################
 
 from setuptools import setup, find_packages
-import os
 
 version = '6.0.0.dev0'
 
@@ -39,62 +38,6 @@ tests_require = [
     'zdaemon',
     'zope.testrunner',
 ]
-
-
-def _modname(path, base, name=''):
-    if path == base:
-        return name
-    dirname, basename = os.path.split(path)
-    return _modname(dirname, base, basename + '.' + name)
-
-
-def _flatten(suite, predicate=lambda *x: True):
-    from unittest import TestCase
-    for suite_or_case in suite:
-        if predicate(suite_or_case):
-            if isinstance(suite_or_case, TestCase):
-                yield suite_or_case
-            else:
-                for x in _flatten(suite_or_case):
-                    yield x
-
-
-def _no_layer(suite_or_case):
-    return getattr(suite_or_case, 'layer', None) is None
-
-
-def _unittests_only(suite, mod_suite):
-    for case in _flatten(mod_suite, _no_layer):
-        suite.addTest(case)
-
-
-def alltests():
-    import logging
-    import pkg_resources
-    import unittest
-
-    class NullHandler(logging.Handler):
-        level = 50
-
-        def emit(self, record):
-            pass
-
-    logging.getLogger().addHandler(NullHandler())
-
-    suite = unittest.TestSuite()
-    base = pkg_resources.working_set.find(
-        pkg_resources.Requirement.parse('ZEO')).location
-    for dirpath, dirnames, filenames in os.walk(base):
-        if os.path.basename(dirpath) == 'tests':
-            for filename in filenames:
-                if filename != 'testZEO.py':
-                    continue
-                if filename.endswith('.py') and filename.startswith('test'):
-                    mod = __import__(
-                        _modname(dirpath, base, os.path.splitext(filename)[0]),
-                        {}, {}, ['*'])
-                    _unittests_only(suite, mod.test_suite())
-    return suite
 
 
 long_description = (
@@ -133,7 +76,6 @@ setup(name="ZEO",
         "Operating System :: Unix",
         "Framework :: ZODB",
       ],
-      test_suite="__main__.alltests",  # to support "setup.py test"
       tests_require=tests_require,
       extras_require={
           'test': tests_require,
