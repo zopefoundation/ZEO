@@ -123,7 +123,7 @@ cdef class Future:
         self._result = exc
         self.call_callbacks()
 
-    # py3 < py3.7 access ._exception directly
+    # py3 accesses ._exception directly
     @property
     def _exception(self):
         if self.state != EXCEPTION:
