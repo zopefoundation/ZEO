@@ -139,7 +139,7 @@ class Future(object):
         self._result = exc
         self.call_callbacks()
 
-    # trollius and py3 < py3.7 access ._exception directly
+    # trollius and py3 access ._exception directly
     @property
     def _exception(self):
         if self.state != 2:  # EXCEPTION
