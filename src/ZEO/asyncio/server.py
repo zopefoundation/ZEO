@@ -47,7 +47,8 @@ class ServerProtocol(base.ZEOBaseProtocol):
     def close(self):
         logger.debug("Closing server protocol")
         if not self.closed:
-            super(ServerProtocol, self).close()  # will set ``closed``
+            self.closed = True
+            super(ServerProtocol, self).close()
             self.zeo_storage = None  # break reference cycle
 
     connected = None  # for tests
