@@ -1,7 +1,7 @@
 Changelog
 =========
 
-5.4.0 (unreleased)
+5.4.0 (2023-01-18)
 ------------------
 
 - Reimplement and streamline the ``asyncio`` part of the ``ClientStorage``
