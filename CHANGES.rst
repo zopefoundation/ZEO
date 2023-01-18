@@ -6,6 +6,7 @@ Changelog
 
 - Reimplement and streamline the ``asyncio`` part of the ``ClientStorage``
   implementation:
+
    - switch from futures with explicit callbacks to `async/await`-like style
    - use standard ``asyncio`` features to implement timeouts
    - redesign the API of the class implementing the ZEO client protocol
