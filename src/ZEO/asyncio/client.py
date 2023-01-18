@@ -328,18 +328,32 @@ class Protocol(base.ZEOBaseProtocol):
         future = self.futures.get(message_id)
         if future is None:
             future = Future(loop=self.loop)
-            self.call_sync('loadBefore', message_id, message_id, future)
-
-            @future.add_done_callback
-            def _(future):
-                try:
+            # Check whether the cache contains the information.
+            # I am not sure whether the cache lookup is really
+            # necessary at this place (it has already been
+            # done in ``ClientStorage.loadBefore`` and therefore
+            # will likely fail here).
+            # The lookup at this place, however, guarantees
+            # (together with the folding of identical requests above)
+            # that we will not store data already in the cache.
+            # Maybe, this is important
+            cache = self.client.cache
+            data = cache.loadBefore(oid, tid)
+            if data:
+                future.set_result(data)
+            else:
+                # data not in the cache
+                # ensure the cache gets updated when the answer arrives
+                @future.add_done_callback
+                def store(future):
+                    if future.cancelled() or future.exception() is not None:
+                        return
                     data = future.result()
-                except Exception:
-                    return
-                if data:
-                    data, start, end = data
-                    self.client.cache.store(oid, start, end, data)
+                    if data:
+                        data, start, end = data
+                        self.client.cache.store(oid, start, end, data)
 
+                self.call_sync('loadBefore', message_id, message_id, future)
         return future
 
     # Methods called by the server.
@@ -753,10 +767,15 @@ class ClientIO(object):
 
     @coroutine
     def load_before_co(self, oid, tid, timeout):
-        data = self.cache.loadBefore(oid, tid)
-        if data is not None:
-            return_(data)
         if not self.operational:
+            # the following cache lookup is not necessary in
+            # real life: ``ClientStorage.loadBefore`` has
+            # already done it (and failed); we will fail, too --
+            # with high probability
+            # But a test relies on this cache lookup.
+            data = self.cache.loadBefore(oid, tid)
+            if data:
+                return_(data)
             yield self.await_operational_co(timeout)
         # Race condition potential
         # -- see comment in ``call_sync_co``
@@ -774,13 +793,8 @@ class ClientIO(object):
     def prefetch_co(self, oids, tid):
         if not self.operational:
             raise ClientDisconnected()
-        oids_tofetch = []
-        for oid in oids:
-            if self.cache.loadBefore(oid, tid) is None:
-                oids_tofetch.append(oid)
-        if oids_tofetch:
-            yield asyncio.gather(*(Task(self._prefetch_co(oid, tid), loop=self.loop)
-                                   for oid in oids_tofetch))
+        yield asyncio.gather(*(Task(self._prefetch_co(oid, tid), loop=self.loop)
+                               for oid in oids))
 
     @coroutine
     def tpc_finish_co(self, tid, updates, f):
