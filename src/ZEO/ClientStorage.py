@@ -255,10 +255,6 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         max_disconnect_poll
         drop_cache_rather_verify
             ignored; retained (as parameters) for compatibility
-
-        Note that the authentication protocol is defined by the server
-        and is detected by the ClientStorage upon connecting (see
-        testConnection() and doAuth() for details).
         """
 
         if isinstance(addr, int):
@@ -383,6 +379,8 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         if self._check_blob_size_thread is not None:
             self._check_blob_size_thread.join()
 
+        self.ping = self.sync = None  # break reference cycles
+
     _check_blob_size_thread = None
 
     def _check_blob_size(self, bytes=None):
@@ -430,6 +428,12 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
     def notify_connected(self, conn, info):
         """The connection is about to be established via *conn*.
 
+        *conn* is an ``asyncio.client.ClientIO`` instance.
+        We can use it already for asynchronous server calls
+        but must not make synchronous calls or
+        use the normal server call API (would lead to deadlock
+        or ``ClientDisconnected``).
+
         *info* is a ``dict`` providing information about the server
         (and its associated storage).
         """
@@ -450,8 +454,10 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         self._connection_generation += 1
 
         if self._client_label:
-            conn.call_async_from_same_thread(
-                'set_client_label', self._client_label)
+            # Note: we cannot yet use ``_async`` (connection not yet
+            # officially established) but can already use
+            # ``ClientIO.call_async``
+            conn.call_async('set_client_label', (self._client_label,))
 
         self._info.update(info)
 
@@ -591,12 +597,18 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         return self._call('loadSerial', oid, serial)
 
     def load(self, oid, version=''):
+        # Note: cache correctness is guaranteed only upto
+        # ``_cache.getLastTid()``. The following call therefore
+        # may return outdated information.
         result = self.loadBefore(oid, utils.maxtid)
         if result is None:
             raise POSException.POSKeyError(oid)
         return result[:2]
 
     def loadBefore(self, oid, tid):
+        # Note: cache correctness is guaranteed only for
+        # ``tid <= _cache.getLastTid()``.
+        # For larger *tid*, the cache may contain outdated information.
         result = self._cache.loadBefore(oid, tid)
         if result:
             return result
@@ -701,6 +713,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         return serials
 
     def receiveBlobStart(self, oid, serial):
+        logger.debug("receiveBlobStart for %r, %r", oid, serial)
         blob_filename = self.fshelper.getBlobFilename(oid, serial)
         assert not os.path.exists(blob_filename)
         lockfilename = os.path.join(os.path.dirname(blob_filename), '.lock')
@@ -711,6 +724,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         f.close()
 
     def receiveBlobChunk(self, oid, serial, chunk):
+        logger.debug("receiveBlobChunk for %r, %r", oid, serial)
         blob_filename = self.fshelper.getBlobFilename(oid, serial)+'.dl'
         assert os.path.exists(blob_filename)
         f = open(blob_filename, 'r+b')
@@ -721,6 +735,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         self._check_blob_size(self._blob_data_bytes_loaded)
 
     def receiveBlobStop(self, oid, serial):
+        logger.debug("receiveBlobStop for %r, %r", oid, serial)
         blob_filename = self.fshelper.getBlobFilename(oid, serial)
         os.rename(blob_filename+'.dl', blob_filename)
         os.chmod(blob_filename, stat.S_IREAD)
@@ -771,7 +786,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
 
             # Ask the server to send it to us.  When this function
             # returns, it will have been sent. (The recieving will
-            # have been handled by the asyncore thread.)
+            # have been handled by the IO thread.)
 
             self._call('sendBlob', oid, serial)
 
@@ -1108,8 +1123,12 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                 return self._iterator_gc(True)
             self._iterator_ids -= iids
 
-    def server_status(self):
-        return self._call('server_status')
+    def server_status(self, timeout=None):
+        """Retrieve status dictionary from the server.
+
+        (The timeout keyword argument is for tests)
+        """
+        return self._call('server_status', timeout=timeout)
 
 
 class TransactionIterator(object):
@@ -1325,12 +1344,29 @@ def check_blob_size_script(args=None):
     _check_blob_cache_size(blob_dir, int(target))
 
 
+class _FileLock:
+    """Auxiliary class to provide for file lock logging."""
+    def __init__(self, filename, log_failure):
+        self.filename = filename
+        try:
+            self.lock = zc.lockfile.LockFile(filename)
+            logger.debug("locked %s", filename)
+        except zc.lockfile.LockError:
+            if log_failure:
+                logger.debug("failed to lock %s", filename)
+            raise
+
+    def close(self):
+        self.lock.close()
+        logger.debug("unlocked %s", self.filename)
+
+
 def _lock_blob(path):
     lockfilename = os.path.join(os.path.dirname(path), '.lock')
     n = 0
     while 1:
         try:
-            return zc.lockfile.LockFile(lockfilename)
+            return _FileLock(lockfilename, n == 0)
         except zc.lockfile.LockError:
             time.sleep(0.01)
             n += 1

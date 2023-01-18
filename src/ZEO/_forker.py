@@ -15,6 +15,7 @@
 from __future__ import print_function
 import gc
 import os
+import os.path
 import sys
 import multiprocessing
 import logging
@@ -85,6 +86,16 @@ class ZEOConfig(object):
 def runner(config, qin, qout, timeout=None,
            debug=False, name=None,
            keep=False, protocol=None):
+
+    root_logger = logging.getLogger()
+    if not root_logger.handlers:
+        # logging is not configured -- maybe because
+        # the process has been ``spawn``ed.
+        # Try to recreate the logging configuration
+        logini = os.environ.get("ZOPE_TESTRUNNER_LOG_INI")
+        if logini is not None and os.path.exists(logini):
+            from logging.config import fileConfig
+            fileConfig(logini, disable_existing_loggers=False)
 
     if debug or DEBUG:
         debug_logging()
@@ -219,9 +230,21 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
         from threading import Thread
         from six.moves.queue import Queue
     else:
-        from multiprocessing import Process as Thread
+        # Experimental to see whether server logging problems under MacOS
+        # have to do with its default `spawn` method
+        # from multiprocessing import Process as Thread
+        process_type = os.environ.get("ZEO_PROCESS_TYPE", "")
+        if six.PY2:
+            from multiprocessing import Process as Thread
+            if process_type:
+                raise NotImplementedError(
+                        "$ZEO_PROCESS_TYPE is not supported on py2")
+        else:
+            from multiprocessing import context
+            Thread = getattr(context, process_type.capitalize() + "Process")
         Queue = ThreadlessQueue
 
+    logger.info("using thread type %r", Thread)
     qin = Queue()
     qout = Queue()
     thread = Thread(

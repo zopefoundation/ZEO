@@ -164,7 +164,7 @@ def setUp(test):
     test.globs['wait_disconnected'] = wait_disconnected
 
 
-def wait_until(label=None, func=None, timeout=30, onfail=None):
+def wait_until(label=None, func=None, timeout=3, onfail=None):
     if label is None:
         if func is not None:
             label = func.__name__

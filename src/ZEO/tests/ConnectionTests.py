@@ -42,6 +42,14 @@ ZERO = '\0'*8
 
 class TestClientStorage(ClientStorage):
 
+    # most operations will wait for reconnection with
+    # ``wait_timeout`` (default: ``30``).
+    # This is bad for our tests: they will eventually succeed, but
+    # take a very long time. Use a timeout more adapted to tests.
+    def __init__(*args, **kw):
+        return ClientStorage.__init__(
+                *args, **(kw.update(dict(wait_timeout=2)) or kw))
+
     test_connection = False
 
     connection_count_for_tests = 0
@@ -136,7 +144,8 @@ class CommonSetupTearDown(StorageTestBase):
 
     def openClientStorage(self, cache=None, cache_size=200000, wait=1,
                           read_only=0, read_only_fallback=0,
-                          username=None, password=None, realm=None):
+                          username=None, password=None, realm=None,
+                          client_label=None):
         if cache is None:
             cache = str(self.__class__.cache_id)
             self.__class__.cache_id += 1
@@ -149,6 +158,7 @@ class CommonSetupTearDown(StorageTestBase):
                                     min_disconnect_poll=0.1,
                                     read_only=read_only,
                                     read_only_fallback=read_only_fallback,
+                                    client_label=client_label,
                                     **self._client_options())
         storage.registerDB(DummyDB())
         return storage
@@ -194,7 +204,7 @@ class CommonSetupTearDown(StorageTestBase):
     def pollUp(self, timeout=30.0, storage=None):
         if storage is None:
             storage = self._storage
-        storage.server_status()
+        storage.server_status(timeout=timeout)
 
     def pollDown(self, timeout=30.0):
         # Poll until we're disconnected.
@@ -875,8 +885,16 @@ class ReconnectionTests(CommonSetupTearDown):
         with short_timeout(self):
             self.assertRaises(ClientDisconnected, self._storage.tpc_vote, txn)
         self.startServer(create=0)
+        # if we do not wait for reconnection,
+        # small timing variations in the reconnection process
+        # can cause occasional ``ClientDisconnected`` exceptions
+        # making the test prone to race conditions.
+        # Of course, in real life the followup operations
+        # could happen while reconnecting but ``ClientDisconnected``
+        # would be a good in those cases
+        self.pollUp(2)  # await reconnection
         self._storage.tpc_abort(txn)
-        self._dostore()
+        self._dostore()  # stores in a new transaction
 
         # This test is supposed to cover the following error, although
         # I don't have much confidence that it does.  The likely
@@ -976,6 +994,7 @@ class TimeoutTests(CommonSetupTearDown):
             else:
                 self.fail('bad logging')
 
+        storage.tpc_abort(txn)
         storage.close()
 
     def checkTimeoutOnAbort(self):
@@ -1022,6 +1041,7 @@ class TimeoutTests(CommonSetupTearDown):
         # Load should fail since the object should not be in either the cache
         # or the server.
         self.assertRaises(KeyError, storage.load, oid, '')
+        storage.tpc_abort(t)
 
 
 class MSTThread(threading.Thread):

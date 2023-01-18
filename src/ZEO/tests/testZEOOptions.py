@@ -101,12 +101,4 @@ class TestZEOOptions(TestZDOptions):
         self.assertEqual(options.invalidation_queue_size, 100)
 
 
-def test_suite():
-    suite = unittest.TestSuite()
-    for cls in [TestZEOOptions]:
-        suite.addTest(unittest.makeSuite(cls))
-    return suite
-
-
-if __name__ == "__main__":
-    unittest.main(defaultTest='test_suite')
+del TestZDOptions  # don't run ZDaemon tests

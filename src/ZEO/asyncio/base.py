@@ -11,10 +11,10 @@ especially, the messages wrote with ``write_message_iter``
 are received as contiguous messages.
 
 The first message transmits the protocol version.
-Its callback is ``finish_connect``.
+Its callback is ``finish_connection``.
 The first byte of the protocol version message identifies
 an encoding type; the remaining bytes specify the version.
-``finish_connect`` is expected to set up
+``finish_connection`` is expected to set up
 methods ``encode`` and ``decode`` corresponding to the
 encoding type.
 
@@ -33,142 +33,28 @@ The ZEO protocol has client and server variants.
 """
 import logging
 import socket
-from struct import unpack
 import sys
 
 from .compat import asyncio
-
+from .smp import SizedMessageProtocol
 
 logger = logging.getLogger(__name__)
 
 INET_FAMILIES = socket.AF_INET, socket.AF_INET6
 
 
-class Protocol(asyncio.Protocol):
-    """asyncio low-level ZEO base interface
-    """
+class ZEOBaseProtocol(asyncio.Protocol):
+    """ZEO protocol base class for the common features."""
 
-    # All of the code in this class runs in a single dedicated
-    # thread. Thus, we can mostly avoid worrying about interleaved
-    # operations.
+    protocol_version = None
 
-    # One place where special care was required was in cache setup on
-    # connect. See finish connect below.
-
-    transport = protocol_version = None
-
-    def __init__(self, loop, addr):
+    def __init__(self, loop, name):
         self.loop = loop
-        self.addr = addr
-        self.input = []  # Input buffer when assembling messages
-        self.output = []  # Output buffer when paused
-        self.paused = []  # Paused indicator, mutable to avoid attr lookup
+        self.name = name
 
-        # Handle the first message, the protocol handshake, differently
-        self.message_received = self.first_message_received
-
-    def __repr__(self):
-        return self.name
-
-    closed = False
-
-    def close(self):
-        if not self.closed:
-            self.closed = True
-            if self.transport is not None:
-                self.transport.close()
-
-    def connection_made(self, transport):
-        logger.info("Connected %s", self)
-
-        if sys.version_info < (3, 6):
-            sock = transport.get_extra_info('socket')
-            if sock is not None and sock.family in INET_FAMILIES:
-                # See https://bugs.python.org/issue27456 :(
-                sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, True)
-        self.transport = transport
-
-        paused = self.paused
-        output = self.output
-        append = output.append
-        writelines = transport.writelines
-        from struct import pack
-
-        def write_message(message):
-            if paused:
-                append(message)
-            else:
-                writelines((pack(">I", len(message)), message))
-
-        self.write_message = write_message
-
-        def write_message_iter(message_iter):
-            # Note, don't worry about combining messages.  Iters
-            # will be used with blobs, in which case, the individual
-            # messages will be big to begin with.
-            data = iter(message_iter)
-            if paused:
-                append(data)
-                return
-            for message in data:
-                writelines((pack(">I", len(message)), message))
-                if paused:
-                    append(data)
-                    break
-
-        self.write_message_iter = write_message_iter
-
-    got = 0
-    want = 4
-    getting_size = True
-
-    def data_received(self, data):
-
-        # Low-level input handler collects data into sized messages.
-
-        # Note that the logic below assume that when new data pushes
-        # us over what we want, we process it in one call until we
-        # need more, because we assume that excess data is all in the
-        # last item of self.input. This is why the exception handling
-        # in the while loop is critical.  Without it, an exception
-        # might cause us to exit before processing all of the data we
-        # should, when then causes the logic to be broken in
-        # subsequent calls.
-
-        self.got += len(data)
-        self.input.append(data)
-        while self.got >= self.want:
-            try:
-                extra = self.got - self.want
-                if extra == 0:
-                    collected = b''.join(self.input)
-                    self.input = []
-                else:
-                    input = self.input
-                    self.input = [input[-1][-extra:]]
-                    input[-1] = input[-1][:-extra]
-                    collected = b''.join(input)
-
-                self.got = extra
-
-                if self.getting_size:
-                    # we were recieving the message size
-                    assert self.want == 4
-                    self.want = unpack(">I", collected)[0]
-                    self.getting_size = False
-                else:
-                    self.want = 4
-                    self.getting_size = True
-                    self.message_received(collected)
-            except Exception:
-                logger.exception("data_received %s %s %s",
-                                 self.want, self.got, self.getting_size)
-
-    def first_message_received(self, protocol_version):
-        # Handler for first/handshake message, set up in __init__
-        del self.message_received  # use default handler from here on
-        self.finish_connect(protocol_version)
-
+    # API -- defined in ``connection_made``
+    # write_message(message)
+    # write_message_iter(message_iter)
     def call_async(self, method, args):
         """call method named *method* asynchronously with *args*."""
         self.write_message(self.encode(0, True, method, args))
@@ -177,26 +63,130 @@ class Protocol(asyncio.Protocol):
         self.write_message_iter(self.encode(0, True, method, args)
                                 for method, args in it)
 
-    def pause_writing(self):
-        self.paused.append(1)
-
-    def resume_writing(self):
-        paused = self.paused
-        del paused[:]
-        output = self.output
-        writelines = self.transport.writelines
-        from struct import pack
-        while output and not paused:
-            message = output.pop(0)
-            if isinstance(message, bytes):
-                writelines((pack(">I", len(message)), message))
-            else:
-                data = message
-                for message in data:
-                    writelines((pack(">I", len(message)), message))
-                    if paused:  # paused again. Put iter back.
-                        output.insert(0, data)
-                        break
-
     def get_peername(self):
-        return self.transport.get_extra_info('peername')
+        return self.sm_protocol.transport.get_extra_info('peername')
+
+    def protocol_factory(self):
+        return self
+
+    closing = None  # ``None`` or closed future
+    sm_protocol = None
+
+    def close(self):
+        """schedule closing, return closed future."""
+        # with ``asyncio``, ``close`` only schedules the closing;
+        # close completion is signalled via a call to ``connection_lost``.
+        closing = self.closing
+        if closing is None:
+            closing = self.closing = create_future(self.loop)
+            # can get closed before ``sm_protocol`` set up
+            if self.sm_protocol is not None:
+                # will eventually cause ``connection_lost``
+                self.sm_protocol.close()
+            else:
+                closing.set_result(True)
+        elif self.sm_protocol is not None:
+            self.sm_protocol.close()  # no problem if repeated
+        return closing
+
+    def __repr__(self):
+        cls = self.__class__
+        return "%s.%s(%s)" % (
+            cls.__module__, cls.__name__, self.name)
+
+    # to be defined by deriving classes
+    # def finish_connection(protocol_version_message)
+    # def message_received(message)
+
+    #  ``Protocol`` responsibilities -- defined in ``connection_made``
+    # data_received
+    # eof_received
+    # pause_writing
+    # resume_writing
+    def connection_made(self, transport):
+        logger.info("Connected %s", self)
+
+        if sys.version_info < (3, 6):
+            sock = transport.get_extra_info('socket')
+            if sock is not None and sock.family in INET_FAMILIES:
+                # See https://bugs.python.org/issue27456 :(
+                sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, True)
+
+        # set up lower level sized message protocol
+        # creates reference cycle
+        smp = self.sm_protocol = SizedMessageProtocol(self._first_message)
+        smp.connection_made(transport)  # takes over ``transport``
+        self.data_received = smp.data_received
+        self.eof_received = smp.eof_received
+        self.pause_writing = smp.pause_writing
+        self.resume_writing = smp.resume_writing
+        self.write_message = smp.write_message
+        self.write_message_iter = smp.write_message_iter
+
+    # In real life ``connection_lost`` is only called by
+    # the transport and ``asyncio.Protocol`` guarantees that
+    # it is called exactly once (if ``connection_made`` has
+    # been called) or not at all.
+    # Some tests, however, call ``connection_lost`` themselves.
+    # The following attribute helps to ensure that ``connection_lost``
+    # is called exactly once.
+    connection_lost_called = False
+
+    def connection_lost(self, exc):
+        """The call signals close completion."""
+        self.connection_lost_called = True
+        self.sm_protocol.connection_lost(exc)
+        closing = self.closing
+        if closing is None:
+            closing = self.closing = create_future(self.loop)
+        if not closing.done():
+            closing.set_result(True)
+
+    # internal
+    def _first_message(self, protocol_version):
+        self.sm_protocol.set_receive(self.message_received)
+        self.finish_connection(protocol_version)
+
+    # ``uvloop`` workaround
+    # We define ``data_received`` in ``connection_made``.
+    # ``uvloop``, however, caches ``protocol.data_received`` before
+    # it calls ``connection_made`` - at a consequence, data is not
+    # received
+    # The method below is overridden in ``connection_made``.
+    def data_received(self, data):
+        self.data_received(data)  # not an infinite loop, because overridden
+
+
+def create_future(loop):
+    mkf = getattr(loop, 'create_future', None)  # py3.5+
+    if mkf is not None:
+        return mkf()
+    else:
+        return asyncio.Future(loop=loop)        # py2
+
+
+def loop_run_forever(loop):
+    """loop_run_forever runs loop.run_forever() with setting loop to be the
+    default loop for current thread during the run.
+
+    It is needed so that functions like asyncio.sleep, asyncio.wait_for, ...
+    work correctly without loop argument.
+
+    py3 handles this correctly out of the box (see get_running_loop), but
+    trollius does not. Better be safe than sorry.
+    """
+    asyncio.set_event_loop(loop)
+    return loop.run_forever()
+    # leave the loop set as the default - don't do `asyncio.set_event_loop(None)`
+    # an IO thread typically gets its loop early and uses it until its death.
+    # There can be several `run_loop*` calls (example, the "closing" logic) and it
+    # is unnatural to reset the loop in between those calls.
+
+
+def loop_run_until_complete(loop, fut):
+    """loop_run_until_complete is similar to loop_run_forever, but applies to
+    loop.run_until_complete.
+    """
+    asyncio.set_event_loop(loop)
+    return loop.run_until_complete(fut)
+    # don't do `asyncio.set_event_loop(None)` - see comment in loop_run_forever

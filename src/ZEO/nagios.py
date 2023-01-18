@@ -77,6 +77,7 @@ def check(addr, output_metrics, status, per):
     try:
         s.connect(addr)
     except socket.error as err:
+        s.close()
         return error("Can't connect %s" % err)
 
     s.sendall(b'\x00\x00\x00\x04ruok')

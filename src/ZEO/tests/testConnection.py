@@ -145,27 +145,34 @@ This tests tries to provoke this bug by:
     >>> db.close()
 
 - starting a second client that writes objects more or less
-  constantly,
+  constantly; we use ``mods`` and ``allowed_mods`` to avoid
+  that the server's invalidation queue is overrun
 
     >>> import random, threading, time
     >>> stop = False
+    >>> allowed_mods = 80  # ``< invalidation_queue_size`` (100)
+    >>> mods = 0
     >>> db2 = ZEO.DB(addr)
     >>> tm = transaction.TransactionManager()
     >>> conn2 = db2.open(transaction_manager=tm)
     >>> random = random.Random(0)
     >>> lock = threading.Lock()
     >>> def run():
+    ...     global mods
     ...     while 1:
-    ...         i = random.randint(0, nobs-1)
     ...         if stop:
     ...             return
+    ...         time.sleep(0)
     ...         with lock:
+    ...             if mods >= allowed_mods:
+    ...                 continue  # avoid invalidation queue overrun
+    ...             mods += 1
+    ...             i = random.randint(0, nobs-1)
     ...             conn2.root()[i].value += 1
     ...             tm.commit()
     ...             #logging.getLogger('ZEO').debug(
     ...             #   'COMMIT %s %s %r' % (
     ...             #   i, conn2.root()[i].value, conn2.root()[i]._p_serial))
-    ...         time.sleep(0)
     >>> thread = threading.Thread(target=run)
     >>> thread.setDaemon(True)
     >>> thread.start()
@@ -203,6 +210,7 @@ This tests tries to provoke this bug by:
     ...                          record = handler.records.pop(0)
     ...                          print(record.name, record.levelname, end=' ')
     ...                          print(handler.format(record))
+    ...            mods = 0  # allow the writer to continue
     ...        #if bad:
     ...        #   with open('server.log') as f:
     ...        #       print(f.read())

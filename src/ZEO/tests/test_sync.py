@@ -26,14 +26,14 @@ class SyncTests(setupstack.TestCase):
         addr, stop = server(name=self.__name)
 
         # By default the client sync method is a noop:
-        c = client(addr)
+        c = client(addr, wait_timeout=2)
         self.instrument()
         c.sync()
         self.assertEqual(self.__ping_calls, 0)
         c.close()
 
         # But if we pass server_sync:
-        c = client(addr, server_sync=True)
+        c = client(addr, wait_timeout=2, server_sync=True)
         self.instrument()
         c.sync()
         self.assertEqual(self.__ping_calls, 1)

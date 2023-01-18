@@ -16,10 +16,12 @@ from __future__ import print_function
 import multiprocessing
 
 from ZEO.ClientStorage import ClientStorage
+from ZEO.Exceptions import ClientDisconnected
 from ZEO.tests import forker, Cache, CommitLockTests, ThreadTests
 from ZEO.tests import IterationTests
 from ZEO._compat import PY3
 from ZEO._compat import WIN
+import six
 
 from ZODB.Connection import TransactionMetaData
 from ZODB.tests import StorageTestBase, BasicStorage,  \
@@ -85,10 +87,12 @@ class Test_convenience_functions(unittest.TestCase):
         import ZEO
 
         client_thread = mock.Mock(
-            spec=['call', 'async', 'async_iter', 'wait'])
+            spec=['call', 'async', 'async_iter', 'wait', 'close'])
         client = ZEO.client(
             8001, wait=False, _client_factory=client_thread)
         self.assertIsInstance(client, ClientStorage)
+        client.close()
+        client._cache.close()  # client thread responsibility
 
     def test_ZEO_DB_convenience_ok(self):
         import mock
@@ -327,18 +331,18 @@ class GenericTests(
     def _do_store_in_separate_thread(self, oid, revid, voted):
 
         def do_store():
+            self.exception = None
             store = self._new_storage_client()
             try:
                 t = transaction.get()
+                self.assertEqual(store._connection_generation, 1)
                 store.tpc_begin(t)
+                self.assertEqual(store._connection_generation, 1)
                 store.store(oid, revid, b'x', '', t)
                 store.tpc_vote(t)
                 store.tpc_finish(t)
             except Exception as v:
-                import traceback
-                print('E'*70)
-                print(v)
-                traceback.print_exception(*sys.exc_info())
+                self.exception = v
             finally:
                 store.close()
 
@@ -346,6 +350,8 @@ class GenericTests(
         thread.setDaemon(True)
         thread.start()
         thread.join(voted and .1 or 9)
+        if self.exception is not None:
+            six.reraise(type(self.exception), self.exception)
         return thread
 
 
@@ -601,15 +607,12 @@ class ZRPCConnectionTests(ZEO.tests.ConnectionTests.CommonSetupTearDown):
         # how to break it.  We'll just stop it instead for now.
         self._storage._server.loop.call_soon_threadsafe(
             self._storage._server.loop.stop)
-
-        forker.wait_until(
-            'disconnected',
-            lambda: not self._storage.is_connected()
-            )
-
+        # We wait for the client thread to stop (to avoid a race condition)
+        self._storage._server.thread.join(1)
         log = str(handler)
         handler.uninstall()
         self.assertTrue("Client loop stopped unexpectedly" in log)
+        self.assertRaises(ClientDisconnected, self._storage.ping)
 
     def checkExceptionLogsAtError(self):
         # Test the exceptions are logged at error
@@ -766,6 +769,7 @@ class CommonBlobTests(object):
         self._storage.tpc_begin(t)
         self._storage.storeBlob(
           oid, ZODB.utils.z64, 'foo', 'blob_file', '', t)
+        self._storage.tpc_abort(t)
         self._storage.close()
 
 
@@ -1119,10 +1123,18 @@ def test_prefetch(self):
     >>> len(storage._cache) < count
     True
 
-    But it is filled eventually:
+    The ``prefetch`` returns a future.
+    As long as it is not yet done, it is part of a reference
+    cycle and therefore not immediately garbage collected.
+    But a garbage collection run might destroy it.
+    Verify that ``prefetch`` nevertheless works correctly.
+    >>> import gc
+    >>> _ = gc.collect()
+
+    Verify that the cache is filled eventually:
 
     >>> from zope.testing.wait import wait
-    >>> wait(lambda: len(storage._cache) > count)
+    >>> wait((lambda: len(storage._cache) > count), 2)
 
     >>> loads = storage.server_status()['loads']
 
@@ -1145,7 +1157,7 @@ def client_has_newer_data_than_server():
     >>> db.close()
     >>> r = shutil.copyfile('Data.fs', 'Data.save')
     >>> addr, admin = start_server(keep=1)  # NOQA: F821 undefined
-    >>> db = ZEO.DB(addr, name='client', max_disconnect_poll=.01)
+    >>> db = ZEO.DB(addr, name='client')
     >>> wait_connected(db.storage)  # NOQA: F821 undefined
     >>> conn = db.open()
     >>> conn.root().x = 1
@@ -1169,9 +1181,11 @@ def client_has_newer_data_than_server():
     ...    len([x for x in handler.records
     ...         if x.levelname == 'CRITICAL' and
     ...            'Client cache is out of sync with the server.' in x.msg
-    ...         ]) >= 2)
+    ...         ]) >= 2, 30)
 
     Note that the errors repeat because the client keeps on trying to connect.
+    We have to wait rather long as the client waits about 10 s
+    before a retrial.
 
     >>> db.close()
     >>> handler.uninstall()
@@ -1263,17 +1277,24 @@ def runzeo_without_configfile():
     ...     )
     >>> proc.wait()
     0
-    >>> print(re.sub(br'\d\d+|[:]', b'', proc.stdout.read()).decode('ascii'))
-    ... # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+
+    # Note: the heuristic to determine the "instance home" can fail
+    # causing an initial error message in the process output.
+    # We check for this and remove it in this case.
+    >>> output = re.sub(br'\d\d+|[:]', b'', proc.stdout.read()).decode('ascii')
+    >>> if "ERROR" in output.splitlines()[1]:
+    ...    output = "\n".join(output.splitlines()[2:])
+    >>> print(output) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     ------
     --T INFO ZEO.runzeo () opening storage '1' using FileStorage
     ------
-    --T INFO ZEO.StorageServer StorageServer created RW with storages 1RWt
+    --T INFO ZEO.StorageServer StorageServer created RW with storages 1RWt...
     ------
     --T INFO ZEO.asyncio... listening on ...
     testing exit immediately
     ------
-    --T INFO ZEO.StorageServer closing storage '1'
+    --T INFO ZEO.StorageServer closing storage '1'...
+
     >>> proc.stdout.close()
     """
 
@@ -1915,7 +1936,3 @@ def test_suite():
     suite.addTest(dynamic_server_ports_suite)
 
     return suite
-
-
-if __name__ == "__main__":
-    unittest.main(defaultTest="test_suite")

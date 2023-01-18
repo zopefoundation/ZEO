@@ -9,6 +9,7 @@ import ZODB.POSException
 from ..shortrepr import short_repr
 
 from . import base
+from .base import loop_run_forever, loop_run_until_complete
 from .compat import asyncio, new_event_loop
 from .marshal import server_decoder, encoder, reduce_exception
 
@@ -16,13 +17,12 @@ from .marshal import server_decoder, encoder, reduce_exception
 logger = logging.getLogger(__name__)
 
 
-class ServerProtocol(base.Protocol):
+class ServerProtocol(base.ZEOBaseProtocol):
     """asyncio low-level ZEO server interface
     """
 
     protocols = (b'5', )
 
-    name = 'server protocol'
     methods = set(('register', ))
 
     unlogged_exception_types = (
@@ -34,7 +34,8 @@ class ServerProtocol(base.Protocol):
     def __init__(self, loop, addr, zeo_storage, msgpack):
         """Create a server's client interface
         """
-        super(ServerProtocol, self).__init__(loop, addr)
+        super(ServerProtocol, self).__init__(loop, repr(addr))
+        self.addr = addr
         self.zeo_storage = zeo_storage
 
         self.announce_protocol = (
@@ -47,8 +48,8 @@ class ServerProtocol(base.Protocol):
         logger.debug("Closing server protocol")
         if not self.closed:
             self.closed = True
-            if self.transport is not None:
-                self.transport.close()
+            super(ServerProtocol, self).close()
+            self.zeo_storage = None  # break reference cycle
 
     connected = None  # for tests
 
@@ -58,16 +59,18 @@ class ServerProtocol(base.Protocol):
         self.write_message(self.announce_protocol)
 
     def connection_lost(self, exc):
+        super(ServerProtocol, self).connection_lost(exc)
         self.connected = False
         if exc:
             logger.error("Disconnected %s:%s", exc.__class__.__name__, exc)
-        self.zeo_storage.notify_disconnected()
+        if not self.closed:  # unanticipated connection loss
+            self.zeo_storage.notify_disconnected()
         self.stop()
 
     def stop(self):
         pass  # Might be replaced when running a thread per client
 
-    def finish_connect(self, protocol_version):
+    def finish_connection(self, protocol_version):
         if protocol_version == b'ruok':
             self.write_message(
                 json.dumps(self.zeo_storage.ruok()).encode("ascii"))
@@ -248,7 +251,7 @@ class Acceptor(object):
             cr = loop.create_unix_server(self.factory, addr, ssl=ssl)
 
         f = asyncio.ensure_future(cr, loop=loop)
-        server = loop.run_until_complete(f)
+        server = loop_run_until_complete(loop, f)
 
         self.server = server
         if isinstance(addr, tuple) and addr[1] == 0:
@@ -273,7 +276,7 @@ class Acceptor(object):
         return protocol
 
     def loop(self, timeout=None):
-        self.event_loop.run_forever()
+        loop_run_forever(self.event_loop)
         self.event_loop.close()
 
     closed = False
@@ -301,3 +304,5 @@ class Acceptor(object):
 
         # But if the server doesn't close in a second, stop the loop anyway.
         loop.call_later(1, timeout)
+
+        self.server = None  # break reference cycle

@@ -498,16 +498,22 @@ class ZEOStorage(object):
         self.blob_log.append((oid, serial, data, filename))
 
     def sendBlob(self, oid, serial):
+        logger.debug("Blob requested %r, %r", oid, serial)
         blobfilename = self.storage.loadBlob(oid, serial)
+        logger.debug("Blob ready %r, %r", oid, serial)
 
         def store():
+            logger.debug("send `receiveBlobStart` for %r, %r", oid, serial)
             yield ('receiveBlobStart', (oid, serial))
             with open(blobfilename, 'rb') as f:
                 while 1:
                     chunk = f.read(59000)
                     if not chunk:
                         break
+                    logger.debug("send `receiveBlobChunk` for %r, %r",
+                                 oid, serial)
                     yield ('receiveBlobChunk', (oid, serial, chunk, ))
+            logger.debug("send `receiveBlobStop` for %r, %r", oid, serial)
             yield ('receiveBlobStop', (oid, serial))
 
         self.connection.call_async_iter(store())
@@ -607,7 +613,9 @@ class ZEOStorage(object):
 
     def iterator_gc(self, iids):
         for iid in iids:
-            self._iterators.pop(iid, None)
+            it = self._iterators.pop(iid, None)
+            if hasattr(it, "close"):
+                it.close()
 
     def server_status(self):
         return self.server.server_status(self.storage_id)
@@ -936,6 +944,8 @@ class StorageServer(object):
 
         if self.__thread is not None:
             self.__thread.join(join_timeout)
+
+        self.acceptor = self.loop = None  # break reference cycles
 
     def close_conn(self, zeo_storage):
         """Remove the given zeo_storage from self.zeo_storages_by_storage_id.
