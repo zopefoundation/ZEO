@@ -28,7 +28,7 @@ Changelog
   actually uses ZEO5.client-ZEO4.server configuration. That's why support for
   ZEO4 server was dropped rather than fixed.
 
-  See `issue 209 <https://github.com/zopefoundation/ZEO/issues/209>` for details.
+  See `issue 209 <https://github.com/zopefoundation/ZEO/issues/209>`_ for details.
 
 - If the ``zeopack`` script cannot connect to a server it sets exit status 1
   See `#214 <https://github.com/zopefoundation/ZEO/issues/214>`_.
@@ -38,7 +38,7 @@ Changelog
   server mode was already deprecated and scheduled for removal, so the fix is
   to finally remove it. From now on ZEO server is always single-threaded.
 
-  See `issue 209 <https://github.com/zopefoundation/ZEO/issues/209>` for details.
+  See `issue 209 <https://github.com/zopefoundation/ZEO/issues/209>`_ for details.
 
 - Test ZEO only with the following storages
   ``FileStorage`` with server side blobs,
