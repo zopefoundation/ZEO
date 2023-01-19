@@ -22,8 +22,7 @@ import logging
 import tempfile
 
 from queue import Empty
-
-from ZEO._compat import StringIO
+from io import StringIO
 
 logger = logging.getLogger('ZEO.tests.forker')
 DEBUG = os.environ.get('ZEO_TEST_SERVER_DEBUG')

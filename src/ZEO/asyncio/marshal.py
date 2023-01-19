@@ -21,7 +21,8 @@ Python-independent format, or possibly a minimal pickle subset.
 
 import logging
 
-from .._compat import Unpickler, Pickler, BytesIO
+from io import BytesIO
+from .._compat import Unpickler, Pickler
 from ..shortrepr import short_repr
 
 logger = logging.getLogger(__name__)

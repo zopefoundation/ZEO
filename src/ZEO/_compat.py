@@ -15,9 +15,7 @@
 """
 import sys
 import platform
-from io import StringIO
 
-from ZODB._compat import BytesIO  # NOQA: F401 unused import
 from zodbpickle.pickle import dump
 from zodbpickle.pickle import dumps
 from zodbpickle.pickle import loads
