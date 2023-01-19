@@ -107,7 +107,7 @@ def runner(config, qin, qout, timeout=None,
         ZEO.asyncio.server.best_protocol_version = protocol
         old_protocols = ZEO.asyncio.server.ServerProtocol.protocols
         ZEO.asyncio.server.ServerProtocol.protocols = tuple(sorted(
-            set(old_protocols) | set([protocol])
+            set(old_protocols) | {protocol}
             ))
 
     try:

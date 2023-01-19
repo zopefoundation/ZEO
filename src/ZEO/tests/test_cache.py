@@ -279,7 +279,7 @@ class CacheTests(ZODB.tests.util.TestCase):
             self.assertEqual(len(cache), small)
             self.assertEqual(os.path.getsize(
                 'cache'), ZEO.cache.ZEC_HEADER_SIZE+small*recsize+extra)
-            self.assertEqual(set(u64(oid) for (oid, tid) in cache.contents()),
+            self.assertEqual({u64(oid) for (oid, tid) in cache.contents()},
                              set(range(small)))
             for i in range(100, 110):
                 cache.store(p64(i), n1, None, data)
@@ -291,7 +291,7 @@ class CacheTests(ZODB.tests.util.TestCase):
             self.assertEqual(len(cache), expected_len)
             expected_oids = set(list(range(11, 50))+list(range(100, 110)))
             self.assertEqual(
-                set(u64(oid) for (oid, tid) in cache.contents()),
+                {u64(oid) for (oid, tid) in cache.contents()},
                 expected_oids)
 
             # Make sure we can reopen with same size
@@ -299,7 +299,7 @@ class CacheTests(ZODB.tests.util.TestCase):
             cache = ZEO.cache.ClientCache(
                 'cache', size=ZEO.cache.ZEC_HEADER_SIZE+small*recsize+extra)
             self.assertEqual(len(cache), expected_len)
-            self.assertEqual(set(u64(oid) for (oid, tid) in cache.contents()),
+            self.assertEqual({u64(oid) for (oid, tid) in cache.contents()},
                              expected_oids)
 
             # Now make it bigger
@@ -310,7 +310,7 @@ class CacheTests(ZODB.tests.util.TestCase):
             self.assertEqual(len(cache), expected_len)
             self.assertEqual(os.path.getsize(
                 'cache'), ZEO.cache.ZEC_HEADER_SIZE+large*recsize+extra)
-            self.assertEqual(set(u64(oid) for (oid, tid) in cache.contents()),
+            self.assertEqual({u64(oid) for (oid, tid) in cache.contents()},
                              expected_oids)
 
             for i in range(200, 305):
@@ -322,7 +322,7 @@ class CacheTests(ZODB.tests.util.TestCase):
             expected_oids = set(list(range(11, 50)) +
                                 list(range(106, 110)) +
                                 list(range(200, 305)))
-            self.assertEqual(set(u64(oid) for (oid, tid) in cache.contents()),
+            self.assertEqual({u64(oid) for (oid, tid) in cache.contents()},
                              expected_oids)
 
             # Make sure we can reopen with same size
@@ -330,7 +330,7 @@ class CacheTests(ZODB.tests.util.TestCase):
             cache = ZEO.cache.ClientCache(
                 'cache', size=ZEO.cache.ZEC_HEADER_SIZE+large*recsize+extra)
             self.assertEqual(len(cache), expected_len)
-            self.assertEqual(set(u64(oid) for (oid, tid) in cache.contents()),
+            self.assertEqual({u64(oid) for (oid, tid) in cache.contents()},
                              expected_oids)
 
             # Cleanup

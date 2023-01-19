@@ -23,7 +23,7 @@ class ServerProtocol(base.ZEOBaseProtocol):
 
     protocols = (b'5', )
 
-    methods = set(('register', ))
+    methods = {'register'}
 
     unlogged_exception_types = (
         ZODB.POSException.POSKeyError,

@@ -400,7 +400,7 @@ class InvalidationTests(object):
                    for i in range(n)]
         self.go(stop, cd, *threads)
 
-        while len(set(db.lastTransaction() for db in dbs)) > 1:
+        while len({db.lastTransaction() for db in dbs}) > 1:
             _ = [db._storage.sync() for db in dbs]
 
         cn = dbs[0].open()

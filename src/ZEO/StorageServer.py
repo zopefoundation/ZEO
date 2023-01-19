@@ -69,8 +69,8 @@ class StorageServerError(StorageError):
     """Error reported when an unpicklable exception is raised."""
 
 
-registered_methods = set(
-    ('get_info', 'lastTransaction',
+registered_methods = {
+    'get_info', 'lastTransaction',
      'getInvalidations', 'new_oids', 'pack', 'loadBefore', 'storea',
      'checkCurrentSerialInTransaction', 'restorea', 'storeBlobStart',
      'storeBlobChunk', 'storeBlobEnd', 'storeBlobShared',
@@ -78,7 +78,7 @@ registered_methods = set(
      'history', 'record_iternext', 'sendBlob', 'getTid', 'loadSerial',
      'new_oid', 'undoa', 'undoLog', 'undoInfo', 'iterator_start',
      'iterator_next', 'iterator_record_start', 'iterator_record_next',
-     'iterator_gc', 'server_status', 'set_client_label', 'ping'))
+     'iterator_gc', 'server_status', 'set_client_label', 'ping'}
 
 
 class ZEOStorage(object):
