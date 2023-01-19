@@ -508,7 +508,7 @@ def verify(f):
     for line in f:
         if line.find('new connection') > 0:
             m = new_connection_idre.search(line)
-            cid = f'{m.group(1)}:{}m.group(2)'
+            cid = f'{m.group(1)}:{m.group(2)}'
             nv[cid] = [time(line), 0]
         elif line.find('calling zeoVerify(') > 0:
             cid = connidre.search(line).group(1)

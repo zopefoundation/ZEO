@@ -83,7 +83,7 @@ class StressTask:
 
     def commit(self):
         key = self.startnum
-        self.tm.get().note("add key %s" % key)
+        self.tm.get().note(f'add key {key}')
         try:
             self.tm.get().commit()
         except ConflictError:
@@ -158,7 +158,7 @@ class StressThread(FailableThread):
         while not self.stop.is_set():
             try:
                 tree[key] = self.threadnum
-                tm.get().note("add key %s" % key)
+                tm.get().note(f'add key {key}')
                 tm.commit()
                 self.commitdict[self] = 1
                 if self.sleep:
