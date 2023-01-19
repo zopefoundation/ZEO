@@ -168,7 +168,7 @@ class Protocol(base.ZEOBaseProtocol):
                 await asyncio.sleep(self.connect_poll + local_random.random())
                 logger.info("retry connecting %r", self.addr)
 
-        self._connecting = Task(connect(), self.loop)
+        self._connecting = self.loop.create_task(connect())
 
     def connection_made(self, transport):
         logger.debug('connection_made %s', self)
