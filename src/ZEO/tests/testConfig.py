@@ -121,6 +121,6 @@ class ZEOConfigTest(ZEOConfigTestBase):
 
 
 def test_suite():
-    suite = unittest.makeSuite(ZEOConfigTest)
+    suite = unittest.defaultTestLoader.loadTestsFromTestCase(ZEOConfigTest)
     suite.layer = threaded_server_tests
     return suite

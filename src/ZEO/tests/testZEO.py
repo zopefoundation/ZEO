@@ -345,7 +345,7 @@ class GenericTests(
                 store.close()
 
         thread = threading.Thread(name='T2', target=do_store)
-        thread.setDaemon(True)
+        thread.daemon = True
         thread.start()
         thread.join(voted and .1 or 9)
         if self.exception is not None:
@@ -1252,7 +1252,7 @@ def client_asyncore_thread_has_name():
     >>> addr, _ = start_server()  # NOQA: F821 undefined
     >>> db = ZEO.DB(addr)
     >>> any(t for t in threading.enumerate()
-    ...     if ' zeo client networking thread' in t.getName())
+    ...     if ' zeo client networking thread' in t.name)
     True
     >>> db.close()
     """
@@ -1307,13 +1307,13 @@ Invalidations could cause errors when closing client storages,
     ...     global writing
     ...     conn = ZEO.connection(addr)
     ...     writing.set()
-    ...     while writing.isSet():
+    ...     while writing.is_set():
     ...         conn.root.x = 1
     ...         transaction.commit()
     ...     conn.close()
 
     >>> thread = threading.Thread(target=mad_write_thread)
-    >>> thread.setDaemon(True)
+    >>> thread.daemon = True
     >>> thread.start()
     >>> _ = writing.wait()
     >>> time.sleep(.01)
@@ -1833,11 +1833,13 @@ class ServerManagingClientStorageForIExternalGCTest(
 
 def test_suite():
     suite = unittest.TestSuite((
-        unittest.makeSuite(Test_convenience_functions),
+        unittest.defaultTestLoader.loadTestsFromTestCase(
+            Test_convenience_functions),
     ))
 
     zeo = unittest.TestSuite()
-    zeo.addTest(unittest.makeSuite(ZODB.tests.util.AAAA_Test_Runner_Hack))
+    zeo.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(
+        ZODB.tests.util.AAAA_Test_Runner_Hack))
     patterns = [
         (re.compile(r"u?'start': u?'[^\n]+'"), 'start'),
         (re.compile(r"u?'last-transaction': u?'[0-9a-f]+'"),
@@ -1866,7 +1868,10 @@ def test_suite():
                      "ClientDisconnected"),
                     )),
             ))
-    zeo.addTest(unittest.makeSuite(ClientConflictResolutionTests, 'check'))
+    test_loader = unittest.TestLoader()
+    test_loader.testMethodPrefix = 'check'
+    zeo.addTest(test_loader.loadTestsFromTestCase(
+        ClientConflictResolutionTests))
     zeo.layer = ZODB.tests.util.MininalTestLayer('testZeo-misc')
     suite.addTest(zeo)
 
@@ -1888,7 +1893,9 @@ def test_suite():
             'data.fs', 'blobs', extrafsoptions='pack-gc false')
         ))
     for klass in quick_test_classes:
-        zeo.addTest(unittest.makeSuite(klass, "check"))
+        test_loader = unittest.TestLoader()
+        test_loader.testMethodPrefix = 'check'
+        zeo.addTest(test_loader.loadTestsFromTestCase(klass))
     zeo.layer = ZODB.tests.util.MininalTestLayer('testZeo-misc2')
     suite.addTest(zeo)
 
@@ -1906,11 +1913,14 @@ def test_suite():
         zeo.layer = ZODB.tests.util.MininalTestLayer('testZeo-' + name)
         suite.addTest(zeo)
 
-    suite.addTest(unittest.makeSuite(MultiprocessingTests))
+    suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(
+        MultiprocessingTests))
 
     # Put the heavyweights in their own layers
     for klass in slow_test_classes:
-        sub = unittest.makeSuite(klass, "check")
+        test_loader = unittest.TestLoader()
+        test_loader.testMethodPrefix = 'check'
+        sub = test_loader.loadTestsFromTestCase(klass)
         sub.layer = ZODB.tests.util.MininalTestLayer(klass.__name__)
         suite.addTest(sub)
 

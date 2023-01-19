@@ -174,7 +174,7 @@ This tests tries to provoke this bug by:
     ...             #   'COMMIT %s %s %r' % (
     ...             #   i, conn2.root()[i].value, conn2.root()[i]._p_serial))
     >>> thread = threading.Thread(target=run)
-    >>> thread.setDaemon(True)
+    >>> thread.daemon = True
     >>> thread.start()
 
 - restarting the first client, and
@@ -241,7 +241,9 @@ def test_suite():
     suite = unittest.TestSuite()
 
     for klass in test_classes:
-        sub = unittest.makeSuite(klass, 'check')
+        test_loader = unittest.TestLoader()
+        test_loader.testMethodPrefix = 'check'
+        sub = test_loader.loadTestsFromTestCase(klass)
         sub.layer = ZODB.tests.util.MininalTestLayer(
             klass.__name__ + ' ZEO Connection Tests')
         suite.addTest(sub)

@@ -127,7 +127,7 @@ def runner(config, qin, qout, timeout=None,
             target=server.server.loop, kwargs=dict(timeout=.2),
             name=(None if name is None else name + '-server'),
             )
-        thread.setDaemon(True)
+        thread.daemon = True
         thread.start()
         os.remove(config)
 

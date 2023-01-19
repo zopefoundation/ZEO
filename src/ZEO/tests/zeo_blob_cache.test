@@ -131,7 +131,7 @@ provoke problems:
 
     >>> threads = [threading.Thread(target=run) for i in range(10)]
     >>> for thread in threads:
-    ...     thread.setDaemon(True)
+    ...     thread.daemon = True
     >>> for thread in threads:
     ...     thread.start()
     >>> for thread in threads:

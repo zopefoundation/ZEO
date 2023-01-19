@@ -279,7 +279,7 @@ class ZEOStorage:
             # If the client isn't waiting for a reply, start a thread
             # and forget about it.
             t = threading.Thread(target=self._pack_impl, args=(time,))
-            t.setName("zeo storage packing thread")
+            t.name = "zeo storage packing thread"
             t.start()
             return None
 
@@ -764,7 +764,7 @@ class StorageServer:
                 timeout = StubTimeoutThread()
             else:
                 timeout = TimeoutThread(transaction_timeout)
-                timeout.setName("TimeoutThread for %s" % name)
+                timeout.name = f'TimeoutThread for {name}'
                 timeout.start()
             self.lock_managers[name] = LockManager(name, stats, timeout)
 
@@ -908,8 +908,8 @@ class StorageServer:
 
     def start_thread(self, daemon=True):
         self.__thread = thread = threading.Thread(target=self.loop)
-        thread.setName("StorageServer(%s)" % _addr_label(self.addr))
-        thread.setDaemon(daemon)
+        thread.name = "StorageServer(%s)" % _addr_label(self.addr)
+        thread.daemon = daemon
         thread.start()
 
     __closed = False
@@ -993,8 +993,8 @@ class TimeoutThread(threading.Thread):
 
     def __init__(self, timeout):
         threading.Thread.__init__(self)
-        self.setName("TimeoutThread")
-        self.setDaemon(1)
+        self.name = "TimeoutThread"
+        self.daemon = True
         self._timeout = timeout
         self._client = None
         self._deadline = None
@@ -1064,7 +1064,7 @@ class SlowMethodThread(threading.Thread):
 
     def __init__(self, method, args):
         threading.Thread.__init__(self)
-        self.setName("SlowMethodThread for %s" % method.__name__)
+        self.name = f'SlowMethodThread for {method.__name__}'
         self._method = method
         self._args = args
         self.delay = MTDelay()
