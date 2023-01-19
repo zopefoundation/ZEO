@@ -148,14 +148,14 @@ class StressThread(FailableThread):
     def _testrun(self):
         tm = transaction.TransactionManager()
         cn = self.db.open(transaction_manager=tm)
-        while not self.stop.isSet():
+        while not self.stop.is_set():
             try:
                 tree = cn.root()["tree"]
                 break
             except (ConflictError, KeyError):
                 tm.abort()
         key = self.startnum
-        while not self.stop.isSet():
+        while not self.stop.is_set():
             try:
                 tree[key] = self.threadnum
                 tm.get().note(u"add key %s" % key)
@@ -191,7 +191,7 @@ class LargeUpdatesThread(FailableThread):
 
     def _testrun(self):
         cn = self.db.open()
-        while not self.stop.isSet():
+        while not self.stop.is_set():
             try:
                 tree = cn.root()["tree"]
                 break
@@ -201,7 +201,7 @@ class LargeUpdatesThread(FailableThread):
 
         keys_added = {}  # set of keys we commit
         tkeys = []
-        while not self.stop.isSet():
+        while not self.stop.is_set():
 
             # The test picks 50 keys spread across many buckets.
             # self.startnum and self.step ensure that all threads use
@@ -309,7 +309,7 @@ class InvalidationTests(object):
         start = time.time()
         while time.time() - start <= self.MAXTIME:
             stop.wait(delay)
-            if stop.isSet():
+            if stop.is_set():
                 # Some thread failed.  Stop right now.
                 break
             delay = 2.0

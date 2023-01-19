@@ -401,7 +401,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             args=(self.blob_dir, target),
             name="%s zeo client check blob size thread" % self.__name__,
             )
-        check_blob_size_thread.setDaemon(True)
+        check_blob_size_thread.daemon = True
         check_blob_size_thread.start()
         self._check_blob_size_thread = check_blob_size_thread
 

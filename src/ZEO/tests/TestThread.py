@@ -40,7 +40,7 @@ class TestThread(threading.Thread):
     def __init__(self, testcase):
         threading.Thread.__init__(self)
         # In case this thread hangs, don't stop Python from exiting.
-        self.setDaemon(1)
+        self.daemon = True
         self._exc_info = None
         self._testcase = testcase
 

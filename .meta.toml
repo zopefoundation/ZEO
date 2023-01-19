@@ -27,7 +27,6 @@ testenv-deps = [
     "uvloop: uvloop",
     ]
 testenv-setenv = [
-    "!py27-!pypy: PYTHONWARNINGS=ignore::ResourceWarning",
     "msgpack1: ZEO_MSGPACK=1",
     ]
 

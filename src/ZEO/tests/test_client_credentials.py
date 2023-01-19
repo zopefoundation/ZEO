@@ -55,6 +55,6 @@ class ClientAuthTests(setupstack.TestCase):
 
 
 def test_suite():
-    suite = unittest.makeSuite(ClientAuthTests)
+    suite = unittest.defaultTestLoader.loadTestsFromTestCase(ClientAuthTests)
     suite.layer = threaded_server_tests
     return suite

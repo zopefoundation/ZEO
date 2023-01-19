@@ -1113,7 +1113,7 @@ An attempt to open a bad cache file will cause it to be dropped and recreated.
 
 def test_suite():
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(CacheTests))
+    suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(CacheTests))
     suite.addTest(
         doctest.DocTestSuite(
             setUp=zope.testing.setupstack.setUpDirectory,

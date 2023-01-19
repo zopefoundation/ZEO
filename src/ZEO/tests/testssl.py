@@ -349,8 +349,9 @@ def pwfunc():
 
 def test_suite():
     suite = unittest.TestSuite((
-        unittest.makeSuite(SSLConfigTest),
-        unittest.makeSuite(SSLConfigTestMockiavellian),
+        unittest.defaultTestLoader.loadTestsFromTestCase(SSLConfigTest),
+        unittest.defaultTestLoader.loadTestsFromTestCase(
+            SSLConfigTestMockiavellian),
         ))
     suite.layer = threaded_server_tests
     return suite
