@@ -22,6 +22,7 @@ Python-independent format, or possibly a minimal pickle subset.
 import logging
 from io import BytesIO
 
+from io import BytesIO
 from .._compat import Unpickler, Pickler
 from ..shortrepr import short_repr
 

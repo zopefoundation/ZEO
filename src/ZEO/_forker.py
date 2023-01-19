@@ -23,7 +23,6 @@ from io import StringIO
 
 from queue import Empty
 
-
 logger = logging.getLogger('ZEO.tests.forker')
 DEBUG = os.environ.get('ZEO_TEST_SERVER_DEBUG')
 
