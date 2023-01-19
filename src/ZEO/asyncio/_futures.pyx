@@ -272,29 +272,11 @@ cdef class CoroutineExecutor:
                 result._asyncio_future_blocking = False
                 await_next = result
 
+            # bad await
             else:
-                # object with __await__ - e.g. @cython.iterable_coroutine used by uvloop
-                risawaitable = True
-                try:
-                    rawait = result.__await__()
-                except AttributeError:
-                    risawaitable = False
-                else:
-                    # cython.iterable_coroutine returns `coroutine_wrapper` that mimics
-                    # iterator/generator but does not inherit from types.GeneratorType .
-                    await_next = AsyncTask(rawait, self.task.get_loop())
-
-                if not risawaitable:
-                    # bare yield
-                    if result is None:
-                        await_next = Future(self.task.get_loop())
-                        await_next.set_result(None)
-
-                    # bad yield
-                    else:
-                        await_next = Future(self.task.get_loop())
-                        await_next.set_exception(
-                                RuntimeError("Task got bad yield: %r" % (result,)))
+                await_next = Future(self.task.get_loop())
+                await_next.set_exception(
+                        RuntimeError("Task got bad await: %r" % (result,)))
 
             if self.cancel_requested:
                 _cancel_future(await_next, self.cancel_msg)
