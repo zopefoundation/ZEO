@@ -971,8 +971,8 @@ class StorageServer(object):
         return status
 
     def ruok(self):
-        return dict((storage_id, self.server_status(storage_id))
-                    for storage_id in self.storages)
+        return {storage_id: self.server_status(storage_id)
+                    for storage_id in self.storages}
 
 
 class StubTimeoutThread(object):

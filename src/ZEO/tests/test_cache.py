@@ -173,8 +173,8 @@ class CacheTests(ZODB.tests.util.TestCase):
         eq(copy.getLastTid(), self.cache.getLastTid())
         eq(len(copy), len(self.cache))
         eq(dict(copy.current), dict(self.cache.current))
-        eq(dict([(k, dict(v)) for (k, v) in copy.noncurrent.items()]),
-           dict([(k, dict(v)) for (k, v) in self.cache.noncurrent.items()]),
+        eq({k: dict(v) for (k, v) in copy.noncurrent.items()},
+           {k: dict(v) for (k, v) in self.cache.noncurrent.items()},
            )
         copy.close()
 
