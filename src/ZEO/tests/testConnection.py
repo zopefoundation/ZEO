@@ -17,7 +17,6 @@ The actual tests are in ConnectionTests.py; this file provides the
 platform-dependent scaffolding.
 """
 
-from __future__ import with_statement, print_function
 
 from ZEO.tests import ConnectionTests, InvalidationTests
 from zope.testing import setupstack
@@ -36,10 +35,10 @@ class FileStorageConfig:
     def getConfig(self, path, create, read_only):
         return """\
         <filestorage 1>
-        path %s
-        create %s
-        read-only %s
-        </filestorage>""" % (path,
+        path {}
+        create {}
+        read-only {}
+        </filestorage>""".format(path,
                              create and 'yes' or 'no',
                              read_only and 'yes' or 'no')
 

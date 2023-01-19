@@ -12,7 +12,6 @@
 #
 ##############################################################################
 """Test suite for ZEO based on ZODB.tests."""
-from __future__ import print_function
 import multiprocessing
 
 from ZEO.ClientStorage import ClientStorage
@@ -323,7 +322,7 @@ class GenericTests(
             ReadOnlyStorage.ReadOnlyStorage.checkWriteMethods(self)
 
     def checkSortKey(self):
-        key = '%s:%s' % (self._storage._storage, self._storage._server_addr)
+        key = f'{self._storage._storage}:{self._storage._server_addr}'
         self.assertEqual(self._storage.sortKey(), key)
 
     def _do_store_in_separate_thread(self, oid, revid, voted):
@@ -374,17 +373,7 @@ class FullGenericTests(
         # Find the underlying function, not the decorated method.
         # If it doesn't exist, the implementation has changed and we
         # need to revisit this...
-        try:
-            underlying_func = super_meth.__wrapped__
-        except AttributeError:
-            # ...unless we're on Python 2, which doesn't have the __wrapped__
-            # attribute.
-            if bytes is not str:  # pragma: no cover Python 3
-                raise
-            unbound_func = PackableStorage.PackableUndoStorage.checkPackUndoLog
-            wrapper_func = unbound_func.__func__
-            underlying_func = wrapper_func.func_closure[0].cell_contents
-
+        underlying_func = super_meth.__wrapped__
         underlying_func(self)
 
 
@@ -1794,15 +1783,15 @@ class ServerManagingClientStorage(ClientStorage):
             server_blob_dir = 'server-'+blob_dir
         self.globs = {}
         addr, stop = forker.start_zeo_server(
-            """
+            f"""
             <blobstorage>
-                blob-dir %s
+                blob-dir {server_blob_dir}
                 <filestorage>
-                   path %s
-                   %s
+                   path {name}.fs
+                   {extrafsoptions}
                 </filestorage>
             </blobstorage>
-            """ % (server_blob_dir, name+'.fs', extrafsoptions),
+            """
             )
         zope.testing.setupstack.register(self, stop)
         if shared:
@@ -1884,7 +1873,6 @@ def test_suite():
             '../nagios.rst',
             setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
             checker=renormalizing.RENormalizing(patterns),
-            globs={'print_function': print_function},
             ),
         )
     zeo.addTest(PackableStorage.IExternalGC_suite(
@@ -1907,7 +1895,6 @@ def test_suite():
                 name,
                 setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
                 checker=renormalizing.RENormalizing(patterns),
-                globs={'print_function': print_function},
                 ),
             )
         zeo.layer = ZODB.tests.util.MininalTestLayer('testZeo-' + name)
@@ -1934,7 +1921,6 @@ def test_suite():
         'dynamic_server_ports.test',
         setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
         checker=renormalizing.RENormalizing(patterns),
-        globs={'print_function': print_function},
         )
     dynamic_server_ports_suite.layer = threaded_server_tests
     suite.addTest(dynamic_server_ports_suite)

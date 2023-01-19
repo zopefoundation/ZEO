@@ -24,16 +24,6 @@ Unlike parsezeolog.py, this script generates timestamps for each transaction,
 and sub-command in the transaction.  We can use this to compare timings with
 synthesized data.
 """
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
 
 import re
 import sys

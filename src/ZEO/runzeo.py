@@ -28,7 +28,6 @@ Options:
 
 Unless -C is specified, -a and -f are required.
 """
-from __future__ import print_function
 
 # The code here is designed to be reused by other, similar servers.
 
@@ -47,7 +46,7 @@ _pid = str(os.getpid())
 
 def log(msg, level=logging.INFO, exc_info=False):
     """Internal: generic logging function."""
-    message = "(%s) %s" % (_pid, msg)
+    message = f'({_pid}) {msg}'
     logger.log(level, message, exc_info=exc_info)
 
 
@@ -191,7 +190,7 @@ class ZEOServer:
         s = socket.socket(family, socket.SOCK_STREAM)
         try:
             s.connect(address)
-        except socket.error:
+        except OSError:
             return 0
         else:
             s.close()
@@ -337,7 +336,7 @@ class ZEOServer:
                 print(pid, file=f)
                 f.close()
                 log("created PID file '%s'" % pidfile)
-            except IOError:
+            except OSError:
                 logger.error("PID file '%s' cannot be opened" % pidfile)
 
     def remove_pidfile(self):
@@ -349,7 +348,7 @@ class ZEOServer:
                 if os.path.exists(pidfile):
                     os.unlink(pidfile)
                     log("removed PID file '%s'" % pidfile)
-            except IOError:
+            except OSError:
                 logger.error("PID file '%s' could not be removed" % pidfile)
 
 

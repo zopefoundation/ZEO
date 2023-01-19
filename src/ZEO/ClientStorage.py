@@ -492,7 +492,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             host = addr[0]
             try:
                 canonical, aliases, addrs = socket.gethostbyaddr(host)
-            except socket.error as err:
+            except OSError as err:
                 logger.debug("%s Error resolving host: %s (%s)",
                              self.__name__, host, err)
                 canonical = host
@@ -506,7 +506,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         if self._server_addr is None:
             raise ClientDisconnected
         else:
-            return '%s:%s' % (self._storage, self._server_addr)
+            return f'{self._storage}:{self._server_addr}'
 
     def notify_disconnected(self):
         """Internal: notify that the server connection was terminated.
@@ -536,7 +536,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         connected.
 
         """
-        return "%s (%s)" % (
+        return "{} ({})".format(
             self.__name__,
             self.is_connected() and "connected" or "disconnected")
 
@@ -804,7 +804,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                 return open(blob_filename, 'rb')
             else:
                 return ZODB.blob.BlobFile(blob_filename, 'r', blob)
-        except (IOError):
+        except (OSError):
             # The file got removed while we were opening.
             # Fall through and try again with the protection of the lock.
             pass
@@ -1219,7 +1219,7 @@ class BlobCacheLayout:
         base, rem = divmod(utils.u64(oid), self.size)
         return os.path.join(
             str(rem),
-            "%s.%s%s" % (base, hexlify(tid).decode('ascii'),
+            "{}.{}{}".format(base, hexlify(tid).decode('ascii'),
                          ZODB.blob.BLOB_SUFFIX)
             )
 
@@ -1381,7 +1381,7 @@ def open_cache(cache, var, client, storage, cache_size):
         if cache is None:
             if client:
                 cache = os.path.join(var or os.getcwd(),
-                                     "%s-%s.zec" % (client, storage))
+                                     f'{client}-{storage}.zec')
             else:
                 # ephemeral cache
                 return ClientCache(None, cache_size)

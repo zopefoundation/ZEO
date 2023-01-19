@@ -12,7 +12,6 @@
 #
 ##############################################################################
 """Library for forking storage server and connecting client storage"""
-from __future__ import print_function
 
 
 import random
@@ -77,14 +76,14 @@ def get_port(ignored=None):
         try:
             try:
                 s.connect(('127.0.0.1', port))
-            except socket.error:
+            except OSError:
                 pass  # Perhaps we should check value of error too.
             else:
                 continue
 
             try:
                 s1.connect(('127.0.0.1', port+1))
-            except socket.error:
+            except OSError:
                 pass  # Perhaps we should check value of error too.
             else:
                 continue
@@ -102,7 +101,7 @@ def can_connect(port):
     try:
         try:
             c.connect(('127.0.0.1', port))
-        except socket.error:
+        except OSError:
             return False  # Perhaps we should check value of error too.
         else:
             return True

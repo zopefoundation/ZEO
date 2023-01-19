@@ -21,7 +21,6 @@ store(), and invalidate().  It manages in-memory data structures that allow
 it to map this richer API onto the simple key-based API of the lower-level
 FileCache.
 """
-from __future__ import print_function
 from struct import pack, unpack
 
 import BTrees.LLBTree
@@ -785,7 +784,7 @@ class ClientCache:
             tfn = path + ".trace"
             try:
                 _tracefile = open(tfn, "ab")
-            except IOError as msg:
+            except OSError as msg:
                 logger.warning("cannot write tracefile %r (%s)", tfn, msg)
             else:
                 logger.info("opened tracefile %r", tfn)

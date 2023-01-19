@@ -158,7 +158,7 @@ class TestZEOServerSocket(unittest.TestCase):
 
     def test_clear_with_unicode_str(self, unlink):
         class Options:
-            address = u"a str that does not exist"
+            address = "a str that does not exist"
         self._unlinked(unlink, Options)
 
     def test_clear_with_bytes(self, unlink):

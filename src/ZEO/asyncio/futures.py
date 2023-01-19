@@ -101,7 +101,7 @@ class Future:
                 raise
             except BaseException as exc:
                 self._loop.call_exception_handler({
-                        'message': 'Exception in callback %s' % (cb,),
+                        'message': f'Exception in callback {cb}',
                         'exception': exc,
                     })
 

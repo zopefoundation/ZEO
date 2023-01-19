@@ -12,7 +12,6 @@
 #
 ##############################################################################
 """Library for forking storage server and connecting client storage"""
-from __future__ import print_function
 import gc
 import os
 import os.path
@@ -67,14 +66,14 @@ class ZEOConfig:
         print("</zeo>", file=f)
 
         if self.log:
-            print("""
+            print(f"""
             <eventlog>
-              level %s
+              level {self.loglevel}
               <logfile>
-                 path %s
+                 path {self.logpath}
               </logfile>
             </eventlog>
-            """ % (self.loglevel, self.logpath), file=f)
+            """, file=f)
 
     def __str__(self):
         f = StringIO()
@@ -106,7 +105,7 @@ def runner(config, qin, qout, timeout=None,
         ZEO.asyncio.server.best_protocol_version = protocol
         old_protocols = ZEO.asyncio.server.ServerProtocol.protocols
         ZEO.asyncio.server.ServerProtocol.protocols = tuple(sorted(
-            set(old_protocols) | set([protocol])
+            set(old_protocols) | {protocol}
             ))
 
     try:
@@ -198,8 +197,8 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
         storage_conf = '<filestorage>\npath %s\n</filestorage>' % path
 
     if blob_dir:
-        storage_conf = '<blobstorage>\nblob-dir %s\n%s\n</blobstorage>' % (
-            blob_dir, storage_conf)
+        storage_conf = (f'<blobstorage>\nblob-dir {blob_dir}\n'
+                        f'{storage_conf}\n</blobstorage>')
 
     if zeo_conf is None or isinstance(zeo_conf, dict):
         if port is None:

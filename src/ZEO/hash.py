@@ -16,12 +16,12 @@
 in favor of using hashlib for both. This class allows for compatibility
 between versions."""
 
-try:
-    import hashlib
-    sha1 = hashlib.sha1
-    new = sha1
-except ImportError:
-    import sha
-    sha1 = sha.new
-    new = sha1
-    digest_size = sha.digest_size
+#try:
+#    import hashlib
+#    sha1 = hashlib.sha1
+#    new = sha1
+#except ImportError:
+#    import sha
+#    sha1 = sha.new
+#    new = sha1
+#    digest_size = sha.digest_size

@@ -131,7 +131,7 @@ def server_default(obj):
 
 def reduce_exception(exc):
     class_ = exc.__class__
-    class_ = "%s.%s" % (class_.__module__, class_.__name__)
+    class_ = f'{class_.__module__}.{class_.__name__}'
     return class_, exc.__dict__ or exc.args
 
 
@@ -151,12 +151,12 @@ def find_global(module, name):
     try:
         m = __import__(module, _globals, _globals, _silly)
     except ImportError as msg:
-        raise ImportError("import error %s: %s" % (module, msg))
+        raise ImportError(f'import error {module}: {msg}')
 
     try:
         r = getattr(m, name)
     except AttributeError:
-        raise ImportError("module %s has no global %s" % (module, name))
+        raise ImportError(f'module {module} has no global {name}')
 
     safe = getattr(r, '__no_side_effects__', 0)
     if safe:
@@ -166,22 +166,22 @@ def find_global(module, name):
     if type(r) == exception_type_type and issubclass(r, Exception):
         return r
 
-    raise ImportError("Unsafe global: %s.%s" % (module, name))
+    raise ImportError(f'Unsafe global: {module}.{name}')
 
 
 def server_find_global(module, name):
     """Helper for message unpickler"""
     if module not in _SAFE_MODULE_NAMES:
-        raise ImportError("Module not allowed: %s" % (module,))
+        raise ImportError(f'Module not allowed: {module}')
 
     try:
         m = __import__(module, _globals, _globals, _silly)
     except ImportError as msg:
-        raise ImportError("import error %s: %s" % (module, msg))
+        raise ImportError(f'import error {module}: {msg}')
 
     try:
         r = getattr(m, name)
     except AttributeError:
-        raise ImportError("module %s has no global %s" % (module, name))
+        raise ImportError(f'module {module} has no global {name}')
 
     return r

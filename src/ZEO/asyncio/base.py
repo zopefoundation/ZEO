@@ -87,8 +87,7 @@ class ZEOBaseProtocol(Protocol):
 
     def __repr__(self):
         cls = self.__class__
-        return "%s.%s(%s)" % (
-            cls.__module__, cls.__name__, self.name)
+        return f'{cls.__module__}.{cls.__name__}({self.name})'
 
     # to be defined by deriving classes
     # def finish_connection(protocol_version_message)

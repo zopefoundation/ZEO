@@ -110,7 +110,7 @@ class CommonSetupTearDown(StorageTestBase):
         for c in self.caches:
             for i in 0, 1:
                 for ext in "", ".trace", ".lock":
-                    path = "%s-%s.zec%s" % (c, "1", ext)
+                    path = f'{c}-1.zec{ext}'
                     # On Windows before 2.3, we don't have a way to wait for
                     # the spawned server(s) to close, and they inherited
                     # file descriptors for our open files.  So long as those
@@ -1129,7 +1129,7 @@ def short_timeout(self):
 try:
     with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as s:
         pass
-except (socket.error, AttributeError):
+except (OSError, AttributeError):
     pass
 else:
     class V6Setup:

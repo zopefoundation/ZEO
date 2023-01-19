@@ -1,4 +1,3 @@
-from __future__ import print_function
 ##############################################################################
 #
 # Copyright (c) 2011 Zope Foundation and Contributors.
@@ -39,10 +38,10 @@ def new_metric(metrics, storage_id, name, value):
         label = name
     else:
         if ' ' in storage_id:
-            label = "'%s:%s'" % (storage_id, name)
+            label = f"'{storage_id}:{name}'"
         else:
-            label = "%s:%s" % (storage_id, name)
-    metrics.append("%s=%s" % (label, value))
+            label = f'{storage_id}:{name}'
+    metrics.append(f'{label}={value}')
 
 
 def result(messages, metrics=(), status=None):
@@ -76,7 +75,7 @@ def check(addr, output_metrics, status, per):
             s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     try:
         s.connect(addr)
-    except socket.error as err:
+    except OSError as err:
         s.close()
         return error("Can't connect %s" % err)
 

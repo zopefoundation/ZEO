@@ -23,7 +23,7 @@ class ServerProtocol(base.ZEOBaseProtocol):
 
     protocols = (b'5', )
 
-    methods = set(('register', ))
+    methods = {'register'}
 
     unlogged_exception_types = (
         ZODB.POSException.POSKeyError,
@@ -197,7 +197,7 @@ class Delay:
             self.protocol.send_error(self.msgid, exc_info[1])
 
     def __repr__(self):
-        return "%s[%s, %r, %r, %r]" % (
+        return "{}[{}, {!r}, {!r}, {!r}]".format(
             self.__class__.__name__, id(self),
             self.msgid, self.protocol, self.sent)
 

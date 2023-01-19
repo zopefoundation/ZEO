@@ -77,7 +77,7 @@ class Protocol(base.ZEOBaseProtocol):
         """
         super().__init__(
             loop,
-            "%r, %r, %r" % (addr, storage_key, read_only))
+            f'{addr!r}, {storage_key!r}, {read_only!r}')
         self.addr = addr
         self.storage_key = storage_key
         self.read_only = read_only
