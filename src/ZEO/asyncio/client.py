@@ -168,6 +168,10 @@ class Protocol(base.ZEOBaseProtocol):
                 await asyncio.sleep(self.connect_poll + local_random.random())
                 logger.info("retry connecting %r", self.addr)
 
+        # Usually, we use our optimized but feature limited tasks
+        # to run coroutines. Here we use a standard task
+        # because we do not know which task features the connect
+        # coroutine needs.
         self._connecting = self.loop.create_task(connect())
 
     def connection_made(self, transport):
