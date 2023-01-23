@@ -12,12 +12,12 @@ recursive-include docs *.txt
 recursive-include docs Makefile
 
 recursive-include src *.py
-recursive-include src *.pyx
 include *.py
 include COPYING
 include log.ini
 recursive-include src *.csr
 recursive-include src *.pem
+recursive-include src *.pyx
 recursive-include src *.rst
 recursive-include src *.test
 recursive-include src *.txt

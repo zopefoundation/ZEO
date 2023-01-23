@@ -77,7 +77,7 @@ class Protocol(base.ZEOBaseProtocol):
         """
         super().__init__(
             loop,
-            "%r, %r, %r" % (addr, storage_key, read_only))
+            f'{addr!r}, {storage_key!r}, {read_only!r}')
         self.addr = addr
         self.storage_key = storage_key
         self.read_only = read_only
@@ -167,7 +167,11 @@ class Protocol(base.ZEOBaseProtocol):
                 await asyncio.sleep(self.connect_poll + local_random.random())
                 logger.info("retry connecting %r", self.addr)
 
-        self._connecting = Task(connect(), self.loop)
+        # Usually, we use our optimized but feature limited tasks
+        # to run coroutines. Here we use a standard task
+        # because we do not know which task features the connect
+        # coroutine needs.
+        self._connecting = self.loop.create_task(connect())
 
     def connection_made(self, transport):
         logger.debug('connection_made %s', self)
@@ -909,7 +913,7 @@ class ClientRunner:
         # future representing a server response, referenced globally.
         # Such a future protects the return value from
         # the garbage collector (it is referenced via callbacks).
-        # It the IO thread is not fast enough, the complete
+        # If the IO thread is not fast enough, the complete
         # structure may be released during a garbage collection.
         return self.io_call(
             self.client.prefetch_co(oids, tid), wait=False)

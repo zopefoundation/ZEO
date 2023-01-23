@@ -10,10 +10,7 @@ Storage Names
 It is an error not to specify any storages:
 
     >>> import sys, ZEO.runzeo
-    >>> try:
-    ...    from StringIO import StringIO
-    ... except ImportError:
-    ...    from io import StringIO
+    >>> from io import StringIO
     >>> stderr = sys.stderr
 
     >>> with open('config', 'w') as f:

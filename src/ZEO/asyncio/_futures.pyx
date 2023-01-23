@@ -1,10 +1,14 @@
 # cython: language_level=3
+"""``cython`` implementation of ``futures.py``.
+
+Please see its docstring for details.
+"""
 
 import asyncio
 cdef object CancelledError = asyncio.CancelledError
 cdef object InvalidStateError = asyncio.InvalidStateError
 cdef object get_event_loop = asyncio.get_event_loop
-from threading import Event, Lock, get_ident
+from threading import Event
 from time import sleep
 
 
@@ -123,7 +127,7 @@ cdef class Future:
         self._result = exc
         self.call_callbacks()
 
-    # py3 < py3.7 access ._exception directly
+    # py3 accesses ._exception directly
     @property
     def _exception(self):
         if self.state != EXCEPTION:
@@ -254,7 +258,7 @@ cdef class CoroutineExecutor:
                 task.set_result(e.value)
             elif isinstance(e, CancelledError):
                 if len(e.args) == 0:
-                    msg = getattr(awaiting, '_xasyncio_cancel_msg', None)  # see _cancel_future
+                    msg = getattr(awaiting, '_cancel_message', None)  # see _cancel_future
                 elif len(e.args) == 1:
                     msg = e.args[0]
                 else:
@@ -272,29 +276,11 @@ cdef class CoroutineExecutor:
                 result._asyncio_future_blocking = False
                 await_next = result
 
+            # bad await
             else:
-                # object with __await__ - e.g. @cython.iterable_coroutine used by uvloop
-                risawaitable = True
-                try:
-                    rawait = result.__await__()
-                except AttributeError:
-                    risawaitable = False
-                else:
-                    # cython.iterable_coroutine returns `coroutine_wrapper` that mimics
-                    # iterator/generator but does not inherit from types.GeneratorType .
-                    await_next = AsyncTask(rawait, self.task.get_loop())
-
-                if not risawaitable:
-                    # bare yield
-                    if result is None:
-                        await_next = Future(self.task.get_loop())
-                        await_next.set_result(None)
-
-                    # bad yield
-                    else:
-                        await_next = Future(self.task.get_loop())
-                        await_next.set_exception(
-                                RuntimeError("Task got bad yield: %r" % (result,)))
+                await_next = Future(self.task.get_loop())
+                await_next.set_exception(
+                        RuntimeError("Task got bad await: %r" % (result,)))
 
             if self.cancel_requested:
                 _cancel_future(await_next, self.cancel_msg)
@@ -327,21 +313,21 @@ cdef class CoroutineExecutor:
         return True
 
 # _cancel_future cancels future fut with message msg.
-# if fut does not support cancelling with message, the message is saved in fut._xasyncio_cancel_msg .
+# if fut does not support cancelling with message, the message is saved in fut._cancel_message .
 cdef _cancel_future(fut, msg):
     try:
         return fut.cancel(msg)
     except TypeError:
         # on py3 < 3.9 Future.cancel does not accept msg
         _ = fut.cancel()
-        fut._xasyncio_cancel_msg = msg
+        fut._cancel_message = msg
         return _
 
 
 cdef class AsyncTask(Future):
     """Simplified ``asyncio.Task``.
 
-    Steps are not scheduled but executed immediately.
+    Steps are not scheduled but executed immediately; the context is ignored.
     """
     cdef CoroutineExecutor executor
 
@@ -362,54 +348,26 @@ cdef class AsyncTask(Future):
 cdef class ConcurrentTask(ConcurrentFuture):
     """Task reporting to ``ConcurrentFuture``.
 
-    Steps are not scheduled but executed immediately.
-    Cancel can be used from any thread.
+    Steps are not scheduled but executed immediately; the context is ignored.
+    Cancel can be used only from IO thread.
     """
     cdef CoroutineExecutor executor
-    cdef long loop_thread_id
 
     def __init__(self, coro, loop):
         ConcurrentFuture.__init__(self, loop=loop)
         self.executor = CoroutineExecutor(self, coro)  # reference cycle
-        self.loop_thread_id = -1
         loop.call_soon_threadsafe(self._start)
 
     cpdef _start(self):
-        # asyncio.Loop has ._thread_id, but uvloop does not expose it
-        self.loop_thread_id = get_ident()  # with gil
         self.executor.step()
 
     cpdef cancel(self, msg=None):
         """external cancel request.
 
         cancel requests cancellation of the task.
-        it is safe to call cancel from any thread.
+        it is safe to call cancel only from IO thread.
         """
-        # invoke CoroutineExecutor.cancel on the loop thread and wait for its result.
-        # but run it directly to avoid deadlock if we are already on the loop thread.
-        if get_ident() == self.loop_thread_id:  # with gil
-            return self.executor.cancel(msg)
-        self._cancel_via_loopthread(msg)
-
-    def _cancel_via_loopthread(self, msg):  # cpdef does not allow to use closures
-        sema = Lock()
-        sema.acquire()
-        res = [None]
-        def _():
-            try:
-                x = self.executor.cancel(msg)
-            except BaseException as e:
-                x = e
-            finally:
-                res[0] = x
-                sema.release()
-        self._loop.call_soon_threadsafe(_)
-        sema.acquire() # wait for the call to complete
-        r = res[0]
-        if isinstance(r, BaseException):
-            raise r
-        return r
-
+        return self.executor.cancel(msg)
 
     def _cancel(self, msg):
         """internal cancel request."""

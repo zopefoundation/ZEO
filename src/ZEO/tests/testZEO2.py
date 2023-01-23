@@ -11,7 +11,6 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-from __future__ import print_function
 from zope.testing import setupstack, renormalizing
 import doctest
 import logging
@@ -514,7 +513,3 @@ def test_suite():
                 ]),
             ),
         ))
-
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')

@@ -11,7 +11,6 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-from __future__ import print_function
 import doctest
 import re
 import unittest
@@ -27,6 +26,5 @@ def test_suite():
                 (re.compile('usage: Usage: '), 'Usage: '),  # Py 2.4
                 (re.compile('options:'), 'Options:'),  # Py 2.4
                 ]),
-            globs={'print_function': print_function},
             ),
         ))

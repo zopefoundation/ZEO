@@ -152,7 +152,3 @@ Now we'll have our way with it's private _server attr:
 
 def test_suite():
     return doctest.DocTestSuite()
-
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')

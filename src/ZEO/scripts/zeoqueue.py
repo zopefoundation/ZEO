@@ -22,7 +22,6 @@ Options:
         when you rotate log files so that the next run will parse from the
         beginning of the file.
 """
-from __future__ import print_function
 
 import os
 import re
@@ -362,7 +361,7 @@ def main():
                 print('reading status from file', file)
         finally:
             statefp.close()
-    except IOError as e:
+    except OSError as e:
         if e.errno != errno.ENOENT:
             raise
     if status is None:

@@ -60,7 +60,7 @@ logger = logging.getLogger('ZEO.StorageServer')
 def log(message, level=logging.INFO, label='', exc_info=False):
     """Internal helper to log a message."""
     if label:
-        message = "(%s) %s" % (label, message)
+        message = f'({label}) {message}'
     logger.log(level, message, exc_info=exc_info)
 
 
@@ -68,8 +68,8 @@ class StorageServerError(StorageError):
     """Error reported when an unpicklable exception is raised."""
 
 
-registered_methods = set(
-    ('get_info', 'lastTransaction',
+registered_methods = {
+    'get_info', 'lastTransaction',
      'getInvalidations', 'new_oids', 'pack', 'loadBefore', 'storea',
      'checkCurrentSerialInTransaction', 'restorea', 'storeBlobStart',
      'storeBlobChunk', 'storeBlobEnd', 'storeBlobShared',
@@ -77,7 +77,7 @@ registered_methods = set(
      'history', 'record_iternext', 'sendBlob', 'getTid', 'loadSerial',
      'new_oid', 'undoa', 'undoLog', 'undoInfo', 'iterator_start',
      'iterator_next', 'iterator_record_start', 'iterator_record_next',
-     'iterator_gc', 'server_status', 'set_client_label', 'ping'))
+     'iterator_gc', 'server_status', 'set_client_label', 'ping'}
 
 
 class ZEOStorage:
@@ -133,7 +133,7 @@ class ZEOStorage:
         else:
             stid = None
         name = self.__class__.__name__
-        return "<%s %X trans=%s s_trans=%s>" % (name, id(self), tid, stid)
+        return f'<{name} {id(self):X} trans={tid} s_trans={stid}>'
 
     def log(self, msg, level=logging.INFO, exc_info=False):
         log(msg, level=level, label=self.log_label, exc_info=exc_info)
@@ -279,7 +279,7 @@ class ZEOStorage:
             # If the client isn't waiting for a reply, start a thread
             # and forget about it.
             t = threading.Thread(target=self._pack_impl, args=(time,))
-            t.setName("zeo storage packing thread")
+            t.name = "zeo storage packing thread"
             t.start()
             return None
 
@@ -727,7 +727,7 @@ class StorageServer:
 
         self.storages = storages
         msg = ", ".join(
-            ["%s:%s:%s" % (name, storage.isReadOnly() and "RO" or "RW",
+            ["{}:{}:{}".format(name, storage.isReadOnly() and "RO" or "RW",
                            storage.getName())
              for name, storage in storages.items()])
         log("%s created %s with storages: %s" %
@@ -764,7 +764,7 @@ class StorageServer:
                 timeout = StubTimeoutThread()
             else:
                 timeout = TimeoutThread(transaction_timeout)
-                timeout.setName("TimeoutThread for %s" % name)
+                timeout.name = f'TimeoutThread for {name}'
                 timeout.start()
             self.lock_managers[name] = LockManager(name, stats, timeout)
 
@@ -900,7 +900,7 @@ class StorageServer:
         elif not invq:
             log("invq empty")
         else:
-            log("tid to old for invq %s < %s" % (u64(tid), u64(invq[-1][0])))
+            log("tid to old for invq {} < {}".format(u64(tid), u64(invq[-1][0])))
 
         return latest_tid, list(oids)
 
@@ -908,8 +908,8 @@ class StorageServer:
 
     def start_thread(self, daemon=True):
         self.__thread = thread = threading.Thread(target=self.loop)
-        thread.setName("StorageServer(%s)" % _addr_label(self.addr))
-        thread.setDaemon(daemon)
+        thread.name = "StorageServer(%s)" % _addr_label(self.addr)
+        thread.daemon = daemon
         thread.start()
 
     __closed = False
@@ -969,8 +969,8 @@ class StorageServer:
         return status
 
     def ruok(self):
-        return dict((storage_id, self.server_status(storage_id))
-                    for storage_id in self.storages)
+        return {storage_id: self.server_status(storage_id)
+                    for storage_id in self.storages}
 
 
 class StubTimeoutThread:
@@ -993,8 +993,8 @@ class TimeoutThread(threading.Thread):
 
     def __init__(self, timeout):
         threading.Thread.__init__(self)
-        self.setName("TimeoutThread")
-        self.setDaemon(1)
+        self.name = "TimeoutThread"
+        self.daemon = True
         self._timeout = timeout
         self._client = None
         self._deadline = None
@@ -1064,7 +1064,7 @@ class SlowMethodThread(threading.Thread):
 
     def __init__(self, method, args):
         threading.Thread.__init__(self)
-        self.setName("SlowMethodThread for %s" % method.__name__)
+        self.name = f'SlowMethodThread for {method.__name__}'
         self._method = method
         self._args = args
         self.delay = MTDelay()

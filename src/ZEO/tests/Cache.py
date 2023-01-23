@@ -36,7 +36,7 @@ class TransUndoStorageWithCache:
 
         # Now start an undo transaction
         t = TransactionMetaData()
-        t.note(u'undo1')
+        t.note('undo1')
         oids = self._begin_undos_vote(t, tid)
 
         # Make sure this doesn't load invalid data into the cache

@@ -1444,7 +1444,8 @@ class FutureTestsBase(OptimizeTestsBase):
         self.loop.exceptions = []
 
     def test_cancel(self):
-        self.fut.cancel('zzz')
+        _ = self.fut.cancel('zzz')
+        self.assertIs(_, True)
         self.assertTrue(self.fut.cancelled())
         with self.assertRaises(asyncio.CancelledError) as e:
             self.fut.result()
@@ -1552,7 +1553,8 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
             await fut
 
         t = self.make_task(exc)
-        fut.cancel('zzz')
+        _ = fut.cancel('zzz')
+        self.assertIs(_, True)
         self.assertTrue(t.done())
         self.assertTrue(t.cancelled())
         with self.assertRaises(asyncio.CancelledError) as e:
@@ -1584,7 +1586,8 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
 
         @waitready.add_done_callback
         def _(_):
-            t.cancel('zzz')
+            _ = t.cancel('zzz')
+            self.assertIs(_, True)
 
         self.loop.call_soon(lambda: go.set_result(None))
         with self.assertRaises(asyncio.CancelledError):
@@ -1598,7 +1601,7 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
         self.assertTrue(waiting.cancelled())
         self.assertEqual(l, [1,2])
         _ = t.cancel()
-        self.assertFalse(_)
+        self.assertIs(_, False)
 
 
     def test_cancel_task_while_running(self):
@@ -1611,7 +1614,8 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
             await go
             l.append(1)
             l.append(2)
-            t.cancel('zzz')
+            _ = t.cancel('zzz')
+            self.assertIs(_, True)
             l.append(3)
             await waiting
             l.append(4)
@@ -1711,55 +1715,3 @@ class ConcurrentTaskTests(CoroutineExecutorTestsBase, TestCase):
         t = ConcurrentTask(coro(), loop)
         self.run_loop()
         return t
-
-    def test_cancel_from_another_thread(self):
-        l = []
-        waitready = threading.Event()
-        waiting = Future(loop=self.loop)
-
-        async def f():
-            l.append(1)
-            l.append(2)
-            waitready.set()
-            await waiting
-            l.append(3)
-
-        t = self.make_task(f)
-        self.assertFalse(t.done())
-
-        def Tcancel():
-            waitready.wait()
-            t.cancel('zzz')
-        tcancel = threading.Thread(target=Tcancel)
-        tcancel.setDaemon(True)
-        tcancel.start()
-
-        with self.assertRaises(asyncio.CancelledError):
-            self.loop.run_until_complete(t)
-        tcancel.join(9)
-        self.assertFalse(tcancel.is_alive())
-        self.assertTrue(t.done())
-        self.assertTrue(t.cancelled())
-        with self.assertRaises(asyncio.CancelledError) as e:
-            t.result()
-        self.assertEqual(e.exception.args, ('zzz',))
-        self.assertTrue(waiting.done())
-        self.assertTrue(waiting.cancelled())
-        self.assertEqual(l, [1,2])
-        _ = t.cancel()
-        self.assertFalse(_)
-
-
-def test_suite():
-    suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(ClientTests))
-    suite.addTest(unittest.makeSuite(ServerTests))
-    suite.addTest(unittest.makeSuite(MsgpackClientTests))
-    suite.addTest(unittest.makeSuite(MsgpackServerTests))
-    suite.addTest(unittest.makeSuite(ZEOBaseProtocolTests))
-    suite.addTest(unittest.makeSuite(SizedMessageProtocolTests))
-    suite.addTest(unittest.makeSuite(FutureTests))
-    suite.addTest(unittest.makeSuite(ConcurrentFutureTests))
-    suite.addTest(unittest.makeSuite(AsyncTaskTests))
-    suite.addTest(unittest.makeSuite(ConcurrentTaskTests))
-    return suite

@@ -1,4 +1,3 @@
-from __future__ import print_function
 ##############################################################################
 #
 # Copyright (c) 2001, 2002 Zope Foundation and Contributors.
@@ -240,7 +239,7 @@ def main(args=None):
     # Print statistics
     if options.dostats:
         print()
-        print("Read %s trace records (%s bytes) in %.1f seconds" % (
+        print("Read {} trace records ({} bytes) in {:.1f} seconds".format(
             addcommas(records), addcommas(end_pos), rte-rt0))
         print("Versions:   %s records used a version" % addcommas(versions))
         print("First time: %s" % ctime(t0))
@@ -291,7 +290,7 @@ def main(args=None):
 
 def dumpbysize(bysize, how, how2):
     print()
-    print("Unique sizes %s: %s" % (how, addcommas(len(bysize))))
+    print("Unique sizes {}: {}".format(how, addcommas(len(bysize))))
     print("%10s %6s %6s" % ("size", "objs", how2))
     sizes = sorted(bysize.keys())
     for size in sizes:

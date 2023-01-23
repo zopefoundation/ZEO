@@ -143,31 +143,6 @@ Commands:
 
 $Id$
 """
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
 
 import datetime
 import os
@@ -372,7 +347,7 @@ def time_trans(f):
                     t = time(line)
                     d = sub(t1, t)
                     if d >= thresh:
-                        print(t1, cid, "%s/%s" % (stores, old),
+                        print(t1, cid, f'{stores}/{old}',
                               sub(t0, t1), sub(t1, t2), vs,
                               sub(t2, t), 'abort')
                 del transactions[cid]
@@ -386,7 +361,7 @@ def time_trans(f):
                 t = time(line)
                 d = sub(t1, t)
                 if d >= thresh:
-                    print(t1, cid, "%s/%s" % (stores, old),
+                    print(t1, cid, f'{stores}/{old}',
                           sub(t0, t1), sub(t1, t2), vs,
                           sub(t2, t3), sub(t3, t))
                 del transactions[cid]
@@ -533,7 +508,7 @@ def verify(f):
     for line in f:
         if line.find('new connection') > 0:
             m = new_connection_idre.search(line)
-            cid = "%s:%s" % (m.group(1), m.group(2))
+            cid = f'{m.group(1)}:{m.group(2)}'
             nv[cid] = [time(line), 0]
         elif line.find('calling zeoVerify(') > 0:
             cid = connidre.search(line).group(1)

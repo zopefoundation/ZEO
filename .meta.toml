@@ -2,13 +2,12 @@
 # https://github.com/zopefoundation/meta/tree/master/config/pure-python
 [meta]
 template = "pure-python"
-commit-id = "200573eb414d2228d463da3de7d71a6d6335a704"
+commit-id = "78e0868c"
 
 [python]
 with-windows = false
 with-pypy = true
 with-future-python = false
-with-legacy-python = true
 with-docs = true
 with-sphinx-doctests = false
 with-macos = false
@@ -27,7 +26,6 @@ testenv-deps = [
     "uvloop: uvloop",
     ]
 testenv-setenv = [
-    "PYTHONWARNINGS=ignore::ResourceWarning",
     "msgpack1: ZEO_MSGPACK=1",
     ]
 
@@ -51,6 +49,7 @@ additional-rules = [
     "include log.ini",
     "recursive-include src *.csr",
     "recursive-include src *.pem",
+    "recursive-include src *.pyx",
     "recursive-include src *.rst",
     "recursive-include src *.test",
     "recursive-include src *.txt",

@@ -76,6 +76,11 @@ The simplest client configuration specified a server address:
 
 In isolated runs, the ``close`` below failed with a timeout.
 Set up a log handler to get at the associated log message.
+Note that we are interested only in this specific log message
+(from `ZEO.asyncio.client.ClientIO.close_co`).
+Occasionally (when the server response for the access to the
+non existing storage `2` is processed sufficiently fast),
+there will we other error log entries; we ignore them.
 
 Note: ``InstalledHandler`` changes the logger's level.
 Therefore, we cannot set ``level`` to ``ERROR`` even though
@@ -96,9 +101,7 @@ Check log records
 
     >>> def check_log_records(records):
     ...     records = [r.message for r in records]
-    ...     if len(records) != 1:
-    ...	        return records
-    ...     return records if "bug" in records[0] else []
+    ...     return any("as a bug" in r for r in records) and records or []
     >>> check_log_records(handler.records)
     []
 

@@ -23,7 +23,6 @@ Note:
 - The simulation will be far off if the trace file
   was created starting with a non-empty cache
 """
-from __future__ import print_function, absolute_import
 
 import bisect
 import struct
@@ -205,7 +204,7 @@ class Simulation:
     extraname = "*** please override ***"
 
     def printheader(self):
-        print("%s, cache size %s bytes" % (self.__class__.__name__,
+        print("{}, cache size {} bytes".format(self.__class__.__name__,
                                            addcommas(self.cachelimit)))
         self.extraheader()
         extranames = tuple([s.upper() for s in self.extras])

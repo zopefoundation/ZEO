@@ -1,10 +1,10 @@
 Changelog
 =========
 
-6.0 (unreleased)
-----------------
+6.0.0 (unreleased)
+------------------
 
-- Drop Python 2 and 3.5 support
+- Drop support for Python 2.7, 3.5, 3.6.
 
 - Switch to using `async/await` directly instead of `@coroutine/yield`
 
@@ -16,11 +16,12 @@ Changelog
   "ZEO 5 client with ZEO 4 server".
 
 
-5.4.0 (unreleased)
+5.4.0 (2023-01-18)
 ------------------
 
 - Reimplement and streamline the ``asyncio`` part of the ``ClientStorage``
   implementation:
+
    - switch from futures with explicit callbacks to `async/await`-like style
    - use standard ``asyncio`` features to implement timeouts
    - redesign the API of the class implementing the ZEO client protocol
@@ -38,7 +39,7 @@ Changelog
   actually uses ZEO5.client-ZEO4.server configuration. That's why support for
   ZEO4 server was dropped rather than fixed.
 
-  See `issue 209 <https://github.com/zopefoundation/ZEO/issues/209>` for details.
+  See `issue 209 <https://github.com/zopefoundation/ZEO/issues/209>`_ for details.
 
 - If the ``zeopack`` script cannot connect to a server it sets exit status 1
   See `#214 <https://github.com/zopefoundation/ZEO/issues/214>`_.
@@ -48,7 +49,7 @@ Changelog
   server mode was already deprecated and scheduled for removal, so the fix is
   to finally remove it. From now on ZEO server is always single-threaded.
 
-  See `issue 209 <https://github.com/zopefoundation/ZEO/issues/209>` for details.
+  See `issue 209 <https://github.com/zopefoundation/ZEO/issues/209>`_ for details.
 
 - Test ZEO only with the following storages
   ``FileStorage`` with server side blobs,
@@ -80,6 +81,10 @@ Changelog
   hinting towards a server rather than client problem.
 
   See `issue 156 <https://github.com/zopefoundation/ZEO/issues/156>`_.
+
+- Remove support for ``python setup.py test``. It hadn't been working
+  for some time. From now the only supported way to run tests is via
+  ``zope-testrunner``.
 
 
 5.3.0 (2022-03-24)
