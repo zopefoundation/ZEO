@@ -1,4 +1,8 @@
 # cython: language_level=3
+"""``cython`` implementation of ``futures.py``.
+
+Please see its docstring for details.
+"""
 
 import asyncio
 cdef object CancelledError = asyncio.CancelledError

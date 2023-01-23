@@ -4,7 +4,13 @@
 loop run. This increases the number of loop runs necessary to
 obtain the result of a ZEO server request and adds significant
 latency (+ 27% in some benchmarks).
-This module defines variants which run callbacks immediately.
+This module defines variants which run callbacks immediately
+and ignore a context.
+
+The tasks defined by this module build on those futures
+and in addition do not implement a task context. If you do not
+know the coroutine run by the task, it is safer to use
+a standard ``asyncio.Task``.
 """
 
 import asyncio
