@@ -164,7 +164,7 @@ msgpack
 Server SSL configuration
 ------------------------
 
-A server can optionally support SSL.  Do do so, include a `ssl`
+A server can optionally support SSL.  To do so, include a `ssl`
 subsection of the ZEO section, as in::
 
     <zeo>
