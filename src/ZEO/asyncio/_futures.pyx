@@ -1,14 +1,15 @@
 # cython: language_level=3
+"""``cython`` implementation of ``futures.py``.
 
-from .compat import asyncio
+Please see its docstring for details.
+"""
+
+import asyncio
 cdef object CancelledError = asyncio.CancelledError
 cdef object InvalidStateError = asyncio.InvalidStateError
 cdef object get_event_loop = asyncio.get_event_loop
-import inspect
 from threading import Event
 from time import sleep
-
-from cpython cimport PY_MAJOR_VERSION
 
 
 cdef enum State:
@@ -97,29 +98,18 @@ cdef class Future:
         return rv
 
     cdef call_callbacks(self):
-        exc_stop = None
         for cb in self.callbacks:  # allows ``callbacks`` to grow
             try:
                 cb(self)
             except (SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as exc:
-                if PY_MAJOR_VERSION < 3:
-                    # trollius stops the loop by raising _StopError
-                    # we delay loop stopping till after all callbacks are invoked
-                    # this goes in line with py3 behaviour
-                    if isinstance(exc, asyncio.base_events._StopError):
-                        exc_stop = exc
-                        continue
-
                 self._loop.call_exception_handler({
                         'message': 'Exception in callback %s' % (cb,),
                         'exception': exc,
                     })
 
         del self.callbacks[:]
-        if exc_stop is not None:
-            raise exc_stop
 
     cpdef set_result(self, result):
         if self.state:
@@ -137,7 +127,7 @@ cdef class Future:
         self._result = exc
         self.call_callbacks()
 
-    # trollius and py3 access ._exception directly
+    # py3 accesses ._exception directly
     @property
     def _exception(self):
         if self.state != EXCEPTION:
@@ -160,25 +150,13 @@ cdef class Future:
                 self.callbacks]
         return " ".join(str(x) for x in info)
 
-    if PY_MAJOR_VERSION >= 3:  # py3-only because cyclic garbage with __del__ is not collected on py2
-        def __del__(self):
-            if self.state == EXCEPTION  and  not self._result_retrieved:
-                self._loop.call_exception_handler({
-                    'message': "%s exception was never retrieved" % self.__class__.__name__,
-                    'exception': self._result,
-                    'future': self,
-                })
-
-# py3: asyncio.isfuture checks ._asyncio_future_blocking
-# py2: trollius does isinstace(_FUTURE_CLASSES)
-# -> register our Future so that it is recognized as such by trollius
-if PY_MAJOR_VERSION < 3:
-    _ = asyncio.futures._FUTURE_CLASSES
-    if not isinstance(_, tuple):
-        _ = (_,)
-    _ += (Future,)
-    asyncio.futures._FUTURE_CLASSES = _
-    del _
+    def __del__(self):
+        if self.state == EXCEPTION  and  not self._result_retrieved:
+            self._loop.call_exception_handler({
+                'message': "%s exception was never retrieved" % self.__class__.__name__,
+                'exception': self._result,
+                'future': self,
+            })
 
 
 cdef class ConcurrentFuture(Future):
@@ -276,14 +254,8 @@ cdef class CoroutineExecutor:
             # we are done
             task = self.task
             self.task = None  # break reference cycle
-            if isinstance(e, (StopIteration, _GenReturn)):
-                if PY_MAJOR_VERSION < 3:
-                    v = getattr(e, 'value', None)  # e.g. no .value on plain return
-                    if hasattr(e, 'raised'):  # coroutines implemented inside trollius raise Return
-                        e.raised = True       # which checks it has been caught and complains if not
-                else:
-                    v = e.value
-                task.set_result(v)
+            if isinstance(e, StopIteration):
+                task.set_result(e.value)
             elif isinstance(e, CancelledError):
                 if len(e.args) == 0:
                     msg = getattr(awaiting, '_cancel_message', None)  # see _cancel_future
@@ -303,37 +275,12 @@ cdef class CoroutineExecutor:
             if blocking is not None:
                 result._asyncio_future_blocking = False
                 await_next = result
-            elif PY_MAJOR_VERSION < 3 and isinstance(result, asyncio.Future):
-                await_next = result  # trollius predates ._asyncio_future_blocking
 
-            # `yield coro` - handle as if it was `yield from coro`
-            elif _iscoroutine(result):
-                # NOTE - always AsyncTask even if we are originally under ConcurrentTask
-                await_next = AsyncTask(result, self.task.get_loop())
-
+            # bad await
             else:
-                # object with __await__ - e.g. @cython.iterable_coroutine used by uvloop
-                risawaitable = True
-                try:
-                    rawait = result.__await__()
-                except AttributeError:
-                    risawaitable = False
-                else:
-                    # cython.iterable_coroutine returns `coroutine_wrapper` that mimics
-                    # iterator/generator but does not inherit from types.GeneratorType .
-                    await_next = AsyncTask(rawait, self.task.get_loop())
-
-                if not risawaitable:
-                    # bare yield
-                    if result is None:
-                        await_next = Future(self.task.get_loop())
-                        await_next.set_result(None)
-
-                    # bad yield
-                    else:
-                        await_next = Future(self.task.get_loop())
-                        await_next.set_exception(
-                                RuntimeError("Task got bad yield: %r" % (result,)))
+                await_next = Future(self.task.get_loop())
+                await_next.set_exception(
+                        RuntimeError("Task got bad await: %r" % (result,)))
 
             if self.cancel_requested:
                 _cancel_future(await_next, self.cancel_msg)
@@ -371,7 +318,7 @@ cdef _cancel_future(fut, msg):
     try:
         return fut.cancel(msg)
     except TypeError:
-        # on trollius and py3 < 3.9 Future.cancel does not accept msg
+        # on py3 < 3.9 Future.cancel does not accept msg
         _ = fut.cancel()
         fut._cancel_message = msg
         return _
@@ -428,29 +375,6 @@ cdef class ConcurrentTask(ConcurrentFuture):
 
 
 # @coroutine - only py implementtion
-
-cdef _iscoroutine(obj):
-    """_iscoroutine checks whether obj is coroutine object."""
-    if inspect.isgenerator(obj) or asyncio.iscoroutine(obj):
-        return True
-    else:
-        return False
-
-cpdef return_(x):
-    """return_(x) should be used instead of ``return x`` in coroutine functions.
-
-    It exists to support Python2 where ``return x`` is rejected inside generators.
-    """
-    # py3:     disallows to explicitly raise StopIteration from inside generator
-    # py2/py3: StopIteration inherits from Exception (not from BaseException)
-    # -> use our own exception type, that mimics StopIteration, but that can be
-    #    raised from inside generator and that is not caught by `except Exception`.
-    e = _GenReturn(x)
-    e.value = x
-    raise e
-
-class _GenReturn(BaseException):  # note: base != Exception to prevent catching
-    __slots__ = "value"           # returns inside `except Exception` in the same function
 
 
 run_coroutine_threadsafe = ConcurrentTask

@@ -25,6 +25,7 @@ import socket
 import stat
 import sys
 import threading
+from threading import get_ident
 import time
 import weakref
 from binascii import hexlify
@@ -37,10 +38,8 @@ import ZODB.BaseStorage
 import ZODB.ConflictResolution
 import ZODB.interfaces
 import zope.interface
-import six
 
 from persistent.TimeStamp import TimeStamp
-from ZEO._compat import get_ident
 from ZEO._compat import WIN
 from ZEO.Exceptions import ClientDisconnected
 from ZEO.TransactionBuffer import TransactionBuffer
@@ -262,12 +261,12 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
 
         self.__name__ = name or str(addr)  # Standard convention for storages
 
-        if isinstance(addr, six.string_types):
+        if isinstance(addr, str):
             if WIN:
                 raise ValueError("Unix sockets are not available on Windows")
             addr = [addr]
         elif (isinstance(addr, tuple) and len(addr) == 2 and
-              isinstance(addr[0], six.string_types) and
+              isinstance(addr[0], str) and
               isinstance(addr[1], int)):
             addr = [addr]
 
@@ -401,7 +400,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             args=(self.blob_dir, target),
             name="%s zeo client check blob size thread" % self.__name__,
             )
-        check_blob_size_thread.setDaemon(True)
+        check_blob_size_thread.daemon = True
         check_blob_size_thread.start()
         self._check_blob_size_thread = check_blob_size_thread
 
@@ -412,7 +411,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
 
         The storage isn't really ready to use until after this call.
         """
-        super(ClientStorage, self).registerDB(db)
+        super().registerDB(db)
         self._db = db
 
     def is_connected(self, test=False):
@@ -493,7 +492,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             host = addr[0]
             try:
                 canonical, aliases, addrs = socket.gethostbyaddr(host)
-            except socket.error as err:
+            except OSError as err:
                 logger.debug("%s Error resolving host: %s (%s)",
                              self.__name__, host, err)
                 canonical = host
@@ -507,7 +506,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         if self._server_addr is None:
             raise ClientDisconnected
         else:
-            return '%s:%s' % (self._storage, self._server_addr)
+            return f'{self._storage}:{self._server_addr}'
 
     def notify_disconnected(self):
         """Internal: notify that the server connection was terminated.
@@ -537,7 +536,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         connected.
 
         """
-        return "%s (%s)" % (
+        return "{} ({})".format(
             self.__name__,
             self.is_connected() and "connected" or "disconnected")
 
@@ -805,7 +804,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                 return open(blob_filename, 'rb')
             else:
                 return ZODB.blob.BlobFile(blob_filename, 'r', blob)
-        except (IOError):
+        except (OSError):
             # The file got removed while we were opening.
             # Fall through and try again with the protection of the lock.
             pass
@@ -1131,7 +1130,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         return self._call('server_status', timeout=timeout)
 
 
-class TransactionIterator(object):
+class TransactionIterator:
 
     def __init__(self, storage, iid, *args):
         self._storage = storage
@@ -1183,7 +1182,7 @@ class ClientStorageTransactionInformation(ZODB.BaseStorage.TransactionRecord):
         return self._storage._setup_iterator(RecordIterator, riid)
 
 
-class RecordIterator(object):
+class RecordIterator:
 
     def __init__(self, storage, riid):
         self._riid = riid
@@ -1209,7 +1208,7 @@ class RecordIterator(object):
     next = __next__
 
 
-class BlobCacheLayout(object):
+class BlobCacheLayout:
 
     size = 997
 
@@ -1220,7 +1219,7 @@ class BlobCacheLayout(object):
         base, rem = divmod(utils.u64(oid), self.size)
         return os.path.join(
             str(rem),
-            "%s.%s%s" % (base, hexlify(tid).decode('ascii'),
+            "{}.{}{}".format(base, hexlify(tid).decode('ascii'),
                          ZODB.blob.BLOB_SUFFIX)
             )
 
@@ -1382,7 +1381,7 @@ def open_cache(cache, var, client, storage, cache_size):
         if cache is None:
             if client:
                 cache = os.path.join(var or os.getcwd(),
-                                     "%s-%s.zec" % (client, storage))
+                                     f'{client}-{storage}.zec')
             else:
                 # ephemeral cache
                 return ClientCache(None, cache_size)

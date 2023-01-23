@@ -33,9 +33,8 @@ def ssl_config(section, server):
 
     context.verify_mode = ssl.CERT_REQUIRED
 
-    if sys.version_info >= (3, 4):
-        context.verify_flags |= ssl.VERIFY_X509_STRICT | (
-            context.cert_store_stats()['crl'] and ssl.VERIFY_CRL_CHECK_LEAF)
+    context.verify_flags |= ssl.VERIFY_X509_STRICT | (
+        context.cert_store_stats()['crl'] and ssl.VERIFY_CRL_CHECK_LEAF)
 
     if server:
         context.check_hostname = False
@@ -54,7 +53,7 @@ def client_ssl(section):
     return ssl_config(section, False)
 
 
-class ClientStorageConfig(object):
+class ClientStorageConfig:
 
     def __init__(self, config):
         self.config = config

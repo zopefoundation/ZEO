@@ -16,7 +16,6 @@
 The stress test should run in an infinite loop and should involve
 multiple connections.
 """
-from __future__ import print_function
 # TODO: This code is currently broken.
 
 import transaction

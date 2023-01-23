@@ -1,5 +1,3 @@
-from __future__ import print_function
-from __future__ import print_function
 ##############################################################################
 #
 # Copyright Zope Foundation and Contributors.
@@ -33,7 +31,6 @@ from __future__ import print_function
 import ZEO.asyncio.tests
 import ZEO.StorageServer
 import ZODB.MappingStorage
-from ZEO.asyncio.base import loop_run_forever
 
 
 class StorageServer(ZEO.StorageServer.StorageServer):
@@ -50,9 +47,9 @@ class StorageServer(ZEO.StorageServer.StorageServer):
         # normal ``close`` does not work.
         loop = self.get_loop()
         if loop.is_running():
-            return super(StorageServer, self).close()
-        loop.call_soon_threadsafe(super(StorageServer, self).close)
-        loop_run_forever(loop)  # will stop automatically
+            return super().close()
+        loop.call_soon_threadsafe(super().close)
+        loop.run_forever()  # will stop automatically
         loop.close()
 
     def get_loop(self):

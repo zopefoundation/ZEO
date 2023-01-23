@@ -1,5 +1,6 @@
 """ZEO server interface implementation."""
 
+import asyncio
 import json
 import logging
 import os
@@ -9,8 +10,7 @@ import ZODB.POSException
 from ..shortrepr import short_repr
 
 from . import base
-from .base import loop_run_forever, loop_run_until_complete
-from .compat import asyncio, new_event_loop
+from .compat import new_event_loop
 from .marshal import server_decoder, encoder, reduce_exception
 
 
@@ -23,7 +23,7 @@ class ServerProtocol(base.ZEOBaseProtocol):
 
     protocols = (b'5', )
 
-    methods = set(('register', ))
+    methods = {'register'}
 
     unlogged_exception_types = (
         ZODB.POSException.POSKeyError,
@@ -34,7 +34,7 @@ class ServerProtocol(base.ZEOBaseProtocol):
     def __init__(self, loop, addr, zeo_storage, msgpack):
         """Create a server's client interface
         """
-        super(ServerProtocol, self).__init__(loop, repr(addr))
+        super().__init__(loop, repr(addr))
         self.addr = addr
         self.zeo_storage = zeo_storage
 
@@ -48,18 +48,18 @@ class ServerProtocol(base.ZEOBaseProtocol):
         logger.debug("Closing server protocol")
         if not self.closed:
             self.closed = True
-            super(ServerProtocol, self).close()
+            super().close()
             self.zeo_storage = None  # break reference cycle
 
     connected = None  # for tests
 
     def connection_made(self, transport):
         self.connected = True
-        super(ServerProtocol, self).connection_made(transport)
+        super().connection_made(transport)
         self.write_message(self.announce_protocol)
 
     def connection_lost(self, exc):
-        super(ServerProtocol, self).connection_lost(exc)
+        super().connection_lost(exc)
         self.connected = False
         if exc:
             logger.error("Disconnected %s:%s", exc.__class__.__name__, exc)
@@ -169,7 +169,7 @@ def new_connection(loop, addr, socket, zeo_storage, msgpack):
     asyncio.ensure_future(cr, loop=loop)
 
 
-class Delay(object):
+class Delay:
     """Used to delay response to client for synchronous calls.
 
     When a synchronous call is made and the original handler returns
@@ -197,7 +197,7 @@ class Delay(object):
             self.protocol.send_error(self.msgid, exc_info[1])
 
     def __repr__(self):
-        return "%s[%s, %r, %r, %r]" % (
+        return "{}[{}, {!r}, {!r}, {!r}]".format(
             self.__class__.__name__, id(self),
             self.msgid, self.protocol, self.sent)
 
@@ -235,7 +235,7 @@ class MTDelay(Delay):
         self.protocol.call_soon_threadsafe(Delay.error, self, exc_info)
 
 
-class Acceptor(object):
+class Acceptor:
 
     def __init__(self, storage_server, addr, ssl, msgpack):
         self.storage_server = storage_server
@@ -251,7 +251,7 @@ class Acceptor(object):
             cr = loop.create_unix_server(self.factory, addr, ssl=ssl)
 
         f = asyncio.ensure_future(cr, loop=loop)
-        server = loop_run_until_complete(loop, f)
+        server = loop.run_until_complete(f)
 
         self.server = server
         if isinstance(addr, tuple) and addr[1] == 0:
@@ -276,7 +276,7 @@ class Acceptor(object):
         return protocol
 
     def loop(self, timeout=None):
-        loop_run_forever(self.event_loop)
+        self.event_loop.run_forever()
         self.event_loop.close()
 
     closed = False

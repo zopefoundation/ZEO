@@ -1,18 +1,7 @@
-from .._compat import PY3
-from .compat import asyncio
-
-if PY3:
-    def to_byte(i):
-        return bytes([i])
-else:
-    def to_byte(b):
-        if isinstance(b, int):
-            b = chr(b)
-        return b
+import asyncio
 
 from zope.testing import setupstack
-from unittest import TestCase
-import mock
+from unittest import TestCase, mock
 from ZODB.utils import maxtid, RLock
 
 import collections
@@ -26,11 +15,10 @@ from functools import partial
 
 from ..Exceptions import ClientDisconnected, ProtocolError
 
-from .base import ZEOBaseProtocol, SizedMessageProtocol, \
-        loop_run_forever, loop_run_until_complete
+from .base import ZEOBaseProtocol, SizedMessageProtocol
 from .testing import Loop, FaithfulLoop
 from .client import ClientThread, Fallback
-from .futures import Future, ConcurrentFuture, AsyncTask, ConcurrentTask, coroutine, return_
+from .futures import Future, ConcurrentFuture, AsyncTask, ConcurrentTask
 from .server import new_connection, best_protocol_version
 from .marshal import encoder, decoder
 
@@ -38,12 +26,12 @@ from .marshal import encoder, decoder
 logger = logging.getLogger(__name__)
 
 
-class Base(object):
+class Base:
     enc = b'Z'
     seq_type = list
 
     def setUp(self):
-        super(Base, self).setUp()
+        super().setUp()
         self.encode = encoder(self.enc)
         self.decode = decoder(self.enc)
 
@@ -107,7 +95,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
     def tearDown(self):
         self.exit_future_mode()
         self.close()
-        super(ClientTests, self).tearDown()
+        super().tearDown()
         loop = self.loop
         if loop is not None:
             self.assertEqual(loop.exceptions, [])
@@ -178,7 +166,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
 
     def pop(self, *args, **kw):
         self.loop.run_until_inactive()
-        return super(ClientTests, self).pop(*args, **kw)
+        return super().pop(*args, **kw)
 
     def respond(self, message_id, result, async_=False,
                 check_exc=True, return_msg=False, protocol=None):
@@ -192,11 +180,8 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         if check_exc:
             self.assertEqual(self.loop.exceptions, [])
 
-    def server_async_call(self, method, *args, **kw):
-        check_exc = kw.pop('check_exc', True)
-        return_msg = kw.pop('return_msg', False)
-        assert not kw
-
+    def server_async_call(self, method, *args,
+                          check_exc=True, return_msg=False):
         msg = sized(self.encode(0, True, method, args))
         if return_msg:
             return msg
@@ -1042,7 +1027,7 @@ class MsgpackClientTests(ClientTests):
     seq_type = tuple
 
 
-class MemoryCache(object):
+class MemoryCache:
 
     def __init__(self):
         # { oid -> [(start, end, data)] }
@@ -1208,7 +1193,7 @@ def sized(message):
     return struct.pack(">I", len(message)) + message
 
 
-class Logging(object):
+class Logging:
 
     def __init__(self, level=logging.ERROR):
         self.level = level
@@ -1251,6 +1236,7 @@ class ZEOBaseProtocolTests(setupstack.TestCase):
             l, t = transport.pop(2)
             self.assertEqual(l, b"\x00\x00\x00\x01")
             self.assertEqual(t, to_byte(b))
+
 
     def test_repr(self):
         repr(self.loop.protocol)  # satisfied if no exception
@@ -1338,6 +1324,10 @@ class SizedMessageProtocolTests(setupstack.TestCase):
         self.assertEqual(self.received, [])
 
 
+def to_byte(i):
+    return bytes([i])
+
+
 def _break_mock_cycles(m):
     """break (``mock`` introduced) cycles in mock *m*.
 
@@ -1350,7 +1340,7 @@ def _break_mock_cycles(m):
         _break_mock_cycles(m._mock_return_value)
 
 
-class OptimizeTestsBase(object):
+class OptimizeTestsBase:
     def setUp(self):
         self.loop = FaithfulLoop()
         asyncio.set_event_loop(self.loop)
@@ -1363,7 +1353,7 @@ class OptimizeTestsBase(object):
 
 class FutureTestsBase(OptimizeTestsBase):
     def setUp(self):
-        super(FutureTestsBase, self).setUp()
+        super().setUp()
         self.fut = fut = self.make_future(self.loop)
         self.callback = cb = mock.Mock()
         fut.add_done_callback(cb)
@@ -1373,7 +1363,7 @@ class FutureTestsBase(OptimizeTestsBase):
         fut.cancel()
         self.assertEqual(self.loop.exceptions, [])
         _break_mock_cycles(self.callback)
-        super(FutureTestsBase, self).tearDown()
+        super().tearDown()
 
     def test_set_result(self):
         self.fut.set_result(1)
@@ -1442,10 +1432,8 @@ class FutureTestsBase(OptimizeTestsBase):
         self.assertIs(type(e1), dict)
         self.assertEqual(set(e0.keys()), {'message', 'exception'})
         self.assertEqual(set(e1.keys()), {'message', 'exception'})
-        assertRe = self.assertRegex if PY3 else \
-                   self.assertRegexpMatches
-        assertRe(e0['message'], r'Exception in callback .*\bg\b')
-        assertRe(e1['message'], r'Exception in callback .*\bi\b')
+        self.assertRegex(e0['message'], r'Exception in callback .*\bg\b')
+        self.assertRegex(e1['message'], r'Exception in callback .*\bi\b')
         # RuntimeError('x') != RuntimeError('x')  -> compare by hand
         x0 = e0['exception']
         x1 = e1['exception']
@@ -1490,14 +1478,12 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
     def run_loop(self):
         loop = self.loop
         loop.call_soon(loop.stop)
-        loop_run_forever(loop)
+        loop.run_forever()
 
     def test_noop(self):
 
-        @coroutine
-        def noop():
-            return
-            yield
+        async def noop():
+            pass
 
         t = self.make_task(noop)
         self.assertTrue(t.done())
@@ -1508,10 +1494,8 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
 
     def test_repr(self):
 
-        @coroutine
-        def noop():
-            return
-            yield
+        async def noop():
+            pass
 
         t = self.make_task(noop)
         repr(t)  # satisfied if no exception
@@ -1521,10 +1505,8 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
 
     def check_future(self, fut, run_loop=False):
 
-        @coroutine
-        def wait():
-            _ = yield fut
-            return_(_)
+        async def wait():
+            return await fut
 
         t = self.make_task(wait)
         self.assertFalse(t.done())
@@ -1537,9 +1519,8 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
     def test_exception(self):
         fut = Future(loop=self.loop)
 
-        @coroutine
-        def exc():
-            yield fut
+        async def exc():
+            await fut
 
         t = self.make_task(exc)
         exc = Exception()
@@ -1552,12 +1533,11 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
 
         fut = Future(loop=self.loop)
 
-        @coroutine
-        def exc():
+        async def exc():
             try:
-                yield fut
+                await fut
             except Exception:
-                return_(1)
+                return 1
 
         t = self.make_task(exc)
         exc = Exception()
@@ -1569,9 +1549,8 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
     def test_cancel_future(self):
         fut = Future(loop=self.loop)
 
-        @coroutine
-        def exc():
-            yield fut
+        async def exc():
+            await fut
 
         t = self.make_task(exc)
         _ = fut.cancel('zzz')
@@ -1594,13 +1573,12 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
         waitready = Future(loop=self.loop)
         waiting = blocked_on
 
-        @coroutine
-        def f():
-            yield go  # wait for loop to start
+        async def f():
+            await go  # wait for loop to start
             l.append(1)
             l.append(2)
             waitready.set_result(None)
-            yield waiting
+            await waiting
             l.append(3)
 
         t = self.make_task(f)
@@ -1613,7 +1591,7 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
 
         self.loop.call_soon(lambda: go.set_result(None))
         with self.assertRaises(asyncio.CancelledError):
-            loop_run_until_complete(self.loop, t)
+            self.loop.run_until_complete(t)
         self.assertTrue(t.done())
         self.assertTrue(t.cancelled())
         with self.assertRaises(asyncio.CancelledError) as e:
@@ -1632,15 +1610,14 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
         go = Future(loop=self.loop)
         waiting = Future(loop=self.loop)
 
-        @coroutine
-        def f():
-            yield go
+        async def f():
+            await go
             l.append(1)
             l.append(2)
             _ = t.cancel('zzz')
             self.assertIs(_, True)
             l.append(3)
-            yield waiting
+            await waiting
             l.append(4)
 
         t = self.make_task(f)
@@ -1659,22 +1636,18 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
     def test_nested_coro(self):
         l = []
 
-        @coroutine
-        def f():
-            yield g('a')
-            yield g('b')
+        async def f():
+            await g('a')
+            await g('b')
 
-        @coroutine
-        def g(s):
-            yield h(s, 1)
-            yield h(s, 2)
-            yield h(s, 3)
+        async def g(s):
+            await h(s, 1)
+            await h(s, 2)
+            await h(s, 3)
 
-        @coroutine
-        def h(s, n):
+        async def h(s, n):
             for i in range(1,n+1):
                 l.append(s*i)
-                yield
 
         t = self.make_task(f)
         self.assertTrue(t.done())
@@ -1683,40 +1656,35 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
     def test_nest_to_async_coro(self):
         go = Future(loop=self.loop)
 
-        @coroutine
-        def f():
-            yield go  # wait for loop to start before running into asyncio.sleep
-            _ = yield asyncio.sleep(1, 'zzz')
-            return_(_)
+        async def f():
+            await go  # wait for loop to start before running into asyncio.sleep
+            _ = await asyncio.sleep(1, 'zzz')
+            return _
 
         tstart = time()
         t = self.make_task(f)
         self.assertFalse(t.done())
         self.loop.call_soon(lambda: go.set_result(None))
-        loop_run_until_complete(self.loop, t)
+        self.loop.run_until_complete(t)
         tend = time()
         self.assertTrue(t.done())
         self.assertEqual(t.result(), 'zzz')
         self.assertGreaterEqual(tend - tstart, 1)
 
-    def test_return_(self):
+    def test_return(self):
 
         # plain return
-        @coroutine
-        def f():
-            return_(123)
-            yield
+        async def f():
+            return 123
 
         t = self.make_task(f)
         self.assertTrue(t.done())
         self.assertEqual(t.result(), 123)
 
         # nested returns
-        @coroutine
-        def g():
-            x = yield f()
-            return_(1000 + x)
-            yield
+        async def g():
+            x = await f()
+            return 1000 + x
 
         t = self.make_task(g)
         self.assertTrue(t.done())
@@ -1724,14 +1692,12 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
 
         # verify that return can go through `except Exception`
         # (but not through `except BaseException`)
-        @coroutine
-        def h():
+        async def h():
             try:
-                return_(456)
+                return 456
                 raise Exception('aaa')
             except Exception:
                 raise
-            yield
 
         t = self.make_task(h)
         self.assertTrue(t.done())

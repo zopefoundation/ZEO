@@ -33,9 +33,8 @@ import ZODB.event
 import ZODB.serialize
 import ZODB.TimeStamp
 import zope.interface
-import six
 
-from ZEO._compat import Pickler, Unpickler, PY3
+from ZEO._compat import Pickler, Unpickler
 from ZEO.monitor import StorageStats
 from ZEO.asyncio.server import Delay, MTDelay, Result, Acceptor
 from ZODB.Connection import TransactionMetaData
@@ -61,7 +60,7 @@ logger = logging.getLogger('ZEO.StorageServer')
 def log(message, level=logging.INFO, label='', exc_info=False):
     """Internal helper to log a message."""
     if label:
-        message = "(%s) %s" % (label, message)
+        message = f'({label}) {message}'
     logger.log(level, message, exc_info=exc_info)
 
 
@@ -69,8 +68,8 @@ class StorageServerError(StorageError):
     """Error reported when an unpicklable exception is raised."""
 
 
-registered_methods = set(
-    ('get_info', 'lastTransaction',
+registered_methods = {
+    'get_info', 'lastTransaction',
      'getInvalidations', 'new_oids', 'pack', 'loadBefore', 'storea',
      'checkCurrentSerialInTransaction', 'restorea', 'storeBlobStart',
      'storeBlobChunk', 'storeBlobEnd', 'storeBlobShared',
@@ -78,10 +77,10 @@ registered_methods = set(
      'history', 'record_iternext', 'sendBlob', 'getTid', 'loadSerial',
      'new_oid', 'undoa', 'undoLog', 'undoInfo', 'iterator_start',
      'iterator_next', 'iterator_record_start', 'iterator_record_next',
-     'iterator_gc', 'server_status', 'set_client_label', 'ping'))
+     'iterator_gc', 'server_status', 'set_client_label', 'ping'}
 
 
-class ZEOStorage(object):
+class ZEOStorage:
     """Proxy to underlying storage for a single remote client."""
 
     connected = connection = stats = storage = storage_id = transaction = None
@@ -134,7 +133,7 @@ class ZEOStorage(object):
         else:
             stid = None
         name = self.__class__.__name__
-        return "<%s %X trans=%s s_trans=%s>" % (name, id(self), tid, stid)
+        return f'<{name} {id(self):X} trans={tid} s_trans={stid}>'
 
     def log(self, msg, level=logging.INFO, exc_info=False):
         log(msg, level=level, label=self.log_label, exc_info=exc_info)
@@ -280,7 +279,7 @@ class ZEOStorage(object):
             # If the client isn't waiting for a reply, start a thread
             # and forget about it.
             t = threading.Thread(target=self._pack_impl, args=(time,))
-            t.setName("zeo storage packing thread")
+            t.name = "zeo storage packing thread"
             t.start()
             return None
 
@@ -630,7 +629,7 @@ class ZEOStorage(object):
         pass
 
 
-class StorageServerDB(object):
+class StorageServerDB:
     """Adapts (StorageServer, storage_id) to ZODB.interfaces.IStorageWrapper.
 
     The class is used as ``DB`` emulation in a ``registerDB`` call;
@@ -661,7 +660,7 @@ class StorageServerDB(object):
     transform_record_data = untransform_record_data = lambda self, data: data
 
 
-class StorageServer(object):
+class StorageServer:
 
     """The server side implementation of ZEO.
 
@@ -728,7 +727,7 @@ class StorageServer(object):
 
         self.storages = storages
         msg = ", ".join(
-            ["%s:%s:%s" % (name, storage.isReadOnly() and "RO" or "RW",
+            ["{}:{}:{}".format(name, storage.isReadOnly() and "RO" or "RW",
                            storage.getName())
              for name, storage in storages.items()])
         log("%s created %s with storages: %s" %
@@ -765,7 +764,7 @@ class StorageServer(object):
                 timeout = StubTimeoutThread()
             else:
                 timeout = TimeoutThread(transaction_timeout)
-                timeout.setName("TimeoutThread for %s" % name)
+                timeout.name = f'TimeoutThread for {name}'
                 timeout.start()
             self.lock_managers[name] = LockManager(name, stats, timeout)
 
@@ -901,7 +900,7 @@ class StorageServer(object):
         elif not invq:
             log("invq empty")
         else:
-            log("tid to old for invq %s < %s" % (u64(tid), u64(invq[-1][0])))
+            log("tid to old for invq {} < {}".format(u64(tid), u64(invq[-1][0])))
 
         return latest_tid, list(oids)
 
@@ -909,8 +908,8 @@ class StorageServer(object):
 
     def start_thread(self, daemon=True):
         self.__thread = thread = threading.Thread(target=self.loop)
-        thread.setName("StorageServer(%s)" % _addr_label(self.addr))
-        thread.setDaemon(daemon)
+        thread.name = "StorageServer(%s)" % _addr_label(self.addr)
+        thread.daemon = daemon
         thread.start()
 
     __closed = False
@@ -938,7 +937,7 @@ class StorageServer(object):
                 except Exception:
                     logger.exception("closing connection %r", zs)
 
-        for name, storage in six.iteritems(self.storages):
+        for name, storage in self.storages.items():
             logger.info("closing storage %r", name)
             storage.close()
 
@@ -964,18 +963,17 @@ class StorageServer(object):
         status['timeout-thread-is-alive'] = lock_manager.timeout.is_alive()
         last_transaction = self.storages[storage_id].lastTransaction()
         last_transaction_hex = codecs.encode(last_transaction, 'hex_codec')
-        if PY3:
-            # doctests and maybe clients expect a str, not bytes
-            last_transaction_hex = str(last_transaction_hex, 'ascii')
+        # doctests and maybe clients expect a str, not bytes
+        last_transaction_hex = str(last_transaction_hex, 'ascii')
         status['last-transaction'] = last_transaction_hex
         return status
 
     def ruok(self):
-        return dict((storage_id, self.server_status(storage_id))
-                    for storage_id in self.storages)
+        return {storage_id: self.server_status(storage_id)
+                    for storage_id in self.storages}
 
 
-class StubTimeoutThread(object):
+class StubTimeoutThread:
 
     def begin(self, client):
         pass
@@ -995,8 +993,8 @@ class TimeoutThread(threading.Thread):
 
     def __init__(self, timeout):
         threading.Thread.__init__(self)
-        self.setName("TimeoutThread")
-        self.setDaemon(1)
+        self.name = "TimeoutThread"
+        self.daemon = True
         self._timeout = timeout
         self._client = None
         self._deadline = None
@@ -1066,7 +1064,7 @@ class SlowMethodThread(threading.Thread):
 
     def __init__(self, method, args):
         threading.Thread.__init__(self)
-        self.setName("SlowMethodThread for %s" % method.__name__)
+        self.name = f'SlowMethodThread for {method.__name__}'
         self._method = method
         self._args = args
         self.delay = MTDelay()
@@ -1083,16 +1081,16 @@ class SlowMethodThread(threading.Thread):
 
 
 def _addr_label(addr):
-    if isinstance(addr, six.binary_type):
+    if isinstance(addr, bytes):
         return addr.decode('ascii')
-    if isinstance(addr, six.string_types):
+    if isinstance(addr, str):
         return addr
     else:
         host, port = addr
         return str(host) + ":" + str(port)
 
 
-class CommitLog(object):
+class CommitLog:
 
     def __init__(self):
         self.file = tempfile.TemporaryFile(suffix=".comit-log")
@@ -1135,7 +1133,7 @@ class CommitLog(object):
             self.file = None
 
 
-class ServerEvent(object):
+class ServerEvent:
 
     def __init__(self, server, **kw):
         self.__dict__.update(kw)
@@ -1156,7 +1154,7 @@ def never_resolve_conflict(oid, committedSerial, oldSerial, newpickle,
                         data=newpickle)
 
 
-class LockManager(object):
+class LockManager:
 
     def __init__(self, storage_id, stats, timeout):
         self.storage_id = storage_id

@@ -60,4 +60,6 @@ class TransBufTests(unittest.TestCase):
 
 
 def test_suite():
-    return unittest.makeSuite(TransBufTests, 'check')
+    test_loader = unittest.TestLoader()
+    test_loader.testMethodPrefix = 'check'
+    return test_loader.loadTestsFromTestCase(TransBufTests)

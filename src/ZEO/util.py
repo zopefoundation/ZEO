@@ -27,7 +27,7 @@ def parentdir(p, n=1):
     return d
 
 
-class Environment(object):
+class Environment:
     """Determine location of the Data.fs & ZEO_SERVER.pid files.
 
     Pass the argv[0] used to start ZEO to the constructor.

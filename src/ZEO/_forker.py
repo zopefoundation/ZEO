@@ -12,7 +12,6 @@
 #
 ##############################################################################
 """Library for forking storage server and connecting client storage"""
-from __future__ import print_function
 import gc
 import os
 import os.path
@@ -20,17 +19,15 @@ import sys
 import multiprocessing
 import logging
 import tempfile
+from io import StringIO
 
-from six.moves.queue import Empty
-import six
-
-from ZEO._compat import StringIO
+from queue import Empty
 
 logger = logging.getLogger('ZEO.tests.forker')
 DEBUG = os.environ.get('ZEO_TEST_SERVER_DEBUG')
 
 
-class ZEOConfig(object):
+class ZEOConfig:
     """Class to generate ZEO configuration file. """
 
     def __init__(self, addr, log=None, **options):
@@ -42,7 +39,7 @@ class ZEOConfig(object):
             else:
                 self.logpath = 'server.log'
 
-        if not isinstance(addr, six.string_types):
+        if not isinstance(addr, str):
             addr = '%s:%s' % addr
 
         self.log = log
@@ -68,14 +65,14 @@ class ZEOConfig(object):
         print("</zeo>", file=f)
 
         if self.log:
-            print("""
+            print(f"""
             <eventlog>
-              level %s
+              level {self.loglevel}
               <logfile>
-                 path %s
+                 path {self.logpath}
               </logfile>
             </eventlog>
-            """ % (self.loglevel, self.logpath), file=f)
+            """, file=f)
 
     def __str__(self):
         f = StringIO()
@@ -107,7 +104,7 @@ def runner(config, qin, qout, timeout=None,
         ZEO.asyncio.server.best_protocol_version = protocol
         old_protocols = ZEO.asyncio.server.ServerProtocol.protocols
         ZEO.asyncio.server.ServerProtocol.protocols = tuple(sorted(
-            set(old_protocols) | set([protocol])
+            set(old_protocols) | {protocol}
             ))
 
     try:
@@ -128,7 +125,7 @@ def runner(config, qin, qout, timeout=None,
             target=server.server.loop, kwargs=dict(timeout=.2),
             name=(None if name is None else name + '-server'),
             )
-        thread.setDaemon(True)
+        thread.daemon = True
         thread.start()
         os.remove(config)
 
@@ -199,8 +196,8 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
         storage_conf = '<filestorage>\npath %s\n</filestorage>' % path
 
     if blob_dir:
-        storage_conf = '<blobstorage>\nblob-dir %s\n%s\n</blobstorage>' % (
-            blob_dir, storage_conf)
+        storage_conf = (f'<blobstorage>\nblob-dir {blob_dir}\n'
+                        f'{storage_conf}\n</blobstorage>')
 
     if zeo_conf is None or isinstance(zeo_conf, dict):
         if port is None:
@@ -228,20 +225,14 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
 
     if threaded:
         from threading import Thread
-        from six.moves.queue import Queue
+        from queue import Queue
     else:
         # Experimental to see whether server logging problems under MacOS
         # have to do with its default `spawn` method
         # from multiprocessing import Process as Thread
         process_type = os.environ.get("ZEO_PROCESS_TYPE", "")
-        if six.PY2:
-            from multiprocessing import Process as Thread
-            if process_type:
-                raise NotImplementedError(
-                        "$ZEO_PROCESS_TYPE is not supported on py2")
-        else:
-            from multiprocessing import context
-            Thread = getattr(context, process_type.capitalize() + "Process")
+        from multiprocessing import context
+        Thread = getattr(context, process_type.capitalize() + "Process")
         Queue = ThreadlessQueue
 
     logger.info("using thread type %r", Thread)
@@ -293,7 +284,7 @@ def whine(*message):
     sys.stderr.flush()
 
 
-class ThreadlessQueue(object):
+class ThreadlessQueue:
 
     def __init__(self):
         self.cin, self.cout = multiprocessing.Pipe(False)

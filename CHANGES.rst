@@ -4,6 +4,10 @@ Changelog
 6.0.0 (unreleased)
 ------------------
 
+- Drop support for Python 2.7, 3.5, 3.6.
+
+- Switch to using `async/await` directly instead of `@coroutine/yield`
+
 
 5.4.0 (2023-01-18)
 ------------------

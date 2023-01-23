@@ -4,7 +4,7 @@ import ZEO.StorageServer
 from ..asyncio.server import best_protocol_version
 
 
-class ServerProtocol(object):
+class ServerProtocol:
 
     method = ('register', )
 
@@ -33,7 +33,7 @@ class ServerProtocol(object):
     async_threadsafe = async_
 
 
-class StorageServer(object):
+class StorageServer:
     """Create a client interface to a StorageServer.
 
     This is for testing StorageServer. It interacts with the storgr

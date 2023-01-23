@@ -12,7 +12,6 @@
 #
 ##############################################################################
 """Basic unit tests for a client cache."""
-from __future__ import print_function
 
 from ZODB.utils import p64, u64, z64, repr_to_oid
 import doctest
@@ -54,7 +53,7 @@ def hexprint(file):
         hex = hex[:24] + ' ' + hex[24:]
         hex = hex.ljust(49)
         printable = printable.ljust(16)
-        print('%08x  %s |%s|' % (offset, hex, printable))
+        print(f'{offset:08x}  {hex} |{printable}|')
         offset += 16
 
 
@@ -173,8 +172,8 @@ class CacheTests(ZODB.tests.util.TestCase):
         eq(copy.getLastTid(), self.cache.getLastTid())
         eq(len(copy), len(self.cache))
         eq(dict(copy.current), dict(self.cache.current))
-        eq(dict([(k, dict(v)) for (k, v) in copy.noncurrent.items()]),
-           dict([(k, dict(v)) for (k, v) in self.cache.noncurrent.items()]),
+        eq({k: dict(v) for (k, v) in copy.noncurrent.items()},
+           {k: dict(v) for (k, v) in self.cache.noncurrent.items()},
            )
         copy.close()
 
@@ -279,7 +278,7 @@ class CacheTests(ZODB.tests.util.TestCase):
             self.assertEqual(len(cache), small)
             self.assertEqual(os.path.getsize(
                 'cache'), ZEO.cache.ZEC_HEADER_SIZE+small*recsize+extra)
-            self.assertEqual(set(u64(oid) for (oid, tid) in cache.contents()),
+            self.assertEqual({u64(oid) for (oid, tid) in cache.contents()},
                              set(range(small)))
             for i in range(100, 110):
                 cache.store(p64(i), n1, None, data)
@@ -291,7 +290,7 @@ class CacheTests(ZODB.tests.util.TestCase):
             self.assertEqual(len(cache), expected_len)
             expected_oids = set(list(range(11, 50))+list(range(100, 110)))
             self.assertEqual(
-                set(u64(oid) for (oid, tid) in cache.contents()),
+                {u64(oid) for (oid, tid) in cache.contents()},
                 expected_oids)
 
             # Make sure we can reopen with same size
@@ -299,7 +298,7 @@ class CacheTests(ZODB.tests.util.TestCase):
             cache = ZEO.cache.ClientCache(
                 'cache', size=ZEO.cache.ZEC_HEADER_SIZE+small*recsize+extra)
             self.assertEqual(len(cache), expected_len)
-            self.assertEqual(set(u64(oid) for (oid, tid) in cache.contents()),
+            self.assertEqual({u64(oid) for (oid, tid) in cache.contents()},
                              expected_oids)
 
             # Now make it bigger
@@ -310,7 +309,7 @@ class CacheTests(ZODB.tests.util.TestCase):
             self.assertEqual(len(cache), expected_len)
             self.assertEqual(os.path.getsize(
                 'cache'), ZEO.cache.ZEC_HEADER_SIZE+large*recsize+extra)
-            self.assertEqual(set(u64(oid) for (oid, tid) in cache.contents()),
+            self.assertEqual({u64(oid) for (oid, tid) in cache.contents()},
                              expected_oids)
 
             for i in range(200, 305):
@@ -322,7 +321,7 @@ class CacheTests(ZODB.tests.util.TestCase):
             expected_oids = set(list(range(11, 50)) +
                                 list(range(106, 110)) +
                                 list(range(200, 305)))
-            self.assertEqual(set(u64(oid) for (oid, tid) in cache.contents()),
+            self.assertEqual({u64(oid) for (oid, tid) in cache.contents()},
                              expected_oids)
 
             # Make sure we can reopen with same size
@@ -330,7 +329,7 @@ class CacheTests(ZODB.tests.util.TestCase):
             cache = ZEO.cache.ClientCache(
                 'cache', size=ZEO.cache.ZEC_HEADER_SIZE+large*recsize+extra)
             self.assertEqual(len(cache), expected_len)
-            self.assertEqual(set(u64(oid) for (oid, tid) in cache.contents()),
+            self.assertEqual({u64(oid) for (oid, tid) in cache.contents()},
                              expected_oids)
 
             # Cleanup
@@ -370,10 +369,7 @@ writes records to a cache file repeatedly.
 >>> with open('t', 'w') as f:
 ...     _ = f.write('''
 ... import os, random, sys, time
-... try:
-...     import thread
-... except ImportError:
-...     import _thread as thread
+... import _thread as thread
 ... sys.path = %r
 ...
 ... def suicide():
@@ -1113,7 +1109,7 @@ An attempt to open a bad cache file will cause it to be dropped and recreated.
 
 def test_suite():
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(CacheTests))
+    suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(CacheTests))
     suite.addTest(
         doctest.DocTestSuite(
             setUp=zope.testing.setupstack.setUpDirectory,

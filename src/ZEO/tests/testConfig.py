@@ -29,7 +29,7 @@ class ZEOConfigTestBase(setupstack.TestCase):
     def start_server(self, settings='', **kw):
 
         for name, value in kw.items():
-            settings += '\n%s %s\n' % (name.replace('_', '-'), value)
+            settings += '\n{} {}\n'.format(name.replace('_', '-'), value)
 
         zeo_conf = """
         <zeo>
@@ -43,7 +43,7 @@ class ZEOConfigTestBase(setupstack.TestCase):
     def start_client(self, addr, settings='', **kw):
         settings += '\nserver %s:%s\n' % addr
         for name, value in kw.items():
-            settings += '\n%s %s\n' % (name.replace('_', '-'), value)
+            settings += '\n{} {}\n'.format(name.replace('_', '-'), value)
         return storageFromString(
             """
             %import ZEO
@@ -121,6 +121,6 @@ class ZEOConfigTest(ZEOConfigTestBase):
 
 
 def test_suite():
-    suite = unittest.makeSuite(ZEOConfigTest)
+    suite = unittest.defaultTestLoader.loadTestsFromTestCase(ZEOConfigTest)
     suite.layer = threaded_server_tests
     return suite

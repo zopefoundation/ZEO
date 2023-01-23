@@ -60,7 +60,7 @@ class FailableThread(TestThread):
             raise
 
 
-class StressTask(object):
+class StressTask:
     # Append integers startnum, startnum + step, startnum + 2*step, ...
     # to 'tree'.  If sleep is given, sleep
     # that long after each append.  At the end, instance var .added_keys
@@ -83,7 +83,7 @@ class StressTask(object):
 
     def commit(self):
         key = self.startnum
-        self.tm.get().note(u"add key %s" % key)
+        self.tm.get().note(f'add key {key}')
         try:
             self.tm.get().commit()
         except ConflictError:
@@ -148,17 +148,17 @@ class StressThread(FailableThread):
     def _testrun(self):
         tm = transaction.TransactionManager()
         cn = self.db.open(transaction_manager=tm)
-        while not self.stop.isSet():
+        while not self.stop.is_set():
             try:
                 tree = cn.root()["tree"]
                 break
             except (ConflictError, KeyError):
                 tm.abort()
         key = self.startnum
-        while not self.stop.isSet():
+        while not self.stop.is_set():
             try:
                 tree[key] = self.threadnum
-                tm.get().note(u"add key %s" % key)
+                tm.get().note(f'add key {key}')
                 tm.commit()
                 self.commitdict[self] = 1
                 if self.sleep:
@@ -191,7 +191,7 @@ class LargeUpdatesThread(FailableThread):
 
     def _testrun(self):
         cn = self.db.open()
-        while not self.stop.isSet():
+        while not self.stop.is_set():
             try:
                 tree = cn.root()["tree"]
                 break
@@ -201,7 +201,7 @@ class LargeUpdatesThread(FailableThread):
 
         keys_added = {}  # set of keys we commit
         tkeys = []
-        while not self.stop.isSet():
+        while not self.stop.is_set():
 
             # The test picks 50 keys spread across many buckets.
             # self.startnum and self.step ensure that all threads use
@@ -222,7 +222,7 @@ class LargeUpdatesThread(FailableThread):
                     break
             else:
                 # print("%d set #%d" % (self.threadnum, len(keys)))
-                transaction.get().note(u"keys %s" % ", ".join(map(str, keys)))
+                transaction.get().note("keys %s" % ", ".join(map(str, keys)))
                 try:
                     transaction.commit()
                     self.commitdict[self] = 1
@@ -239,7 +239,7 @@ class LargeUpdatesThread(FailableThread):
         cn.close()
 
 
-class InvalidationTests(object):
+class InvalidationTests:
 
     # Minimum # of seconds the main thread lets the workers run.  The
     # test stops as soon as this much time has elapsed, and all threads
@@ -309,7 +309,7 @@ class InvalidationTests(object):
         start = time.time()
         while time.time() - start <= self.MAXTIME:
             stop.wait(delay)
-            if stop.isSet():
+            if stop.is_set():
                 # Some thread failed.  Stop right now.
                 break
             delay = 2.0
@@ -400,7 +400,7 @@ class InvalidationTests(object):
                    for i in range(n)]
         self.go(stop, cd, *threads)
 
-        while len(set(db.lastTransaction() for db in dbs)) > 1:
+        while len({db.lastTransaction() for db in dbs}) > 1:
             _ = [db._storage.sync() for db in dbs]
 
         cn = dbs[0].open()

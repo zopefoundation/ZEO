@@ -25,11 +25,6 @@ Options:
 
 You must specify either -p and -h or -U.
 """
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
 
 import getopt
 import logging

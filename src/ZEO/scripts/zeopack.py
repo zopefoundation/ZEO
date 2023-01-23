@@ -7,7 +7,6 @@ import sys
 import time
 import traceback
 import ZEO.ClientStorage
-from six.moves import map
 
 usage = """Usage: %prog [options] [servers]
 
@@ -164,7 +163,7 @@ def _main(args=None, prog=None):
             cs.close()
         except:  # NOQA: E722 bare except
             traceback.print_exception(*(sys.exc_info()+(99, sys.stderr)))
-            error("Error packing storage %s in %r" % (name, addr))
+            error(f'Error packing storage {name} in {addr!r}')
 
     if not server_found:
         error("Cannot connect to any of the configured ZEO servers.")

@@ -21,7 +21,6 @@ store(), and invalidate().  It manages in-memory data structures that allow
 it to map this richer API onto the simple key-based API of the lower-level
 FileCache.
 """
-from __future__ import print_function
 from struct import pack, unpack
 
 import BTrees.LLBTree
@@ -34,7 +33,6 @@ import time
 import ZODB.fsIndex
 import zc.lockfile
 from ZODB.utils import p64, u64, z64, RLock
-import six
 from ._compat import PYPY
 
 logger = logging.getLogger("ZEO.cache")
@@ -139,7 +137,7 @@ _noncurrent_index_type = BTrees.LOBTree.LOBTree if not PYPY else dict
 _noncurrent_bucket_type = BTrees.LLBTree.LLBucket
 
 
-class ClientCache(object):
+class ClientCache:
     """A simple in-memory cache."""
 
     # The default size of 200MB makes a lot more sense than the traditional
@@ -746,7 +744,7 @@ class ClientCache(object):
         # depends on whether the caller may change the cache.
         seek = self.f.seek
         read = self.f.read
-        for oid, ofs in six.iteritems(self.current):
+        for oid, ofs in self.current.items():
             seek(ofs)
             status = read(1)
             assert status == b'a', (ofs, self.f.tell(), oid)
@@ -786,7 +784,7 @@ class ClientCache(object):
             tfn = path + ".trace"
             try:
                 _tracefile = open(tfn, "ab")
-            except IOError as msg:
+            except OSError as msg:
                 logger.warning("cannot write tracefile %r (%s)", tfn, msg)
             else:
                 logger.info("opened tracefile %r", tfn)

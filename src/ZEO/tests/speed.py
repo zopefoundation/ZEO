@@ -1,10 +1,3 @@
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
 ##############################################################################
 #
 # Copyright (c) 2001, 2002 Zope Foundation and Contributors.

@@ -9,11 +9,6 @@ transaction timeout feature of the server.
 usage: timeout.py address delay [storage-name]
 
 """
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
 
 import sys
 import time

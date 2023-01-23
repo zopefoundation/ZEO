@@ -1,5 +1,5 @@
-from .compat import asyncio
-from ZEO._compat import thread
+from _thread import allocate_lock
+import asyncio
 from time import sleep
 
 try:
@@ -9,7 +9,7 @@ except NameError:
         pass
 
 
-class Loop(object):
+class Loop:
     """Simple loop for testing purposes.
 
     It calls callbacks directly (instead of in the next round);
@@ -143,7 +143,7 @@ class FaithfulLoop(Loop, AsyncioLoop):
             Loop.close(self)
 
     _inactivity_checker_scheduled = False
-    _inactivity_lock = thread.allocate_lock()
+    _inactivity_lock = allocate_lock()
 
     def run_until_inactive(self):
         """return when the loop becomes inactive."""
@@ -199,7 +199,7 @@ class _ProtocolWrapper:
         return getattr(self._protocol, attr)
 
 
-class Handle(object):
+class Handle:
 
     _cancelled = False
 
@@ -207,7 +207,7 @@ class Handle(object):
         self._cancelled = True
 
 
-class Transport(object):
+class Transport:
 
     capacity = 1 << 64
     paused = False
@@ -262,7 +262,7 @@ class Transport(object):
         return self.extra[name]
 
 
-class AsyncRPC(object):
+class AsyncRPC:
     """Adapt an asyncio API to an RPC to help hysterical tests
     """
     def __init__(self, api):
@@ -272,7 +272,7 @@ class AsyncRPC(object):
         return lambda *a, **kw: self.api.call(name, *a, **kw)
 
 
-class ClientRunner(object):
+class ClientRunner:
 
     def __init__(self, addr, client, cache, storage, read_only, timeout,
                  **kw):

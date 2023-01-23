@@ -23,7 +23,6 @@ Note:
 - The simulation will be far off if the trace file
   was created starting with a non-empty cache
 """
-from __future__ import print_function, absolute_import
 
 import bisect
 import struct
@@ -41,7 +40,6 @@ from .cache_stats import add_tracefile_argument
 
 # we assign ctime locally to facilitate test replacement!
 from time import ctime
-import six
 
 
 def main(args=None):
@@ -118,7 +116,7 @@ def main(args=None):
     sim.finish()
 
 
-class Simulation(object):
+class Simulation:
     """Base class for simulations.
 
     The driver program calls: event(), printheader(), finish().
@@ -206,7 +204,7 @@ class Simulation(object):
     extraname = "*** please override ***"
 
     def printheader(self):
-        print("%s, cache size %s bytes" % (self.__class__.__name__,
+        print("{}, cache size {} bytes".format(self.__class__.__name__,
                                            addcommas(self.cachelimit)))
         self.extraheader()
         extranames = tuple([s.upper() for s in self.extras])
@@ -253,7 +251,7 @@ class Simulation(object):
 
 
 # For use in CircularCacheSimulation.
-class CircularCacheEntry(object):
+class CircularCacheEntry:
     __slots__ = (
         # object key: an (oid, start_tid) pair, where start_tid is the
         # tid of the transaction that created this revision of oid
@@ -503,7 +501,7 @@ class CircularCacheSimulation(Simulation):
     def report(self):
         self.check()
         free = used = total = 0
-        for size, e in six.itervalues(self.filemap):
+        for size, e in self.filemap.values():
             total += size
             if e:
                 used += size

@@ -14,7 +14,6 @@
 """A Thread base class for use with unittest."""
 import threading
 import sys
-import six
 
 
 class TestThread(threading.Thread):
@@ -40,7 +39,7 @@ class TestThread(threading.Thread):
     def __init__(self, testcase):
         threading.Thread.__init__(self)
         # In case this thread hangs, don't stop Python from exiting.
-        self.setDaemon(1)
+        self.daemon = True
         self._exc_info = None
         self._testcase = testcase
 
@@ -53,8 +52,9 @@ class TestThread(threading.Thread):
     def cleanup(self, timeout=15):
         self.join(timeout)
         if self._exc_info:
-            six.reraise(self._exc_info[0],
-                        self._exc_info[1],
-                        self._exc_info[2])
+            et, ev, etb = self._exc_info
+            if ev is None:
+                ev = et()
+            raise ev.with_traceback(etb)
         if self.is_alive():
             self._testcase.fail("Thread did not finish: %s" % self)

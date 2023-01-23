@@ -31,19 +31,15 @@ The ZEO protocol sits on top of a sized message protocol.
 
 The ZEO protocol has client and server variants.
 """
+from asyncio import Protocol
 import logging
-import socket
-import sys
 
-from .compat import asyncio
 from .smp import SizedMessageProtocol
 
 logger = logging.getLogger(__name__)
 
-INET_FAMILIES = socket.AF_INET, socket.AF_INET6
 
-
-class ZEOBaseProtocol(asyncio.Protocol):
+class ZEOBaseProtocol(Protocol):
     """ZEO protocol base class for the common features."""
 
     protocol_version = None
@@ -78,7 +74,7 @@ class ZEOBaseProtocol(asyncio.Protocol):
         # close completion is signalled via a call to ``connection_lost``.
         closing = self.closing
         if closing is None:
-            closing = self.closing = create_future(self.loop)
+            closing = self.closing = self.loop.create_future()
             # can get closed before ``sm_protocol`` set up
             if self.sm_protocol is not None:
                 # will eventually cause ``connection_lost``
@@ -91,8 +87,7 @@ class ZEOBaseProtocol(asyncio.Protocol):
 
     def __repr__(self):
         cls = self.__class__
-        return "%s.%s(%s)" % (
-            cls.__module__, cls.__name__, self.name)
+        return f'{cls.__module__}.{cls.__name__}({self.name})'
 
     # to be defined by deriving classes
     # def finish_connection(protocol_version_message)
@@ -105,13 +100,6 @@ class ZEOBaseProtocol(asyncio.Protocol):
     # resume_writing
     def connection_made(self, transport):
         logger.info("Connected %s", self)
-
-        if sys.version_info < (3, 6):
-            sock = transport.get_extra_info('socket')
-            if sock is not None and sock.family in INET_FAMILIES:
-                # See https://bugs.python.org/issue27456 :(
-                sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, True)
-
         # set up lower level sized message protocol
         # creates reference cycle
         smp = self.sm_protocol = SizedMessageProtocol(self._first_message)
@@ -138,7 +126,7 @@ class ZEOBaseProtocol(asyncio.Protocol):
         self.sm_protocol.connection_lost(exc)
         closing = self.closing
         if closing is None:
-            closing = self.closing = create_future(self.loop)
+            closing = self.closing = self.loop.create_future()
         if not closing.done():
             closing.set_result(True)
 
@@ -155,38 +143,3 @@ class ZEOBaseProtocol(asyncio.Protocol):
     # The method below is overridden in ``connection_made``.
     def data_received(self, data):
         self.data_received(data)  # not an infinite loop, because overridden
-
-
-def create_future(loop):
-    mkf = getattr(loop, 'create_future', None)  # py3.5+
-    if mkf is not None:
-        return mkf()
-    else:
-        return asyncio.Future(loop=loop)        # py2
-
-
-def loop_run_forever(loop):
-    """loop_run_forever runs loop.run_forever() with setting loop to be the
-    default loop for current thread during the run.
-
-    It is needed so that functions like asyncio.sleep, asyncio.wait_for, ...
-    work correctly without loop argument.
-
-    py3 handles this correctly out of the box (see get_running_loop), but
-    trollius does not. Better be safe than sorry.
-    """
-    asyncio.set_event_loop(loop)
-    return loop.run_forever()
-    # leave the loop set as the default - don't do `asyncio.set_event_loop(None)`
-    # an IO thread typically gets its loop early and uses it until its death.
-    # There can be several `run_loop*` calls (example, the "closing" logic) and it
-    # is unnatural to reset the loop in between those calls.
-
-
-def loop_run_until_complete(loop, fut):
-    """loop_run_until_complete is similar to loop_run_forever, but applies to
-    loop.run_until_complete.
-    """
-    asyncio.set_event_loop(loop)
-    return loop.run_until_complete(fut)
-    # don't do `asyncio.set_event_loop(None)` - see comment in loop_run_forever

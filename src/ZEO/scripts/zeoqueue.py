@@ -22,7 +22,6 @@ Options:
         when you rotate log files so that the next run will parse from the
         beginning of the file.
 """
-from __future__ import print_function
 
 import os
 import re
@@ -77,7 +76,7 @@ def parse_time(line):
     return int(time.mktime(date_l + time_l + [0, 0, 0]))
 
 
-class Txn(object):
+class Txn:
     """Track status of single transaction."""
     def __init__(self, tid):
         self.tid = tid
@@ -95,7 +94,7 @@ class Txn(object):
             return False
 
 
-class Status(object):
+class Status:
     """Track status of ZEO server by replaying log records.
 
     We want to keep track of several events:
@@ -362,7 +361,7 @@ def main():
                 print('reading status from file', file)
         finally:
             statefp.close()
-    except IOError as e:
+    except OSError as e:
         if e.errno != errno.ENOENT:
             raise
     if status is None:

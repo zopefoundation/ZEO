@@ -1,6 +1,4 @@
-from .._compat import PY3
-
-import mock
+from unittest import mock
 import os
 import ssl
 import unittest
@@ -35,10 +33,11 @@ class SSLConfigTest(ZEOConfigTestBase):
         with self.assertRaises(ClientDisconnected):
             self.start_client(
                 addr,
-                """<ssl>
-                certificate {}
-                key {}
-                </ssl>""".format(client_cert, client_key), wait_timeout=1)
+                f"""<ssl>
+                certificate {client_cert}
+                key {client_key}
+                </ssl>""",
+                wait_timeout=1)
 
         # But a non-ssl one can:
         client = self.start_client(addr)
@@ -48,11 +47,11 @@ class SSLConfigTest(ZEOConfigTestBase):
 
         # A non-SSL client can't talk to an SSL server:
         addr, stop = self.start_server(
-            """<ssl>
-            certificate {}
-            key {}
-            authenticate {}
-            </ssl>""".format(server_cert, server_key, client_cert)
+            f"""<ssl>
+            certificate {server_cert}
+            key {server_key}
+            authenticate {client_cert}
+            </ssl>"""
             )
         with self.assertRaises(ClientDisconnected):
             self.start_client(addr, wait_timeout=1)
@@ -60,23 +59,23 @@ class SSLConfigTest(ZEOConfigTestBase):
         # But an SSL one can:
         client = self.start_client(
             addr,
-            """<ssl>
-                certificate {}
-                key {}
-                authenticate {}
+            f"""<ssl>
+                certificate {client_cert}
+                key {client_key}
+                authenticate {server_cert}
                 server-hostname zodb.org
-                </ssl>""".format(client_cert, client_key, server_cert))
+                </ssl>""")
         self._client_assertions(client, addr)
         client.close()
         stop()
 
     def test_ssl_hostname_check(self):
         addr, stop = self.start_server(
-            """<ssl>
-            certificate {}
-            key {}
-            authenticate {}
-            </ssl>""".format(server_cert, server_key, client_cert)
+            f"""<ssl>
+            certificate {server_cert}
+            key {server_key}
+            authenticate {client_cert}
+            </ssl>"""
             )
 
         # Connext with bad hostname fails:
@@ -84,42 +83,42 @@ class SSLConfigTest(ZEOConfigTestBase):
         with self.assertRaises(ClientDisconnected):
             client = self.start_client(
                 addr,
-                """<ssl>
-                    certificate {}
-                    key {}
-                    authenticate {}
+                f"""<ssl>
+                    certificate {client_cert}
+                    key {client_key}
+                    authenticate {server_cert}
                     server-hostname example.org
-                    </ssl>""".format(client_cert, client_key, server_cert),
+                    </ssl>""",
                 wait_timeout=1)
 
         # Connext with good hostname succeeds:
         client = self.start_client(
             addr,
-            """<ssl>
-                certificate {}
-                key {}
-                authenticate {}
+            f"""<ssl>
+                certificate {client_cert}
+                key {client_key}
+                authenticate {server_cert}
                 server-hostname zodb.org
-                </ssl>""".format(client_cert, client_key, server_cert))
+                </ssl>""")
         self._client_assertions(client, addr)
         client.close()
         stop()
 
     def test_ssl_pw(self):
         addr, stop = self.start_server(
-            """<ssl>
-            certificate {}
-            key {}
-            authenticate {}
+            f"""<ssl>
+            certificate {serverpw_cert}
+            key {serverpw_key}
+            authenticate {client_cert}
             password-function ZEO.tests.testssl.pwfunc
-            </ssl>""".format(serverpw_cert, serverpw_key, client_cert)
+            </ssl>"""
             )
         stop()
 
 
-@mock.patch(('asyncio' if PY3 else 'trollius') + '.ensure_future')
-@mock.patch(('asyncio' if PY3 else 'trollius') + '.set_event_loop')
-@mock.patch(('asyncio' if PY3 else 'trollius') + '.new_event_loop')
+@mock.patch('asyncio.ensure_future')
+@mock.patch('asyncio.set_event_loop')
+@mock.patch('asyncio.new_event_loop')
 @mock.patch('ZEO.asyncio.client.new_event_loop')
 @mock.patch('ZEO.asyncio.server.new_event_loop')
 class SSLConfigTestMockiavellian(ZEOConfigTestBase):
@@ -349,24 +348,25 @@ def pwfunc():
 
 def test_suite():
     suite = unittest.TestSuite((
-        unittest.makeSuite(SSLConfigTest),
-        unittest.makeSuite(SSLConfigTestMockiavellian),
+        unittest.defaultTestLoader.loadTestsFromTestCase(SSLConfigTest),
+        unittest.defaultTestLoader.loadTestsFromTestCase(
+            SSLConfigTestMockiavellian),
         ))
     suite.layer = threaded_server_tests
     return suite
 
 
 # Helpers for other tests:
-server_config = """
+server_config = f"""
     <zeo>
       address 127.0.0.1:0
       <ssl>
-        certificate {}
-        key {}
-        authenticate {}
+        certificate {server_cert}
+        key {server_key}
+        authenticate {client_cert}
       </ssl>
     </zeo>
-    """.format(server_cert, server_key, client_cert)
+    """
 
 
 def client_ssl(cafile=server_key,

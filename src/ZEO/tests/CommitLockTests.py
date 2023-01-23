@@ -66,7 +66,7 @@ class WorkerThread(TestThread):
         future.result(9)
 
 
-class CommitLockTests(object):
+class CommitLockTests:
 
     NUM_CLIENTS = 5
 

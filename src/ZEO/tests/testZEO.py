@@ -12,16 +12,13 @@
 #
 ##############################################################################
 """Test suite for ZEO based on ZODB.tests."""
-from __future__ import print_function
 import multiprocessing
 
 from ZEO.ClientStorage import ClientStorage
 from ZEO.Exceptions import ClientDisconnected
 from ZEO.tests import forker, Cache, CommitLockTests, ThreadTests
 from ZEO.tests import IterationTests
-from ZEO._compat import PY3
 from ZEO._compat import WIN
-import six
 
 from ZODB.Connection import TransactionMetaData
 from ZODB.tests import StorageTestBase, BasicStorage,  \
@@ -63,7 +60,7 @@ from . import testssl
 logger = logging.getLogger('ZEO.tests.testZEO')
 
 
-class DummyDB(object):
+class DummyDB:
 
     def invalidate(self, *args):
         pass
@@ -77,13 +74,13 @@ class DummyDB(object):
 class CreativeGetState(persistent.Persistent):
     def __getstate__(self):
         self.name = 'me'
-        return super(CreativeGetState, self).__getstate__()
+        return super().__getstate__()
 
 
 class Test_convenience_functions(unittest.TestCase):
 
     def test_ZEO_client_convenience(self):
-        import mock
+        from unittest import mock
         import ZEO
 
         client_thread = mock.Mock(
@@ -95,7 +92,7 @@ class Test_convenience_functions(unittest.TestCase):
         client._cache.close()  # client thread responsibility
 
     def test_ZEO_DB_convenience_ok(self):
-        import mock
+        from unittest import mock
         import ZEO
 
         client_mock = mock.Mock(spec=['close'])
@@ -113,7 +110,7 @@ class Test_convenience_functions(unittest.TestCase):
         client_mock.close.assert_not_called()
 
     def test_ZEO_DB_convenience_error(self):
-        import mock
+        from unittest import mock
         import ZEO
 
         client_mock = mock.Mock(spec=['close'])
@@ -131,7 +128,7 @@ class Test_convenience_functions(unittest.TestCase):
         client_mock.close.assert_called_once()
 
     def test_ZEO_connection_convenience_ok(self):
-        import mock
+        from unittest import mock
         import ZEO
 
         ret = object()
@@ -150,7 +147,7 @@ class Test_convenience_functions(unittest.TestCase):
         DB_mock.close.assert_not_called()
 
     def test_ZEO_connection_convenience_value(self):
-        import mock
+        from unittest import mock
         import ZEO
 
         DB_mock = mock.Mock(spec=[
@@ -169,7 +166,7 @@ class Test_convenience_functions(unittest.TestCase):
         DB_mock.close.assert_called_once()
 
 
-class MiscZEOTests(object):
+class MiscZEOTests:
     """ZEO tests that don't fit in elsewhere."""
 
     def checkCreativeGetState(self):
@@ -325,7 +322,7 @@ class GenericTests(
             ReadOnlyStorage.ReadOnlyStorage.checkWriteMethods(self)
 
     def checkSortKey(self):
-        key = '%s:%s' % (self._storage._storage, self._storage._server_addr)
+        key = f'{self._storage._storage}:{self._storage._server_addr}'
         self.assertEqual(self._storage.sortKey(), key)
 
     def _do_store_in_separate_thread(self, oid, revid, voted):
@@ -347,11 +344,11 @@ class GenericTests(
                 store.close()
 
         thread = threading.Thread(name='T2', target=do_store)
-        thread.setDaemon(True)
+        thread.daemon = True
         thread.start()
         thread.join(voted and .1 or 9)
         if self.exception is not None:
-            six.reraise(type(self.exception), self.exception)
+            raise self.exception.with_traceback(self.exception.__traceback__)
         return thread
 
 
@@ -372,21 +369,11 @@ class FullGenericTests(
         # time.sleep and time.time to cooperate and pretend for time
         # to pass. That doesn't work for the spawned server, and this
         # test case is very sensitive to times matching.
-        super_meth = super(FullGenericTests, self).checkPackUndoLog
+        super_meth = super().checkPackUndoLog
         # Find the underlying function, not the decorated method.
         # If it doesn't exist, the implementation has changed and we
         # need to revisit this...
-        try:
-            underlying_func = super_meth.__wrapped__
-        except AttributeError:
-            # ...unless we're on Python 2, which doesn't have the __wrapped__
-            # attribute.
-            if bytes is not str:  # pragma: no cover Python 3
-                raise
-            unbound_func = PackableStorage.PackableUndoStorage.checkPackUndoLog
-            wrapper_func = unbound_func.__func__
-            underlying_func = wrapper_func.func_closure[0].cell_contents
-
+        underlying_func = super_meth.__wrapped__
         underlying_func(self)
 
 
@@ -638,7 +625,7 @@ class ZRPCConnectionTests(ZEO.tests.ConnectionTests.CommonSetupTearDown):
         self._storage = storage
         assert storage.is_connected()
 
-        class DummyDB(object):
+        class DummyDB:
             _invalidatedCache = 0
 
             def invalidateCache(self):
@@ -673,7 +660,7 @@ class ZRPCConnectionTests(ZEO.tests.ConnectionTests.CommonSetupTearDown):
         self.assertEqual(db._invalidatedCache, base+1)
 
 
-class CommonBlobTests(object):
+class CommonBlobTests:
 
     def getConfig(self):
         return """
@@ -854,7 +841,7 @@ class BlobWritableCacheTests(FullGenericTests, CommonBlobTests):
     shared_blob_dir = True
 
 
-class FauxConn(object):
+class FauxConn:
     addr = 'x'
     protocol_version = ZEO.asyncio.server.best_protocol_version
     peer_protocol_version = protocol_version
@@ -865,7 +852,7 @@ class FauxConn(object):
     call_soon_threadsafe = async_threadsafe = async_
 
 
-class StorageServerWrapper(object):
+class StorageServerWrapper:
 
     def __init__(self, server, storage_id):
         self.storage_id = storage_id
@@ -1254,7 +1241,7 @@ def client_asyncore_thread_has_name():
     >>> addr, _ = start_server()  # NOQA: F821 undefined
     >>> db = ZEO.DB(addr)
     >>> any(t for t in threading.enumerate()
-    ...     if ' zeo client networking thread' in t.getName())
+    ...     if ' zeo client networking thread' in t.name)
     True
     >>> db.close()
     """
@@ -1309,13 +1296,13 @@ Invalidations could cause errors when closing client storages,
     ...     global writing
     ...     conn = ZEO.connection(addr)
     ...     writing.set()
-    ...     while writing.isSet():
+    ...     while writing.is_set():
     ...         conn.root.x = 1
     ...         transaction.commit()
     ...     conn.close()
 
     >>> thread = threading.Thread(target=mad_write_thread)
-    >>> thread.setDaemon(True)
+    >>> thread.daemon = True
     >>> thread.start()
     >>> _ = writing.wait()
     >>> time.sleep(.01)
@@ -1796,15 +1783,15 @@ class ServerManagingClientStorage(ClientStorage):
             server_blob_dir = 'server-'+blob_dir
         self.globs = {}
         addr, stop = forker.start_zeo_server(
-            """
+            f"""
             <blobstorage>
-                blob-dir %s
+                blob-dir {server_blob_dir}
                 <filestorage>
-                   path %s
-                   %s
+                   path {name}.fs
+                   {extrafsoptions}
                 </filestorage>
             </blobstorage>
-            """ % (server_blob_dir, name+'.fs', extrafsoptions),
+            """
             )
         zope.testing.setupstack.register(self, stop)
         if shared:
@@ -1835,11 +1822,13 @@ class ServerManagingClientStorageForIExternalGCTest(
 
 def test_suite():
     suite = unittest.TestSuite((
-        unittest.makeSuite(Test_convenience_functions),
+        unittest.defaultTestLoader.loadTestsFromTestCase(
+            Test_convenience_functions),
     ))
 
     zeo = unittest.TestSuite()
-    zeo.addTest(unittest.makeSuite(ZODB.tests.util.AAAA_Test_Runner_Hack))
+    zeo.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(
+        ZODB.tests.util.AAAA_Test_Runner_Hack))
     patterns = [
         (re.compile(r"u?'start': u?'[^\n]+'"), 'start'),
         (re.compile(r"u?'last-transaction': u?'[0-9a-f]+'"),
@@ -1856,10 +1845,6 @@ def test_suite():
         (re.compile("u('.*?')"), r"\1"),
         (re.compile('u(".*?")'), r"\1")
         ]
-    if not PY3:
-        patterns.append((re.compile("^'(blob[^']*)'"), r"b'\1'"))
-        patterns.append((re.compile("^'Z308'"), "b'Z308'"))
-        patterns.append((re.compile(r" Z4$"), " b'Z4'"))
     zeo.addTest(doctest.DocTestSuite(
         setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
         checker=renormalizing.RENormalizing(patterns),
@@ -1872,7 +1857,10 @@ def test_suite():
                      "ClientDisconnected"),
                     )),
             ))
-    zeo.addTest(unittest.makeSuite(ClientConflictResolutionTests, 'check'))
+    test_loader = unittest.TestLoader()
+    test_loader.testMethodPrefix = 'check'
+    zeo.addTest(test_loader.loadTestsFromTestCase(
+        ClientConflictResolutionTests))
     zeo.layer = ZODB.tests.util.MininalTestLayer('testZeo-misc')
     suite.addTest(zeo)
 
@@ -1885,7 +1873,6 @@ def test_suite():
             '../nagios.rst',
             setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
             checker=renormalizing.RENormalizing(patterns),
-            globs={'print_function': print_function},
             ),
         )
     zeo.addTest(PackableStorage.IExternalGC_suite(
@@ -1894,7 +1881,9 @@ def test_suite():
             'data.fs', 'blobs', extrafsoptions='pack-gc false')
         ))
     for klass in quick_test_classes:
-        zeo.addTest(unittest.makeSuite(klass, "check"))
+        test_loader = unittest.TestLoader()
+        test_loader.testMethodPrefix = 'check'
+        zeo.addTest(test_loader.loadTestsFromTestCase(klass))
     zeo.layer = ZODB.tests.util.MininalTestLayer('testZeo-misc2')
     suite.addTest(zeo)
 
@@ -1906,17 +1895,19 @@ def test_suite():
                 name,
                 setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
                 checker=renormalizing.RENormalizing(patterns),
-                globs={'print_function': print_function},
                 ),
             )
         zeo.layer = ZODB.tests.util.MininalTestLayer('testZeo-' + name)
         suite.addTest(zeo)
 
-    suite.addTest(unittest.makeSuite(MultiprocessingTests))
+    suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(
+        MultiprocessingTests))
 
     # Put the heavyweights in their own layers
     for klass in slow_test_classes:
-        sub = unittest.makeSuite(klass, "check")
+        test_loader = unittest.TestLoader()
+        test_loader.testMethodPrefix = 'check'
+        sub = test_loader.loadTestsFromTestCase(klass)
         sub.layer = ZODB.tests.util.MininalTestLayer(klass.__name__)
         suite.addTest(sub)
 
@@ -1930,7 +1921,6 @@ def test_suite():
         'dynamic_server_ports.test',
         setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
         checker=renormalizing.RENormalizing(patterns),
-        globs={'print_function': print_function},
         )
     dynamic_server_ports_suite.layer = threaded_server_tests
     suite.addTest(dynamic_server_ports_suite)

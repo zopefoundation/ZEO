@@ -1,4 +1,3 @@
-from __future__ import print_function
 ##############################################################################
 #
 # Copyright (c) 2001, 2002 Zope Foundation and Contributors.
@@ -53,7 +52,6 @@ import gzip
 
 # we assign ctime locally to facilitate test replacement!
 from time import ctime
-import six
 
 
 def add_interval_argument(parser):
@@ -74,10 +72,10 @@ def add_tracefile_argument(parser):
 
     class GzipFileType(argparse.FileType):
         def __init__(self):
-            super(GzipFileType, self).__init__(mode='rb')
+            super().__init__(mode='rb')
 
         def __call__(self, s):
-            f = super(GzipFileType, self).__call__(s)
+            f = super().__call__(s)
             if s.endswith(".gz"):
                 f = gzip.GzipFile(filename=s, fileobj=f)
             return f
@@ -241,7 +239,7 @@ def main(args=None):
     # Print statistics
     if options.dostats:
         print()
-        print("Read %s trace records (%s bytes) in %.1f seconds" % (
+        print("Read {} trace records ({} bytes) in {:.1f} seconds".format(
             addcommas(records), addcommas(end_pos), rte-rt0))
         print("Versions:   %s records used a version" % addcommas(versions))
         print("First time: %s" % ctime(t0))
@@ -292,12 +290,12 @@ def main(args=None):
 
 def dumpbysize(bysize, how, how2):
     print()
-    print("Unique sizes %s: %s" % (how, addcommas(len(bysize))))
+    print("Unique sizes {}: {}".format(how, addcommas(len(bysize))))
     print("%10s %6s %6s" % ("size", "objs", how2))
     sizes = sorted(bysize.keys())
     for size in sizes:
         loads = 0
-        for n in six.itervalues(bysize[size]):
+        for n in bysize[size].values():
             loads += n
         print("%10s %6d %6d" % (addcommas(size),
                                 len(bysize.get(size, "")),
@@ -344,7 +342,7 @@ def hitrate(bycode):
 
 def histogram(d):
     bins = {}
-    for v in six.itervalues(d):
+    for v in d.values():
         bins[v] = bins.get(v, 0) + 1
     L = sorted(bins.items())
     return L
@@ -355,7 +353,7 @@ def U64(s):
 
 
 def oid_repr(oid):
-    if isinstance(oid, six.binary_type) and len(oid) == 8:
+    if isinstance(oid, bytes) and len(oid) == 8:
         return '%16x' % U64(oid)
     else:
         return repr(oid)

@@ -28,7 +28,6 @@ Options:
 
 Unless -C is specified, -a and -f are required.
 """
-from __future__ import print_function
 
 # The code here is designed to be reused by other, similar servers.
 
@@ -37,8 +36,6 @@ import sys
 import signal
 import socket
 import logging
-
-import six
 
 import ZConfig.datatypes
 from zdaemon.zdoptions import ZDOptions
@@ -49,7 +46,7 @@ _pid = str(os.getpid())
 
 def log(msg, level=logging.INFO, exc_info=False):
     """Internal: generic logging function."""
-    message = "(%s) %s" % (_pid, msg)
+    message = f'({_pid}) {msg}'
     logger.log(level, message, exc_info=exc_info)
 
 
@@ -65,7 +62,7 @@ def windows_shutdown_handler():
     asyncore.close_all()
 
 
-class ZEOOptionsMixin(object):
+class ZEOOptionsMixin:
 
     storages = None
 
@@ -75,7 +72,7 @@ class ZEOOptionsMixin(object):
     def handle_filename(self, arg):
         from ZODB.config import FileStorage  # That's a FileStorage *opener*!
 
-        class FSConfig(object):
+        class FSConfig:
             def __init__(self, name, path):
                 self._name = name
                 self.path = path
@@ -145,7 +142,7 @@ class ZEOOptions(ZDOptions, ZEOOptionsMixin):
                     break
 
 
-class ZEOServer(object):
+class ZEOServer:
 
     def __init__(self, options):
         self.options = options
@@ -193,14 +190,14 @@ class ZEOServer(object):
         s = socket.socket(family, socket.SOCK_STREAM)
         try:
             s.connect(address)
-        except socket.error:
+        except OSError:
             return 0
         else:
             s.close()
             return 1
 
     def clear_socket(self):
-        if isinstance(self.options.address, six.string_types):
+        if isinstance(self.options.address, str):
             try:
                 os.unlink(self.options.address)
             except os.error:
@@ -339,7 +336,7 @@ class ZEOServer(object):
                 print(pid, file=f)
                 f.close()
                 log("created PID file '%s'" % pidfile)
-            except IOError:
+            except OSError:
                 logger.error("PID file '%s' cannot be opened" % pidfile)
 
     def remove_pidfile(self):
@@ -351,7 +348,7 @@ class ZEOServer(object):
                 if os.path.exists(pidfile):
                     os.unlink(pidfile)
                     log("removed PID file '%s'" % pidfile)
-            except IOError:
+            except OSError:
                 logger.error("PID file '%s' could not be removed" % pidfile)
 
 

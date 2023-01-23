@@ -18,7 +18,6 @@ version = '6.0.0.dev0'
 
 install_requires = [
     'ZODB >= 5.1.1',
-    'six',
     'transaction >= 2.0.3',
     'persistent >= 4.1.0',
     'zc.lockfile',
@@ -34,10 +33,8 @@ tests_require = [
     'ZODB >= 5.5.1',
     'ZopeUndo',
     'zope.testing',
-    'manuel',
     'transaction',
-    'mock',
-    'msgpack < 1',
+    'msgpack',
     'zdaemon',
     'zope.testrunner',
 ]
@@ -64,11 +61,7 @@ setup(name="ZEO",
       classifiers=[
         "Intended Audience :: Developers",
         "License :: OSI Approved :: Zope Public License",
-        "Programming Language :: Python :: 2",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
@@ -91,10 +84,6 @@ setup(name="ZEO",
           'msgpack': [
               'msgpack-python'
           ],
-          ':python_version == "2.7"': [
-              'futures',
-              'trollius',
-          ],
           'docs': [
               'Sphinx',
               'repoze.sphinx.autointerface',
@@ -111,5 +100,5 @@ setup(name="ZEO",
       zeo-nagios = ZEO.nagios:main
       """,
       include_package_data=True,
-      python_requires='>=2.7.9,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*',
+      python_requires='>=3.7',
       )

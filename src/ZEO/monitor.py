@@ -13,22 +13,6 @@
 ##############################################################################
 """Monitor behavior of ZEO server and record statistics.
 """
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
-from __future__ import print_function
 
 import time
 
@@ -45,7 +29,7 @@ else:
         zeo_version = zeo_dist.version
 
 
-class StorageStats(object):
+class StorageStats:
     """Per-storage usage statistics."""
 
     def __init__(self, connections=None):
