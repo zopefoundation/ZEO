@@ -13,6 +13,7 @@
 ##############################################################################
 """Test suite for ZEO based on ZODB.tests."""
 import multiprocessing
+import resource
 
 from ZEO.ClientStorage import ClientStorage
 from ZEO.Exceptions import ClientDisconnected
@@ -241,6 +242,14 @@ class GenericTestBase(
     server_debug = False
 
     def setUp(self):
+        # Some operating systems like macOS set a very low soft limit for
+        # the maximum number of open files. Some ZEO tests hit these limits.
+        (soft_max_open_files,
+         hard_max_open_files) = resource.getrlimit(resource.RLIMIT_NOFILE)
+        if soft_max_open_files < 512:
+            resource.setrlimit(resource.RLIMIT_NOFILE,
+                               (512, hard_max_open_files))
+
         StorageTestBase.StorageTestBase.setUp(self)
         logger.info("setUp() %s", self.id())
         zport, stop = forker.start_zeo_server(
