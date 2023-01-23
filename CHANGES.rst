@@ -8,12 +8,13 @@ Changelog
 
 - Switch to using `async/await` directly instead of `@coroutine/yield`
 
-- Drop credentials support: the corresponding ``ClientStorage.__init__``
-  parameters (i.e. ``credentials``, ``username``, ``password``)
-  are retained but ignored.
-  Note: the ZEO 5 server never supported credentials; the feature
-  has previously been retained for the use case
-  "ZEO 5 client with ZEO 4 server".
+- Drop experimental support for credentials object: the corresponding
+  ``ClientStorage.__init__`` parameter ``credentials`` is retained but ignored.
+  From now on ZEO supports authentication only via SSL certificates.
+
+  Note that ZEO 5 never supported authenticating via ``username`` and
+  ``password`` - support for such basic auth was dropped in 2016 before ZEO 5.0
+  was released.
 
 
 5.4.0 (2023-01-18)

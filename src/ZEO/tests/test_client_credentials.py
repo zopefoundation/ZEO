@@ -11,7 +11,6 @@ import ZEO.StorageServer
 from .threaded import threaded_server_tests
 
 
-@unittest.skipIf(True, "credentials support has been dropped")
 class ClientAuthTests(setupstack.TestCase):
 
     def setUp(self):
