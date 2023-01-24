@@ -217,9 +217,6 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
         wait
             Wait for server connection, defaulting to true.
 
-        credentials
-            [Experimental] Credentials object for authentication to server.
-
         server_sync
             Whether sync() should make a server round trip, thus causing client
             to wait for outstanding invalidations.
@@ -246,6 +243,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
 
             Defaults to false.
 
+        credentials
         username
         password
         realm
@@ -338,7 +336,6 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             ZEO.asyncio.client.Fallback if read_only_fallback else read_only,
             wait_timeout or 30,
             ssl=ssl, ssl_server_hostname=ssl_server_hostname,
-            credentials=credentials,
             )
         self._call = self._server.call
         self._async = self._server.async_

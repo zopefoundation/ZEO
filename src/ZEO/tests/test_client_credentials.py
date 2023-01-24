@@ -45,10 +45,10 @@ class ClientAuthTests(setupstack.TestCase):
         client.close()
         creds_log.pop()
 
-        # But if we pass credentials, they'll be passed to register:
+        # Even if we pass credentials, they'll be ignored
         creds = dict(user='me', password='123')
         client = ZEO.client(addr, credentials=creds)
-        self.assertEqual(creds_log, [creds])
+        self.assertEqual(creds_log, [self])
         client.close()
 
         stop()

@@ -68,7 +68,7 @@ class Protocol(base.ZEOBaseProtocol):
     def __init__(self, loop,
                  addr, client, storage_key, read_only, connect_poll=1,
                  heartbeat_interval=60, ssl=None, ssl_server_hostname=None,
-                 credentials=None):
+                 ):
         """Create a server connection
 
         addr is either a host,port tuple or a string file name.
@@ -87,7 +87,6 @@ class Protocol(base.ZEOBaseProtocol):
         self.futures = {}  # { message_id -> future }
         self.ssl = ssl
         self.ssl_server_hostname = ssl_server_hostname
-        self.credentials = credentials
         # received invalidations while the protocol is not yet registered with client
         self.invalidations = []
 
@@ -229,8 +228,6 @@ class Protocol(base.ZEOBaseProtocol):
         We try to register with the server; if this succeeds with
         the client.
         """
-        credentials = (self.credentials,) if self.credentials else ()
-
         # we do not want that several servers concurrently
         # update the cache -- lock
         async with self.client.register_lock:
@@ -238,14 +235,14 @@ class Protocol(base.ZEOBaseProtocol):
                 try:
                     server_tid = await self.server_call(
                         'register', self.storage_key,
-                        (self.read_only if self.read_only is not Fallback
-                         else False),
-                        *credentials)
+                        self.read_only if self.read_only is not Fallback
+                        else False,
+                        )
                 except ZODB.POSException.ReadOnlyError:
                     if self.read_only is Fallback:
                         self.read_only = True
                         server_tid = await self.server_call(
-                            'register', self.storage_key, True, *credentials)
+                            'register', self.storage_key, True)
                     else:
                         raise
                 else:
@@ -438,7 +435,7 @@ class ClientIO:
     def __init__(self, loop,
                  addrs, client, cache, storage_key, read_only, connect_poll,
                  register_failed_poll=9,
-                 ssl=None, ssl_server_hostname=None, credentials=None):
+                 ssl=None, ssl_server_hostname=None):
         """Create a client interface
 
         *addrs* specifies addresses of a set of servers which
@@ -460,7 +457,6 @@ class ClientIO:
         self.client = client
         self.ssl = ssl
         self.ssl_server_hostname = ssl_server_hostname
-        self.credentials = credentials
         for name in Protocol.client_delegated:
             setattr(self, name, getattr(client, name))
         self.cache = cache
@@ -543,7 +539,6 @@ class ClientIO:
                          self.storage_key, self.read_only, self.connect_poll,
                          ssl=self.ssl,
                          ssl_server_hostname=self.ssl_server_hostname,
-                         credentials=self.credentials,
                          )
                 for addr in self.addrs
                 ]
@@ -997,12 +992,11 @@ class ClientThread(ClientRunner):
 
     def __init__(self, addrs, client, cache,
                  storage_key='1', read_only=False, timeout=30,
-                 disconnect_poll=1, ssl=None, ssl_server_hostname=None,
-                 credentials=None):
+                 disconnect_poll=1, ssl=None, ssl_server_hostname=None):
         self.set_options(addrs, client, cache, storage_key, read_only,
                          timeout, disconnect_poll,
                          ssl=ssl, ssl_server_hostname=ssl_server_hostname,
-                         credentials=credentials)
+                         )
         self.thread = threading.Thread(
             target=self.run_io_thread,
             name="%s zeo client networking thread" % client.__name__,

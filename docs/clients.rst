@@ -280,7 +280,7 @@ authenticate
   parameters in the Python documentation for
   ``ssl.SSLContext.load_verify_locations``.)
 
-  If this setting is used. then certificate authentication is
+  If this setting is used then certificate authentication is
   used to authenticate the server.  The server must be configured
   with one of the certificates supplied using this setting.
 
