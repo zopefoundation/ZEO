@@ -261,6 +261,9 @@ class Transport:
     def get_extra_info(self, name):
         return self.extra[name]
 
+    def _write_ready(self):
+        return
+
 
 class AsyncRPC:
     """Adapt an asyncio API to an RPC to help hysterical tests

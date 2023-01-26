@@ -16,6 +16,7 @@ a standard ``asyncio.Task``.
 import asyncio
 from asyncio import CancelledError, InvalidStateError, get_event_loop
 from threading import Event
+from threading import RLock
 from time import sleep
 
 
@@ -32,8 +33,20 @@ class Future:
     In contrast to an ``asyncio`` future,
     callbacks are called immediately, not scheduled;
     their context is ignored.
+
+    Usually, a future is only used by a single thread.
+    However, we allow a different thread to create the future,
+    add callbacks and use its ``__await__``.
+    As a consequence, we must protect
+    the methods affecting callbacks with a lock.
+    This must be an ``RLock`` because we want to allow
+    a callback to add an additional callback (not sure that
+    we really need that).
+
+    Futures can be used as context manager.
     """
     __slots__ = ("_loop", "state", "_result", "callbacks",
+                 "_lock",
                  "_asyncio_future_blocking", "_result_retrieved")
 
     def __init__(self, loop=None):
@@ -41,6 +54,7 @@ class Future:
         self.state = 0  # PENDING
         self._result = None
         self.callbacks = []
+        self._lock = RLock()
         self._asyncio_future_blocking = False
         self._result_retrieved = False
 
@@ -52,13 +66,14 @@ class Future:
 
         Return ``True``, if really cancelled.
         """
-        if self.state:
-            return False
-        self.state = 3  # CANCELLED
-        self._result = CancelledError()  if msg is None  else \
-                       CancelledError(msg)
-        self.call_callbacks()
-        return True
+        with self._lock:
+            if self.state:
+                return False
+            self.state = 3  # CANCELLED
+            self._result = CancelledError()  if msg is None  else \
+                           CancelledError(msg)
+            self.call_callbacks()
+            return True
 
     def cancelled(self):
         return self.state == 3  # CANCELLED
@@ -85,19 +100,21 @@ class Future:
             return self._result
 
     def add_done_callback(self, cb, context=None):
-        if not self.state or self.callbacks:
-            self.callbacks.append(cb)
-        else:
-            cb(self)
+        with self._lock:
+            if not self.state or self.callbacks:
+                self.callbacks.append(cb)
+            else:
+                cb(self)
 
     def remove_done_callback(self, cb):
-        if self.state and self.callbacks:
-            raise NotImplementedError("cannot remove callbacks when done")
-        flt = [c for c in self.callbacks if c != cb]
-        rv = len(self.callbacks) - len(flt)
-        if rv:
-            self.callbacks[:] = flt
-        return rv
+        with self._lock:
+            if self.state and self.callbacks:
+                raise NotImplementedError("cannot remove callbacks when done")
+            flt = [c for c in self.callbacks if c != cb]
+            rv = len(self.callbacks) - len(flt)
+            if rv:
+                self.callbacks[:] = flt
+            return rv
 
     def call_callbacks(self):
         for cb in self.callbacks:  # allows ``callbacks`` to grow
@@ -114,20 +131,22 @@ class Future:
         del self.callbacks[:]
 
     def set_result(self, result):
-        if self.state:
-            raise InvalidStateError("already done")
-        self.state = 1  # RESULT
-        self._result = result
-        self.call_callbacks()
+        with self._lock:
+            if self.state:
+                raise InvalidStateError("already done")
+            self.state = 1  # RESULT
+            self._result = result
+            self.call_callbacks()
 
     def set_exception(self, exc):
-        if self.state:
-            raise InvalidStateError("already done")
-        if isinstance(exc, type):
-            exc = exc()
-        self.state = 2  # EXCEPTION
-        self._result = exc
-        self.call_callbacks()
+        with self._lock:
+            if self.state:
+                raise InvalidStateError("already done")
+            if isinstance(exc, type):
+                exc = exc()
+            self.state = 2  # EXCEPTION
+            self._result = exc
+            self.call_callbacks()
 
     # py3 accesses ._exception directly
     @property
@@ -137,12 +156,24 @@ class Future:
         return self._result
 
     def __await__(self):
+        # This method can be used by an application thread.
+        # Due to the ``yield``, we canot use the lock
+        # Thus, there is a small risk for a race condition: we
+        # may yield an already done result. The executor must
+        # be aware of this possibility.
         if not self.state:
             self._asyncio_future_blocking = True
             yield self
         return self.result()
 
     __iter__ = __await__
+
+    def __enter__(self):
+        self._lock.acquire()
+        return self
+
+    def __exit__(self, *unused):
+        self._lock.release()
 
     def __str__(self):
         cls = self.__class__
@@ -200,6 +231,11 @@ class CoroutineExecutor:
     """Execute a coroutine on behalf of a task.
 
     No context support.
+
+    ATT: the first step can be executed by an application thread;
+    subsequent steps are usually executed by the IO thread; however,
+    due to a potential race condition in ``Future.__await__``,
+    they, too, might be executed by an application thread.
     """
     __slots__ = "coro", "task", "awaiting", "cancel_requested", "cancel_msg"
 
@@ -262,6 +298,8 @@ class CoroutineExecutor:
             # bad await
             else:
                 await_next = Future(self.task.get_loop())
+                # ``set_exception`` is lock protected; therefore,
+                # we can call it also from an application thread
                 await_next.set_exception(
                         RuntimeError("Task got bad await: %r" % (result,)))
 
@@ -334,12 +372,17 @@ class ConcurrentTask(ConcurrentFuture):
 
     Steps are not scheduled but executed immediately; the context is ignored.
     Cancel can be used only from IO thread.
+
+    The stapes are all executed in the IO thread.
     """
     __slots__ = "executor",
 
     def __init__(self, coro, loop):
         ConcurrentFuture.__init__(self, loop=loop)
         self.executor = CoroutineExecutor(self, coro)  # reference cycle
+        self._start()
+
+    def _start(self):
         self._loop.call_soon_threadsafe(self.executor.step)
 
     def cancel(self, msg=None):
@@ -355,6 +398,17 @@ class ConcurrentTask(ConcurrentFuture):
         return ConcurrentFuture.cancel(self, msg)
 
 
+class FastConcurrentTask(ConcurrentTask):
+    """A oncurrent task with the first step run by the application thread.
+
+    Subsequent steps are tpyically run by the IO thread but can in
+    rare cases also be run by the application thread.
+    """
+
+    def _start(self):
+        self.executor.step()
+
+
 # use C implementation if available
 try:
     from ._futures import Future, ConcurrentFuture  # noqa: F401, F811
@@ -364,3 +418,4 @@ except ImportError:
     pass
 
 run_coroutine_threadsafe = ConcurrentTask
+run_coroutine_fast = FastConcurrentTask
