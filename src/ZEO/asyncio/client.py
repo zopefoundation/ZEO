@@ -207,17 +207,18 @@ class Protocol(base.ZEOBaseProtocol):
 
     def connection_made(self, transport):
         logger.debug('connection_made %s', self)
-        write_lock = threading.Lock()
-        ori_write = transport.write
-        ori_write_ready = transport._write_ready
-        def write(data):
-            with write_lock:
-                ori_write(data)
-        def _write_ready():
-            with write_lock():
-                ori_write_ready()
-        transport.write = write
-        transport._write_ready = _write_ready
+        if self.client.direct_socket_access:
+            write_lock = threading.Lock()
+            ori_write = transport.write
+            ori_write_ready = transport._write_ready
+            def write(data):
+                with write_lock:
+                    ori_write(data)
+            def _write_ready():
+                with write_lock():
+                    ori_write_ready()
+            transport.write = write
+            transport._write_ready = _write_ready
         super().connection_made(transport)
         self.heartbeat(write=False)
 
@@ -232,9 +233,13 @@ class Protocol(base.ZEOBaseProtocol):
                     f.set_exception(ClientDisconnected(exc or "Closed"))
         else:
             client = self.client
+            # We must first inform the client about the disconnection
+            # before the pending futures are finalized in ``close``.
+            # This ensures that subsequent API calls see the disconnected
+            # state and can wait for a reconnection
+            client.disconnected(self)
             # will set ``self.client = None``
             self.close(exc or "Connection lost")
-            client.disconnected(self)
 
     verify_task = None
 
@@ -541,6 +546,9 @@ class ClientIO:
         self.cache = cache
         self.register_lock = asyncio.Lock()
         self.closing_protocol_futures = set()  # closing futures
+        # check whether we want to access the socket directly
+        #   for the moment, not for SSL
+        self.direct_socket_access = ssl is None
         self.disconnected(None)
 
     def new_addrs(self, addrs):
@@ -750,8 +758,13 @@ class ClientIO:
                 # to interact with the server (deadlock or
                 # ``ClientDisconnected`` would result).
                 self.client.notify_connected(self, info)
-                self.connected.set_result(None)  # signal full readyness
+                # Order is important: as soon as we set the result
+                # of ``connected``, a waiter for connectedness
+                # can proceed and expect ``operational == True``
+                # We are at this time fully operational even if
+                # the ``connected`` result is not yet set
                 self.operational = True
+                self.connected.set_result(None)  # signal full readyness
 
     def get_peername(self):
         return self.protocol.get_peername()
@@ -954,7 +967,8 @@ class ClientRunner:
         self.call_sync_fco = client.call_sync_fco
         self.load_before_fco = client.load_before_fco
         run_threadsafe = run_coroutine_threadsafe
-        run_fast = run_coroutine_fast
+        run_fast = client.direct_socket_access and run_coroutine_fast \
+                   or run_threadsafe
 
         def io_call(coro, wait=True, fast=True):
             """run coroutine *coro* in the IO thread.

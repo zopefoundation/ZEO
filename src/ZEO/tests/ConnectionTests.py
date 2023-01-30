@@ -465,7 +465,7 @@ class ConnectionTests(CommonSetupTearDown):
         # - tpc_abort makes a synchronous call to the server to abort
         #   the transaction
         # - when disconnected, synchronous calls are blocked for a little
-        #   while while reconnecting (or they timeout of it takes too long).
+        #   while while reconnecting (or they timeout if it takes too long).
         try:
             self._dostore()
         except ClientDisconnected:
