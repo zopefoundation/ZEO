@@ -1013,7 +1013,10 @@ class ClientRunner:
         # Potential race condition:
         # We may lose the connection before the call is sent to the server.
         # In this case, an exception is raised.
-        client.call_async(method, args)
+        if client.direct_socket_access:
+            client.call_async(method, args)
+        else:
+            self.loop.call_soon_threadsafe(client.call_async, method, args)
 
     def async_iter(self, it):
         client = self.client
@@ -1023,7 +1026,10 @@ class ClientRunner:
         # We may lose the connection before all messages are
         # sent to the server.
         # In this case, an exception is raised.
-        client.call_async_iter(it)
+        if client.direct_socket_access:
+            client.call_async_iter(it)
+        else:
+            self.loop.call_soon_threadsafe(client.call_async_iter, it)
 
     def prefetch(self, oids, tid):
         oids = tuple(oids)  # avoid concurrency problems
