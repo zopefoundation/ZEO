@@ -547,8 +547,10 @@ class ClientIO:
         self.register_lock = asyncio.Lock()
         self.closing_protocol_futures = set()  # closing futures
         # check whether we want to access the socket directly
+        #   not for ``uvloop``
         #   for the moment, not for SSL
-        self.direct_socket_access = ssl is None
+        self.direct_socket_access = ssl is None \
+                                    and "uvloop" not in sys.modules
         self.disconnected(None)
 
     def new_addrs(self, addrs):
