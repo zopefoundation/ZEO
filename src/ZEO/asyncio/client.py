@@ -879,22 +879,26 @@ class ClientIO:
         # -- see comment in ``call_sync_fco``
         return await self.protocol.load_before(oid, tid)
 
-    async def _prefetch_co(self, oid, tid):
-        try:
-            await self.protocol.load_before(oid, tid)
-        except Exception:
-            logger.exception("Exception for prefetch `%r` `%r`", oid, tid)
-
     async def prefetch_co(self, oids, tid):
         if not self.operational:
             raise ClientDisconnected()
-        oids_tofetch = []
-        for oid in oids:
-            if self.cache.loadBefore(oid, tid) is None:
-                oids_tofetch.append(oid)
-        if oids_tofetch:
-            await asyncio.gather(*(Task(self._prefetch_co(oid, tid), loop=self.loop)
-                                   for oid in oids_tofetch))
+
+        async def _prefetch(oid):
+            """update the cache for *oid, tid* (if necessary)"""
+            try:
+                # ``load_before`` checks if the data is already in the cache
+                await self.protocol.load_before(oid, tid)
+            except ClientDisconnected:  # pragma noqa
+                pass
+            except Exception:  # pragma noqa
+                logger.exception("Exception for prefetch `%r` `%r`", oid, tid)
+                
+        # We could directly ``gather`` ``protocol.load_before`` calls;
+        # however, this would keep unneeded data in RAM
+        # Therefore, we use the auxiliary function ``_prefetch`` which
+        # discards the data
+        await asyncio.gather(*(Task(_prefetch(oid), loop=self.loop)
+                               for oid in oids))
 
     async def tpc_finish_fco(self, tid, updates, f):
         if not self.operational:
