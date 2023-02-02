@@ -201,7 +201,9 @@ class CoroutineExecutor:
 
     No context support.
     """
-    __slots__ = "coro", "task", "awaiting", "cancel_requested", "cancel_msg"
+    __slots__ = "coro", "task", "awaiting", \
+                "cancel_requested", "cancel_msg", \
+                "lock"
 
     def __init__(self, task, coro):
         self.task = task  # likely creates a reference cycle
@@ -209,6 +211,7 @@ class CoroutineExecutor:
         self.awaiting = None
         self.cancel_requested = False
         self.cancel_msg = None
+        self.lock = None
 
     def step(self):
         await_result = None  # with what to wakeup suspended await
@@ -229,10 +232,20 @@ class CoroutineExecutor:
             self.cancel_requested = False
             self.cancel_msg = None
         try:
-            if not await_resexc:
-                result = self.coro.send(await_result)
-            else:
-                result = self.coro.throw(await_result)
+            # If ``self.lock`` is not ``None``, we may run in an
+            # application thread; acquire the lock to prevent
+            # concurrency with the IO thread
+            if self.lock is not None:
+                self.lock.acquire()
+            try:
+                if not await_resexc:
+                    result = self.coro.send(await_result)
+                else:
+                    result = self.coro.throw(await_result)
+            finally:
+                if self.lock is not None:
+                    self.lock.release()
+
         except BaseException as e:
             # we are done
             task = self.task
@@ -340,6 +353,9 @@ class ConcurrentTask(ConcurrentFuture):
     def __init__(self, coro, loop):
         ConcurrentFuture.__init__(self, loop=loop)
         self.executor = CoroutineExecutor(self, coro)  # reference cycle
+        self._start()
+
+    def _start(self):
         self._loop.call_soon_threadsafe(self.executor.step)
 
     def cancel(self, msg=None):
@@ -355,6 +371,18 @@ class ConcurrentTask(ConcurrentFuture):
         return ConcurrentFuture.cancel(self, msg)
 
 
+class FastConcurrentTask(ConcurrentTask):
+    """A oncurrent task with the first step run by the application thread.
+
+    Subsequent steps are tpyically run by the IO thread but can in
+    rare cases also be run by the application thread.
+    """
+
+    def _start(self):
+        self.executor.lock = self._loop.lock
+        self.executor.step()
+
+
 # use C implementation if available
 try:
     from ._futures import Future, ConcurrentFuture  # noqa: F401, F811
@@ -364,3 +392,4 @@ except ImportError:
     pass
 
 run_coroutine_threadsafe = ConcurrentTask
+run_coroutine_fast = FastConcurrentTask

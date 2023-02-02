@@ -5,10 +5,19 @@ The client interface implementation is split into two parts:
 ``ClientRunner`` methods are executed in the calling thread,
 ``ClientIO`` methods in an ``asyncio`` context.
 
-``ClientRunner`` calls ``ClientIO`` methods indirectly via
-either ``loop.call_soon_threadsafe`` (the async calls
-``call_async`` and ``call_async_iter``) or
-``run_coroutine_threadsafe`` (methods with suffix ``_co``).
+``ClientRunner`` calls ``ClientIO`` methods in three different ways:
+
+  directly
+     the async calls ``call_async`` and ``call_async_iter``
+
+  via ``run_coroutine_threadsafe``
+     the methods with ``_co`` suffix
+
+  via ``run_coroutine_fast``
+     the methods with ``_fco`` suffix.
+     Note that those methods are partially run in the application thread
+     and therefore cannot use standard ``asyncio`` functionality.
+
 ``ClientIO`` does not call ``ClientRunner`` methods; however, it
 can call ``ClientStorage`` and ``ClientCache`` methods.
 Those methods must be thread safe.
@@ -22,6 +31,31 @@ A server connection is represented by a ``Protocol`` instance.
 The ``asyncio`` loop must be run in a separate thread.
 The loop management is the responsibility of ``ClientThread``,
 a tiny wrapper around ``ClientRunner``.
+
+Some ``ClientIO` methods are called directly or via
+``run_coroutine_fast``. Therefore, part of their execution happens in the
+application thread. As the IO thread runs concurrently, unavoidable race
+conditions can occur -- in particular races regarding connection loss.
+Connection loss is by principle an external and therefore uncontrollable
+event. Running part of the method code in the application thread
+does not introduce a new problem but can make the problem symptom
+more difficult to understand (e.g. we may get the exception
+``NoneType object does not have attribute Protocol`` instead
+of ``IO on a closed socket``.
+
+When ``ClientIO`` methods are called directly, we must avoid
+concurrency problems between the IO thread and the application threads.
+To achieve this, the IO loop has a lock. The loop holds this lock
+whenever it is not waiting (and especially when it executes callbacks).
+Application threads must acquire this lock during their direct call
+of ``ClientIO`` methods. This prevents concurrency between the IO thread
+and IO related activity by application threads.
+
+The optimization to call ``ClientIO`` methods directly is not
+always possible. It is indicated by a true `ClientIO.direct_socket_access``.
+If the optimization is not possible, the ``async*`` methods
+are called via ``loop.call_soon_threadsafe``, and the ``*_fco`` methods
+via ``run_coroutine_threadsafe``.
 """
 
 import asyncio
@@ -29,6 +63,8 @@ import logging
 import random
 import sys
 import threading
+from asyncio import CancelledError
+from asyncio import TimeoutError
 
 import ZODB.event
 import ZODB.POSException
@@ -39,9 +75,9 @@ import ZEO.interfaces
 
 from . import base
 from .compat import new_event_loop
-from .marshal import encoder, decoder
 from .futures import Future, AsyncTask as Task, \
-     run_coroutine_threadsafe, switch_thread
+     run_coroutine_threadsafe, run_coroutine_fast
+from .marshal import encoder, decoder
 
 logger = logging.getLogger(__name__)
 
@@ -189,9 +225,13 @@ class Protocol(base.ZEOBaseProtocol):
                     f.set_exception(ClientDisconnected(exc or "Closed"))
         else:
             client = self.client
+            # We must first inform the client about the disconnection
+            # before the pending futures are finalized in ``close``.
+            # This ensures that subsequent API calls see the disconnected
+            # state and can wait for a reconnection
+            client.disconnected(self)
             # will set ``self.client = None``
             self.close(exc or "Connection lost")
-            client.disconnected(self)
 
     verify_task = None
 
@@ -323,18 +363,34 @@ class Protocol(base.ZEOBaseProtocol):
         future = self.futures.get(message_id)
         if future is None:
             future = Future(loop=self.loop)
-            self.call_sync('loadBefore', message_id, message_id, future)
+            # Check whether the cache contains the information.
+            # I am not sure whether the cache lookup is really
+            # necessary at this place (it has already been
+            # done in ``ClientStorage.loadBefore`` and therefore
+            # will likely fail here).
+            # The lookup at this place, however, guarantees
+            # (together with the folding of identical requests above)
+            # that we will not store data already in the cache.
+            # Maybe, this is important
+            cache = self.client.cache
+            data = cache.loadBefore(oid, tid)
+            if data:
+                future.set_result(data)
+            else:
+                # data not in the cache
+                # ensure the cache gets updated when the answer arrives
+                @future.add_done_callback
+                def _(future):
+                    try:
+                        data = future.result()
+                    except Exception:
+                        return
+                    if data:
+                        data, start, end = data
+                        self.client.cache.store(oid, start, end, data)
 
-            @future.add_done_callback
-            def _(future):
-                try:
-                    data = future.result()
-                except Exception:
-                    return
-                if data:
-                    data, start, end = data
-                    self.client.cache.store(oid, start, end, data)
-
+                self.call_sync('loadBefore', message_id,
+                               message_id, future)
         return future
 
     # Methods called by the server.
@@ -462,6 +518,32 @@ class ClientIO:
         self.cache = cache
         self.register_lock = asyncio.Lock()
         self.closing_protocol_futures = set()  # closing futures
+        # check whether we want to access the socket directly
+        # We cannot do that for SSL because it uses a non-thread safe
+        # loop operation in ``_write_app_data``.
+        self.direct_socket_access = \
+              ssl is None and \
+              hasattr(loop, "_process_events") and \
+              hasattr(loop, "_run_once")
+        if self.direct_socket_access and not hasattr(loop, "lock"):
+            # direct socket access possible
+            # patch the loop
+            loop.lock = threading.RLock()
+            ori_process_events = loop._process_events
+            ori_run_once = loop._run_once
+
+            def _process_events(*args):
+                loop.lock.acquire()
+                ori_process_events(*args)
+
+            def _run_once():
+                ori_run_once()
+                loop.lock.release()
+
+            loop._process_events = _process_events
+            loop._run_once = _run_once
+            logger.info("loop patched to allow direct socket access")
+
         self.disconnected(None)
 
     def new_addrs(self, addrs):
@@ -508,7 +590,7 @@ class ClientIO:
         """
         if self.connected is not None:
             self.connected.cancel()  # cancel waiters
-        self.connected = self.loop.create_future()
+        self.connected = Future(self.loop)
 
     def disconnected(self, protocol=None):
         logger.debug('disconnected %r %r', self, protocol)
@@ -668,8 +750,13 @@ class ClientIO:
                 # to interact with the server (deadlock or
                 # ``ClientDisconnected`` would result).
                 self.client.notify_connected(self, info)
-                self.connected.set_result(None)  # signal full readyness
+                # Order is important: as soon as we set the result
+                # of ``connected``, a waiter for connectedness
+                # can proceed and expect ``operational == True``
+                # We are at this time fully operational even if
+                # the ``connected`` result is not yet set
                 self.operational = True
+                self.connected.set_result(None)  # signal full readyness
 
     def get_peername(self):
         return self.protocol.get_peername()
@@ -680,7 +767,7 @@ class ClientIO:
     def call_async_iter(self, it):
         return self.protocol.call_async_iter(it)
 
-    async def await_operational_co(self, timeout, init_ok=False):
+    async def await_operational_fco(self, timeout, init_ok=False):
         """Wait *timeout* for operational.
 
         Fail immediately if ``ready is None`` unless ``init_ok``.
@@ -689,28 +776,63 @@ class ClientIO:
             # We started without waiting for a connection. (prob tests :( )
             raise ClientDisconnected("never connected")
         if not self.operational:
-            try:
-                await asyncio.wait_for(asyncio.shield(self.connected), timeout)
-            except asyncio.TimeoutError:
+            if timeout <= 0:
                 raise ClientDisconnected("timed out waiting for connection")
-            except asyncio.CancelledError:
+
+            async def wait_operational():
+                waiter = Future(self.loop)
+                handle = None
+                connected = self.connected
+
+                def setup_timeout():
+                    nonlocal handle
+                    # we overwrite ``handle`` here to cancel
+                    # the timeout (rather than the ``setup_timeout``).
+                    # There is a race condition potential here,
+                    # when ``setup_timeout`` has started but
+                    # could not yet overwrite ``handle``.
+                    # However, this simply means that the timeout
+                    # is not cancelled which has no serious effects
+                    handle = self.loop.call_later(timeout, stop)
+
+                def stop(*unused):
+                    if not waiter.done():
+                        waiter.set_result(None)
+
+                connected.add_done_callback(stop)
+                handle = self.loop.call_soon_threadsafe(setup_timeout)
+                await waiter
+                try:
+                    if connected.done():
+                        return self.connected.result()
+                    else:
+                        connected.remove_done_callback(stop)
+                        raise TimeoutError
+                finally:
+                    handle.cancel()
+
+            try:
+                await wait_operational()
+            except TimeoutError:
+                raise ClientDisconnected("timed out waiting for connection")
+            except CancelledError:
                 raise ClientDisconnected()
         # should be connected now
 
-    async def call_sync_co(self, method, args, timeout):
+    async def call_sync_fco(self, method, args, timeout):
         """call method named *method* with *args* and *task* when ready.
 
         Wait at most *timeout* for readyness.
         """
         if not self.operational:
-            await self.await_operational_co(timeout)
+            await self.await_operational_fco(timeout)
         # race condition potential:
         # We have been operational but may meanwhile have lost the connection.
         # This will result in an exception propagated to the caller
         return await self.protocol.call_sync(method, args)
 
     async def close_co(self):
-        # The following ``close`` deadlock''ked in isolated tests.
+        # The following ``close`` deadlocked in isolated tests.
         # Prevent this with a timeout and log information
         # to understand the bug.
         # await self.close()
@@ -738,34 +860,35 @@ class ClientIO:
 
     # Special methods because they update the cache.
 
-    async def load_before_co(self, oid, tid, timeout):
-        data = self.cache.loadBefore(oid, tid)
-        if data is not None:
-            return data
+    async def load_before_fco(self, oid, tid, timeout):
         if not self.operational:
-            await self.await_operational_co(timeout)
+            await self.await_operational_fco(timeout)
         # Race condition potential
-        # -- see comment in ``call_sync_co``
+        # -- see comment in ``call_sync_fco``
         return await self.protocol.load_before(oid, tid)
-
-    async def _prefetch_co(self, oid, tid):
-        try:
-            await self.protocol.load_before(oid, tid)
-        except Exception:
-            logger.exception("Exception for prefetch `%r` `%r`", oid, tid)
 
     async def prefetch_co(self, oids, tid):
         if not self.operational:
             raise ClientDisconnected()
-        oids_tofetch = []
-        for oid in oids:
-            if self.cache.loadBefore(oid, tid) is None:
-                oids_tofetch.append(oid)
-        if oids_tofetch:
-            await asyncio.gather(*(Task(self._prefetch_co(oid, tid), loop=self.loop)
-                                   for oid in oids_tofetch))
 
-    async def tpc_finish_co(self, tid, updates, f):
+        async def _prefetch(oid):
+            """update the cache for *oid, tid* (if necessary)"""
+            try:
+                # ``load_before`` checks if the data is already in the cache
+                await self.protocol.load_before(oid, tid)
+            except ClientDisconnected:  # pragma no cover
+                pass
+            except Exception:  # pragma no cover
+                logger.exception("Exception for prefetch `%r` `%r`", oid, tid)
+
+        # We could directly ``gather`` ``protocol.load_before`` calls;
+        # however, this would keep unneeded data in RAM
+        # Therefore, we use the auxiliary function ``_prefetch`` which
+        # discards the data
+        await asyncio.gather(*(Task(_prefetch(oid), loop=self.loop)
+                               for oid in oids))
+
+    async def tpc_finish_fco(self, tid, updates, f):
         if not self.operational:
             raise ClientDisconnected()
         try:
@@ -806,7 +929,7 @@ class ClientIO:
 
     # server callbacks
     def invalidateTransaction(self, tid, oids):
-        # see the cache related comment in ``tpc_finish_co``
+        # see the cache related comment in ``tpc_finish_fco``
         # why we think that locking is not necessary at this place
         for oid in oids:
             self.cache.invalidate(oid, tid)
@@ -835,16 +958,19 @@ class ClientRunner:
     def setup_delegation(self, loop):
         self.loop = loop
         self.client = client = ClientIO(loop, *self.__args, **self.__kwargs)
-        self.call_sync_co = client.call_sync_co
-        self.load_before_co = client.load_before_co
-        run_coroutine = run_coroutine_threadsafe
+        self.call_sync_fco = client.call_sync_fco
+        self.load_before_fco = client.load_before_fco
+        run_threadsafe = run_coroutine_threadsafe
+        run_fast = client.direct_socket_access and run_coroutine_fast \
+                   or run_threadsafe
 
-        def io_call(coro, wait=True):
+        def io_call(coro, wait=True, fast=True):
             """run coroutine *coro* in the IO thread.
 
             If *wait*, return the result otherwise the future.
             """
-            future = run_coroutine(coro, loop)
+            run = fast and run_fast or run_threadsafe
+            future = run(coro, loop)
             try:
                 return future.result() if wait else future
             finally:
@@ -868,7 +994,7 @@ class ClientRunner:
         """
         timeout = kw.pop("timeout", None)
         return self.io_call(
-            self.call_sync_co(
+            self.call_sync_fco(
                 method, args,
                 timeout if timeout is not None else self.timeout),
             **kw)
@@ -880,12 +1006,12 @@ class ClientRunner:
             raise ClientDisconnected
         # Potential race condition:
         # We may lose the connection before the call is sent to the server.
-        # In this case, an exception is raised and handled by the
-        # loops exception handler (which logs the exception).
-        self.loop.call_soon_threadsafe(client.call_async, method, args)
-        # we do not suggest a thread switch here because continuing
-        # can reduce loop and switching overhead and utilize the
-        # transport more efficiently
+        # In this case, an exception is raised.
+        if client.direct_socket_access:
+            with client.loop.lock:
+                client.call_async(method, args)
+        else:
+            self.loop.call_soon_threadsafe(client.call_async, method, args)
 
     def async_iter(self, it):
         client = self.client
@@ -894,13 +1020,12 @@ class ClientRunner:
         # Potential race condition:
         # We may lose the connection before all messages are
         # sent to the server.
-        # In this case, an exception is raised and handled by the
-        # loops exception handler (which logs the exception).
-        self.loop.call_soon_threadsafe(client.call_async_iter, it)
-        # try to activate the IO thread as soon as possible
-        # because we have likely a lot of data to transfer; not bad
-        # if this starts early
-        switch_thread()
+        # In this case, an exception is raised.
+        if client.direct_socket_access:
+            with client.loop.lock:
+                client.call_async_iter(it)
+        else:
+            self.loop.call_soon_threadsafe(client.call_async_iter, it)
 
     def prefetch(self, oids, tid):
         oids = tuple(oids)  # avoid concurrency problems
@@ -916,14 +1041,14 @@ class ClientRunner:
         # If the IO thread is not fast enough, the complete
         # structure may be released during a garbage collection.
         return self.io_call(
-            self.client.prefetch_co(oids, tid), wait=False)
+            self.client.prefetch_co(oids, tid), wait=False, fast=False)
 
     def load_before(self, oid, tid):
-        return self.io_call(self.load_before_co(oid, tid, self.timeout))
+        return self.io_call(self.load_before_fco(oid, tid, self.timeout))
 
     def tpc_finish(self, tid, updates, f, **kw):
         # ``kw`` for test only; supported ``wait``
-        return self.io_call(self.client.tpc_finish_co(tid, updates, f), **kw)
+        return self.io_call(self.client.tpc_finish_fco(tid, updates, f), **kw)
 
     def is_connected(self):
         return self.client.operational
@@ -951,7 +1076,7 @@ class ClientRunner:
             # this should not happen
             return
         if loop.is_running():
-            call(self.client.close_co())
+            call(self.client.close_co(), fast=False)
         else:  # pragma: no cover
             # Note: this can happen when loop.stop is called and so run_io_thread
             #       calls hereby close with already stopped event loop.
@@ -973,12 +1098,12 @@ class ClientRunner:
     def new_addrs(self, addrs):
         # This usually doesn't have an immediate effect, since the
         # addrs aren't used until the client disconnects.xs
-        self.io_call(self.apply_co(self.client.new_addrs, addrs))
+        self.io_call(self.apply_co(self.client.new_addrs, addrs), fast=False)
 
     def wait(self, timeout=None):
         """wait for readyness"""
         return self.io_call(
-            self.client.await_operational_co(
+            self.client.await_operational_fco(
                 self.timeout if timeout is None else timeout, True))
 
 
