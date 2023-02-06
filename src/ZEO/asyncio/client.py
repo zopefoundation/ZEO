@@ -65,6 +65,7 @@ import sys
 import threading
 from asyncio import CancelledError
 from asyncio import TimeoutError
+from itertools import count
 
 import ZODB.event
 import ZODB.POSException
@@ -1069,6 +1070,7 @@ class ClientRunner:
         if self.__closed:
             return
         self.__closed = True
+        logger.debug("closing")
         call = self.io_call
         self.io_call = self._io_call_after_closure
         loop = self.loop
@@ -1124,10 +1126,11 @@ class ClientThread(ClientRunner):
                          )
         self.thread = threading.Thread(
             target=self.run_io_thread,
-            name="%s zeo client networking thread" % client.__name__,
-            )
+            name="%s zeo client networking thread %s"
+            % (client.__name__, make_thread_id()))
         self.thread.daemon = True
         self.started = threading.Event()
+        logger.debug("starting %s", self.thread.name)
         self.thread.start()
         self.started.wait()
         if self.exception:
@@ -1165,6 +1168,7 @@ class ClientThread(ClientRunner):
         """
         if not self.__closed:
             self.__closed = True
+            logger.debug("close requested")
             loop = self.loop
             if loop is None:  # pragma no cover
                 # we have never been connected
@@ -1192,3 +1196,12 @@ def cancel_task(task):
     if sys.version_info < (3,9):
         task.add_done_callback(
             lambda future: future.cancelled() or future.exception())
+
+
+# Debugging aid
+thread_counter = count()
+
+def make_thread_id():
+    """return new unique thread id -- for log analysis."""
+    return next(thread_counter)
+
