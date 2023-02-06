@@ -214,6 +214,16 @@ class CoroutineExecutor:
         self.lock = None
 
     def step(self):
+        # If ``self.lock`` is not ``None``, we may run in an
+        # application thread; acquire the lock to prevent
+        # concurrency with the IO thread
+        if self.lock is None:
+            self._step()
+        else:
+            with self.lock:
+                self._step()
+
+    def _step(self):
         await_result = None  # with what to wakeup suspended await
         await_resexc = False # is it exception?
         awaiting = self.awaiting
@@ -232,19 +242,10 @@ class CoroutineExecutor:
             self.cancel_requested = False
             self.cancel_msg = None
         try:
-            # If ``self.lock`` is not ``None``, we may run in an
-            # application thread; acquire the lock to prevent
-            # concurrency with the IO thread
-            if self.lock is not None:
-                self.lock.acquire()
-            try:
-                if not await_resexc:
-                    result = self.coro.send(await_result)
-                else:
-                    result = self.coro.throw(await_result)
-            finally:
-                if self.lock is not None:
-                    self.lock.release()
+            if not await_resexc:
+                result = self.coro.send(await_result)
+            else:
+                result = self.coro.throw(await_result)
 
         except BaseException as e:
             # we are done

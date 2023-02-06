@@ -65,6 +65,7 @@ import sys
 import threading
 from asyncio import CancelledError
 from asyncio import TimeoutError
+from asyncio import get_event_loop
 from itertools import count
 
 import ZODB.event
@@ -524,14 +525,16 @@ class ClientIO:
         # loop operation in ``_write_app_data``.
         self.direct_socket_access = \
               ssl is None and \
-              hasattr(loop, "_process_events") and \
-              hasattr(loop, "_run_once")
+              all(hasattr(loop, m) for m in
+                  ("_process_events", "_run_once",
+                   "_write_to_self", "_add_writer"))
         if self.direct_socket_access and not hasattr(loop, "lock"):
             # direct socket access possible
             # patch the loop
             loop.lock = threading.RLock()
             ori_process_events = loop._process_events
             ori_run_once = loop._run_once
+            ori_add_writer = loop._add_writer
 
             def _process_events(*args):
                 loop.lock.acquire()
@@ -541,8 +544,18 @@ class ClientIO:
                 ori_run_once()
                 loop.lock.release()
 
+            def _add_writer(*args):
+                ori_add_writer(*args)
+                try:
+                    c_loop = get_event_loop()
+                except Exception:
+                    c_loop = None
+                if c_loop is not loop:
+                    loop._write_to_self()
+
             loop._process_events = _process_events
             loop._run_once = _run_once
+            loop._add_writer = _add_writer
             logger.info("loop patched to allow direct socket access")
 
         self.disconnected(None)
