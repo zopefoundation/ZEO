@@ -218,6 +218,7 @@ cdef class CoroutineExecutor:
     cdef object awaiting  # future we are waiting for
     cdef bint   cancel_requested  # request to be canceled from .cancel
     cdef object cancel_msg  # ^^^ cancellation message
+    cdef object lock  # ``None`` or the loop lock
 
     def __init__(self, task, coro):
         """execute *coro* on behalf of *task*."""
@@ -226,8 +227,19 @@ cdef class CoroutineExecutor:
         self.awaiting = None
         self.cancel_requested = False
         self.cancel_msg = None
+        self.lock = None
 
     cpdef step(self):
+        # If ``self.lock`` is not ``None``, we may run in an
+        # application thread; acquire the lock to prevent
+        # concurrency with the IO thread
+        if self.lock is None:
+            self._step()
+        else:
+            with self.lock:
+                self._step()
+            
+    cdef _step(self):
         await_result = None  # with what to wakeup suspended await
         await_resexc = False # is it exception?
         awaiting = self.awaiting
@@ -356,10 +368,10 @@ cdef class ConcurrentTask(ConcurrentFuture):
     def __init__(self, coro, loop):
         ConcurrentFuture.__init__(self, loop=loop)
         self.executor = CoroutineExecutor(self, coro)  # reference cycle
-        loop.call_soon_threadsafe(self._start)
+        self._start()
 
-    cpdef _start(self):
-        self.executor.step()
+    cdef _start(self):
+        self._loop.call_soon_threadsafe(self.executor.step)
 
     cpdef cancel(self, msg=None):
         """external cancel request.
@@ -374,7 +386,13 @@ cdef class ConcurrentTask(ConcurrentFuture):
         return ConcurrentFuture.cancel(self, msg)
 
 
-# @coroutine - only py implementtion
+cdef class FastConcurrentTask(ConcurrentTask):
+    """A oncurrent task with the first step run by the application thread.
 
+    Subsequent steps are tpyically run by the IO thread but can in
+    rare cases also be run by the application thread.
+    """
 
-run_coroutine_threadsafe = ConcurrentTask
+    cdef _start(self):
+        self.executor.lock = self._loop.lock
+        self.executor.step()

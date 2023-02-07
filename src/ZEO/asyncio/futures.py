@@ -246,7 +246,6 @@ class CoroutineExecutor:
                 result = self.coro.send(await_result)
             else:
                 result = self.coro.throw(await_result)
-
         except BaseException as e:
             # we are done
             task = self.task
@@ -388,6 +387,7 @@ class FastConcurrentTask(ConcurrentTask):
 try:
     from ._futures import Future, ConcurrentFuture  # noqa: F401, F811
     from ._futures import AsyncTask, ConcurrentTask  # noqa: F401, F811
+    from ._futures import FastConcurrentTask  # noqa: F401, F811
     from ._futures import switch_thread  # noqa: F401, F811
 except ImportError:
     pass

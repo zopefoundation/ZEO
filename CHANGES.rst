@@ -16,6 +16,13 @@ Changelog
   ``password`` - support for such basic auth was dropped in 2016 before ZEO 5.0
   was released.
 
+- Optimize ZEO server interactions in typical cases
+  (e.g. no SSL, no ``uvloop``) by allowing client application
+  threads to access the server communication socket directly.
+  This can speed up ZEO operations considerable, especially reads.
+  For details see
+  `#225 <https://github.com/zopefoundation/ZEO/pull/225>`_.
+
 
 5.4.0 (2023-01-18)
 ------------------
