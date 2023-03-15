@@ -1035,8 +1035,12 @@ class ClientThread(ClientRunner):
         try:
             loop = self.loop if self.loop is not None else new_event_loop()
             asyncio.set_event_loop(loop)
-            self.setup_delegation(loop)
-            loop.call_soon(self.started.set)
+            # setup_delegation triggers to execute coroutines - we need to call
+            # it from under running loop
+            def _():
+                self.setup_delegation(loop)
+                self.started.set()
+            loop.call_soon(_)
             loop_run_forever(loop)
         except Exception as exc:
             logger.exception("Client thread")

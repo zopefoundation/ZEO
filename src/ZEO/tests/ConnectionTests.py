@@ -943,6 +943,30 @@ class ReconnectionTests(CommonSetupTearDown):
         logger.info("checkReconnection(): finished")
         self._storage.close()
 
+    def checkRetryConnectingUNIX(self):
+        # Check that the client retries connecting after failing initial
+        # attempt even on UNIX sockets: if zeo.sock does not exist at all,
+        # asyncio will fail "connecting" future without waiting for asyncio
+        # loop to start, and that was leading to crashes in connecting code
+        # because it was assuming it was running under asyncio loop.
+        # https://github.com/zopefoundation/ZEO/issues/226
+        self.shutdownServer()
+        self._servers = []
+        self.addr = ['/path/to/zeo.sock']
+
+        import zope.testing.loggingsupport
+        handler = zope.testing.loggingsupport.InstalledHandler(
+            'ZEO.asyncio.client')
+
+        self._storage = self.openClientStorage('test', 1000, wait=False)
+
+        time.sleep(2)
+        log = str(handler)
+        handler.uninstall()
+        self.assertIn("retry connecting", log)
+
+        self._storage.close()
+
     def checkMultipleServers(self):
         # Crude test-- just start two servers and do a commit at each one.
 
