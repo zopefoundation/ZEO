@@ -153,8 +153,10 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         cache = MemoryCache()
         # We can also provide an event loop.  We'll use a testing loop
         # so we don't have to actually make any network connection.
-        self.loop = loop = FaithfulLoop(
-            addrs if loop_addrs is None else loop_addrs)
+        if self.loop is None:
+            self.loop = FaithfulLoop(
+                addrs if loop_addrs is None else loop_addrs)
+        loop = self.loop
         ClientThread.__init__(self,
                               addrs, wrapper, cache, 'TEST',
                               read_only, timeout=1)
@@ -504,6 +506,21 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         # But the cache is now empty and we invalidated the database cache
         self.assertFalse(cache)
         wrapper.invalidateCache.assert_called_with()
+
+    def test_reconnect_trial(self):
+        """test for "https://github.com/zopefoundation/ZEO/issues/226"."""
+        # we use a unix connection (to be in line with #226)
+        addrs = ["__nonexisting_unix_socket__"]
+        loop = self.loop = FaithfulLoop(addrs)
+        # we override the loop's ``create_unix_connection`` to let it
+        # fail immediately
+        loop.create_unix_connection = lambda *args: 1/0
+        wrapper, cache, loop, client, protocol, transport = self.start(
+            addrs, ())
+
+        # The failed connection is attempted in the future:
+        delay, func, args, handle = loop.later.pop(0)
+        self.assertTrue(1 <= delay <= 2)
 
     def test_multiple_addresses(self):
         # We can pass multiple addresses to client constructor

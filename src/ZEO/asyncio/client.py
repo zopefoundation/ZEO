@@ -42,6 +42,11 @@ from .marshal import encoder, decoder
 from .futures import Future, AsyncTask as Task, \
      coroutine, return_, run_coroutine_threadsafe, switch_thread
 
+if sys.version_info[0] == 2:
+    from .connectco_2 import connect_coroutine
+else:
+    from .connectco_3 import connect_coroutine
+
 logger = logging.getLogger(__name__)
 
 Fallback = object()
@@ -154,22 +159,9 @@ class Protocol(base.ZEOBaseProtocol):
             cr = lambda: self.loop.create_unix_connection(  # noqa: E731
                 self.protocol_factory, self.addr, ssl=self.ssl)
 
-        @coroutine
-        def connect():
-            while not self.closed:
-                try:
-                    yield cr()
-                    return
-                except asyncio.CancelledError:
-                    logger.info("Connection to %r cancelled", self.addr)
-                    raise
-                except Exception as exc:
-                    logger.info("Connection to %r failed, %s",
-                                self.addr, exc)
-                yield asyncio.sleep(self.connect_poll + local_random.random())
-                logger.info("retry connecting %r", self.addr)
-
-        self._connecting = Task(connect(), self.loop)
+        self._connecting = asyncio.Task(
+            connect_coroutine(cr, self, logger, local_random.random),
+            loop=self.loop)
 
     def connection_made(self, transport):
         logger.debug('connection_made %s', self)

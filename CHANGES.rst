@@ -4,6 +4,13 @@ Changelog
 5.4.1 (unreleased)
 ------------------
 
+- Fix `#226 <https://github.com/zopefoundation/ZEO/issues/226>`_
+  using an ``asyncio.Task`` (rather than a proprietary,
+  specially ZEO optimized task) for the connection process.
+  This is advisable because the connection process is not
+  implemented by ZEO but by foreign code which may
+  have problems with the limitations of ZEO tasks.
+
 
 5.4.0 (2023-01-18)
 ------------------
