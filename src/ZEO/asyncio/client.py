@@ -159,7 +159,11 @@ class Protocol(base.ZEOBaseProtocol):
             cr = lambda: self.loop.create_unix_connection(  # noqa: E731
                 self.protocol_factory, self.addr, ssl=self.ssl)
 
-        self._connecting = asyncio.Task(
+        # Usually, we use our optimized but feature limited tasks
+        # to run coroutines. Here we use a standard task
+        # because we do not know which task features the connect
+        # coroutine needs.
+        self._connecting = self.loop.create_task(
             connect_coroutine(cr, self, logger, local_random.random),
             loop=self.loop)
 
