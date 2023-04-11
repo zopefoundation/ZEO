@@ -164,8 +164,7 @@ class Protocol(base.ZEOBaseProtocol):
         # because we do not know which task features the connect
         # coroutine needs.
         self._connecting = self.loop.create_task(
-            connect_coroutine(cr, self, logger, local_random.random),
-            loop=self.loop)
+            connect_coroutine(cr, self, logger, local_random.random))
 
     def connection_made(self, transport):
         logger.debug('connection_made %s', self)
