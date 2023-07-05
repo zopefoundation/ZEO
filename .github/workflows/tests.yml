@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         os:
-        - ["ubuntu", "ubuntu-latest"]
+        - ["ubuntu", "ubuntu-20.04"]
         config:
         # [Python version, tox env]
         - ["3.9",   "lint"]
@@ -53,20 +53,10 @@ jobs:
     name: ${{ matrix.config[1] }}
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python (${{ matrix.config[0] }})
-      if: matrix.config[0] != '2.7'
+    - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.config[0] }}
-    - name: Set up Python (${{ matrix.config[0] }})
-      if: matrix.config[0] == '2.7'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y python2.7 python2.7-dev python2-pip-whl
-        sudo ln -sf python2.7 /usr/bin/python
-        export PYTHONPATH=`echo /usr/share/python-wheels/pip-*py2*.whl`
-        sudo --preserve-env=PYTHONPATH python -m pip install --upgrade pip setuptools wheel
-        sudo chown -R $USER /usr/local/lib/python2.7
     - name: Pip cache
       uses: actions/cache@v3
       with:
