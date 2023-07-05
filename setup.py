@@ -14,7 +14,7 @@
 
 from setuptools import setup, find_packages
 
-version = '5.4.1.dev0'
+version = '5.4.1'
 
 install_requires = [
     'ZODB >= 5.1.1',

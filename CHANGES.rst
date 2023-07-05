@@ -1,7 +1,7 @@
 Changelog
 =========
 
-5.4.1 (unreleased)
+5.4.1 (2023-07-05)
 ------------------
 
 - Fix `#226 <https://github.com/zopefoundation/ZEO/issues/226>`_
