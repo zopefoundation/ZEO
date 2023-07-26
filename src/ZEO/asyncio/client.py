@@ -689,12 +689,15 @@ class ClientIO:
             # We started without waiting for a connection. (prob tests :( )
             raise ClientDisconnected("never connected")
         if not self.operational:
+            if timeout <= 0:
+                raise ClientDisconnected("timed out waiting for connection")
+
             try:
-                await asyncio.wait_for(asyncio.shield(self.connected), timeout)
+                await await_with_timeout(self.connected, timeout, self.loop)
             except asyncio.TimeoutError:
                 raise ClientDisconnected("timed out waiting for connection")
             except asyncio.CancelledError:
-                raise ClientDisconnected()
+                raise ClientDisconnected("connection cancelled")
         # should be connected now
 
     async def call_sync_co(self, method, args, timeout):
@@ -716,8 +719,7 @@ class ClientIO:
         # await self.close()
         closing = self.close()
         try:
-            # the ``shield`` is necessary to keep the state unchanged
-            await asyncio.wait_for(asyncio.shield(closing), 10)
+            await await_with_timeout(closing, 10, self.loop)
         except asyncio.TimeoutError:
             from pprint import pformat
             info = {"client": pformat(vars(self))}
@@ -1067,3 +1069,36 @@ def cancel_task(task):
     if sys.version_info < (3,9):
         task.add_done_callback(
             lambda future: future.cancelled() or future.exception())
+
+
+async def await_with_timeout(f, timeout, loop):
+    """wait for future *f* with timeout *timeout*."""
+    waiter = Future(loop)
+    handle = None
+
+    def setup_timeout():
+        nonlocal handle
+        # we overwrite ``handle`` here to cancel
+        # the timeout (rather than the ``setup_timeout``).
+        # There is a race condition potential here,
+        # when ``setup_timeout`` has started but
+        # could not yet overwrite ``handle``.
+        # However, this simply means that the timeout
+        # is not cancelled which has no serious effects
+        handle = loop.call_later(timeout, stop)
+
+    def stop(*unused):
+        if not waiter.done():
+            waiter.set_result(None)
+
+    f.add_done_callback(stop)
+    handle = loop.call_soon_threadsafe(setup_timeout)
+    await waiter
+    try:
+        if f.done():
+            return f.result()
+        else:
+            f.remove_done_callback(stop)
+            raise TimeoutError
+    finally:
+        handle.cancel()

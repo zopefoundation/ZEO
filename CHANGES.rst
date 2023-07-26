@@ -16,6 +16,9 @@ Changelog
   ``password`` - support for such basic auth was dropped in 2016 before ZEO 5.0
   was released.
 
+- fix problems with Python 3.12.0b4
+  (`issue 231 <https://github.com/zopefoundation/ZEO/issues/231>_`).
+
 
 5.4.0 (2023-01-18)
 ------------------
