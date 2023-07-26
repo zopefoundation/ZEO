@@ -378,7 +378,9 @@ class FullGenericTests(
         # time.sleep and time.time to cooperate and pretend for time
         # to pass. That doesn't work for the spawned server, and this
         # test case is very sensitive to times matching.
-        super_meth = super().checkPackUndoLog
+        super_meth = getattr(super(), "testPackUndoLog", None)
+        if super_meth is None:  # old ZODB
+            super_meth = super().checkPackUndoLog
         # Find the underlying function, not the decorated method.
         # If it doesn't exist, the implementation has changed and we
         # need to revisit this...
