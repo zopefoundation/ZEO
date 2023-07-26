@@ -1099,6 +1099,6 @@ async def await_with_timeout(f, timeout, loop):
             return f.result()
         else:
             f.remove_done_callback(stop)
-            raise TimeoutError
+            raise asyncio.TimeoutError
     finally:
         handle.cancel()
