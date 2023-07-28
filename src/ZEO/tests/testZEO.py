@@ -373,6 +373,17 @@ class FullGenericTests(
         IterationTests.IterationTests):
     """Extend GenericTests with tests that MappingStorage can't pass."""
 
+    def testPackUndoLog(self):
+        # Prevent execution of the test inherited from ``ZODB>=6.0``.
+        #
+        # An adapted version of this test is executed via the following
+        # ``checkPackUndoLog``.
+        #
+        # Once support for ``ZODB<6.0`` is dropped, this function
+        # can go away and ``checkPackUndoLog`` can get renamed
+        # to ``testPackUndoLog``.
+        pass
+
     def checkPackUndoLog(self):
         # PackableStorage.PackableUndoStorage wants to adjust
         # time.sleep and time.time to cooperate and pretend for time
@@ -1868,10 +1879,19 @@ def test_suite():
                      "ClientDisconnected"),
                     )),
             ))
-    test_loader = unittest.TestLoader()
-    test_loader.testMethodPrefix = 'check'
-    zeo.addTest(test_loader.loadTestsFromTestCase(
-        ClientConflictResolutionTests))
+
+    def add_tests(to, case):
+        """add tests from *case* to *to*.
+
+        This adds tests with prefixes ``check`` and ``test``
+        to be compatible with ``ZODB<6`` and ``ZODB>=6``.
+        """
+        for prefix in ('check', 'test'):
+            test_loader = unittest.TestLoader()
+            test_loader.testMethodPrefix = prefix
+            to.addTest(test_loader.loadTestsFromTestCase(case))
+        
+    add_tests(zeo, ClientConflictResolutionTests)
     zeo.layer = ZODB.tests.util.MininalTestLayer('testZeo-misc')
     suite.addTest(zeo)
 
@@ -1892,9 +1912,7 @@ def test_suite():
             'data.fs', 'blobs', extrafsoptions='pack-gc false')
         ))
     for klass in quick_test_classes:
-        test_loader = unittest.TestLoader()
-        test_loader.testMethodPrefix = 'check'
-        zeo.addTest(test_loader.loadTestsFromTestCase(klass))
+        add_tests(zeo, klass)
     zeo.layer = ZODB.tests.util.MininalTestLayer('testZeo-misc2')
     suite.addTest(zeo)
 
@@ -1916,9 +1934,8 @@ def test_suite():
 
     # Put the heavyweights in their own layers
     for klass in slow_test_classes:
-        test_loader = unittest.TestLoader()
-        test_loader.testMethodPrefix = 'check'
-        sub = test_loader.loadTestsFromTestCase(klass)
+        sub = unittest.TestSuite()
+        add_tests(sub, klass)
         sub.layer = ZODB.tests.util.MininalTestLayer(klass.__name__)
         suite.addTest(sub)
 

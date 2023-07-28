@@ -19,6 +19,12 @@ Changelog
 - fix problems with Python 3.12.0b4
   (`issue 231 <https://github.com/zopefoundation/ZEO/issues/231>_`).
 
+- ensure test compatibility with both ``ZODB<6`` and ``ZODB>=6``
+  by looking for ZODB inherited tests with prefixes
+  ``check`` (used by ``ZODB<6``) 
+  and ``test`` (used by ``ZODB>=6``)
+  (`issue 233 <https://github.com/zopefoundation/ZEO/issues/233>_`).
+
 
 5.4.0 (2023-01-18)
 ------------------
