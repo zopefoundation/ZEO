@@ -1074,25 +1074,13 @@ def cancel_task(task):
 async def await_with_timeout(f, timeout, loop):
     """wait for future *f* with timeout *timeout*."""
     waiter = Future(loop)
-    handle = None
-
-    def setup_timeout():
-        nonlocal handle
-        # we overwrite ``handle`` here to cancel
-        # the timeout (rather than the ``setup_timeout``).
-        # There is a race condition potential here,
-        # when ``setup_timeout`` has started but
-        # could not yet overwrite ``handle``.
-        # However, this simply means that the timeout
-        # is not cancelled which has no serious effects
-        handle = loop.call_later(timeout, stop)
 
     def stop(*unused):
         if not waiter.done():
             waiter.set_result(None)
 
+    handle = loop.call_later(timeout, stop)
     f.add_done_callback(stop)
-    handle = loop.call_soon(setup_timeout)
     await waiter
     try:
         if f.done():
