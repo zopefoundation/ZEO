@@ -1092,7 +1092,7 @@ async def await_with_timeout(f, timeout, loop):
             waiter.set_result(None)
 
     f.add_done_callback(stop)
-    handle = loop.call_soon_threadsafe(setup_timeout)
+    handle = loop.call_soon(setup_timeout)
     await waiter
     try:
         if f.done():
