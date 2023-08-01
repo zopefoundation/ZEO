@@ -454,12 +454,12 @@ log, but will ignore the error and keep going.
 >>> cache._del_noncurrent(ZODB.utils.p64(1), ZODB.utils.p64(2))
 ... # doctest: +NORMALIZE_WHITESPACE
 Couldn't find non-current
-('\x00\x00\x00\x00\x00\x00\x00\x01', '\x00\x00\x00\x00\x00\x00\x00\x02')
+(b'\x00\x00\x00\x00\x00\x00\x00\x01', b'\x00\x00\x00\x00\x00\x00\x00\x02')
 >>> cache._del_noncurrent(ZODB.utils.p64(1), ZODB.utils.p64(1))
 >>> cache._del_noncurrent(ZODB.utils.p64(1), ZODB.utils.p64(1)) #
 ... # doctest: +NORMALIZE_WHITESPACE
 Couldn't find non-current
-('\x00\x00\x00\x00\x00\x00\x00\x01', '\x00\x00\x00\x00\x00\x00\x00\x01')
+(b'\x00\x00\x00\x00\x00\x00\x00\x01', b'\x00\x00\x00\x00\x00\x00\x00\x01')
 
 >>> logger.setLevel(logging.NOTSET)
 >>> logger.removeHandler(handler)
@@ -582,7 +582,7 @@ Check to make sure the cache analysis scripts work.
     >>> ZEO.scripts.cache_stats.main('-v cache.trace'.split())
     ... # doctest: +ELLIPSIS
                        loads    hits  inv(h)  writes hitrate
-    Jul 11 12:11:41 00 '' 0000000000000000 0000000000000000 -
+    Jul 11 12:11:41 00 b'' 0000000000000000 0000000000000000 -
     Jul 11 12:11-11       0       0       0       0     n/a
     Jul 11 12:11:41 ==================== Restart ====================
     Jul 11 12:11:42 10             1065 0000000000000002 0000000000000000 -
@@ -1073,7 +1073,7 @@ An attempt to open a bad cache file will cause it to be dropped and recreated.
     Moving bad cache file to 'cache.bad'.
     Traceback (most recent call last):
     ...
-    ValueError: unexpected magic number: 'xxxx'
+    ValueError: unexpected magic number: b'xxxx'
 
     >>> cache.store(p64(1), p64(1), None, b'data')
     >>> cache.close()
@@ -1088,7 +1088,7 @@ An attempt to open a bad cache file will cause it to be dropped and recreated.
     Removing bad cache file: 'cache' (prev bad exists).
     Traceback (most recent call last):
     ...
-    ValueError: unexpected magic number: 'xxxx'
+    ValueError: unexpected magic number: b'xxxx'
 
     >>> cache.store(p64(1), p64(1), None, b'data')
     >>> cache.close()
