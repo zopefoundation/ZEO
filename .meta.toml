@@ -2,7 +2,7 @@
 # https://github.com/zopefoundation/meta/tree/master/config/pure-python
 [meta]
 template = "pure-python"
-commit-id = "49beb029"
+commit-id = "b21fbbf2"
 
 [python]
 with-windows = false
@@ -44,6 +44,7 @@ fail-under = 53
 
 [manifest]
 additional-rules = [
+    "include *.yaml",
     "include *.py",
     "include COPYING",
     "include log.ini",
