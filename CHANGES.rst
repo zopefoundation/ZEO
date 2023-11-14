@@ -6,6 +6,8 @@ Changelog
 
 - Drop support for Python 2.7, 3.5, 3.6.
 
+- Add support for Python 3.12.
+
 - Switch to using `async/await` directly instead of `@coroutine/yield`
 
 - Drop experimental support for credentials object: the corresponding
@@ -16,12 +18,12 @@ Changelog
   ``password`` - support for such basic auth was dropped in 2016 before ZEO 5.0
   was released.
 
-- fix problems with Python 3.12.0b4
+- Fix problems with Python 3.12.0b4
   (`issue 231 <https://github.com/zopefoundation/ZEO/issues/231>_`).
 
-- ensure test compatibility with both ``ZODB<6`` and ``ZODB>=6``
+- Ensure test compatibility with both ``ZODB<6`` and ``ZODB>=6``
   by looking for ZODB inherited tests with prefixes
-  ``check`` (used by ``ZODB<6``) 
+  ``check`` (used by ``ZODB<6``)
   and ``test`` (used by ``ZODB>=6``)
   (`issue 233 <https://github.com/zopefoundation/ZEO/issues/233>_`).
 
