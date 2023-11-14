@@ -16,8 +16,11 @@
 import threading
 
 from ZODB.Connection import TransactionMetaData
-from ZODB.tests.StorageTestBase import zodb_pickle, MinPO
+from ZODB.tests.StorageTestBase import MinPO
+from ZODB.tests.StorageTestBase import zodb_pickle
+
 import ZEO.Exceptions
+
 
 ZERO = '\0'*8
 

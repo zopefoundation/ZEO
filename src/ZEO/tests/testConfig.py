@@ -14,9 +14,8 @@
 
 import unittest
 
-
-from zope.testing import setupstack
 from ZODB.config import storageFromString
+from zope.testing import setupstack
 
 from .forker import start_zeo_server
 from .threaded import threaded_server_tests

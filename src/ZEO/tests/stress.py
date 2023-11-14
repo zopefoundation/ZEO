@@ -18,15 +18,17 @@ multiple connections.
 """
 # TODO: This code is currently broken.
 
+import os
+import random
+
 import transaction
 import ZODB
 from ZODB.MappingStorage import MappingStorage
 from ZODB.tests import MinPO
+
 from ZEO.ClientStorage import ClientStorage
 from ZEO.tests import forker
 
-import os
-import random
 
 NUM_TRANSACTIONS_PER_CONN = 10
 NUM_CONNECTIONS = 10

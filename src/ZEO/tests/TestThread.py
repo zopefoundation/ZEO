@@ -12,8 +12,8 @@
 #
 ##############################################################################
 """A Thread base class for use with unittest."""
-import threading
 import sys
+import threading
 
 
 class TestThread(threading.Thread):

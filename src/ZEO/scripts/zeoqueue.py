@@ -23,13 +23,16 @@ Options:
         beginning of the file.
 """
 
+import errno
+import getopt
 import os
 import re
 import sys
 import time
-import errno
-import getopt
-from ZEO._compat import load, dump
+
+from ZEO._compat import dump
+from ZEO._compat import load
+
 
 COMMASPACE = ', '
 STATEFILE = 'zeoqueue.pck'

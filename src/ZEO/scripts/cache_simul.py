@@ -24,22 +24,22 @@ Note:
   was created starting with a non-empty cache
 """
 
+import argparse
 import bisect
-import struct
 import random
 import re
+import struct
 import sys
-import ZEO.cache
-import argparse
+# we assign ctime locally to facilitate test replacement!
+from time import ctime
 
 from ZODB.utils import z64
+
+import ZEO.cache
 
 from ..cache import ZEC_HEADER_SIZE
 from .cache_stats import add_interval_argument
 from .cache_stats import add_tracefile_argument
-
-# we assign ctime locally to facilitate test replacement!
-from time import ctime
 
 
 def main(args=None):

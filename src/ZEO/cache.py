@@ -21,19 +21,24 @@ store(), and invalidate().  It manages in-memory data structures that allow
 it to map this richer API onto the simple key-based API of the lower-level
 FileCache.
 """
-from struct import pack, unpack
-
-import BTrees.LLBTree
-import BTrees.LOBTree
 import logging
 import os
 import tempfile
 import time
+from struct import pack
+from struct import unpack
 
-import ZODB.fsIndex
+import BTrees.LLBTree
+import BTrees.LOBTree
 import zc.lockfile
-from ZODB.utils import p64, u64, z64, RLock
+import ZODB.fsIndex
+from ZODB.utils import RLock
+from ZODB.utils import p64
+from ZODB.utils import u64
+from ZODB.utils import z64
+
 from ._compat import PYPY
+
 
 logger = logging.getLogger("ZEO.cache")
 

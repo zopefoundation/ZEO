@@ -17,14 +17,15 @@ import time
 from random import Random
 
 import transaction
-
-from BTrees.check import check, display
+from BTrees.check import check
+from BTrees.check import display
 from BTrees.OOBTree import OOBTree
+from ZODB.DB import DB
+from ZODB.POSException import ConflictError
+from ZODB.POSException import ReadConflictError
 
 from ZEO.tests.TestThread import TestThread
 
-from ZODB.DB import DB
-from ZODB.POSException import ReadConflictError, ConflictError
 
 # The tests here let several threads have a go at one or more database
 # instances simultaneously.  Each thread appends a disjoint (from the

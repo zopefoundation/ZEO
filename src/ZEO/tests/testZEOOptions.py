@@ -19,9 +19,10 @@ import tempfile
 import unittest
 
 import ZODB.config
+from zdaemon.tests.testzdoptions import TestZDOptions
 
 from ZEO.runzeo import ZEOOptions
-from zdaemon.tests.testzdoptions import TestZDOptions
+
 
 # When a hostname isn't specified in a socket binding address, ZConfig
 # supplies the empty string.

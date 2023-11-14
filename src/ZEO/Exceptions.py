@@ -14,7 +14,6 @@
 """Exceptions for ZEO."""
 
 import transaction.interfaces
-
 from ZODB.POSException import StorageError
 
 

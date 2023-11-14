@@ -13,15 +13,15 @@
 ##############################################################################
 """Library for forking storage server and connecting client storage"""
 import gc
+import logging
+import multiprocessing
 import os
 import os.path
 import sys
-import multiprocessing
-import logging
 import tempfile
 from io import StringIO
-
 from queue import Empty
+
 
 logger = logging.getLogger('ZEO.tests.forker')
 DEBUG = os.environ.get('ZEO_TEST_SERVER_DEBUG')
@@ -109,6 +109,7 @@ def runner(config, qin, qout, timeout=None,
 
     try:
         import threading
+
         from . import runzeo
 
         options = runzeo.ZEOOptions()
@@ -224,8 +225,8 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
         fp.write(zeo_conf)
 
     if threaded:
-        from threading import Thread
         from queue import Queue
+        from threading import Thread
     else:
         # Experimental to see whether server logging problems under MacOS
         # have to do with its default `spawn` method

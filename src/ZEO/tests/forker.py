@@ -14,19 +14,17 @@
 """Library for forking storage server and connecting client storage"""
 
 
-import random
-import time
-
-
-import socket
-
 import logging
+import random
+import socket
+import time
 
 import ZODB.tests.util
 import zope.testing.setupstack
 
-from ZEO._compat import WIN
 from ZEO import _forker
+from ZEO._compat import WIN
+
 
 logger = logging.getLogger('ZEO.tests.forker')
 

@@ -1,8 +1,9 @@
 from zope.testing import setupstack
 
-from .. import server, client
-
 from ZEO import _forker as forker
+
+from .. import client
+from .. import server
 
 
 class SyncTests(setupstack.TestCase):

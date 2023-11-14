@@ -18,14 +18,21 @@ platform-dependent scaffolding.
 """
 
 
-from ZEO.tests import ConnectionTests, InvalidationTests
-from zope.testing import setupstack
 import os
+
+from zope.testing import setupstack
+
+from ZEO.tests import ConnectionTests
+from ZEO.tests import InvalidationTests
+
+
 if os.environ.get('USE_ZOPE_TESTING_DOCTEST'):
     from zope.testing import doctest
 else:
     import doctest
+
 import unittest
+
 import ZODB.tests.util
 
 from . import forker

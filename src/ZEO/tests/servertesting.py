@@ -28,9 +28,10 @@
 # Here, we'll try to provide some testing infrastructure to isolate
 # servers from the network.
 
+import ZODB.MappingStorage
+
 import ZEO.asyncio.tests
 import ZEO.StorageServer
-import ZODB.MappingStorage
 
 
 class StorageServer(ZEO.StorageServer.StorageServer):

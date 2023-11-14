@@ -23,7 +23,8 @@ is used to store the data until a commit or abort.
 
 import tempfile
 
-from ZEO._compat import Pickler, Unpickler
+from ZEO._compat import Pickler
+from ZEO._compat import Unpickler
 
 
 class TransactionBuffer:

@@ -11,20 +11,23 @@
 # FOR A PARTICULAR PURPOSE.
 #
 ##############################################################################
-from zope.testing import setupstack, renormalizing
 import doctest
 import logging
 import pprint
 import re
 import sys
-import transaction
 import unittest
-import ZEO.StorageServer
-import ZEO.tests.servertesting
+
+import transaction
 import ZODB.blob
 import ZODB.FileStorage
 import ZODB.tests.util
 import ZODB.utils
+from zope.testing import renormalizing
+from zope.testing import setupstack
+
+import ZEO.StorageServer
+import ZEO.tests.servertesting
 
 
 def proper_handling_of_blob_conflicts():

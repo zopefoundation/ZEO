@@ -1,14 +1,15 @@
-from unittest import mock
 import os
 import ssl
 import unittest
+from unittest import mock
+
 from ZODB.config import storageFromString
 
-from ..Exceptions import ClientDisconnected
 from .. import runzeo
-
+from ..Exceptions import ClientDisconnected
 from .testConfig import ZEOConfigTestBase
 from .threaded import threaded_server_tests
+
 
 here = os.path.dirname(__file__)
 server_cert = os.path.join(here, 'server.pem')

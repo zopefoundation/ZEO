@@ -13,14 +13,15 @@
 ##############################################################################
 """Python versions compatiblity
 """
-import sys
 import platform
+import sys
 
+from zodbpickle.pickle import Pickler
+from zodbpickle.pickle import Unpickler as _Unpickler
 from zodbpickle.pickle import dump
 from zodbpickle.pickle import dumps
 from zodbpickle.pickle import loads
-from zodbpickle.pickle import Pickler
-from zodbpickle.pickle import Unpickler as _Unpickler
+
 
 PYPY = getattr(platform, 'python_implementation', lambda: None)() == 'PyPy'
 WIN = sys.platform.startswith('win')

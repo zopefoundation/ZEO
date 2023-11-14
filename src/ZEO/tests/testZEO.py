@@ -12,31 +12,13 @@
 #
 ##############################################################################
 """Test suite for ZEO based on ZODB.tests."""
-import multiprocessing
-import resource
-
-from ZEO.ClientStorage import ClientStorage
-from ZEO.Exceptions import ClientDisconnected
-from ZEO.tests import forker, Cache, CommitLockTests, ThreadTests
-from ZEO.tests import IterationTests
-from ZEO._compat import WIN
-
-from ZODB.Connection import TransactionMetaData
-from ZODB.tests import StorageTestBase, BasicStorage,  \
-     TransactionalUndoStorage,  \
-     PackableStorage, Synchronization, ConflictResolution, RevisionStorage, \
-     MTStorage, ReadOnlyStorage, IteratorStorage, RecoveryStorage
-from ZODB.tests.MinPO import MinPO
-from ZODB.tests.StorageTestBase import zodb_unpickle
-from ZODB.utils import maxtid, p64, u64, z64
-from zope.testing import renormalizing
-
 import doctest
 import logging
+import multiprocessing
 import os
-import persistent
 import pprint
 import re
+import resource
 import shutil
 import signal
 import stat
@@ -44,10 +26,10 @@ import sys
 import tempfile
 import threading
 import time
-import transaction
 import unittest
-import ZEO.StorageServer
-import ZEO.tests.ConnectionTests
+
+import persistent
+import transaction
 import ZODB
 import ZODB.blob
 import ZODB.tests.hexstorage
@@ -55,8 +37,39 @@ import ZODB.tests.testblob
 import ZODB.tests.util
 import ZODB.utils
 import zope.testing.setupstack
+from ZODB.Connection import TransactionMetaData
+from ZODB.tests import BasicStorage
+from ZODB.tests import ConflictResolution
+from ZODB.tests import IteratorStorage
+from ZODB.tests import MTStorage
+from ZODB.tests import PackableStorage
+from ZODB.tests import ReadOnlyStorage
+from ZODB.tests import RecoveryStorage
+from ZODB.tests import RevisionStorage
+from ZODB.tests import StorageTestBase
+from ZODB.tests import Synchronization
+from ZODB.tests import TransactionalUndoStorage
+from ZODB.tests.MinPO import MinPO
+from ZODB.tests.StorageTestBase import zodb_unpickle
+from ZODB.utils import maxtid
+from ZODB.utils import p64
+from ZODB.utils import u64
+from ZODB.utils import z64
+from zope.testing import renormalizing
+
+import ZEO.StorageServer
+import ZEO.tests.ConnectionTests
+from ZEO._compat import WIN
+from ZEO.ClientStorage import ClientStorage
+from ZEO.Exceptions import ClientDisconnected
+from ZEO.tests import Cache
+from ZEO.tests import CommitLockTests
+from ZEO.tests import IterationTests
+from ZEO.tests import ThreadTests
+from ZEO.tests import forker
 
 from . import testssl
+
 
 logger = logging.getLogger('ZEO.tests.testZEO')
 
@@ -82,6 +95,7 @@ class Test_convenience_functions(unittest.TestCase):
 
     def test_ZEO_client_convenience(self):
         from unittest import mock
+
         import ZEO
 
         client_thread = mock.Mock(
@@ -94,6 +108,7 @@ class Test_convenience_functions(unittest.TestCase):
 
     def test_ZEO_DB_convenience_ok(self):
         from unittest import mock
+
         import ZEO
 
         client_mock = mock.Mock(spec=['close'])
@@ -112,6 +127,7 @@ class Test_convenience_functions(unittest.TestCase):
 
     def test_ZEO_DB_convenience_error(self):
         from unittest import mock
+
         import ZEO
 
         client_mock = mock.Mock(spec=['close'])
@@ -130,6 +146,7 @@ class Test_convenience_functions(unittest.TestCase):
 
     def test_ZEO_connection_convenience_ok(self):
         from unittest import mock
+
         import ZEO
 
         ret = object()
@@ -149,6 +166,7 @@ class Test_convenience_functions(unittest.TestCase):
 
     def test_ZEO_connection_convenience_value(self):
         from unittest import mock
+
         import ZEO
 
         DB_mock = mock.Mock(spec=[
@@ -739,7 +757,8 @@ class CommonBlobTests:
 
     def checkLoadBlob(self):
         from ZODB.blob import Blob
-        from ZODB.tests.StorageTestBase import zodb_pickle, ZERO
+        from ZODB.tests.StorageTestBase import ZERO
+        from ZODB.tests.StorageTestBase import zodb_pickle
 
         somedata = b'a' * 10
 
