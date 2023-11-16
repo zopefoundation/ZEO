@@ -15,7 +15,7 @@ In it's simplest form, the script just checks if it can get status:
     >>> saddr = ':'.join(map(str, addr)) # (host, port) -> host:port
 
     >>> nagios([saddr])
-    Empty storage u'1'
+    Empty storage '1'
     1
 
 The storage was empty. In that case, the monitor warned as much.
@@ -119,8 +119,8 @@ profixes metrics with a storage id.
     ... """, threaded=False)
     >>> saddr = ':'.join(map(str, addr)) # (host, port) -> host:port
     >>> nagios([saddr, '-m', '-sstatus'])
-    Empty storage u'first'|first:active_txns=0
-    Empty storage u'second'
+    Empty storage 'first'|first:active_txns=0
+    Empty storage 'second'
     | first:connections=0
      first:waiting=0
      second:active_txns=0
@@ -128,8 +128,8 @@ profixes metrics with a storage id.
      second:waiting=0
     1
     >>> nagios([saddr, '-m', '-sstatus'])
-    Empty storage u'first'|first:active_txns=0
-    Empty storage u'second'
+    Empty storage 'first'|first:active_txns=0
+    Empty storage 'second'
     | first:connections=0
      first:waiting=0
      second:active_txns=0

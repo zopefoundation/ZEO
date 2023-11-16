@@ -1412,19 +1412,19 @@ def test_ruok():
     >>> data = json.loads(
     ...     s.recv(struct.unpack(">I", s.recv(4))[0]).decode("ascii"))
     >>> pprint.pprint(data['1'])
-    {u'aborts': 0,
-     u'active_txns': 0,
-     u'commits': 1,
-     u'conflicts': 0,
-     u'conflicts_resolved': 0,
-     u'connections': 1,
-     u'last-transaction': u'03ac11cd11372499',
-     u'loads': 1,
-     u'lock_time': None,
-     u'start': u'Sun Jan  4 09:37:03 2015',
-     u'stores': 1,
-     u'timeout-thread-is-alive': True,
-     u'waiting': 0}
+    {'aborts': 0,
+     'active_txns': 0,
+     'commits': 1,
+     'conflicts': 0,
+     'conflicts_resolved': 0,
+     'connections': 1,
+     'last-transaction': '03ac11cd11372499',
+     'loads': 1,
+     'lock_time': None,
+     'start': 'Sun Jan  4 09:37:03 2015',
+     'stores': 1,
+     'timeout-thread-is-alive': True,
+     'waiting': 0}
     >>> db.close(); s.close()
     """
 
