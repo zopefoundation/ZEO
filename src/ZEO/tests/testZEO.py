@@ -1871,8 +1871,8 @@ def test_suite():
     zeo.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(
         ZODB.tests.util.AAAA_Test_Runner_Hack))
     patterns = [
-        (re.compile(r"u?'start': u?'[^\n]+'"), 'start'),
-        (re.compile(r"u?'last-transaction': u?'[0-9a-f]+'"),
+        (re.compile(r"'start': '[^\n]+'"), 'start'),
+        (re.compile(r"'last-transaction': '[0-9a-f]+'"),
          'last-transaction'),
         (re.compile("ZODB.POSException.ConflictError"), "ConflictError"),
         (re.compile("ZODB.POSException.POSKeyError"), "POSKeyError"),
@@ -1882,9 +1882,9 @@ def test_suite():
          "ClientDisconnected"),
         (re.compile(r"\[Errno \d+\]"), '[Errno N]'),
         (re.compile(r"loads=\d+\.\d+"), 'loads=42.42'),
-        # Python 3 drops the u prefix
-        (re.compile("u('.*?')"), r"\1"),
-        (re.compile('u(".*?")'), r"\1")
+        # GHA prints this for PyPy3 to stdout:
+        (re.compile("/home/runner/work/ZEO/ZEO/src/ZEO/tests/server.pem None"),
+         ''),
         ]
     zeo.addTest(doctest.DocTestSuite(
         setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
@@ -1909,7 +1909,7 @@ def test_suite():
             test_loader = unittest.TestLoader()
             test_loader.testMethodPrefix = prefix
             to.addTest(test_loader.loadTestsFromTestCase(case))
-        
+
     add_tests(zeo, ClientConflictResolutionTests)
     zeo.layer = ZODB.tests.util.MininalTestLayer('testZeo-misc')
     suite.addTest(zeo)
