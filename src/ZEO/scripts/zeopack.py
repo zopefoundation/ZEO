@@ -6,7 +6,9 @@ import socket
 import sys
 import time
 import traceback
+
 import ZEO.ClientStorage
+
 
 usage = """Usage: %prog [options] [servers]
 

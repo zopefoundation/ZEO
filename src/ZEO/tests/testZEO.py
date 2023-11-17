@@ -12,31 +12,13 @@
 #
 ##############################################################################
 """Test suite for ZEO based on ZODB.tests."""
-import multiprocessing
-import resource
-
-from ZEO.ClientStorage import ClientStorage
-from ZEO.Exceptions import ClientDisconnected
-from ZEO.tests import forker, Cache, CommitLockTests, ThreadTests
-from ZEO.tests import IterationTests
-from ZEO._compat import WIN
-
-from ZODB.Connection import TransactionMetaData
-from ZODB.tests import StorageTestBase, BasicStorage,  \
-     TransactionalUndoStorage,  \
-     PackableStorage, Synchronization, ConflictResolution, RevisionStorage, \
-     MTStorage, ReadOnlyStorage, IteratorStorage, RecoveryStorage
-from ZODB.tests.MinPO import MinPO
-from ZODB.tests.StorageTestBase import zodb_unpickle
-from ZODB.utils import maxtid, p64, u64, z64
-from zope.testing import renormalizing
-
 import doctest
 import logging
+import multiprocessing
 import os
-import persistent
 import pprint
 import re
+import resource
 import shutil
 import signal
 import stat
@@ -44,10 +26,10 @@ import sys
 import tempfile
 import threading
 import time
-import transaction
 import unittest
-import ZEO.StorageServer
-import ZEO.tests.ConnectionTests
+
+import persistent
+import transaction
 import ZODB
 import ZODB.blob
 import ZODB.tests.hexstorage
@@ -55,8 +37,39 @@ import ZODB.tests.testblob
 import ZODB.tests.util
 import ZODB.utils
 import zope.testing.setupstack
+from ZODB.Connection import TransactionMetaData
+from ZODB.tests import BasicStorage
+from ZODB.tests import ConflictResolution
+from ZODB.tests import IteratorStorage
+from ZODB.tests import MTStorage
+from ZODB.tests import PackableStorage
+from ZODB.tests import ReadOnlyStorage
+from ZODB.tests import RecoveryStorage
+from ZODB.tests import RevisionStorage
+from ZODB.tests import StorageTestBase
+from ZODB.tests import Synchronization
+from ZODB.tests import TransactionalUndoStorage
+from ZODB.tests.MinPO import MinPO
+from ZODB.tests.StorageTestBase import zodb_unpickle
+from ZODB.utils import maxtid
+from ZODB.utils import p64
+from ZODB.utils import u64
+from ZODB.utils import z64
+from zope.testing import renormalizing
+
+import ZEO.StorageServer
+import ZEO.tests.ConnectionTests
+from ZEO._compat import WIN
+from ZEO.ClientStorage import ClientStorage
+from ZEO.Exceptions import ClientDisconnected
+from ZEO.tests import Cache
+from ZEO.tests import CommitLockTests
+from ZEO.tests import IterationTests
+from ZEO.tests import ThreadTests
+from ZEO.tests import forker
 
 from . import testssl
+
 
 logger = logging.getLogger('ZEO.tests.testZEO')
 
@@ -82,6 +95,7 @@ class Test_convenience_functions(unittest.TestCase):
 
     def test_ZEO_client_convenience(self):
         from unittest import mock
+
         import ZEO
 
         client_thread = mock.Mock(
@@ -94,6 +108,7 @@ class Test_convenience_functions(unittest.TestCase):
 
     def test_ZEO_DB_convenience_ok(self):
         from unittest import mock
+
         import ZEO
 
         client_mock = mock.Mock(spec=['close'])
@@ -112,6 +127,7 @@ class Test_convenience_functions(unittest.TestCase):
 
     def test_ZEO_DB_convenience_error(self):
         from unittest import mock
+
         import ZEO
 
         client_mock = mock.Mock(spec=['close'])
@@ -130,6 +146,7 @@ class Test_convenience_functions(unittest.TestCase):
 
     def test_ZEO_connection_convenience_ok(self):
         from unittest import mock
+
         import ZEO
 
         ret = object()
@@ -149,6 +166,7 @@ class Test_convenience_functions(unittest.TestCase):
 
     def test_ZEO_connection_convenience_value(self):
         from unittest import mock
+
         import ZEO
 
         DB_mock = mock.Mock(spec=[
@@ -739,7 +757,8 @@ class CommonBlobTests:
 
     def checkLoadBlob(self):
         from ZODB.blob import Blob
-        from ZODB.tests.StorageTestBase import zodb_pickle, ZERO
+        from ZODB.tests.StorageTestBase import ZERO
+        from ZODB.tests.StorageTestBase import zodb_pickle
 
         somedata = b'a' * 10
 
@@ -1393,19 +1412,19 @@ def test_ruok():
     >>> data = json.loads(
     ...     s.recv(struct.unpack(">I", s.recv(4))[0]).decode("ascii"))
     >>> pprint.pprint(data['1'])
-    {u'aborts': 0,
-     u'active_txns': 0,
-     u'commits': 1,
-     u'conflicts': 0,
-     u'conflicts_resolved': 0,
-     u'connections': 1,
-     u'last-transaction': u'03ac11cd11372499',
-     u'loads': 1,
-     u'lock_time': None,
-     u'start': u'Sun Jan  4 09:37:03 2015',
-     u'stores': 1,
-     u'timeout-thread-is-alive': True,
-     u'waiting': 0}
+    {'aborts': 0,
+     'active_txns': 0,
+     'commits': 1,
+     'conflicts': 0,
+     'conflicts_resolved': 0,
+     'connections': 1,
+     'last-transaction': '03ac11cd11372499',
+     'loads': 1,
+     'lock_time': None,
+     'start': 'Sun Jan  4 09:37:03 2015',
+     'stores': 1,
+     'timeout-thread-is-alive': True,
+     'waiting': 0}
     >>> db.close(); s.close()
     """
 
@@ -1852,8 +1871,8 @@ def test_suite():
     zeo.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(
         ZODB.tests.util.AAAA_Test_Runner_Hack))
     patterns = [
-        (re.compile(r"u?'start': u?'[^\n]+'"), 'start'),
-        (re.compile(r"u?'last-transaction': u?'[0-9a-f]+'"),
+        (re.compile(r"'start': '[^\n]+'"), 'start'),
+        (re.compile(r"'last-transaction': '[0-9a-f]+'"),
          'last-transaction'),
         (re.compile("ZODB.POSException.ConflictError"), "ConflictError"),
         (re.compile("ZODB.POSException.POSKeyError"), "POSKeyError"),
@@ -1863,9 +1882,10 @@ def test_suite():
          "ClientDisconnected"),
         (re.compile(r"\[Errno \d+\]"), '[Errno N]'),
         (re.compile(r"loads=\d+\.\d+"), 'loads=42.42'),
-        # Python 3 drops the u prefix
-        (re.compile("u('.*?')"), r"\1"),
-        (re.compile('u(".*?")'), r"\1")
+        # GHA prints this for PyPy3 to stdout:
+        (re.compile(
+            r"/home/runner/work/ZEO/ZEO/src/ZEO/tests/server.pem None\n"),
+         ''),
         ]
     zeo.addTest(doctest.DocTestSuite(
         setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
@@ -1890,7 +1910,7 @@ def test_suite():
             test_loader = unittest.TestLoader()
             test_loader.testMethodPrefix = prefix
             to.addTest(test_loader.loadTestsFromTestCase(case))
-        
+
     add_tests(zeo, ClientConflictResolutionTests)
     zeo.layer = ZODB.tests.util.MininalTestLayer('testZeo-misc')
     suite.addTest(zeo)

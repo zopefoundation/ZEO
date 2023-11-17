@@ -18,10 +18,12 @@ import time
 
 from persistent.TimeStamp import TimeStamp
 from ZODB.Connection import TransactionMetaData
-from ZODB.tests.StorageTestBase import zodb_pickle, MinPO
+from ZODB.tests.StorageTestBase import MinPO
+from ZODB.tests.StorageTestBase import zodb_pickle
 
 from ZEO.Exceptions import ClientDisconnected
 from ZEO.tests.TestThread import TestThread
+
 
 ZERO = b'\0'*8
 

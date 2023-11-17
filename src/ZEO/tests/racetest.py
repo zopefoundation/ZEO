@@ -17,8 +17,9 @@ problems in ZEO.
 It complements ZODB.tests.racetest .
 """
 
-import zope.interface
 import time
+
+import zope.interface
 
 
 # LoadDelayedStorage wraps base storage in injects delays after load*

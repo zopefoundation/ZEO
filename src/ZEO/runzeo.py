@@ -31,14 +31,15 @@ Unless -C is specified, -a and -f are required.
 
 # The code here is designed to be reused by other, similar servers.
 
+import logging
 import os
-import sys
 import signal
 import socket
-import logging
+import sys
 
 import ZConfig.datatypes
 from zdaemon.zdoptions import ZDOptions
+
 
 logger = logging.getLogger('ZEO.runzeo')
 _pid = str(os.getpid())

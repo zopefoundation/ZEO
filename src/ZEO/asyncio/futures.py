@@ -14,7 +14,9 @@ a standard ``asyncio.Task``.
 """
 
 import asyncio
-from asyncio import CancelledError, InvalidStateError, get_event_loop
+from asyncio import CancelledError
+from asyncio import InvalidStateError
+from asyncio import get_event_loop
 from threading import Event
 from time import sleep
 
@@ -357,8 +359,10 @@ class ConcurrentTask(ConcurrentFuture):
 
 # use C implementation if available
 try:
-    from ._futures import Future, ConcurrentFuture  # noqa: F401, F811
-    from ._futures import AsyncTask, ConcurrentTask  # noqa: F401, F811
+    from ._futures import AsyncTask  # noqa: F401, F811
+    from ._futures import ConcurrentFuture
+    from ._futures import ConcurrentTask
+    from ._futures import Future
     from ._futures import switch_thread  # noqa: F401, F811
 except ImportError:
     pass

@@ -13,7 +13,6 @@
 ##############################################################################
 """Basic unit tests for a client cache."""
 
-from ZODB.utils import p64, u64, z64, repr_to_oid
 import doctest
 import os
 import re
@@ -22,10 +21,16 @@ import struct
 import sys
 import tempfile
 import unittest
-import ZEO.cache
+
 import ZODB.tests.util
-import zope.testing.setupstack
 import zope.testing.renormalizing
+import zope.testing.setupstack
+from ZODB.utils import p64
+from ZODB.utils import repr_to_oid
+from ZODB.utils import u64
+from ZODB.utils import z64
+
+import ZEO.cache
 
 
 n1 = p64(1)

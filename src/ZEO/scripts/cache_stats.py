@@ -44,12 +44,11 @@ this file in the 'explain' dictionary.  Note that the keys there (and
 also the arguments to _trace() in ClientStorage.py) are 'code & 0x7e',
 i.e. the low bit is always zero.
 """
+import argparse
+import gzip
+import struct
 import sys
 import time
-import argparse
-import struct
-import gzip
-
 # we assign ctime locally to facilitate test replacement!
 from time import ctime
 

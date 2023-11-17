@@ -9,6 +9,7 @@ An example of the log format is:
 import re
 import time
 
+
 rx_time = re.compile(r'(\d\d\d\d-\d\d-\d\d)T(\d\d:\d\d:\d\d)')
 
 

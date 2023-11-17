@@ -13,27 +13,28 @@
 ##############################################################################
 import concurrent.futures
 import contextlib
+import logging
 import os
-import time
 import socket
 import threading
-import logging
+import time
 
-from ZEO.ClientStorage import ClientStorage
-from ZEO.Exceptions import ClientDisconnected
-from ZEO.asyncio.marshal import encode
-from ZEO.tests import forker
-
+import transaction
 from ZODB.Connection import TransactionMetaData
 from ZODB.DB import DB
 from ZODB.POSException import ReadOnlyError
-from ZODB.tests.StorageTestBase import StorageTestBase
 from ZODB.tests.MinPO import MinPO
-from ZODB.tests.StorageTestBase import zodb_pickle, zodb_unpickle
+from ZODB.tests.StorageTestBase import StorageTestBase
+from ZODB.tests.StorageTestBase import zodb_pickle
+from ZODB.tests.StorageTestBase import zodb_unpickle
 
-import transaction
+from ZEO.asyncio.marshal import encode
+from ZEO.ClientStorage import ClientStorage
+from ZEO.Exceptions import ClientDisconnected
+from ZEO.tests import forker
 
 from . import testssl
+
 
 logger = logging.getLogger('ZEO.tests.ConnectionTests')
 

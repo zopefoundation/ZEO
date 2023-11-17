@@ -34,14 +34,19 @@ import ZODB.event
 import ZODB.POSException
 
 import ZEO.Exceptions
-from ZEO.Exceptions import ClientDisconnected, ServerException
 import ZEO.interfaces
+from ZEO.Exceptions import ClientDisconnected
+from ZEO.Exceptions import ServerException
 
 from . import base
 from .compat import new_event_loop
-from .marshal import encoder, decoder
-from .futures import Future, AsyncTask as Task, \
-     run_coroutine_threadsafe, switch_thread
+from .futures import AsyncTask as Task
+from .futures import Future
+from .futures import run_coroutine_threadsafe
+from .futures import switch_thread
+from .marshal import decoder
+from .marshal import encoder
+
 
 logger = logging.getLogger(__name__)
 

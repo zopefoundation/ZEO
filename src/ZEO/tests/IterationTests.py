@@ -13,9 +13,9 @@
 ##############################################################################
 """ZEO iterator protocol tests."""
 
-import transaction
 import gc
 
+import transaction
 from ZODB.Connection import TransactionMetaData
 
 from ..asyncio.testing import AsyncRPC

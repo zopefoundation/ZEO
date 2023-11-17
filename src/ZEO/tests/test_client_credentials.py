@@ -3,8 +3,9 @@
 This is an experimental feature to enable server authentication and
 authorization.
 """
-from zope.testing import setupstack
 import unittest
+
+from zope.testing import setupstack
 
 import ZEO.StorageServer
 
