@@ -1883,7 +1883,8 @@ def test_suite():
         (re.compile(r"\[Errno \d+\]"), '[Errno N]'),
         (re.compile(r"loads=\d+\.\d+"), 'loads=42.42'),
         # GHA prints this for PyPy3 to stdout:
-        (re.compile("/home/runner/work/ZEO/ZEO/src/ZEO/tests/server.pem None"),
+        (re.compile(
+            r"/home/runner/work/ZEO/ZEO/src/ZEO/tests/server.pem None\n"),
          ''),
         ]
     zeo.addTest(doctest.DocTestSuite(
