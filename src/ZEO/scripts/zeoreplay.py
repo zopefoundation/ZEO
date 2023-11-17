@@ -25,22 +25,23 @@ and sub-command in the transaction.  We can use this to compare timings with
 synthesized data.
 """
 
+import getopt
+import operator
 import re
 import sys
 import time
-import getopt
-import operator
+from functools import reduce
 # ZEO logs measure wall-clock time so for consistency we need to do the same
 # from time import clock as now
 from time import time as now
 
-from ZODB.FileStorage import FileStorage
 # from BDBStorage.BDBFullStorage import BDBFullStorage
 # from Standby.primary import PrimaryStorage
 # from Standby.config import RS_PORT
 from ZODB.Connection import TransactionMetaData
+from ZODB.FileStorage import FileStorage
 from ZODB.utils import p64
-from functools import reduce
+
 
 datecre = re.compile(r'(\d\d\d\d-\d\d-\d\d)T(\d\d:\d\d:\d\d)')
 methcre = re.compile(r"ZEO Server (\w+)\((.*)\) \('(.*)', (\d+)")

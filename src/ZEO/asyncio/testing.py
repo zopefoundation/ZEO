@@ -1,6 +1,7 @@
-from _thread import allocate_lock
 import asyncio
+from _thread import allocate_lock
 from time import sleep
+
 
 try:
     ConnectionRefusedError

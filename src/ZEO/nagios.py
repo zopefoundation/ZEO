@@ -25,6 +25,7 @@ import struct
 import sys
 import time
 
+
 NO_TRANSACTION = '0'*16
 
 nodiff_names = 'active_txns connections waiting'.split()

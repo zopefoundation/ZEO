@@ -7,5 +7,6 @@ application, so we isolate the few threaded tests in their own layer.
 """
 import ZODB.tests.util
 
+
 threaded_server_tests = ZODB.tests.util.MininalTestLayer(
     'threaded_server_tests')

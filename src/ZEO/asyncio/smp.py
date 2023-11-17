@@ -5,9 +5,10 @@ On the wire, a message is represented by a 4 bytes length followed
 by the message's bytes.
 """
 
+import struct
 from asyncio import Protocol
 from logging import getLogger
-import struct
+
 
 logger = getLogger(__name__)
 

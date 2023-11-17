@@ -6,9 +6,10 @@ import unittest
 import zope.testing.setupstack
 from BTrees.Length import Length
 from ZODB import serialize
-from ZODB.DemoStorage import DemoStorage
-from ZODB.utils import z64, maxtid
 from ZODB.broken import find_global
+from ZODB.DemoStorage import DemoStorage
+from ZODB.utils import maxtid
+from ZODB.utils import z64
 
 import ZEO
 

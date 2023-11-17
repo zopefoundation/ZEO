@@ -1,26 +1,36 @@
 import asyncio
-
-from zope.testing import setupstack
-from unittest import TestCase, mock
-from ZODB.utils import maxtid, RLock
-
 import collections
-from itertools import count
 import logging
 import struct
-import unittest
 import threading
-from time import time, sleep
+import unittest
 from functools import partial
+from itertools import count
+from time import sleep
+from time import time
+from unittest import TestCase
+from unittest import mock
 
-from ..Exceptions import ClientDisconnected, ProtocolError
+from ZODB.utils import RLock
+from ZODB.utils import maxtid
+from zope.testing import setupstack
 
-from .base import ZEOBaseProtocol, SizedMessageProtocol
-from .testing import Loop, FaithfulLoop
-from .client import ClientThread, Fallback
-from .futures import Future, ConcurrentFuture, AsyncTask, ConcurrentTask
-from .server import new_connection, best_protocol_version
-from .marshal import encoder, decoder
+from ..Exceptions import ClientDisconnected
+from ..Exceptions import ProtocolError
+from .base import SizedMessageProtocol
+from .base import ZEOBaseProtocol
+from .client import ClientThread
+from .client import Fallback
+from .futures import AsyncTask
+from .futures import ConcurrentFuture
+from .futures import ConcurrentTask
+from .futures import Future
+from .marshal import decoder
+from .marshal import encoder
+from .server import best_protocol_version
+from .server import new_connection
+from .testing import FaithfulLoop
+from .testing import Loop
 
 
 logger = logging.getLogger(__name__)

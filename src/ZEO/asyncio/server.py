@@ -5,13 +5,15 @@ import json
 import logging
 import os
 import threading
+
 import ZODB.POSException
 
 from ..shortrepr import short_repr
-
 from . import base
 from .compat import new_event_loop
-from .marshal import server_decoder, encoder, reduce_exception
+from .marshal import encoder
+from .marshal import reduce_exception
+from .marshal import server_decoder
 
 
 logger = logging.getLogger(__name__)

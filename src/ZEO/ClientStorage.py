@@ -25,29 +25,28 @@ import socket
 import stat
 import sys
 import threading
-from threading import get_ident
 import time
 import weakref
 from binascii import hexlify
+from threading import get_ident
 
 import BTrees.OOBTree
-
 import zc.lockfile
 import ZODB
 import ZODB.BaseStorage
 import ZODB.ConflictResolution
 import ZODB.interfaces
 import zope.interface
-
 from persistent.TimeStamp import TimeStamp
-from ZEO._compat import WIN
-from ZEO.Exceptions import ClientDisconnected
-from ZEO.TransactionBuffer import TransactionBuffer
 from ZODB import POSException
 from ZODB import utils
 
 import ZEO.asyncio.client
 import ZEO.cache
+from ZEO._compat import WIN
+from ZEO.Exceptions import ClientDisconnected
+from ZEO.TransactionBuffer import TransactionBuffer
+
 
 logger = logging.getLogger(__name__)
 

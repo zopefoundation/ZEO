@@ -17,8 +17,9 @@
 
 import os
 
-import ZEO
 import zdaemon.zdctl
+
+import ZEO
 
 
 # Main program
