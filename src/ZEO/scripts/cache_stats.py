@@ -289,7 +289,7 @@ def main(args=None):
 
 def dumpbysize(bysize, how, how2):
     print()
-    print("Unique sizes {}: {}".format(how, addcommas(len(bysize))))
+    print(f"Unique sizes {how}: {addcommas(len(bysize))}")
     print("%10s %6s %6s" % ("size", "objs", how2))
     sizes = sorted(bysize.keys())
     for size in sizes:
