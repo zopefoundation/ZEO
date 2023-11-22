@@ -139,6 +139,7 @@ class IterationTests:
         self._storage.tpc_abort(t)
         self._assertIteratorIdsEmpty()
         self.assertRaises(KeyError, self._storage._call, 'iterator_next', iid)
+        gc.enable()
 
     def checkIteratorGCStorageDisconnect(self):
 
