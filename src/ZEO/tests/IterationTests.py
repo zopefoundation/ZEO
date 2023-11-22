@@ -122,6 +122,8 @@ class IterationTests:
         self.assertRaises(KeyError, self._storage._call, 'iterator_next', iid)
 
     def checkIteratorGCStorageTPCAborting(self):
+        # Disabling GC to prevent a race condition in PyPy later on:
+        gc.disable()
         # The odd little jig we do below arises from the fact that the
         # CS iterator may not be constructed right away if the CS is wrapped.
         # We need to actually do some iteration to get the iterator created.

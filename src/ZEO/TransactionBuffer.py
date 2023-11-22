@@ -24,8 +24,7 @@ is used to store the data until a commit or abort.
 import tempfile
 
 from zodbpickle.pickle import Pickler
-
-from ZEO._compat import Unpickler
+from zodbpickle.pickle import Unpickler
 
 
 class TransactionBuffer:
