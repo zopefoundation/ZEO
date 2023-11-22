@@ -165,10 +165,7 @@ class TestZEOServerSocket(unittest.TestCase):
         class Options:
             address = b'a byte str that does not exist'
 
-        # bytes are not a string type under Py3
-        assertion = self._not_unlinked
-
-        assertion(unlink, Options)
+        self._not_unlinked(unlink, Options)
 
     def test_clear_with_tuple(self, unlink):
         class Options:

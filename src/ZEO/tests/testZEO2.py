@@ -221,8 +221,7 @@ def some_basic_locking_tests():
     >>> logging.getLogger('ZEO').addHandler(handler)
     >>> logging.getLogger('ZEO').setLevel(logging.DEBUG)
 
-Work around the fact that ZODB registers level names backwards, which
-quit working in Python 3.4:
+Work around the fact that ZODB registers level names backwards:
 
     >>> import logging
     >>> from ZODB.loglevels import BLATHER
@@ -452,8 +451,7 @@ Set up server and logging:
     >>> logging.getLogger('ZEO').addHandler(handler)
     >>> logging.getLogger('ZEO').setLevel(logging.DEBUG)
 
-Work around the fact that ZODB registers level names backwards, which
-quit working in Python 3.4:
+Work around the fact that ZODB registers level names backwards:
 
     >>> import logging
     >>> from ZODB.loglevels import BLATHER

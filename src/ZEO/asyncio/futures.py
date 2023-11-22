@@ -265,7 +265,7 @@ class CoroutineExecutor:
             else:
                 await_next = Future(self.task.get_loop())
                 await_next.set_exception(
-                        RuntimeError("Task got bad await: %r" % (result,)))
+                        RuntimeError("Task got bad await: {!r}".format(result)))
 
             if self.cancel_requested:
                 _cancel_future(await_next, self.cancel_msg)

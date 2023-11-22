@@ -47,8 +47,8 @@ from ZODB.utils import RLock
 from ZODB.utils import p64
 from ZODB.utils import u64
 from ZODB.utils import z64
+from zodbpickle.pickle import Pickler
 
-from ZEO._compat import Pickler
 from ZEO._compat import Unpickler
 from ZEO.asyncio.server import Acceptor
 from ZEO.asyncio.server import Delay
@@ -913,7 +913,7 @@ class StorageServer:
         elif not invq:
             log("invq empty")
         else:
-            log("tid to old for invq {} < {}".format(u64(tid), u64(invq[-1][0])))
+            log(f"tid to old for invq {u64(tid)} < {u64(invq[-1][0])}")
 
         return latest_tid, list(oids)
 

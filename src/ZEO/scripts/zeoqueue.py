@@ -30,8 +30,8 @@ import re
 import sys
 import time
 
-from ZEO._compat import dump
-from ZEO._compat import load
+from zodbpickle.pickle import dump
+from zodbpickle.pickle import load
 
 
 COMMASPACE = ', '

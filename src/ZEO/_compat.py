@@ -16,11 +16,7 @@
 import platform
 import sys
 
-from zodbpickle.pickle import Pickler
 from zodbpickle.pickle import Unpickler as _Unpickler
-from zodbpickle.pickle import dump
-from zodbpickle.pickle import dumps
-from zodbpickle.pickle import loads
 
 
 PYPY = getattr(platform, 'python_implementation', lambda: None)() == 'PyPy'

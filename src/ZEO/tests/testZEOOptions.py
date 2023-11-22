@@ -54,7 +54,7 @@ class TestZEOOptions(TestZDOptions):
     def tearDown(self):
         try:
             os.remove(self.tempfilename)
-        except os.error:
+        except OSError:
             pass
 
     def test_configure(self):
