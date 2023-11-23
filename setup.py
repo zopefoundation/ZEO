@@ -16,7 +16,7 @@ from setuptools import find_packages
 from setuptools import setup
 
 
-version = '6.0.0.dev0'
+version = '6.0.0'
 
 install_requires = [
     'ZODB >= 5.1.1',
