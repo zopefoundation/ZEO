@@ -78,7 +78,6 @@ setup(name="ZEO",
         "Operating System :: Unix",
         "Framework :: ZODB",
       ],
-      tests_require=tests_require,
       extras_require={
           'test': tests_require,
           'uvloop': [
