@@ -2,7 +2,7 @@
 # https://github.com/zopefoundation/meta/tree/master/config/pure-python
 [meta]
 template = "pure-python"
-commit-id = "cb0568c7"
+commit-id = "8518e7ed"
 
 [python]
 with-windows = false
@@ -13,7 +13,6 @@ with-sphinx-doctests = false
 with-macos = false
 
 [tox]
-use-flake8 = false
 testenv-commands = [
     "# Run unit tests first.",
     "zope-testrunner -u --test-path=src -a 1000 {posargs:-vc}",
@@ -43,7 +42,6 @@ fail-under = 53
 [manifest]
 additional-rules = [
     "include *.yaml",
-    "include *.py",
     "include COPYING",
     "include log.ini",
     "recursive-include src *.csr",
@@ -57,11 +55,6 @@ additional-rules = [
 
 [github-actions]
 additional-config = [
-    "- [\"3.7\",   \"py37-msgpack1\"]",
-    "- [\"3.7\",   \"py37-uvloop\"]",
-    "- [\"3.7\",   \"py37-zodbmaster\"]",
-    "- [\"3.8\",   \"py38-msgpack1\"]",
-    "- [\"3.8\",   \"py38-uvloop\"]",
     "- [\"3.9\",   \"py39-msgpack1\"]",
     "- [\"3.9\",   \"py39-uvloop\"]",
     "- [\"3.10\",  \"py310-msgpack1\"]",
@@ -71,5 +64,7 @@ additional-config = [
     "- [\"3.11\",  \"py311-uvloop\"]",
     "- [\"3.12\",  \"py312-msgpack1\"]",
     "- [\"3.12\",  \"py312-uvloop\"]",
-    "- [\"pypy-3.7\", \"pypy3-msgpack1\"]",
+    "- [\"3.13\",  \"py313-msgpack1\"]",
+    "- [\"3.13\",  \"py313-uvloop\"]",
+    "- [\"pypy-3.10\", \"pypy3-msgpack1\"]",
     ]
