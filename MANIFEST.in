@@ -13,6 +13,7 @@ recursive-include docs *.txt
 recursive-include docs Makefile
 
 recursive-include src *.py
+include *.py
 include *.yaml
 include COPYING
 include log.ini
