@@ -81,6 +81,7 @@ def parse_time(line):
 
 class Txn:
     """Track status of single transaction."""
+
     def __init__(self, tid):
         self.tid = tid
         self.hint = None

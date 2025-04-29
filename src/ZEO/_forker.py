@@ -35,7 +35,7 @@ class ZEOConfig:
             if isinstance(log, str):
                 self.logpath = log
             elif isinstance(addr, str):
-                self.logpath = addr+'.log'
+                self.logpath = addr + '.log'
             else:
                 self.logpath = 'server.log'
 
@@ -105,7 +105,7 @@ def runner(config, qin, qout, timeout=None,
         old_protocols = ZEO.asyncio.server.ServerProtocol.protocols
         ZEO.asyncio.server.ServerProtocol.protocols = tuple(sorted(
             set(old_protocols) | {protocol}
-            ))
+        ))
 
     try:
         import threading
@@ -125,7 +125,7 @@ def runner(config, qin, qout, timeout=None,
         thread = threading.Thread(
             target=server.server.loop, kwargs=dict(timeout=.2),
             name=(None if name is None else name + '-server'),
-            )
+        )
         thread.daemon = True
         thread.start()
         os.remove(config)

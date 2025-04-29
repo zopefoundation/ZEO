@@ -138,7 +138,7 @@ class ReplayTxn(TxnStat):
         TxnStat.__init__(self)
 
     def replay(self):
-        ZERO = '\0'*8
+        ZERO = '\0' * 8
         t0 = now()
         t = TransactionMetaData()
         self._storage.tpc_begin(t)
@@ -301,13 +301,13 @@ def main():
             print('input file line:', i)
             raise
     t1 = now()
-    print('total parse time:', t1-t0)
+    print('total parse time:', t1 - t0)
     t2 = now()
     if replay:
         p.replay()
     t3 = now()
-    print('total replay time:', t3-t2)
-    print('total time:', t3-t0)
+    print('total replay time:', t3 - t2)
+    print('total time:', t3 - t0)
 
 
 if __name__ == '__main__':

@@ -1,4 +1,4 @@
 try:
     from uvloop import new_event_loop
-except ImportError:
+except ModuleNotFoundError:
     from asyncio import new_event_loop

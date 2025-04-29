@@ -12,7 +12,6 @@
 #
 ##############################################################################
 import doctest
-import unittest
 
 
 class FakeStorageBase:
@@ -41,14 +40,14 @@ class FakeStorage(FakeStorageBase):
         if next == '4':
             next = None
 
-        return oid, oid*8, 'data ' + oid, next
+        return oid, oid * 8, 'data ' + oid, next
 
 
 class FakeServer:
     storages = {
         '1': FakeStorage(),
         '2': FakeStorageBase(),
-        }
+    }
     lock_managers = storages
 
     def register_connection(*args):

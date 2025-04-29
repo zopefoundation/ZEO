@@ -16,7 +16,6 @@
 
 import os
 import tempfile
-import unittest
 
 import ZODB.config
 from zdaemon.tests.testzdoptions import TestZDOptions

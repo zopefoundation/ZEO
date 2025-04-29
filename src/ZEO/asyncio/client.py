@@ -92,7 +92,8 @@ class Protocol(base.ZEOBaseProtocol):
         self.futures = {}  # { message_id -> future }
         self.ssl = ssl
         self.ssl_server_hostname = ssl_server_hostname
-        # received invalidations while the protocol is not yet registered with client
+        # received invalidations while the protocol is not yet registered with
+        # client
         self.invalidations = []
 
         self.connect()
@@ -152,11 +153,12 @@ class Protocol(base.ZEOBaseProtocol):
     def connect(self):
         if isinstance(self.addr, tuple):
             host, port = self.addr
-            cr = lambda: self.loop.create_connection(  # noqa: E731
+
+            def cr(): return self.loop.create_connection(  # noqa: E731
                 self.protocol_factory, host or '127.0.0.1', port,
                 ssl=self.ssl, server_hostname=self.ssl_server_hostname)
         else:
-            cr = lambda: self.loop.create_unix_connection(  # noqa: E731
+            def cr(): return self.loop.create_unix_connection(  # noqa: E731
                 self.protocol_factory, self.addr, ssl=self.ssl)
 
         async def connect():
@@ -242,7 +244,7 @@ class Protocol(base.ZEOBaseProtocol):
                         'register', self.storage_key,
                         self.read_only if self.read_only is not Fallback
                         else False,
-                        )
+                    )
                 except ZODB.POSException.ReadOnlyError:
                     if self.read_only is Fallback:
                         self.read_only = True
@@ -277,7 +279,7 @@ class Protocol(base.ZEOBaseProtocol):
                     exc = ServerException(class_, args)
                 future.set_exception(exc)
             elif (isinstance(args, tuple) and len(args) > 1 and
-                  type(args[0]) == self.exception_type_type and
+                  isinstance(args[0], self.exception_type_type) and
                   issubclass(args[0], Exception)
                   ):
                 if not issubclass(args[0], unlogged_exceptions):
@@ -313,7 +315,7 @@ class Protocol(base.ZEOBaseProtocol):
         if message_id is None:
             self.message_id += 1
             message_id = self.message_id
-        future = future or  Future(loop=self.loop)  # noqa: E271
+        future = future or Future(loop=self.loop)  # noqa: E271
         self.futures[message_id] = future
         self.write_message(self.encode(message_id, False, method, args))
         return future
@@ -350,7 +352,7 @@ class Protocol(base.ZEOBaseProtocol):
         'invalidateTransaction', 'info',
         'receiveBlobStart', 'receiveBlobChunk', 'receiveBlobStop',
         # plus: notify_connected, notify_disconnected
-        )
+    )
     client_delegated = client_methods[1:]
 
     def heartbeat(self, write=True):
@@ -369,7 +371,7 @@ def create_ConflictError(class_, args):
         message=args['message'],
         oid=args['oid'],
         serials=args['serials'],
-        )
+    )
     exc.class_name = args.get('class_name')
     return exc
 
@@ -380,7 +382,7 @@ def create_BTreesConflictError(class_, args):
         p2=args['p2'],
         p3=args['p3'],
         reason=args['reason'],
-        )
+    )
 
 
 def create_MultipleUndoErrors(class_, args):
@@ -398,7 +400,7 @@ exc_classes = {
     'ZODB.POSException.ReadOnlyError': ZODB.POSException.ReadOnlyError,
     'ZODB.POSException.StorageTransactionError':
     ZODB.POSException.StorageTransactionError,
-    }
+}
 exc_factories = {
     'builtins.KeyError': create_Exception,
     'builtins.TypeError': create_Exception,
@@ -411,7 +413,7 @@ exc_factories = {
     'ZODB.POSException.ReadConflictError': create_ConflictError,
     'ZODB.POSException.ReadOnlyError': create_Exception,
     'ZODB.POSException.StorageTransactionError': create_Exception,
-    }
+}
 unlogged_exceptions = (ZODB.POSException.POSKeyError,
                        ZODB.POSException.ConflictError)
 
@@ -546,7 +548,7 @@ class ClientIO:
                          ssl_server_hostname=self.ssl_server_hostname,
                          )
                 for addr in self.addrs
-                ]
+            ]
 
     async def register(self, protocol, server_tid):
         """register *protocol* -- run as task."""
@@ -623,7 +625,7 @@ class ClientIO:
                         logger.critical(
                             "%s dropping stale cache",
                             getattr(self.client, '__name__', ''),
-                            )
+                        )
                         self.cache.clear()
                         self.client.invalidateCache()
             else:
@@ -690,7 +692,7 @@ class ClientIO:
 
         Fail immediately if ``ready is None`` unless ``init_ok``.
         """
-        if self.ready is None  and  not init_ok:
+        if self.ready is None and not init_ok:
             # We started without waiting for a connection. (prob tests :( )
             raise ClientDisconnected("never connected")
         if not self.operational:
@@ -769,8 +771,9 @@ class ClientIO:
             if self.cache.loadBefore(oid, tid) is None:
                 oids_tofetch.append(oid)
         if oids_tofetch:
-            await asyncio.gather(*(Task(self._prefetch_co(oid, tid), loop=self.loop)
-                                   for oid in oids_tofetch))
+            await asyncio.gather(
+                *(Task(self._prefetch_co(oid, tid), loop=self.loop)
+                  for oid in oids_tofetch))
 
     async def tpc_finish_co(self, tid, updates, f):
         if not self.operational:
@@ -960,12 +963,13 @@ class ClientRunner:
         if loop.is_running():
             call(self.client.close_co())
         else:  # pragma: no cover
-            # Note: this can happen when loop.stop is called and so run_io_thread
-            #       calls hereby close with already stopped event loop.
+            # Note: this can happen when loop.stop is called and so
+            #       run_io_thread calls hereby close with already stopped event
+            #       loop.
             # Note: run_coroutine_threadsafe - not Task - is used to protect
             #       from executing coro steps while loop is not yet running.
             loop.run_until_complete(
-                    run_coroutine_threadsafe(self.client.close_co(), loop))
+                run_coroutine_threadsafe(self.client.close_co(), loop))
         self.__args = None  # break reference cycle
 
     @staticmethod
@@ -1007,7 +1011,7 @@ class ClientThread(ClientRunner):
         self.thread = threading.Thread(
             target=self.run_io_thread,
             name="%s zeo client networking thread" % client.__name__,
-            )
+        )
         self.thread.daemon = True
         self.started = threading.Event()
         self.thread.start()
@@ -1069,11 +1073,6 @@ class ClientThread(ClientRunner):
 
 def cancel_task(task):
     task.cancel()
-    # With Python before 3.8, cancelation is not sufficient to
-    # ignore a potential exception -- eat it in a done callback
-    if sys.version_info < (3,9):
-        task.add_done_callback(
-            lambda future: future.cancelled() or future.exception())
 
 
 async def await_with_timeout(f, timeout, loop):

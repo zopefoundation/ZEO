@@ -34,7 +34,7 @@ def short_repr(obj):
         else:
             r = repr(obj)
         if len(r) > REPR_LIMIT:
-            r = r[:REPR_LIMIT-4] + '...' + r[-1]
+            r = r[:REPR_LIMIT - 4] + '...' + r[-1]
         return r
     elif isinstance(obj, (list, tuple)):
         elts = []

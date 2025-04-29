@@ -275,7 +275,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             read_only and "RO" or "RW",
             read_only_fallback and "fallback" or "normal",
             storage,
-            )
+        )
 
         self._is_read_only = read_only
         self._read_only_fallback = read_only_fallback
@@ -335,7 +335,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             ZEO.asyncio.client.Fallback if read_only_fallback else read_only,
             wait_timeout or 30,
             ssl=ssl, ssl_server_hostname=ssl_server_hostname,
-            )
+        )
         self._call = self._server.call
         self._async = self._server.async_
         self._async_iter = self._server.async_iter
@@ -395,7 +395,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
             target=_check_blob_cache_size,
             args=(self.blob_dir, target),
             name="%s zeo client check blob size thread" % self.__name__,
-            )
+        )
         check_blob_size_thread.daemon = True
         check_blob_size_thread.start()
         self._check_blob_size_thread = check_blob_size_thread
@@ -720,7 +720,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
 
     def receiveBlobChunk(self, oid, serial, chunk):
         logger.debug("receiveBlobChunk for %r, %r", oid, serial)
-        blob_filename = self.fshelper.getBlobFilename(oid, serial)+'.dl'
+        blob_filename = self.fshelper.getBlobFilename(oid, serial) + '.dl'
         assert os.path.exists(blob_filename)
         f = open(blob_filename, 'r+b')
         f.seek(0, 2)
@@ -732,7 +732,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
     def receiveBlobStop(self, oid, serial):
         logger.debug("receiveBlobStop for %r, %r", oid, serial)
         blob_filename = self.fshelper.getBlobFilename(oid, serial)
-        os.rename(blob_filename+'.dl', blob_filename)
+        os.rename(blob_filename + '.dl', blob_filename)
         os.chmod(blob_filename, stat.S_IREAD)
 
     def deleteObject(self, oid, serial, txn):
@@ -757,7 +757,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                 # We're using a server shared cache.  If the file isn't
                 # here, it's not anywhere.
                 raise POSException.POSKeyError(
-                        "No blob file at %s" % blob_filename, oid, serial)
+                    "No blob file at %s" % blob_filename, oid, serial)
 
         if os.path.exists(blob_filename):
             return _accessed(blob_filename)
@@ -995,7 +995,7 @@ class ClientStorage(ZODB.ConflictResolution.ConflictResolvingStorage):
                     ZODB.blob.rename_or_copy_blob(
                         blobfilename,
                         target_blob_file_name,
-                        )
+                    )
                 finally:
                     lock.close()
                 had_blobs = True
@@ -1216,8 +1216,8 @@ class BlobCacheLayout:
         return os.path.join(
             str(rem),
             "{}.{}{}".format(base, hexlify(tid).decode('ascii'),
-                         ZODB.blob.BLOB_SUFFIX)
-            )
+                             ZODB.blob.BLOB_SUFFIX)
+        )
 
 
 def _accessed(filename):
@@ -1233,7 +1233,7 @@ cache_file_name = re.compile(r'\d+$').match
 
 def _check_blob_cache_size(blob_dir, target):
 
-    logger = logging.getLogger(__name__+'.check_blob_cache')
+    logger = logging.getLogger(__name__ + '.check_blob_cache')
 
     with open(os.path.join(blob_dir, ZODB.blob.LAYOUT_MARKER)) as layout_file:
         layout = layout_file.read().strip()
@@ -1341,6 +1341,7 @@ def check_blob_size_script(args=None):
 
 class _FileLock:
     """Auxiliary class to provide for file lock logging."""
+
     def __init__(self, filename, log_failure):
         self.filename = filename
         try:

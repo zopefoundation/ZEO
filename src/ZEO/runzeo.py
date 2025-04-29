@@ -171,8 +171,8 @@ class ZEOServer:
         root = logging.getLogger()
         root.setLevel(logging.INFO)
         fmt = logging.Formatter(
-                "------\n%(asctime)s %(levelname)s %(name)s %(message)s",
-                "%Y-%m-%dT%H:%M:%S")
+            "------\n%(asctime)s %(levelname)s %(name)s %(message)s",
+            "%Y-%m-%dT%H:%M:%S")
         handler = logging.StreamHandler()
         handler.setFormatter(fmt)
         root.addHandler(handler)
@@ -238,7 +238,7 @@ class ZEOServer:
         # Signals does a check/log for the availability of pywin32.
         try:
             import Signals.Signals
-        except ImportError:
+        except ModuleNotFoundError:
             logger.debug("Signals package not found. "
                          "Windows-specific signal handler "
                          "will *not* be installed.")

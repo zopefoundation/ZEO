@@ -27,7 +27,7 @@ class Loop:
         self.exceptions = []
 
     def call_soon(self, func, *args, **kw):
-        # Python 3.7+ calls us with a `context` keyword-only argument:
+        # Python calls us with a `context` keyword-only argument:
         kw.pop('context', None)
         assert not kw
         func(*args)
@@ -103,6 +103,7 @@ AsyncioLoop = asyncio.get_event_loop_policy()._loop_factory
 
 class FaithfulLoop(Loop, AsyncioLoop):
     """Testing loop variant with true ``asyncio`` ``call_*`` methods."""
+
     def __init__(self, addrs=(), debug=True):
         Loop.__init__(self, addrs, debug)
         AsyncioLoop.__init__(self)
@@ -266,6 +267,7 @@ class Transport:
 class AsyncRPC:
     """Adapt an asyncio API to an RPC to help hysterical tests
     """
+
     def __init__(self, api):
         self.api = api
 

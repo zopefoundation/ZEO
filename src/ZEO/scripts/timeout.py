@@ -20,7 +20,7 @@ from ZODB.tests.StorageTestBase import zodb_pickle
 from ZEO.ClientStorage import ClientStorage
 
 
-ZERO = '\0'*8
+ZERO = '\0' * 8
 
 
 def main():
@@ -41,7 +41,7 @@ def main():
     else:
         if ":" in hostport:
             i = hostport.index(":")
-            host, port = hostport[:i], hostport[i+1:]
+            host, port = hostport[:i], hostport[i + 1:]
         else:
             host, port = "", hostport
         port = int(port)

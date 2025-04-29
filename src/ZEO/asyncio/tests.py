@@ -2,8 +2,6 @@ import asyncio
 import collections
 import logging
 import struct
-import threading
-import unittest
 from functools import partial
 from itertools import count
 from time import sleep
@@ -165,7 +163,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
             protocol.data_received(sized(self.enc + b'5'))
             self.assertEqual(self.pop(2, False), self.enc + b'5')
             self.respond(1, None)
-            self.respond(2, 'a'*8)
+            self.respond(2, 'a' * 8)
             self.pop(4)
             self.assertEqual(self.pop(), (3, False, 'get_info', ()))
             self.respond(3, dict(length=42))
@@ -260,7 +258,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         self.assertEqual(self.pop(), (2, False, 'lastTransaction', ()))
 
         # We respond
-        self.respond(2, b'a'*8)
+        self.respond(2, b'a' * 8)
 
         # After verification, the client requests info:
         self.assertEqual(self.pop(), (3, False, 'get_info', ()))
@@ -269,7 +267,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         # Now we're connected, the cache was initialized, and the
         # queued message has been sent:
         self.assertTrue(client.connected.done())
-        self.assertEqual(cache.getLastTid(), b'a'*8)
+        self.assertEqual(cache.getLastTid(), b'a' * 8)
         self.assertEqual(self.pop(), (4, False, 'foo', (1, 2)))
 
         # The wrapper object (ClientStorage) has been notified:
@@ -283,58 +281,58 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         self.assertEqual(self.pop(), (0, True, 'bar', (3, 4)))
 
         # Loading objects gets special handling to leverage the cache.
-        loaded = self.load_before(b'1'*8, maxtid)
+        loaded = self.load_before(b'1' * 8, maxtid)
 
         # The data wasn't in the cache, so we made a server call:
         self.assertEqual(self.pop(),
-                         ((b'1'*8, maxtid),
+                         ((b'1' * 8, maxtid),
                           False,
                           'loadBefore',
-                          (b'1'*8, maxtid)))
+                          (b'1' * 8, maxtid)))
         # Note load_before uses ``(oid, tid)`` as message id.
-        self.respond((b'1'*8, maxtid), (b'data', b'a'*8, None))
-        self.assertEqual(loaded.result(), (b'data', b'a'*8, None))
+        self.respond((b'1' * 8, maxtid), (b'data', b'a' * 8, None))
+        self.assertEqual(loaded.result(), (b'data', b'a' * 8, None))
 
         # If we make another request, it will be satisfied from the cache:
-        loaded = self.load_before(b'1'*8, maxtid)
-        self.assertEqual(loaded.result(), (b'data', b'a'*8, None))
+        loaded = self.load_before(b'1' * 8, maxtid)
+        self.assertEqual(loaded.result(), (b'data', b'a' * 8, None))
         self.assertFalse(transport.data)
 
         # Let's send an invalidation:
-        self.send('invalidateTransaction', b'b'*8, self.seq_type([b'1'*8]))
+        self.send('invalidateTransaction', b'b' * 8, self.seq_type([b'1' * 8]))
 
         # Now, if we try to load current again, we'll make a server request.
-        loaded = self.load_before(b'1'*8, maxtid)
+        loaded = self.load_before(b'1' * 8, maxtid)
 
         # Note that if we make another request for the same object,
         # the requests will be collapsed:
-        loaded2 = self.load_before(b'1'*8, maxtid)
+        loaded2 = self.load_before(b'1' * 8, maxtid)
 
         self.assertEqual(self.pop(),
-                         ((b'1'*8, maxtid),
+                         ((b'1' * 8, maxtid),
                           False,
                           'loadBefore',
-                          (b'1'*8, maxtid)))
-        self.respond((b'1'*8, maxtid), (b'data2', b'b'*8, None))
-        self.assertEqual(loaded.result(), (b'data2', b'b'*8, None))
-        self.assertEqual(loaded2.result(), (b'data2', b'b'*8, None))
+                          (b'1' * 8, maxtid)))
+        self.respond((b'1' * 8, maxtid), (b'data2', b'b' * 8, None))
+        self.assertEqual(loaded.result(), (b'data2', b'b' * 8, None))
+        self.assertEqual(loaded2.result(), (b'data2', b'b' * 8, None))
 
         # Loading non-current data may also be satisfied from cache
-        loaded = self.load_before(b'1'*8, b'b'*8)
-        self.assertEqual(loaded.result(), (b'data', b'a'*8, b'b'*8))
+        loaded = self.load_before(b'1' * 8, b'b' * 8)
+        self.assertEqual(loaded.result(), (b'data', b'a' * 8, b'b' * 8))
         self.assertFalse(transport.data)
-        loaded = self.load_before(b'1'*8, b'c'*8)
-        self.assertEqual(loaded.result(), (b'data2', b'b'*8, None))
+        loaded = self.load_before(b'1' * 8, b'c' * 8)
+        self.assertEqual(loaded.result(), (b'data2', b'b' * 8, None))
         self.assertFalse(transport.data)
-        loaded = self.load_before(b'1'*8, b'_'*8)
+        loaded = self.load_before(b'1' * 8, b'_' * 8)
 
         self.assertEqual(self.pop(),
-                         ((b'1'*8, b'_'*8),
+                         ((b'1' * 8, b'_' * 8),
                           False,
                           'loadBefore',
-                          (b'1'*8, b'_'*8)))
-        self.respond((b'1'*8, b'_'*8), (b'data0', b'^'*8, b'_'*8))
-        self.assertEqual(loaded.result(), (b'data0', b'^'*8, b'_'*8))
+                          (b'1' * 8, b'_' * 8)))
+        self.respond((b'1' * 8, b'_' * 8), (b'data0', b'^' * 8, b'_' * 8))
+        self.assertEqual(loaded.result(), (b'data0', b'^' * 8, b'_' * 8))
 
         # When committing transactions, we need to update the cache
         # with committed data.  To do this, we pass a (oid, data, resolved)
@@ -346,36 +344,36 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
             tids.append(tid)
 
         committed = self.tpc_finish(
-            b'd'*8,
-            [(b'2'*8, 'committed 2', False),
-             (b'1'*8, 'committed 3', True),
-             (b'4'*8, 'committed 4', False),
+            b'd' * 8,
+            [(b'2' * 8, 'committed 2', False),
+             (b'1' * 8, 'committed 3', True),
+             (b'4' * 8, 'committed 4', False),
              ],
             finished_cb)
         self.assertFalse(committed.done() or
-                         cache.load(b'2'*8) or
-                         cache.load(b'4'*8))
-        self.assertEqual(cache.load(b'1'*8), (b'data2', b'b'*8))
+                         cache.load(b'2' * 8) or
+                         cache.load(b'4' * 8))
+        self.assertEqual(cache.load(b'1' * 8), (b'data2', b'b' * 8))
         self.assertEqual(self.pop(),
-                         (5, False, 'tpc_finish', (b'd'*8,)))
-        self.respond(5, b'e'*8)
-        self.assertEqual(committed.result(), b'e'*8)
-        self.assertEqual(cache.load(b'1'*8), None)
-        self.assertEqual(cache.load(b'2'*8), ('committed 2', b'e'*8))
-        self.assertEqual(cache.load(b'4'*8), ('committed 4', b'e'*8))
-        self.assertEqual(tids.pop(), b'e'*8)
+                         (5, False, 'tpc_finish', (b'd' * 8,)))
+        self.respond(5, b'e' * 8)
+        self.assertEqual(committed.result(), b'e' * 8)
+        self.assertEqual(cache.load(b'1' * 8), None)
+        self.assertEqual(cache.load(b'2' * 8), ('committed 2', b'e' * 8))
+        self.assertEqual(cache.load(b'4' * 8), ('committed 4', b'e' * 8))
+        self.assertEqual(tids.pop(), b'e' * 8)
 
         # If the protocol is disconnected, it will reconnect and will
         # resolve outstanding requests with exceptions:
-        loaded = self.load_before(b'1'*8, maxtid)
+        loaded = self.load_before(b'1' * 8, maxtid)
         f1 = self.call('foo', 1, 2)
         self.assertFalse(loaded.done() or f1.done())
         self.assertEqual(
             self.pop(),
             [((b'11111111', b'\x7f\xff\xff\xff\xff\xff\xff\xff'),
-              False, 'loadBefore', (b'1'*8, maxtid)),
+              False, 'loadBefore', (b'1' * 8, maxtid)),
              (6, False, 'foo', (1, 2))],
-            )
+        )
         exc = TypeError(43)
 
         self.assertFalse(wrapper.notify_disconnected.called)
@@ -409,14 +407,14 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
 
         # If the register response is a tid, then the client won't
         # request lastTransaction
-        self.respond(1, b'e'*8)
+        self.respond(1, b'e' * 8)
         self.assertEqual(self.pop(), (2, False, 'get_info', ()))
         self.respond(2, dict(length=42))
 
         # Because the server tid matches the cache tid, we're done connecting
         wrapper.notify_connected.assert_called_with(client, {'length': 42})
         self.assertTrue(client.connected.done() and not transport.data)
-        self.assertEqual(cache.getLastTid(), b'e'*8)
+        self.assertEqual(cache.getLastTid(), b'e' * 8)
 
         # Because we were able to update the cache, we didn't have to
         # invalidate the database cache:
@@ -434,34 +432,34 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
     def test_cache_behind(self):
         wrapper, cache, loop, client, protocol, transport = self.start()
 
-        cache.setLastTid(b'a'*8)
-        cache.store(b'4'*8, b'a'*8, None, '4 data')
-        cache.store(b'2'*8, b'a'*8, None, '2 data')
+        cache.setLastTid(b'a' * 8)
+        cache.store(b'4' * 8, b'a' * 8, None, '4 data')
+        cache.store(b'2' * 8, b'a' * 8, None, '2 data')
 
         self.assertFalse(client.connected.done() or transport.data)
         protocol.data_received(sized(self.enc + b'5'))
         self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'5')
         self.respond(1, None)
-        self.respond(2, b'e'*8)
+        self.respond(2, b'e' * 8)
         self.pop(4)
 
         # We have to verify the cache, so we're not done connecting:
         self.assertFalse(client.connected.done())
         self.assertEqual(self.pop(),
-                         (3, False, 'getInvalidations', (b'a'*8, )))
-        self.respond(3, (b'e'*8, [b'4'*8]))
+                         (3, False, 'getInvalidations', (b'a' * 8, )))
+        self.respond(3, (b'e' * 8, [b'4' * 8]))
 
         self.assertEqual(self.pop(), (4, False, 'get_info', ()))
         self.respond(4, dict(length=42))
 
         # Now that verification is done, we're done connecting
         self.assertTrue(client.connected.done() and not transport.data)
-        self.assertEqual(cache.getLastTid(), b'e'*8)
+        self.assertEqual(cache.getLastTid(), b'e' * 8)
 
         # And the cache has been updated:
-        self.assertEqual(cache.load(b'2'*8),
-                         ('2 data', b'a'*8))  # unchanged
-        self.assertEqual(cache.load(b'4'*8), None)
+        self.assertEqual(cache.load(b'2' * 8),
+                         ('2 data', b'a' * 8))  # unchanged
+        self.assertEqual(cache.load(b'4' * 8), None)
 
         # Because we were able to update the cache, we didn't have to
         # invalidate the database cache:
@@ -470,21 +468,21 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
     def test_cache_way_behind(self):
         wrapper, cache, loop, client, protocol, transport = self.start()
 
-        cache.setLastTid(b'a'*8)
-        cache.store(b'4'*8, b'a'*8, None, '4 data')
+        cache.setLastTid(b'a' * 8)
+        cache.store(b'4' * 8, b'a' * 8, None, '4 data')
         self.assertTrue(cache)
 
         self.assertFalse(client.connected.done() or transport.data)
         protocol.data_received(sized(self.enc + b'5'))
         self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'5')
         self.respond(1, None)
-        self.respond(2, b'e'*8)
+        self.respond(2, b'e' * 8)
         self.pop(4)
 
         # We have to verify the cache, so we're not done connecting:
         self.assertFalse(client.connected.done())
         self.assertEqual(self.pop(),
-                         (3, False, 'getInvalidations', (b'a'*8, )))
+                         (3, False, 'getInvalidations', (b'a' * 8, )))
 
         # We respond None, indicating that we're too far out of date:
         self.respond(3, None)
@@ -494,7 +492,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
 
         # Now that verification is done, we're done connecting
         self.assertTrue(client.connected.done() and not transport.data)
-        self.assertEqual(cache.getLastTid(), b'e'*8)
+        self.assertEqual(cache.getLastTid(), b'e' * 8)
 
         # But the cache is now empty and we invalidated the database cache
         self.assertFalse(cache)
@@ -552,12 +550,12 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         # If in verification we get a server_tid behind the cache's, make sure
         # we retry the connection later.
         wrapper, cache, loop, client, protocol, transport = self.start()
-        cache.store(b'4'*8, b'a'*8, None, '4 data')
-        cache.setLastTid('b'*8)
+        cache.store(b'4' * 8, b'a' * 8, None, '4 data')
+        cache.setLastTid('b' * 8)
         protocol.data_received(sized(self.enc + b'5'))
         self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'5')
         self.respond(1, None)
-        self.respond(2, 'a'*8)
+        self.respond(2, 'a' * 8)
         self.pop()
         self.assertFalse(client.connected.done() or transport.data)
         delay, func, args, _ = loop.later.pop(1)  # first in later is heartbeat
@@ -572,7 +570,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         protocol.data_received(sized(self.enc + b'5'))
         self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'5')
         self.respond(1, None)
-        self.respond(2, 'b'*8)
+        self.respond(2, 'b' * 8)
         self.pop(4)
         self.assertEqual(self.pop(), (3, False, 'get_info', ()))
         self.respond(3, dict(length=42))
@@ -604,7 +602,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         # We respond with successfully:
         self.respond(2, None)
         self.pop(2)
-        self.respond(3, 'b'*8)
+        self.respond(3, 'b' * 8)
         self.assertTrue(self.is_read_only())
 
         # At this point, the client is ready and using the protocol,
@@ -651,7 +649,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         self.assertEqual(protocol.read_only, False)
 
         # Now, we finish verification
-        self.respond(2, 'b'*8)
+        self.respond(2, 'b' * 8)
         self.respond(3, dict(length=42))
         self.assertTrue(client.ready)
         self.assertTrue(client.connected.done())
@@ -663,9 +661,9 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'5')
         self.respond(1, None)
         self.pop(4)
-        self.send('invalidateTransaction', b'b'*8, [b'1'*8], called=False)
-        self.respond(2, b'a'*8)
-        self.send('invalidateTransaction', b'c'*8, self.seq_type([b'1'*8]),
+        self.send('invalidateTransaction', b'b' * 8, [b'1' * 8], called=False)
+        self.respond(2, b'a' * 8)
+        self.send('invalidateTransaction', b'c' * 8, self.seq_type([b'1' * 8]),
                   no_output=False)
         self.assertEqual(self.pop(), (3, False, 'get_info', ()))
 
@@ -682,9 +680,9 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         self.assertEqual(self.unsized(transport.pop(2)), self.enc + b'5')
         self.respond(1, None)
         self.pop(4)
-        self.send('invalidateTransaction', b'd'*8, [b'1'*8], called=False)
-        self.respond(2, b'c'*8)
-        self.send('invalidateTransaction', b'e'*8, self.seq_type([b'1'*8]),
+        self.send('invalidateTransaction', b'd' * 8, [b'1' * 8], called=False)
+        self.respond(2, b'c' * 8)
+        self.send('invalidateTransaction', b'e' * 8, self.seq_type([b'1' * 8]),
                   no_output=False)
         self.assertEqual(self.pop(), (3, False, 'get_info', ()))
 
@@ -764,17 +762,17 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
             loop.protocol.data_received(
                 sized(
                     self.encode(0, True, 'receiveBlobStart', ('oid', 'serial'))
-                    ) +
+                ) +
                 sized(
                     self.encode(
                         0, True, 'receiveBlobChunk', ('oid', 'serial', chunk))
-                    )
                 )
+            )
         except ValueError:
             pass
         loop.protocol.data_received(sized(
             self.encode(0, True, 'receiveBlobStop', ('oid', 'serial'))
-            ))
+        ))
         wrapper.receiveBlobChunk.assert_called_with('oid', 'serial', chunk)
         wrapper.receiveBlobStop.assert_called_with('oid', 'serial')
 
@@ -788,20 +786,20 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         self.assertEqual(
             (delay, func, args, handle),
             (60, protocol.heartbeat, (), protocol.heartbeat_handle),
-            )
+        )
         self.assertFalse(loop.later or handle._cancelled)
 
         # The heartbeat function sends heartbeat data and reschedules itself.
         self.loop.call_soon_threadsafe(func)
         self.loop.run_until_inactive()
         self.assertEqual(self.pop(), (-1, 0, '.reply', None))
-        self.assertTrue(protocol.heartbeat_handle != handle)
+        self.assertNotEqual(protocol.heartbeat_handle, handle)
 
         delay, func, args, handle = loop.later.pop()
         self.assertEqual(
             (delay, func, args, handle),
             (60, protocol.heartbeat, (), protocol.heartbeat_handle),
-            )
+        )
         self.assertFalse(loop.later or handle._cancelled)
 
         # The heartbeat is cancelled when the protocol connection is lost:
@@ -819,13 +817,13 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         # emulate the reply, followed by an asynchronous call
         # of ``invalidateTransaction``.
         # It is important that the two messages are delivered together
-        msg = (self.respond(4, "b"*8, return_msg=True) +
-               self.server_async_call("invalidateTransaction", "c"*8, (),
+        msg = (self.respond(4, "b" * 8, return_msg=True) +
+               self.server_async_call("invalidateTransaction", "c" * 8, (),
                                       return_msg=True))
         protocol.data_received(msg)
         self.assertEqual(loop.exceptions, [])
         f.result()  # no exception
-        self.assertEqual(cache.getLastTid(), "c"*8)
+        self.assertEqual(cache.getLastTid(), "c" * 8)
 
     def test_reply_doesnt_overtake_asyncall(self):
         """verify that a reply does not overtake an asynchronous call."""
@@ -851,7 +849,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
                self.respond(4, None, return_msg=True))
         protocol.data_received(msg)
         self.assertEqual(loop.exceptions, [])
-        self.assertIs(self.observed, False)
+        self.assertFalse(self.observed)
 
     def test_serialized_registration(self):
         addrs = [('1.2.3.4', 8200), ('2.2.3.4', 8200)]
@@ -881,7 +879,7 @@ class ClientTests(Base, setupstack.TestCase, ClientThread):
         self.assertFalse(io.connected.done())
         # finish first protocol connection
         self.respond(1, None, protocol=protocol_1)  # register
-        self.respond(2, b"a"*8, protocol=protocol_1)  # lastTransaction
+        self.respond(2, b"a" * 8, protocol=protocol_1)  # lastTransaction
         self.assertTrue(io.ready)
         self.assertFalse(io.connected.done())
         self.respond(3, {}, protocol=protocol_1)  # get_info
@@ -1247,7 +1245,6 @@ class ZEOBaseProtocolTests(setupstack.TestCase):
             self.assertEqual(l, b"\x00\x00\x00\x01")
             self.assertEqual(t, to_byte(b))
 
-
     def test_repr(self):
         repr(self.loop.protocol)  # satisfied if no exception
 
@@ -1419,21 +1416,32 @@ class FutureTestsBase(OptimizeTestsBase):
 
     def test_exception_in_callback(self):
         fut = self.fut
-        l = []
+        l_ = []
 
-        def f(_): l.append('f')
-        def g(_): l.append('g'); raise RuntimeError('g')
-        def h(_): l.append('h')
-        def i(_): l.append('i'); raise RuntimeError('i')
-        def j(_): l.append('j')
+        def f(_):
+            l_.append('f')
 
-        for x in f,g,h,i,j:
+        def g(_):
+            l_.append('g')
+            raise RuntimeError('g')
+
+        def h(_):
+            l_.append('h')
+
+        def i(_):
+            l_.append('i')
+            raise RuntimeError('i')
+
+        def j(_):
+            l_.append('j')
+
+        for x in f, g, h, i, j:
             fut.add_done_callback(x)
 
         self.assertEqual(self.loop.exceptions, [])
         fut.set_result(None)
         self.assertTrue(fut.done())
-        self.assertEqual(l, ['f','g','h','i','j'])
+        self.assertEqual(l_, ['f', 'g', 'h', 'i', 'j'])
 
         self.assertEqual(len(self.loop.exceptions), 2)
         e0 = self.loop.exceptions[0]
@@ -1455,7 +1463,7 @@ class FutureTestsBase(OptimizeTestsBase):
 
     def test_cancel(self):
         _ = self.fut.cancel('zzz')
-        self.assertIs(_, True)
+        self.assertTrue(_)
         self.assertTrue(self.fut.cancelled())
         with self.assertRaises(asyncio.CancelledError) as e:
             self.fut.result()
@@ -1472,6 +1480,7 @@ class FutureTestsBase(OptimizeTestsBase):
 class FutureTests(FutureTestsBase, TestCase):
     def make_future(self, loop):
         return Future(loop=self.loop)
+
 
 class ConcurrentFutureTests(FutureTestsBase, TestCase):
     def make_future(self, loop):
@@ -1564,7 +1573,7 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
 
         t = self.make_task(exc)
         _ = fut.cancel('zzz')
-        self.assertIs(_, True)
+        self.assertTrue(_)
         self.assertTrue(t.done())
         self.assertTrue(t.cancelled())
         with self.assertRaises(asyncio.CancelledError) as e:
@@ -1578,18 +1587,18 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
         self._test_cancel_task_while_blocked(asyncio.Future(loop=self.loop))
 
     def _test_cancel_task_while_blocked(self, blocked_on):
-        l = []
+        l_ = []
         go = Future(loop=self.loop)
         waitready = Future(loop=self.loop)
         waiting = blocked_on
 
         async def f():
             await go  # wait for loop to start
-            l.append(1)
-            l.append(2)
+            l_.append(1)
+            l_.append(2)
             waitready.set_result(None)
             await waiting
-            l.append(3)
+            l_.append(3)
 
         t = self.make_task(f)
         self.assertFalse(t.done())
@@ -1597,7 +1606,7 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
         @waitready.add_done_callback
         def _(_):
             _ = t.cancel('zzz')
-            self.assertIs(_, True)
+            self.assertTrue(_)
 
         self.loop.call_soon(lambda: go.set_result(None))
         with self.assertRaises(asyncio.CancelledError):
@@ -1609,26 +1618,25 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
         self.assertEqual(e.exception.args, ('zzz',))
         self.assertTrue(waiting.done())
         self.assertTrue(waiting.cancelled())
-        self.assertEqual(l, [1,2])
+        self.assertEqual(l_, [1, 2])
         _ = t.cancel()
-        self.assertIs(_, False)
-
+        self.assertFalse(_)
 
     def test_cancel_task_while_running(self):
-        l = []
+        l_ = []
         t = None
         go = Future(loop=self.loop)
         waiting = Future(loop=self.loop)
 
         async def f():
             await go
-            l.append(1)
-            l.append(2)
+            l_.append(1)
+            l_.append(2)
             _ = t.cancel('zzz')
-            self.assertIs(_, True)
-            l.append(3)
+            self.assertTrue(_)
+            l_.append(3)
             await waiting
-            l.append(4)
+            l_.append(4)
 
         t = self.make_task(f)
         self.assertFalse(t.done())
@@ -1640,11 +1648,10 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
         self.assertEqual(e.exception.args, ('zzz',))
         self.assertTrue(waiting.done())
         self.assertTrue(waiting.cancelled())
-        self.assertEqual(l, [1,2,3])
-
+        self.assertEqual(l_, [1, 2, 3])
 
     def test_nested_coro(self):
-        l = []
+        l_ = []
 
         async def f():
             await g('a')
@@ -1656,18 +1663,20 @@ class CoroutineExecutorTestsBase(OptimizeTestsBase):
             await h(s, 3)
 
         async def h(s, n):
-            for i in range(1,n+1):
-                l.append(s*i)
+            for i in range(1, n + 1):
+                l_.append(s * i)
 
         t = self.make_task(f)
         self.assertTrue(t.done())
-        self.assertEqual(l, ['a', 'a','aa', 'a','aa','aaa', 'b', 'b','bb', 'b','bb','bbb'])
+        self.assertEqual(l_, ['a', 'a', 'aa', 'a', 'aa',
+                         'aaa', 'b', 'b', 'bb', 'b', 'bb', 'bbb'])
 
     def test_nest_to_async_coro(self):
         go = Future(loop=self.loop)
 
         async def f():
-            await go  # wait for loop to start before running into asyncio.sleep
+            # wait for loop to start before running into asyncio.sleep:
+            await go
             _ = await asyncio.sleep(1, 'zzz')
             return _
 

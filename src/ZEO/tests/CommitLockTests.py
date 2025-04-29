@@ -25,7 +25,7 @@ from ZEO.Exceptions import ClientDisconnected
 from ZEO.tests.TestThread import TestThread
 
 
-ZERO = b'\0'*8
+ZERO = b'\0' * 8
 
 
 class WorkerThread(TestThread):
@@ -134,7 +134,7 @@ class CommitLockTests:
 
     def _get_timestamp(self):
         t = time.time()
-        t = TimeStamp(*time.gmtime(t)[:5]+(t % 60,))
+        t = TimeStamp(*time.gmtime(t)[:5] + (t % 60,))
         return repr(t)
 
 

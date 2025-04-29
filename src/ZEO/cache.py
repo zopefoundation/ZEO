@@ -149,7 +149,7 @@ class ClientCache:
     # default of 20MB.  The default here is misleading, though, since
     # ClientStorage is the only user of ClientCache, and it always passes an
     # explicit size of its own choosing.
-    def __init__(self, path=None, size=200*1024**2, rearrange=.8):
+    def __init__(self, path=None, size=200 * 1024**2, rearrange=.8):
 
         # - `path`:  filepath for the cache file, or None (in which case
         #   a temp file will be created)
@@ -199,7 +199,7 @@ class ClientCache:
             if not os.path.exists(path):
                 # Create a small empty file. We'll make it bigger in _initfile.
                 self.f = open(path, 'wb+')
-                self.f.write(magic+z64)
+                self.f.write(magic + z64)
                 logger.info("created persistent cache file %r", path)
             else:
                 fsize = os.path.getsize(self.path)
@@ -208,7 +208,7 @@ class ClientCache:
         else:
             # Create a small empty file.  We'll make it bigger in _initfile.
             self.f = tempfile.TemporaryFile()
-            self.f.write(magic+z64)
+            self.f.write(magic + z64)
             logger.info("created temporary cache file %r", self.f.name)
 
         try:
@@ -217,7 +217,7 @@ class ClientCache:
             self.f.close()
             if not path:
                 raise  # unrecoverable temp file error :(
-            badpath = path+'.bad'
+            badpath = path + '.bad'
             if os.path.exists(badpath):
                 logger.critical(
                     'Removing bad cache file: %r (prev bad exists).',
@@ -228,7 +228,7 @@ class ClientCache:
                                 badpath, exc_info=1)
                 os.rename(path, badpath)
             self.f = open(path, 'wb+')
-            self.f.write(magic+z64)
+            self.f.write(magic + z64)
             self._initfile(ZEC_HEADER_SIZE)
 
         # Statistics:  _n_adds, _n_added_bytes,
@@ -286,7 +286,7 @@ class ClientCache:
             if status == b'a':
                 size, oid, start_tid, end_tid, lver = unpack(
                     ">I8s8s8sH", read(30))
-                if ofs+size <= maxsize:
+                if ofs + size <= maxsize:
                     if end_tid == z64:
                         assert oid not in current, (ofs, f.tell())
                         current[oid] = ofs
@@ -304,11 +304,11 @@ class ClientCache:
                     if size > max_block_size:
                         # Oops, we either have an old cache, or a we
                         # crashed while storing. Split this block into two.
-                        assert size <= max_block_size*2
-                        seek(ofs+max_block_size)
-                        write(b'f'+pack(">I", size-max_block_size))
+                        assert size <= max_block_size * 2
+                        seek(ofs + max_block_size)
+                        write(b'f' + pack(">I", size - max_block_size))
                         seek(ofs)
-                        write(b'f'+pack(">I", max_block_size))
+                        write(b'f' + pack(">I", max_block_size))
                         sync(f)
                 elif status in b'1234':
                     size = int(status)
@@ -324,10 +324,10 @@ class ClientCache:
                 if ofs > maxsize:
                     # The last record is too big. Replace it with a smaller
                     # free record
-                    size = maxsize-last
+                    size = maxsize - last
                     seek(last)
                     if size > 4:
-                        write(b'f'+pack(">I", size))
+                        write(b'f' + pack(">I", size))
                     else:
                         write("012345"[size].encode())
                     sync(f)
@@ -344,9 +344,9 @@ class ClientCache:
             seek(ofs)
             nfree = maxsize - ZEC_HEADER_SIZE
             for i in range(0, nfree, max_block_size):
-                block_size = min(max_block_size, nfree-i)
+                block_size = min(max_block_size, nfree - i)
                 write(b'f' + pack(">I", block_size))
-                seek(block_size-5, 1)
+                seek(block_size - 5, 1)
             sync(self.f)
 
             # There is always data to read and
@@ -520,7 +520,7 @@ class ClientCache:
                 ofsofs += self.maxsize
 
             if ofsofs > self.rearrange and \
-               self.maxsize > 10*len(data) and \
+               self.maxsize > 10 * len(data) and \
                size > 4:
                 # The record is far back and might get evicted, but it's
                 # valuable, so move it forward.
@@ -528,7 +528,7 @@ class ClientCache:
                 # Remove fromn old loc:
                 del self.current[oid]
                 self.f.seek(ofs)
-                self.f.write(b'f'+pack(">I", size))
+                self.f.write(b'f' + pack(">I", size))
 
                 # Write to new location:
                 self._store(oid, tid, None, data, size)
@@ -552,7 +552,7 @@ class ClientCache:
                     self._trace(0x24, oid, "", before_tid)
                     return result
 
-            items = noncurrent_for_oid.items(None, u64(before_tid)-1)
+            items = noncurrent_for_oid.items(None, u64(before_tid) - 1)
             if not items:
                 result = self.load(oid, before_tid)
                 if result:
@@ -652,7 +652,7 @@ class ClientCache:
         # have a free block after the new alocated block.  This free
         # block acts as a ring pointer, so that on restart, we start
         # where we left off.
-        nfreebytes = self._makeroom(size+1)
+        nfreebytes = self._makeroom(size + 1)
 
         assert size <= nfreebytes, (size, nfreebytes)
         excess = nfreebytes - size
@@ -674,7 +674,7 @@ class ClientCache:
         # Before writing data, we'll write a free block for the space freed.
         # We'll come back with a last atomic write to rewrite the start of the
         # allocated-block header.
-        write(b'f'+pack(">I", nfreebytes))
+        write(b'f' + pack(">I", nfreebytes))
 
         # Now write the rest of the allocation block header and object data.
         write(pack(">8s8s8sHI", oid, start_tid, end_tid or z64, 0, len(data)))
@@ -685,7 +685,7 @@ class ClientCache:
         # Now, we'll go back and rewrite the beginning of the
         # allocated block header.
         seek(ofs)
-        write(b'a'+pack(">I", size))
+        write(b'a' + pack(">I", size))
 
         if end_tid:
             self._set_noncurrent(oid, start_tid, ofs)
@@ -726,7 +726,7 @@ class ClientCache:
             del self.current[oid]
             if tid is None:
                 self.f.seek(ofs)
-                self.f.write(b'f'+pack(">I", size))
+                self.f.write(b'f' + pack(">I", size))
                 # 0x1E = invalidate (hit, discarding current or non-current)
                 self._trace(0x1E, oid, tid)
                 self._len -= 1
@@ -735,7 +735,7 @@ class ClientCache:
                     logger.warning(
                         "Ignoring invalidation with same tid as current")
                     return
-                self.f.seek(ofs+21)
+                self.f.seek(ofs + 21)
                 self.f.write(tid)
                 self._set_noncurrent(oid, saved_tid, ofs)
                 # 0x1C = invalidate (hit, saving non-current)
@@ -813,7 +813,7 @@ class ClientCache:
                 _tracefile.write(
                     pack(">iiH8s8s",
                          int(now()), encoded, len(oid), tid, end_tid) + oid,
-                    )
+                )
             except:  # NOQA: E722 bare except
                 print(repr(tid), repr(end_tid))
                 raise

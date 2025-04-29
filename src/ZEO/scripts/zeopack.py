@@ -33,19 +33,19 @@ def _main(args=None, prog=None):
     parser.add_option(
         "-d", "--days", dest="days", type='int', default=0,
         help=("Pack objects that are older than this number of days")
-        )
+    )
 
     parser.add_option(
         "-t", "--time", dest="time",
         help=("Time of day to pack to of the form: HH[:MM[:SS]]. "
               "Defaults to current time.")
-        )
+    )
 
     parser.add_option(
         "-u", "--unix", dest="unix_sockets", action="append",
         help=("A unix-domain-socket server to connect to, of the form: "
               "path[:name]")
-        )
+    )
 
     parser.remove_option('-h')
     parser.add_option(
@@ -53,26 +53,26 @@ def _main(args=None, prog=None):
         help=("Deprecated: "
               "Used with the -p and -S options, specified the host to "
               "connect to.")
-        )
+    )
 
     parser.add_option(
         "-p", type="int", dest="port",
         help=("Deprecated: "
               "Used with the -h and -S options, specifies "
               "the port to connect to.")
-        )
+    )
 
     parser.add_option(
         "-S", dest="name", default='1',
         help=("Deprecated: Used with the -h and -p, options, or with the "
               "-U option specified the storage name to use. Defaults to 1.")
-        )
+    )
 
     parser.add_option(
         "-U", dest="unix",
         help=("Deprecated: Used with the -S option, "
               "Unix-domain socket to connect to.")
-        )
+    )
 
     if not args:
         parser.print_help()
@@ -95,7 +95,7 @@ def _main(args=None, prog=None):
             error("Invalid time value: %r" % options.time)
 
         packt = time.localtime(packt)
-        packt = time.mktime(packt[:3]+tuple(time_)+packt[6:])
+        packt = time.mktime(packt[:3] + tuple(time_) + packt[6:])
 
     packt -= options.days * 86400
 
@@ -164,7 +164,7 @@ def _main(args=None, prog=None):
             cs.pack(packt, wait=True)
             cs.close()
         except:  # NOQA: E722 bare except
-            traceback.print_exception(*(sys.exc_info()+(99, sys.stderr)))
+            traceback.print_exception(*(sys.exc_info() + (99, sys.stderr)))
             error(f'Error packing storage {name} in {addr!r}')
 
     if not server_found:

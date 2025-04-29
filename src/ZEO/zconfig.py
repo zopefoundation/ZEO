@@ -1,7 +1,6 @@
 """SSL configuration support
 """
 import os
-import sys
 
 
 def ssl_config(section, server):

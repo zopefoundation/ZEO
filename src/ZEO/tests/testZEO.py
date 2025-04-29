@@ -285,7 +285,7 @@ class GenericTestBase(
                 wait_timeout=60, blob_dir=self.blob_cache_dir,
                 shared_blob_dir=self.shared_blob_dir,
                 **self._client_options()),
-            )
+        )
         self._storage.registerDB(DummyDB())
 
     # _new_storage_client opens another ClientStorage to the same storage
@@ -479,7 +479,7 @@ class FileStorageTests(FullGenericTests):
         ('ZODB.interfaces', 'IExternalGC'),
         ('ZODB.interfaces', 'IStorage'),
         ('zope.interface', 'Interface'),
-        )
+    )
 
     def checkInterfaceFromRemoteStorage(self):
         # ClientStorage itself doesn't implement IStorageIteration, but the
@@ -513,7 +513,7 @@ class FileStorageHexTests(FileStorageTests):
         ('ZODB.interfaces', 'IStorage'),
         ('ZODB.interfaces', 'IStorageWrapper'),
         ('zope.interface', 'Interface'),
-        )
+    )
 
     def getConfig(self):
         return """\
@@ -638,7 +638,7 @@ class ZRPCConnectionTests(ZEO.tests.ConnectionTests.CommonSetupTearDown):
         self._storage._server.thread.join(1)
         log = str(handler)
         handler.uninstall()
-        self.assertTrue("Client loop stopped unexpectedly" in log)
+        self.assertIn("Client loop stopped unexpectedly", log)
         self.assertRaises(ClientDisconnected, self._storage.ping)
 
     def checkExceptionLogsAtError(self):
@@ -697,7 +697,7 @@ class ZRPCConnectionTests(ZEO.tests.ConnectionTests.CommonSetupTearDown):
             raise AssertionError("Couldn't connect to server")
 
         # Now, the root object in the connection should have been invalidated:
-        self.assertEqual(db._invalidatedCache, base+1)
+        self.assertEqual(db._invalidatedCache, base + 1)
 
 
 class CommonBlobTests:
@@ -796,7 +796,7 @@ class CommonBlobTests:
         t = TransactionMetaData()
         self._storage.tpc_begin(t)
         self._storage.storeBlob(
-          oid, ZODB.utils.z64, 'foo', 'blob_file', '', t)
+            oid, ZODB.utils.z64, 'foo', 'blob_file', '', t)
         self._storage.tpc_abort(t)
         self._storage.close()
 
@@ -855,7 +855,7 @@ class BlobAdaptedFileStorageTests(FullGenericTests, CommonBlobTests):
             server_filename = os.path.join(
                 self.blobdir,
                 ZODB.blob.BushyLayout().getBlobFilePath(oid, revid),
-                )
+            )
 
             self.assertTrue(server_filename.startswith(self.blobdir))
             check_data(server_filename)
@@ -869,7 +869,7 @@ class BlobAdaptedFileStorageTests(FullGenericTests, CommonBlobTests):
                 threading.Thread(
                     target=lambda:
                         returns.append(self._storage.loadBlob(oid, revid))
-                    ) for i in range(10)]
+                ) for i in range(10)]
             [thread.start() for thread in threads]
             [thread.join() for thread in threads]
             [self.assertEqual(r, filename) for r in returns]
@@ -1334,7 +1334,6 @@ Invalidations could cause errors when closing client storages,
     >>> addr, _ = start_server()  # NOQA: F821 undefined
     >>> writing = threading.Event()
     >>> def mad_write_thread():
-    ...     global writing
     ...     conn = ZEO.connection(addr)
     ...     writing.set()
     ...     while writing.is_set():
@@ -1739,7 +1738,7 @@ class MultiprocessingTests(unittest.TestCase):
         processes = [multiprocessing.Process(
             target=work_with_multiprocessing_process,
             args=(i, addr, q))
-                        for i in range(3)]
+            for i in range(3)]
         _ = [p.start() for p in processes]
         self.assertEqual(sorted(q.get(timeout=300) for p in processes),
                          [(0, 1), (1, 1), (2, 1)])
@@ -1810,7 +1809,7 @@ slow_test_classes = [
     # FileStorageHexTests, FileStorageClientHexTests,
     FileStorageLoadDelayedTests,
     FileStorageSSLTests,
-    ]
+]
 
 quick_test_classes = [FileStorageRecoveryTests, ZRPCConnectionTests]
 
@@ -1821,7 +1820,7 @@ class ServerManagingClientStorage(ClientStorage):
         if shared:
             server_blob_dir = blob_dir
         else:
-            server_blob_dir = 'server-'+blob_dir
+            server_blob_dir = 'server-' + blob_dir
         self.globs = {}
         addr, stop = forker.start_zeo_server(
             f"""
@@ -1833,7 +1832,7 @@ class ServerManagingClientStorage(ClientStorage):
                 </filestorage>
             </blobstorage>
             """
-            )
+        )
         zope.testing.setupstack.register(self, stop)
         if shared:
             ClientStorage.__init__(self, addr, blob_dir=blob_dir,
@@ -1882,23 +1881,23 @@ def test_suite():
          "ClientDisconnected"),
         (re.compile(r"\[Errno \d+\]"), '[Errno N]'),
         (re.compile(r"loads=\d+\.\d+"), 'loads=42.42'),
-        # GHA prints this for PyPy3 to stdout:
+        # GHA prints this for PyPy to stdout:
         (re.compile(
             r"/home/runner/work/ZEO/ZEO/src/ZEO/tests/server.pem None\n"),
          ''),
-        ]
+    ]
     zeo.addTest(doctest.DocTestSuite(
         setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
         checker=renormalizing.RENormalizing(patterns),
-        ))
+    ))
     zeo.addTest(doctest.DocTestSuite(
-            ZEO.tests.IterationTests,
-            setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
-            checker=renormalizing.RENormalizing((
-                    (re.compile("ZEO.Exceptions.ClientDisconnected"),
-                     "ClientDisconnected"),
-                    )),
-            ))
+        ZEO.tests.IterationTests,
+        setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
+        checker=renormalizing.RENormalizing((
+                (re.compile("ZEO.Exceptions.ClientDisconnected"),
+                 "ClientDisconnected"),
+                )),
+    ))
 
     def add_tests(to, case):
         """add tests from *case* to *to*.
@@ -1924,13 +1923,13 @@ def test_suite():
             '../nagios.rst',
             setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
             checker=renormalizing.RENormalizing(patterns),
-            ),
-        )
+        ),
+    )
     zeo.addTest(PackableStorage.IExternalGC_suite(
         lambda:
         ServerManagingClientStorageForIExternalGCTest(
             'data.fs', 'blobs', extrafsoptions='pack-gc false')
-        ))
+    ))
     for klass in quick_test_classes:
         add_tests(zeo, klass)
     zeo.layer = ZODB.tests.util.MininalTestLayer('testZeo-misc2')
@@ -1944,8 +1943,8 @@ def test_suite():
                 name,
                 setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
                 checker=renormalizing.RENormalizing(patterns),
-                ),
-            )
+            ),
+        )
         zeo.layer = ZODB.tests.util.MininalTestLayer('testZeo-' + name)
         suite.addTest(zeo)
 
@@ -1969,7 +1968,7 @@ def test_suite():
         'dynamic_server_ports.test',
         setUp=forker.setUp, tearDown=zope.testing.setupstack.tearDown,
         checker=renormalizing.RENormalizing(patterns),
-        )
+    )
     dynamic_server_ports_suite.layer = threaded_server_tests
     suite.addTest(dynamic_server_ports_suite)
 

@@ -80,7 +80,7 @@ def get_port(ignored=None):
                 continue
 
             try:
-                s1.connect(('127.0.0.1', port+1))
+                s1.connect(('127.0.0.1', port + 1))
             except OSError:
                 pass  # Perhaps we should check value of error too.
             else:

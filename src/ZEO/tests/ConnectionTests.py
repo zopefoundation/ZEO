@@ -38,7 +38,7 @@ from . import testssl
 
 logger = logging.getLogger('ZEO.tests.ConnectionTests')
 
-ZERO = '\0'*8
+ZERO = '\0' * 8
 
 
 class TestClientStorage(ClientStorage):
@@ -49,7 +49,7 @@ class TestClientStorage(ClientStorage):
     # take a very long time. Use a timeout more adapted to tests.
     def __init__(*args, **kw):
         return ClientStorage.__init__(
-                *args, **(kw.update(dict(wait_timeout=4)) or kw))
+            *args, **(kw.update(dict(wait_timeout=4)) or kw))
 
     test_connection = False
 
@@ -472,7 +472,7 @@ class ConnectionTests(CommonSetupTearDown):
         except ClientDisconnected:
             self._dostore()
 
-        self.assertTrue(self._storage._connection_generation > generation)
+        self.assertGreater(self._storage._connection_generation, generation)
 
     # Test case for multiple storages participating in a single
     # transaction.  This is not really a connection test, but it needs
@@ -553,7 +553,7 @@ class ConnectionTests(CommonSetupTearDown):
         self.shutdownServer()
         with short_timeout(self):
             self.assertRaises(ClientDisconnected,
-                              self._storage.load, b'\0'*8, '')
+                              self._storage.load, b'\0' * 8, '')
 
         self.startServer()
 
@@ -561,7 +561,7 @@ class ConnectionTests(CommonSetupTearDown):
         time.sleep(2)
         with short_timeout(self):
             self.assertRaises(ClientDisconnected,
-                              self._storage.load, b'\0'*8, '')
+                              self._storage.load, b'\0' * 8, '')
 
 
 class SSLConnectionTests(ConnectionTests):
@@ -632,7 +632,7 @@ class InvqTests(CommonSetupTearDown):
             "Client has seen all of the transactions from the server",
             lambda:
             perstorage.lastTransaction() == self._storage.lastTransaction()
-            )
+        )
         perstorage.load(oid, '')
         perstorage.close()
 
@@ -856,7 +856,7 @@ class ReconnectionTests(CommonSetupTearDown):
             "Client has seen all of the transactions from the server",
             lambda:
             perstorage.lastTransaction() == self._storage.lastTransaction()
-            )
+        )
         perstorage.load(oid, '')
         self.shutdownServer()
         self.pollDown()
@@ -957,7 +957,7 @@ class ReconnectionTests(CommonSetupTearDown):
         # the original.  We need this because ClientStorage won't use
         # a server if the server's last transaction is earlier than
         # what the client has seen.
-        self.startServer(index=1, path=self.file+'.0', create=False)
+        self.startServer(index=1, path=self.file + '.0', create=False)
 
         # If we can still store after shutting down one of the
         # servers, we must be reconnecting to the other server.
@@ -1032,7 +1032,7 @@ class TimeoutTests(CommonSetupTearDown):
             (not storage.is_connected())
             or
             (storage.connection_count_for_tests > old_connection_count)
-            )
+        )
         storage._wait()
         self.assertTrue(storage.is_connected())
         # We expect finish to fail
@@ -1140,4 +1140,4 @@ else:
     _g = globals()
     for name, value in tuple(_g.items()):
         if isinstance(value, type) and issubclass(value, CommonSetupTearDown):
-            _g[name+"V6"] = type(name+"V6", (V6Setup, value), {})
+            _g[name + "V6"] = type(name + "V6", (V6Setup, value), {})

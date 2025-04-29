@@ -26,7 +26,7 @@ import sys
 import time
 
 
-NO_TRANSACTION = '0'*16
+NO_TRANSACTION = '0' * 16
 
 nodiff_names = 'active_txns connections waiting'.split()
 diff_names = 'aborts commits conflicts conflicts_resolved loads stores'.split()
@@ -131,16 +131,16 @@ def main(args=None):
     parser.add_option(
         '-m', '--output-metrics', action="store_true",
         help="Output metrics.",
-        )
+    )
     parser.add_option(
         '-s', '--status-path',
         help="Path to status file, needed to get rate metrics",
-        )
+    )
     parser.add_option(
         '-u', '--time-units', type='choice', default='minutes',
         choices=['seconds', 'minutes', 'hours', 'days'],
         help="Time unit for rate metrics",
-        )
+    )
     (options, args) = parser.parse_args(args)
     [addr] = args
     return check(

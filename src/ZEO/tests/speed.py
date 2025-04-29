@@ -208,7 +208,7 @@ def main(args):
         os.waitpid(pid, 0)
 
     if detailed:
-        print('-'*24)
+        print('-' * 24)
     print("num\tmean\tmin\tmax")
     for r in 1, 10, 100, 1000:
         times = []

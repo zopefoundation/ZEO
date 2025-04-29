@@ -83,14 +83,14 @@ class StorageServerError(StorageError):
 
 registered_methods = {
     'get_info', 'lastTransaction',
-     'getInvalidations', 'new_oids', 'pack', 'loadBefore', 'storea',
-     'checkCurrentSerialInTransaction', 'restorea', 'storeBlobStart',
-     'storeBlobChunk', 'storeBlobEnd', 'storeBlobShared',
-     'deleteObject', 'tpc_begin', 'vote', 'tpc_finish', 'tpc_abort',
-     'history', 'record_iternext', 'sendBlob', 'getTid', 'loadSerial',
-     'new_oid', 'undoa', 'undoLog', 'undoInfo', 'iterator_start',
-     'iterator_next', 'iterator_record_start', 'iterator_record_next',
-     'iterator_gc', 'server_status', 'set_client_label', 'ping'}
+    'getInvalidations', 'new_oids', 'pack', 'loadBefore', 'storea',
+    'checkCurrentSerialInTransaction', 'restorea', 'storeBlobStart',
+    'storeBlobChunk', 'storeBlobEnd', 'storeBlobShared',
+    'deleteObject', 'tpc_begin', 'vote', 'tpc_finish', 'tpc_abort',
+    'history', 'record_iternext', 'sendBlob', 'getTid', 'loadSerial',
+    'new_oid', 'undoa', 'undoLog', 'undoInfo', 'iterator_start',
+    'iterator_next', 'iterator_record_start', 'iterator_record_next',
+    'iterator_gc', 'server_status', 'set_client_label', 'ping'}
 
 
 class ZEOStorage:
@@ -633,7 +633,7 @@ class ZEOStorage:
         return self.server.server_status(self.storage_id)
 
     def set_client_label(self, label):
-        self.log_label = str(label)+' '+_addr_label(self.connection.addr)
+        self.log_label = str(label) + ' ' + _addr_label(self.connection.addr)
 
     def ruok(self):
         return self.server.ruok()
@@ -741,7 +741,7 @@ class StorageServer:
         self.storages = storages
         msg = ", ".join(
             ["{}:{}:{}".format(name, storage.isReadOnly() and "RO" or "RW",
-                           storage.getName())
+                               storage.getName())
              for name, storage in storages.items()])
         log("%s created %s with storages: %s" %
             (self.__class__.__name__, read_only and "RO" or "RW", msg))
@@ -903,10 +903,10 @@ class StorageServer:
             latest_tid = invq[0][0]
         elif (self.invalidation_age and
               (self.invalidation_age >
-               (time.time()-ZODB.TimeStamp.TimeStamp(tid).timeTime())
+               (time.time() - ZODB.TimeStamp.TimeStamp(tid).timeTime())
                )
               ):
-            for t in self.storages[storage_id].iterator(p64(u64(tid)+1)):
+            for t in self.storages[storage_id].iterator(p64(u64(tid) + 1)):
                 for r in t:
                     oids.add(r.oid)
                 latest_tid = t.tid
@@ -983,7 +983,7 @@ class StorageServer:
 
     def ruok(self):
         return {storage_id: self.server_status(storage_id)
-                    for storage_id in self.storages}
+                for storage_id in self.storages}
 
 
 class StubTimeoutThread:

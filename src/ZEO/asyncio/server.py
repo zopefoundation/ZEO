@@ -31,7 +31,7 @@ class ServerProtocol(base.ZEOBaseProtocol):
         ZODB.POSException.POSKeyError,
         ZODB.POSException.ConflictError,
         ZODB.POSException.ReadConflictError,
-        )
+    )
 
     def __init__(self, loop, addr, zeo_storage, msgpack):
         """Create a server's client interface
@@ -41,7 +41,7 @@ class ServerProtocol(base.ZEOBaseProtocol):
         self.zeo_storage = zeo_storage
 
         self.announce_protocol = (
-          (b'M' if msgpack else b'Z') + best_protocol_version
+            (b'M' if msgpack else b'Z') + best_protocol_version
         )
 
     closed = False

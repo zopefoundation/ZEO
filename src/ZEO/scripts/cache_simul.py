@@ -49,8 +49,8 @@ def main(args=None):
     MB = 1 << 20
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--size", "-s",
-                        default=20*MB, dest="cachelimit",
-                        type=lambda s: int(float(s)*MB),
+                        default=20 * MB, dest="cachelimit",
+                        type=lambda s: int(float(s) * MB),
                         help="cache size in MB (default 20MB)")
     add_interval_argument(parser)
     parser.add_argument("--rearrange", "-r",
@@ -205,7 +205,7 @@ class Simulation:
 
     def printheader(self):
         print("{}, cache size {} bytes".format(self.__class__.__name__,
-                                           addcommas(self.cachelimit)))
+                                               addcommas(self.cachelimit)))
         self.extraheader()
         extranames = tuple([s.upper() for s in self.extras])
         args = ("START TIME", "DUR.", "LOADS", "HITS",
@@ -232,7 +232,7 @@ class Simulation:
         # Make sure that the last line of output ends with "OVERALL".  This
         # makes it much easier for another program parsing the output to
         # find summary statistics.
-        print('-'*74)
+        print('-' * 74)
         if self.nreports < 2:
             self.report()
         else:
@@ -264,7 +264,7 @@ class CircularCacheEntry:
         # Offset from start of file to the object's data record; this
         # includes all overhead bytes (status byte, size bytes, etc).
         'offset',
-        )
+    )
 
     def __init__(self, key, end_tid, offset):
         self.key = key
@@ -365,7 +365,7 @@ class CircularCacheSimulation(Simulation):
         if i == 0:
             # This tid is smaller than any we know about -- miss.
             return
-        lo, hi = L[i-1]
+        lo, hi = L[i - 1]
         assert lo < tid
         if tid > hi:
             # No data in the right tid range -- miss.
@@ -458,7 +458,7 @@ class CircularCacheSimulation(Simulation):
         key = oid, start_tid
         assert key not in self.key2entry
         size += self.overhead
-        avail = self.makeroom(size+1)   # see cache.py
+        avail = self.makeroom(size + 1)   # see cache.py
         e = CircularCacheEntry(key, end_tid, self.offset)
         self.filemap[self.offset] = size, e
         self.key2entry[key] = e
@@ -490,7 +490,7 @@ class CircularCacheSimulation(Simulation):
                 oid, start_tid = e.key
                 if e.end_tid == z64:
                     del self.current[oid]
-                    self.evicted[oid] = size-self.overhead, e
+                    self.evicted[oid] = size - self.overhead, e
                 else:
                     L = self.noncurrent[oid]
                     L.remove((start_tid, e.end_tid))
@@ -568,7 +568,7 @@ def addcommas(n):
     result = s[-3:]
     s = s[:-3]
     while s:
-        result = s[-3:]+','+result
+        result = s[-3:] + ',' + result
         s = s[:-3]
 
     return (sign or '') + result + (d or '')

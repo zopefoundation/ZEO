@@ -160,7 +160,8 @@ def time(line):
 
 def sub(t1, t2):
     delta = t2 - t1
-    return delta.days*86400.0+delta.seconds+delta.microseconds/1000000.0
+    return (
+        delta.days * 86400.0 + delta.seconds + delta.microseconds / 1000000.0)
 
 
 waitre = re.compile(r'Clients waiting: (\d+)')
@@ -378,7 +379,7 @@ def minute(f, slice=16, detail=1, summary=1):
     cols = ["time", "reads", "stores", "commits", "aborts", "txns"]
     fmt = "%18s %6s %6s %7s %6s %6s"
     print(fmt % cols)
-    print(fmt % ["-"*len(col) for col in cols])
+    print(fmt % ["-" * len(col) for col in cols])
 
     mlast = r = s = c = a = cl = None
     rs = []
@@ -398,13 +399,13 @@ def minute(f, slice=16, detail=1, summary=1):
             if m != mlast:
                 if mlast:
                     if detail:
-                        print(fmt % (mlast, len(cl), r, s, c, a, a+c))
+                        print(fmt % (mlast, len(cl), r, s, c, a, a + c))
                     cls.append(len(cl))
                     rs.append(r)
                     ss.append(s)
                     cs.append(c)
                     aborts.append(a)
-                    ts.append(c+a)
+                    ts.append(c + a)
                 mlast = m
                 r = s = c = a = 0
                 cl = {}
@@ -423,19 +424,19 @@ def minute(f, slice=16, detail=1, summary=1):
 
     if mlast:
         if detail:
-            print(fmt % (mlast, len(cl), r, s, c, a, a+c))
+            print(fmt % (mlast, len(cl), r, s, c, a, a + c))
         cls.append(len(cl))
         rs.append(r)
         ss.append(s)
         cs.append(c)
         aborts.append(a)
-        ts.append(c+a)
+        ts.append(c + a)
 
     if summary:
         print()
         print('Summary:     \t', '\t'.join(('min', '10%', '25%', 'med',
                                             '75%', '90%', 'max', 'mean')))
-        print("n=%6d\t" % len(cls), '-'*62)
+        print("n=%6d\t" % len(cls), '-' * 62)
         print('Clients: \t', '\t'.join(map(str, stats(cls))))
         print('Reads:   \t', '\t'.join(map(str, stats(rs))))
         print('Stores:  \t', '\t'.join(map(str, stats(ss))))
@@ -452,21 +453,21 @@ def stats(s):
     out = [min]
     ni = n + 1
     for p in .1, .25, .5, .75, .90:
-        lp = ni*p
+        lp = ni * p
         lp_int = int(lp)
         if lp < 1 or lp > n:
             out.append('-')
-        elif abs(lp-lp_int) < .00001:
-            out.append(s[lp_int-1])
+        elif abs(lp - lp_int) < .00001:
+            out.append(s[lp_int - 1])
         else:
-            out.append(
-                int(s[lp_int-1] + (lp - lp_int) * (s[lp_int] - s[lp_int-1])))
+            out.append(int(s[lp_int - 1] + (lp - lp_int)
+                           * (s[lp_int] - s[lp_int - 1])))
 
     mean = 0.0
     for v in s:
         mean += v
 
-    out.extend([max, int(mean/n)])
+    out.extend([max, int(mean / n)])
 
     return out
 
@@ -518,7 +519,7 @@ def verify(f):
             t1, n = nv[cid]
             if n:
                 d = sub(t1, time(line))
-                print(cid, t1, n, d, n and (d*1000.0/n) or '-')
+                print(cid, t1, n, d, n and (d * 1000.0 / n) or '-')
 
 
 def recovery(f):
@@ -538,7 +539,7 @@ def recovery(f):
             continue
         pos = line.find('sending transaction ')
         if pos > 0 and last.find('sending transaction ') > 0:
-            trans.append(line[pos+20:].strip())
+            trans.append(line[pos + 20:].strip())
         else:
             if trans:
                 if len(trans) > 1:

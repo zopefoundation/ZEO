@@ -25,6 +25,6 @@ def test_suite():
             checker=renormalizing.RENormalizing([
                 (re.compile('usage: Usage: '), 'Usage: '),  # Py 2.4
                 (re.compile('options:'), 'Options:'),  # Py 2.4
-                ]),
-            ),
-        ))
+            ]),
+        ),
+    ))

@@ -1,17 +1,16 @@
 import argparse
-import logging
 import multiprocessing
 import os
-import persistent
-import re
 import time
 
+import persistent
 import ZODB
 from BTrees.IOBTree import BTree
 
 import ZEO
 
-#logging.basicConfig(level='DEBUG')
+
+# logging.basicConfig(level='DEBUG')
 
 class P(persistent.Persistent):
 
@@ -34,6 +33,7 @@ parser.add_argument('--save', '-s', help='save results to file')
 parser.add_argument('--name', '-n', help='Run name')
 parser.add_argument('--read-only', '-W', action='store_true')
 
+
 def shoot():
     """zodbshootout-inspired performance exercise.
     """
@@ -45,15 +45,16 @@ def shoot():
     repetitions = options.repetitions
 
     if options.ssl:
-        from ZEO.tests.testssl import server_config, client_ssl
+        from ZEO.tests.testssl import client_ssl
+        from ZEO.tests.testssl import server_config
     else:
         server_config = None
-        client_ssl = lambda : None
+        def client_ssl(): return None
 
     if options.demo_storage_baseline:
         db_factory = None
         headings = ('add', 'update', 'read')
-        stop = lambda : None
+        def stop(): return None
     else:
         if options.address:
             addr = options.address
@@ -62,7 +63,8 @@ def shoot():
                 addr = host, int(port)
             else:
                 addr = '127.0.0.1', int(addr)
-            stop = lambda : None
+
+            def stop(): return None
         else:
             if os.path.exists('perf.fs'):
                 os.remove('perf.fs')
@@ -74,7 +76,7 @@ def shoot():
                 # ZEO 4
                 addr, stop = ZEO.server()
 
-        db_factory = lambda : ZEO.DB(
+        def db_factory(): return ZEO.DB(
             addr,
             ssl=client_ssl(),
             wait_timeout=9999,
@@ -96,8 +98,7 @@ def shoot():
             db.pack()
             db.close()
 
-
-    print('Times per operation in microseconds (o=%s, t=%s, c=%s)' % (
+    print('Times per operation in microseconds (o={}, t={}, c={})'.format(
         object_size, transaction_size, concurrency))
     print(' %12s' * 5 % ('op', 'min', 'mean', 'median', 'max'))
 
@@ -116,16 +117,16 @@ def shoot():
                 args=(db_factory, ip, queues[ip][0], queues[ip][1],
                       object_size, transaction_size, repetitions,
                       options.read_only),
-                )
+            )
             for ip in range(concurrency)
-            ]
+        ]
 
         for p in processes:
             p.daemon = True
             p.start()
 
         for iqueue, oqueue in queues:
-            oqueue.get(timeout=9) # ready?
+            oqueue.get(timeout=9)  # ready?
 
         for name in headings:
             for iqueue, oqueue in queues:
@@ -142,9 +143,9 @@ def shoot():
                          options.server_sync, options.ssl,
                          options.demo_storage_baseline,
                          options.address,
-                         name, sum(data)/len(data))
+                         name, sum(data) / len(data))
                         )
-                    ) + '\n')
+                ) + '\n')
 
         for p in processes:
             p.join(1)
@@ -163,7 +164,7 @@ def shoot():
         run_test(db_factory, 0, iqueue, oqueue,
                  object_size, transaction_size, repetitions,
                  options.read_only)
-        oqueue.get(timeout=9) # ready?
+        oqueue.get(timeout=9)  # ready?
         if profiler is not None:
             profiler.disable()
             profiler.dump_stats(options.profile)
@@ -173,16 +174,18 @@ def shoot():
 
     stop()
 
+
 def summarize(name, results):
-    results = [int(t*1000000) for t in results]
-    l = len(results)
-    if l > 1:
+    results = [int(t * 1000000) for t in results]
+    l_ = len(results)
+    if l_ > 1:
         print(' %12s' * 5 % (
-            name, min(results), round(sum(results)/l), results[l//2],
+            name, min(results), round(sum(results) / l_), results[l_ // 2],
             max(results)
-            ))
+        ))
     else:
         print(' %12s' * 2 % (name, results[0]))
+
 
 def run_test(db_factory, process_index, iqueue, oqueue,
              object_size, transaction_size, repetitions, read_only):
@@ -200,7 +203,7 @@ def run_test(db_factory, process_index, iqueue, oqueue,
 
     conn = db.open()
     data = conn.root.speedtest[process_index]
-    slots = list(data.values()) # Get data slots loaded
+    slots = list(data.values())  # Get data slots loaded
     oqueue.put('ready')
 
     if not read_only:
@@ -287,6 +290,7 @@ def run_test(db_factory, process_index, iqueue, oqueue,
 
     conn.close()
     db.close()
+
 
 if __name__ == '__main__':
     shoot()

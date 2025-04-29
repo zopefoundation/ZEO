@@ -89,7 +89,7 @@ class CloseServerTests(unittest.TestCase):
             "close_server",  # New
             "clear_socket",
             "remove_pidfile",
-            ])
+        ])
         # The default implementation closes the storage server
         self.assertEqual(hasattr(zeo, "server"), True)
         self.assertEqual(zeo.server.called, ["close"])
@@ -111,7 +111,7 @@ class CloseServerTests(unittest.TestCase):
             "close_server",
             "clear_socket",
             "remove_pidfile",
-            ])
+        ])
         # The storage server has been closed
         self.assertEqual(hasattr(zeo, "server"), True)
         self.assertEqual(zeo.server.called, ["close"])
@@ -132,7 +132,7 @@ class CloseServerTests(unittest.TestCase):
             "close_server",
             "clear_socket",
             "remove_pidfile",
-            ])
+        ])
         # The server attribute is present but None
         self.assertEqual(hasattr(zeo, "server"), True)
         self.assertEqual(zeo.server, None)

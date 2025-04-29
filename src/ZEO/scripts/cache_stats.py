@@ -63,7 +63,7 @@ def add_interval_argument(parser):
         return interval
     parser.add_argument(
         "--interval", "-i",
-        default=15*60, type=_interval,
+        default=15 * 60, type=_interval,
         help="summarizing interval in minutes (default 15; max 60)")
 
 
@@ -88,11 +88,11 @@ def main(args=None):
         args = sys.argv[1:]
     # Parse options
     parser = argparse.ArgumentParser(
-                description="Trace file statistics analyzer",
-                # Our -h, short for --load-histogram
-                # conflicts with default for help, so we handle
-                # manually.
-                add_help=False)
+        description="Trace file statistics analyzer",
+        # Our -h, short for --load-histogram
+        # conflicts with default for help, so we handle
+        # manually.
+        add_help=False)
     verbose_group = parser.add_mutually_exclusive_group()
     verbose_group.add_argument('--verbose', '-v',
                                default=False, action='store_true',
@@ -150,8 +150,8 @@ def main(args=None):
     FMT_SIZE = struct.calcsize(FMT)
     assert FMT_SIZE == 26
     # Read file, gathering statistics, and printing each record if verbose.
-    print(' '*16, "%7s %7s %7s %7s" % (
-            'loads', 'hits', 'inv(h)', 'writes'), end=' ')
+    print(' ' * 16, "%7s %7s %7s %7s" % (
+        'loads', 'hits', 'inv(h)', 'writes'), end=' ')
     print('hitrate')
     try:
         while 1:
@@ -208,7 +208,7 @@ def main(args=None):
                     U64(start_tid),
                     U64(end_tid),
                     version,
-                    dlen and (' '+str(dlen)) or ""))
+                    dlen and (' ' + str(dlen)) or ""))
             if code & 0x70 == 0x20:
                 oids[oid] = oids.get(oid, 0) + 1
                 total_loads += 1
@@ -220,7 +220,7 @@ def main(args=None):
                 h0 = he = ts
                 if not options.quiet:
                     print(ctime(ts)[4:-5], end=' ')
-                    print('='*20, "Restart", '='*20)
+                    print('=' * 20, "Restart", '=' * 20)
     except KeyboardInterrupt:
         print("\nInterrupted.  Stats so far:\n")
 
@@ -239,11 +239,11 @@ def main(args=None):
     if options.dostats:
         print()
         print("Read {} trace records ({} bytes) in {:.1f} seconds".format(
-            addcommas(records), addcommas(end_pos), rte-rt0))
+            addcommas(records), addcommas(end_pos), rte - rt0))
         print("Versions:   %s records used a version" % addcommas(versions))
         print("First time: %s" % ctime(t0))
         print("Last time:  %s" % ctime(te))
-        print("Duration:   %s seconds" % addcommas(te-t0))
+        print("Duration:   %s seconds" % addcommas(te - t0))
         print("Data recs:  %s (%.1f%%), average size %d bytes" % (
             addcommas(datarecords),
             100.0 * datarecords / records,
@@ -390,7 +390,7 @@ explain = {
     0x50: "store (version)",
     0x52: "store (current, non-version)",
     0x54: "store (non-current)",
-    }
+}
 
 if __name__ == "__main__":
     sys.exit(main())

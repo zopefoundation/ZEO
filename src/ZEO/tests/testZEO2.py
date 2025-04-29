@@ -511,6 +511,6 @@ def test_suite():
                 (re.compile(r"'start': '[^\n]+'"), 'start'),
                 (re.compile('ZODB.POSException.StorageTransactionError'),
                  'StorageTransactionError'),
-                ]),
-            ),
-        ))
+            ]),
+        ),
+    ))

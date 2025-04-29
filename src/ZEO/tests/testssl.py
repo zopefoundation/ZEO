@@ -53,7 +53,7 @@ class SSLConfigTest(ZEOConfigTestBase):
             key {server_key}
             authenticate {client_cert}
             </ssl>"""
-            )
+        )
         with self.assertRaises(ClientDisconnected):
             self.start_client(addr, wait_timeout=1)
 
@@ -77,7 +77,7 @@ class SSLConfigTest(ZEOConfigTestBase):
             key {server_key}
             authenticate {client_cert}
             </ssl>"""
-            )
+        )
 
         # Connext with bad hostname fails:
 
@@ -113,7 +113,7 @@ class SSLConfigTest(ZEOConfigTestBase):
             authenticate {client_cert}
             password-function ZEO.tests.testssl.pwfunc
             </ssl>"""
-            )
+        )
         stop()
 
 
@@ -176,7 +176,7 @@ class SSLConfigTestMockiavellian(ZEOConfigTestBase):
             key=server_key,
             password_function='ZEO.tests.testssl.pwfunc',
             authenticate=here,
-            )
+        )
         context = server.acceptor.ssl_context
         self.assert_context(True,
                             factory,
@@ -189,8 +189,8 @@ class SSLConfigTestMockiavellian(ZEOConfigTestBase):
     @mock.patch('ZEO.ClientStorage.ClientStorage')
     def test_ssl_mockiavellian_client_no_ssl(self, ClientStorage, factory, *_):
         ssl_client()
-        self.assertFalse('ssl' in ClientStorage.call_args[1])
-        self.assertFalse('ssl_server_hostname' in ClientStorage.call_args[1])
+        self.assertNotIn('ssl', ClientStorage.call_args[1])
+        self.assertNotIn('ssl_server_hostname', ClientStorage.call_args[1])
 
     @mock.patch('ssl.create_default_context')
     @mock.patch('ZEO.ClientStorage.ClientStorage')
@@ -304,7 +304,7 @@ def ssl_conf(**ssl_settings):
         ssl_conf = '<ssl>\n' + '\n'.join(
             '{} {}'.format(name.replace('_', '-'), value)
             for name, value in ssl_settings.items()
-            ) + '\n</ssl>\n'
+        ) + '\n</ssl>\n'
     else:
         ssl_conf = ''
 
@@ -320,7 +320,7 @@ def ssl_client(**ssl_settings):
           {}
         </clientstorage>
         """.format(ssl_conf(**ssl_settings))
-        )
+    )
 
 
 def create_server(**ssl_settings):
@@ -352,7 +352,7 @@ def test_suite():
         unittest.defaultTestLoader.loadTestsFromTestCase(SSLConfigTest),
         unittest.defaultTestLoader.loadTestsFromTestCase(
             SSLConfigTestMockiavellian),
-        ))
+    ))
     suite.layer = threaded_server_tests
     return suite
 

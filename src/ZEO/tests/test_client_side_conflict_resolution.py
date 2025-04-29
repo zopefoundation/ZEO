@@ -1,7 +1,6 @@
 import os
 import shutil
 import tempfile
-import unittest
 
 import zope.testing.setupstack
 from BTrees.Length import Length
@@ -48,7 +47,7 @@ class ClientSideConflictResolutionTests(zope.testing.setupstack.TestCase):
         zs.storea(ob._p_oid, tid1, writer.serialize(ob), 2)
         self.assertEqual(zs.vote(2), [])
         tid2 = server.unpack_result(zs.tpc_finish(2))
-        server.assert_calls(self, ('info', {'size':  Var(), 'length': 1}))
+        server.assert_calls(self, ('info', {'size': Var(), 'length': 1}))
 
         # Now, a cnflicting one:
         zs.tpc_begin(3, '', '', {})
@@ -96,7 +95,7 @@ class ClientSideConflictResolutionTests(zope.testing.setupstack.TestCase):
                   serials=(tid2, tid1),
                   data=writer.serialize(ob),
                   )],
-            )
+        )
 
         # Now, it's up to the client to resolve the conflict. It can
         # do this by making another store call. In this call, we use
@@ -137,7 +136,7 @@ class ClientSideConflictResolutionTests(zope.testing.setupstack.TestCase):
             storage_conf='<mappingstorage>\n</mappingstorage>\n',
             zeo_conf=dict(client_conflict_resolution=True),
             threaded=False,
-            )
+        )
 
         db = ZEO.DB(addr2)
         with db.transaction() as conn:

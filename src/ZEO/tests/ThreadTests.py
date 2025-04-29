@@ -22,7 +22,7 @@ from ZODB.tests.StorageTestBase import zodb_pickle
 import ZEO.Exceptions
 
 
-ZERO = '\0'*8
+ZERO = '\0' * 8
 
 
 class BasicThread(threading.Thread):

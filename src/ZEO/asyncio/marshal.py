@@ -166,7 +166,7 @@ def find_global(module, name):
         return r
 
     # TODO:  is there a better way to do this?
-    if type(r) == exception_type_type and issubclass(r, Exception):
+    if isinstance(r, exception_type_type) and issubclass(r, Exception):
         return r
 
     raise ImportError(f'Unsafe global: {module}.{name}')

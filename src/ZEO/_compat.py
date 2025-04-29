@@ -24,7 +24,7 @@ WIN = sys.platform.startswith('win')
 
 
 class Unpickler(_Unpickler):
-    # Python 3 doesn't allow assignments to find_global,
+    # Python doesn't allow assignments to find_global any more,
     # instead, find_class can be overridden
 
     find_global = None

@@ -28,7 +28,7 @@ class IterationTests:
         # under non-refcounted implementations like PyPy
         # for storage._iterator_gc to fully do its job.
         # First, confirm that it ran
-        self.assertTrue(self._storage._iterators._last_gc > 0)
+        self.assertGreater(self._storage._iterators._last_gc, 0)
         gc_enabled = gc.isenabled()
         # make sure there's no race conditions cleaning out the weak refs
         gc.disable()

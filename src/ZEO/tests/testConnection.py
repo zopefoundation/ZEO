@@ -46,8 +46,8 @@ class FileStorageConfig:
         create {}
         read-only {}
         </filestorage>""".format(path,
-                             create and 'yes' or 'no',
-                             read_only and 'yes' or 'no')
+                                 create and 'yes' or 'no',
+                                 read_only and 'yes' or 'no')
 
 
 class MappingStorageConfig:
@@ -256,7 +256,7 @@ def test_suite():
 
     sub = doctest.DocTestSuite(
         setUp=forker.setUp, tearDown=setupstack.tearDown,
-        )
+    )
     sub.layer = ZODB.tests.util.MininalTestLayer('ZEO Connection DocTests')
     suite.addTest(sub)
 

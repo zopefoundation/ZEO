@@ -6,7 +6,7 @@ from ZEO.asyncio.marshal import pickle_server_decode
 
 try:
     from ZopeUndo.Prefix import Prefix
-except ImportError:
+except ModuleNotFoundError:
     _HAVE_ZOPE_UNDO = False
 else:
     _HAVE_ZOPE_UNDO = True
