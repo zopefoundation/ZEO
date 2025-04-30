@@ -36,13 +36,13 @@ jobs:
         - ["3.9",   "py39-uvloop"]
         - ["3.10",  "py310-msgpack1"]
         - ["3.10",  "py310-uvloop"]
-        - ["3.10",  "py310-zodbmaster"]
         - ["3.11",  "py311-msgpack1"]
         - ["3.11",  "py311-uvloop"]
         - ["3.12",  "py312-msgpack1"]
         - ["3.12",  "py312-uvloop"]
         - ["3.13",  "py313-msgpack1"]
         - ["3.13",  "py313-uvloop"]
+        - ["3.13",  "py313-zodbmaster"]
         - ["pypy-3.10", "pypy3-msgpack1"]
 
     runs-on: ${{ matrix.os[1] }}

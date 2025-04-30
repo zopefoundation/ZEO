@@ -2,7 +2,7 @@
 # https://github.com/zopefoundation/meta/tree/master/config/pure-python
 [meta]
 template = "pure-python"
-commit-id = "2f63b298"
+commit-id = "09d4ab7e"
 
 [python]
 with-windows = false
@@ -21,7 +21,7 @@ testenv-commands = [
     ]
 testenv-deps = [
     "!zodbmaster: ZODB >= 4.2.0b1",
-    "zodbmaster: -e git+https://github.com/zopefoundation/ZODB.git@master\\#egg=ZODB",
+    "zodbmaster: git+https://github.com/zopefoundation/ZODB.git@master\\#egg=ZODB",
     "uvloop: uvloop",
     ]
 testenv-setenv = [
@@ -60,12 +60,12 @@ additional-config = [
     "- [\"3.9\",   \"py39-uvloop\"]",
     "- [\"3.10\",  \"py310-msgpack1\"]",
     "- [\"3.10\",  \"py310-uvloop\"]",
-    "- [\"3.10\",  \"py310-zodbmaster\"]",
     "- [\"3.11\",  \"py311-msgpack1\"]",
     "- [\"3.11\",  \"py311-uvloop\"]",
     "- [\"3.12\",  \"py312-msgpack1\"]",
     "- [\"3.12\",  \"py312-uvloop\"]",
     "- [\"3.13\",  \"py313-msgpack1\"]",
     "- [\"3.13\",  \"py313-uvloop\"]",
+    "- [\"3.13\",  \"py313-zodbmaster\"]",
     "- [\"pypy-3.10\", \"pypy3-msgpack1\"]",
     ]
