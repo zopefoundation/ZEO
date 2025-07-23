@@ -8,6 +8,10 @@ Changelog
 
 - Drop support for Python 3.7, 3.8.
 
+- Drop ``ZEO.monitor.zeo_version`` as it is unused across all zopefoundation
+  packages.
+
+- No longer use deprecated ``pkg_resources``.
 
 6.0.0 (2023-11-23)
 ------------------

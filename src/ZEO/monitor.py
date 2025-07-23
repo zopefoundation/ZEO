@@ -17,19 +17,6 @@
 import time
 
 
-zeo_version = 'unknown'
-try:
-    import pkg_resources
-except ModuleNotFoundError:
-    pass
-else:
-    zeo_dist = pkg_resources.working_set.find(
-        pkg_resources.Requirement.parse('ZODB3')
-    )
-    if zeo_dist is not None:
-        zeo_version = zeo_dist.version
-
-
 class StorageStats:
     """Per-storage usage statistics."""
 
