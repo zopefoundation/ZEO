@@ -6,8 +6,11 @@ ZEO includes a script that provides a nagios monitor plugin:
 
     >>> import time
     >>> import importlib.metadata
-    >>> nagios = importlib.metadata.entry_points(
-    ...     group='console_scripts')['zeo-nagios'].load()
+    >>> try:
+    ...     nagios = importlib.metadata.entry_points(
+    ...         group='console_scripts')['zeo-nagios'].load()
+    ... except TypeError:  # PY39
+    ...     from ZEO.nagios import main as nagios
 
 In it's simplest form, the script just checks if it can get status:
 
