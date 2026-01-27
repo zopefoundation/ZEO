@@ -232,8 +232,14 @@ def start_zeo_server(storage_conf=None, zeo_conf=None, port=None, keep=False,
         # have to do with its default `spawn` method
         # from multiprocessing import Process as Thread
         process_type = os.environ.get("ZEO_PROCESS_TYPE", "")
-        from multiprocessing import context
-        Thread = getattr(context, process_type.capitalize() + "Process")
+        if not process_type:
+            process_type = multiprocessing.get_start_method()
+            if process_type == "forkserver":
+                # forkserver is default on python3.14 but this is incompatible
+                # with running ZEO test suite using tox under linux.
+                process_type = "spawn"
+        ctx = multiprocessing.get_context(process_type)
+        Thread = ctx.Process
         Queue = ThreadlessQueue
 
     logger.info("using thread type %r", Thread)
