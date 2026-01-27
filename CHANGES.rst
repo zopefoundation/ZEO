@@ -4,6 +4,8 @@ Changelog
 6.2 (unreleased)
 ----------------
 
+- Fix ZEO cache tracing to work after year 2038.
+
 - Add support for Python 3.14.
 
 - Drop support for Python 3.9.

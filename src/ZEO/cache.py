@@ -811,7 +811,7 @@ class ClientCache:
                 end_tid = z64
             try:
                 _tracefile.write(
-                    pack(">iiH8s8s",
+                    pack(">IiH8s8s",
                          int(now()), encoded, len(oid), tid, end_tid) + oid,
                 )
             except:  # NOQA: E722 bare except

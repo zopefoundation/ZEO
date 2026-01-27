@@ -146,7 +146,7 @@ def main(args=None):
     thisinterval = None  # generally te//interval
     f_read = f.read
     unpack = struct.unpack
-    FMT = ">iiH8s8s"
+    FMT = ">IiH8s8s"
     FMT_SIZE = struct.calcsize(FMT)
     assert FMT_SIZE == 26
     # Read file, gathering statistics, and printing each record if verbose.
