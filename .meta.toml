@@ -1,8 +1,8 @@
-# Generated from:
-# https://github.com/zopefoundation/meta/tree/master/config/pure-python
+# Generated with zope.meta (https://zopemeta.readthedocs.io/) from:
+# https://github.com/zopefoundation/meta/tree/master/src/zope/meta/pure-python
 [meta]
 template = "pure-python"
-commit-id = "09d4ab7e"
+commit-id = "f6df9072"
 
 [python]
 with-windows = false
@@ -56,8 +56,6 @@ additional-rules = [
 
 [github-actions]
 additional-config = [
-    "- [\"3.9\",   \"py39-msgpack1\"]",
-    "- [\"3.9\",   \"py39-uvloop\"]",
     "- [\"3.10\",  \"py310-msgpack1\"]",
     "- [\"3.10\",  \"py310-uvloop\"]",
     "- [\"3.11\",  \"py311-msgpack1\"]",
@@ -66,6 +64,8 @@ additional-config = [
     "- [\"3.12\",  \"py312-uvloop\"]",
     "- [\"3.13\",  \"py313-msgpack1\"]",
     "- [\"3.13\",  \"py313-uvloop\"]",
-    "- [\"3.13\",  \"py313-zodbmaster\"]",
+    "- [\"3.14\",  \"py314-msgpack1\"]",
+    "- [\"3.14\",  \"py314-uvloop\"]",
+    "- [\"3.14\",  \"py314-zodbmaster\"]",
     "- [\"pypy-3.10\", \"pypy3-msgpack1\"]",
     ]

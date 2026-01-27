@@ -1,5 +1,5 @@
-# Generated from:
-# https://github.com/zopefoundation/meta/tree/master/config/pure-python
+# Generated with zope.meta (https://zopemeta.readthedocs.io/) from:
+# https://github.com/zopefoundation/meta/tree/master/src/zope/meta/pure-python
 name: tests
 
 on:
@@ -24,16 +24,14 @@ jobs:
         config:
         # [Python version, tox env]
         - ["3.11", "release-check"]
-        - ["3.9", "py39"]
         - ["3.10", "py310"]
         - ["3.11", "py311"]
         - ["3.12", "py312"]
         - ["3.13", "py313"]
-        - ["pypy-3.10", "pypy3"]
+        - ["3.14", "py314"]
+        - ["pypy-3.11", "pypy3"]
         - ["3.11", "docs"]
         - ["3.11", "coverage"]
-        - ["3.9",   "py39-msgpack1"]
-        - ["3.9",   "py39-uvloop"]
         - ["3.10",  "py310-msgpack1"]
         - ["3.10",  "py310-uvloop"]
         - ["3.11",  "py311-msgpack1"]
@@ -42,31 +40,30 @@ jobs:
         - ["3.12",  "py312-uvloop"]
         - ["3.13",  "py313-msgpack1"]
         - ["3.13",  "py313-uvloop"]
-        - ["3.13",  "py313-zodbmaster"]
+        - ["3.14",  "py314-msgpack1"]
+        - ["3.14",  "py314-uvloop"]
+        - ["3.14",  "py314-zodbmaster"]
         - ["pypy-3.10", "pypy3-msgpack1"]
 
     runs-on: ${{ matrix.os[1] }}
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
     name: ${{ matrix.config[1] }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         persist-credentials: false
     - name: Install uv + caching
-      uses: astral-sh/setup-uv@v6
+      # astral/setup-uv@7.2.0
+      uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b
       with:
         enable-cache: true
         cache-dependency-glob: |
           setup.*
           tox.ini
-        python-version: ${{ matrix.matrix.config[0] }}
+        python-version: ${{ matrix.config[0] }}
         github-token: ${{ secrets.GITHUB_TOKEN }}
     - name: Test
-      if: ${{ !startsWith(runner.os, 'Mac') }}
       run: uvx --with tox-uv tox -e ${{ matrix.config[1] }}
-    - name: Test (macOS)
-      if: ${{ startsWith(runner.os, 'Mac') }}
-      run: uvx --with tox-uv tox -e ${{ matrix.config[1] }}-universal2
     - name: Coverage
       if: matrix.config[1] == 'coverage'
       run: |
