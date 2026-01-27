@@ -4,7 +4,9 @@ Changelog
 6.2 (unreleased)
 ----------------
 
-- Nothing changed yet.
+- Add support for Python 3.14.
+
+- Drop support for Python 3.9.
 
 
 6.1 (2025-07-23)
