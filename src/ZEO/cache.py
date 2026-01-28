@@ -780,6 +780,11 @@ class ClientCache:
     # self._tracefile to None.
     _tracefile = None
 
+    # cache trace records have the following format:
+    #   timestamp (dlen|code) len(oid) tid end_tid  (+ oid following after)
+    # (see ZEO/scripts/cache_stats.py for more details)
+    TRACE_FMT = ">IiH8s8s"
+
     def _trace(self, *a, **kw):
         pass
 
@@ -811,7 +816,7 @@ class ClientCache:
                 end_tid = z64
             try:
                 _tracefile.write(
-                    pack(">IiH8s8s",
+                    pack(ClientCache.TRACE_FMT,
                          int(now()), encoded, len(oid), tid, end_tid) + oid,
                 )
             except:  # NOQA: E722 bare except

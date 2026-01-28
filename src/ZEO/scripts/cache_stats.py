@@ -52,6 +52,8 @@ import time
 # we assign ctime locally to facilitate test replacement!
 from time import ctime
 
+import ZEO.cache
+
 
 def add_interval_argument(parser):
     def _interval(a):
@@ -146,7 +148,7 @@ def main(args=None):
     thisinterval = None  # generally te//interval
     f_read = f.read
     unpack = struct.unpack
-    FMT = ">IiH8s8s"
+    FMT = ZEO.cache.ClientCache.TRACE_FMT
     FMT_SIZE = struct.calcsize(FMT)
     assert FMT_SIZE == 26
     # Read file, gathering statistics, and printing each record if verbose.
