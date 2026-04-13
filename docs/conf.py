@@ -11,10 +11,10 @@
 # All configuration values have a default; values that are commented out serve
 # to show the default.
 
+import importlib.metadata
 import os
 import sys
-
-import pkg_resources
+from datetime import datetime
 
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -29,7 +29,7 @@ sys.path.insert(0, os.path.abspath(".."))
 # If your documentation needs a minimal Sphinx version, state it here.
 # needs_sphinx = '1.0'
 
-rqmt = pkg_resources.require('ZEO')[0]
+rqmt = importlib.metadata.distribution('ZEO')
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
@@ -56,7 +56,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'ZEO'
-copyright = '2012, Zope Foundation Contributors'
+copyright = f'2012-{datetime.now().year}, Zope Foundation Contributors'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

@@ -4,6 +4,8 @@ Changelog
 6.2 (unreleased)
 ----------------
 
+- Move package metadata from setup.py to pyproject.toml.
+
 - Fix ZEO cache tracing to work after year 2038.
 
 - Add support for Python 3.14.
