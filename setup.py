@@ -93,13 +93,14 @@ setup(name="ZEO",
       },
       install_requires=install_requires,
       zip_safe=False,
-      entry_points="""
-      [console_scripts]
-      zeopack = ZEO.scripts.zeopack:main
-      runzeo = ZEO.runzeo:main
-      zeoctl = ZEO.zeoctl:main
-      zeo-nagios = ZEO.nagios:main
-      """,
+      entry_points={
+          'console_scripts': [
+              'zeopack = ZEO.scripts.zeopack:main',
+              'runzeo = ZEO.runzeo:main',
+              'zeoctl = ZEO.zeoctl:main',
+              'zeo-nagios = ZEO.nagios:main',
+          ]
+      },
       include_package_data=True,
       python_requires='>=3.10',
       )
