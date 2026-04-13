@@ -11,8 +11,10 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ZEO"
 version = "6.3.dev0"
+description = "Single-server client-server database server for ZODB"
 license = "ZPL-2.1"
 classifiers = [
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
