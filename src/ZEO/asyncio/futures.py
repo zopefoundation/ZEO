@@ -192,7 +192,7 @@ class ConcurrentFuture(Future):
             concurrent.futures.TimeoutError, which is raised for uniformity.
         """
         if not self.completed.wait(timeout):
-            raise asyncio.TimeoutError()
+            raise TimeoutError()
         return Future.result(self)
 
 

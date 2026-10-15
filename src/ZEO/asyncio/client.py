@@ -701,7 +701,7 @@ class ClientIO:
 
             try:
                 await await_with_timeout(self.connected, timeout, self.loop)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 raise ClientDisconnected("timed out waiting for connection")
             except asyncio.CancelledError:
                 raise ClientDisconnected("connection cancelled")
@@ -727,7 +727,7 @@ class ClientIO:
         closing = self.close()
         try:
             await await_with_timeout(closing, 10, self.loop)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             from pprint import pformat
             info = {"client": pformat(vars(self))}
             if self.protocol is not None:
@@ -1091,6 +1091,6 @@ async def await_with_timeout(f, timeout, loop):
             return f.result()
         else:
             f.remove_done_callback(stop)
-            raise asyncio.TimeoutError
+            raise TimeoutError
     finally:
         handle.cancel()
