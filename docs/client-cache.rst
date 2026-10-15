@@ -7,8 +7,8 @@ client cache allows reads to be done from local disk rather than by remote
 access to the storage server.
 
 The cache may be persistent or transient.  If the cache is persistent, then
-the cache file is retained for use after process restarts.  A non-
-persistent cache uses a temporary file.
+the cache file is retained for use after process restarts.  A
+non-persistent cache uses a temporary file.
 
 The client cache is managed in a single file, of the specified size.
 

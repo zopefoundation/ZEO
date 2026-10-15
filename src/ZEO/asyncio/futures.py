@@ -13,7 +13,6 @@ know the coroutine run by the task, it is safer to use
 a standard ``asyncio.Task``.
 """
 
-import asyncio
 from asyncio import CancelledError
 from asyncio import InvalidStateError
 from asyncio import get_event_loop
@@ -192,7 +191,7 @@ class ConcurrentFuture(Future):
             concurrent.futures.TimeoutError, which is raised for uniformity.
         """
         if not self.completed.wait(timeout):
-            raise asyncio.TimeoutError()
+            raise TimeoutError()
         return Future.result(self)
 
 
