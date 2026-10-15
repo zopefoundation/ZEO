@@ -32,8 +32,6 @@ jobs:
         - ["pypy-3.11", "pypy3"]
         - ["3.11", "docs"]
         - ["3.11", "coverage"]
-        - ["3.10",  "py310-msgpack1"]
-        - ["3.10",  "py310-uvloop"]
         - ["3.11",  "py311-msgpack1"]
         - ["3.11",  "py311-uvloop"]
         - ["3.12",  "py312-msgpack1"]
@@ -43,7 +41,10 @@ jobs:
         - ["3.14",  "py314-msgpack1"]
         - ["3.14",  "py314-uvloop"]
         - ["3.14",  "py314-zodbmaster"]
-        - ["pypy-3.10", "pypy3-msgpack1"]
+        - ["3.15",  "py315-msgpack1"]
+        - ["3.15",  "py315-uvloop"]
+        - ["3.15",  "py315-zodbmaster"]
+        - ["pypy-3.11", "pypy3-msgpack1"]
 
     runs-on: ${{ matrix.os[1] }}
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
