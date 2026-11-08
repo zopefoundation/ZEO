@@ -4,7 +4,9 @@ Changelog
 6.3 (unreleased)
 ----------------
 
-- Nothing changed yet.
+- Fix ``KeyError`` in ``ClientCache._makeroom`` after an invalidation with
+  the current tid
+  (`issue 254 <https://github.com/zopefoundation/ZEO/issues/254>`_).
 
 
 6.2 (2026-04-13)

@@ -114,6 +114,28 @@ class CacheTests(ZODB.tests.util.TestCase):
         self.assertEqual(self.cache.loadBefore(n1, n4),
                          (data1, n3, n4))
 
+    def testInvalidateSameTid(self):
+        """Invalidating with the current tid drops the record (#254)."""
+        self.cache.store(n1, n3, None, b"first data for n1")
+        self.cache.invalidate(n1, n3)
+        self.assertEqual(self.cache.load(n1), None)
+        self.assertEqual(len(self.cache), 0)
+        # The next store with the same tid wins.
+        self.cache.store(n1, n3, None, b"second data for n1")
+        self.assertEqual(self.cache.load(n1), (b"second data for n1", n3))
+
+    def testInvalidateSameTidThenEvict(self):
+        """Evicting after an invalidation with the current tid works (#254)."""
+        cache = ZEO.cache.ClientCache(None, 200000)
+        cache.store(n1, n3, None, b"x" * 1000)
+        cache.setLastTid(n3)
+        cache.invalidate(n1, n3)
+        # Fill the cache until the first record is evicted.
+        for i in range(2, 2000):
+            cache.store(p64(i), n4, None, b"y" * 1000)
+        self.assertEqual(cache.load(n1), None)
+        cache.close()
+
     def testNonCurrent(self):
         data1 = b"data for n1"
         data2 = b"data for n2"
