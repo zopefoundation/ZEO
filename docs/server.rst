@@ -230,5 +230,3 @@ should first rename the log file and then send the signal to the
 server.  The server will continue writing to the renamed log file
 until it receives the signal.  After it receives the signal, the
 server will create a new file with the old name and write to it.
-
-

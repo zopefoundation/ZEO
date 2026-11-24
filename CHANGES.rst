@@ -8,6 +8,10 @@ Changelog
   the current tid
   (`issue 254 <https://github.com/zopefoundation/ZEO/issues/254>`_).
 
+- Add support for Python 3.15.
+
+- Drop support for Python 3.10.
+
 
 6.2 (2026-04-13)
 ----------------
