@@ -1067,6 +1067,38 @@ Now try to do simulation:
     """
 
 
+def cache_tools_handle_invalidation_with_current_tid():
+    r"""
+    The trace tools handle the 0x1E record written when an object is stored
+    twice in one transaction.
+
+    >>> os.environ["ZEO_CACHE_TRACE"] = 'yes'
+    >>> cache = ZEO.cache.ClientCache('cache', 1<<21)
+    >>> cache.store(p64(1), p64(1), None, b'x' * 500)
+    >>> cache.invalidate(p64(1), p64(1))
+    >>> cache.store(p64(1), p64(1), None, b'x' * 600)
+    >>> cache.close()
+    >>> del os.environ["ZEO_CACHE_TRACE"]
+
+    >>> import ZEO.scripts.cache_simul, ZEO.scripts.cache_stats
+    >>> ZEO.scripts.cache_simul.main('-s 1 cache.trace'.split())
+    ... # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+    CircularCacheSimulation, cache size 1,048,576 bytes
+      START TIME   DUR.   LOADS    HITS INVALS WRITES HITRATE  EVICTS   INUSE
+    ...                0       0      1      2     n/a       0     0.1
+    --------------------------------------------------------------------------
+    ...                0       0      1      2     n/a       0     0.1
+    >>> ZEO.scripts.cache_stats.main('-q cache.trace'.split())
+    ... # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+                       loads    hits  inv(h)  writes hitrate
+    ...
+            Count Code Function (action)
+                1  00  _setup_trace (initialization)
+                1  1e  invalidate (hit, discarding current or non-current)
+                2  52  store (current, non-version)
+    """
+
+
 def invalidations_with_current_tid_dont_wreck_cache():
     """
     An invalidation with the current tid drops the record, and the cache

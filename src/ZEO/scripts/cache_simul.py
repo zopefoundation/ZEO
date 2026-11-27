@@ -412,8 +412,9 @@ class CircularCacheSimulation(Simulation):
         self.invals += 1
         self.total_invals += 1
         del self.current[oid]
-        if tid == z64:
-            # Startup cache verification:  forget this oid entirely.
+        if tid == z64 or tid == cur_tid:
+            # Startup cache verification, or the oid was stored twice in one
+            # transaction:  forget this oid entirely, as the cache does.
             self._remove(oid, cur_tid)
             return
 
