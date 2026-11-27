@@ -119,6 +119,7 @@ class CacheTests(ZODB.tests.util.TestCase):
         self.cache.store(n1, n3, None, b"first data for n1")
         self.cache.invalidate(n1, n3)
         self.assertEqual(self.cache.load(n1), None)
+        self.assertEqual(self.cache.loadBefore(n1, n5), None)
         self.assertEqual(len(self.cache), 0)
         # The next store with the same tid wins.
         self.cache.store(n1, n3, None, b"second data for n1")
@@ -127,14 +128,15 @@ class CacheTests(ZODB.tests.util.TestCase):
     def testInvalidateSameTidThenEvict(self):
         """Evicting after an invalidation with the current tid works (#254)."""
         cache = ZEO.cache.ClientCache(None, 200000)
+        self.addCleanup(cache.close)
         cache.store(n1, n3, None, b"x" * 1000)
         cache.setLastTid(n3)
         cache.invalidate(n1, n3)
         # Fill the cache until the first record is evicted.
         for i in range(2, 2000):
             cache.store(p64(i), n4, None, b"y" * 1000)
+        self.assertGreater(cache.getStats()[2], 0)  # evictions
         self.assertEqual(cache.load(n1), None)
-        cache.close()
 
     def testNonCurrent(self):
         data1 = b"data for n1"
@@ -1067,20 +1069,21 @@ Now try to do simulation:
 
 def invalidations_with_current_tid_dont_wreck_cache():
     """
+    An invalidation with the current tid drops the record, and the cache
+    can still evict and reopen afterwards.
+
     >>> cache = ZEO.cache.ClientCache('cache', 1000)
     >>> cache.store(p64(1), p64(1), None, b'data')
-    >>> import logging, sys
-    >>> handler = logging.StreamHandler(sys.stdout)
-    >>> logging.getLogger().addHandler(handler)
-    >>> old_level = logging.getLogger().getEffectiveLevel()
-    >>> logging.getLogger().setLevel(logging.WARNING)
     >>> cache.invalidate(p64(1), p64(1))
-    Ignoring invalidation with same tid as current
+    >>> cache.load(p64(1))
+    >>> len(cache)
+    0
+    >>> for i in range(2, 40):  # let the cache go around many times
+    ...     cache.store(p64(i), p64(1), None, b'x' * 100)
+    >>> cache.load(p64(1))
     >>> cache.close()
     >>> cache = ZEO.cache.ClientCache('cache', 1000)
     >>> cache.close()
-    >>> logging.getLogger().removeHandler(handler)
-    >>> logging.getLogger().setLevel(old_level)
     """
 
 

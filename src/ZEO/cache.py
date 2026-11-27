@@ -724,11 +724,9 @@ class ClientCache:
             assert saved_oid == oid, (ofs, self.f.tell(), oid, saved_oid)
             assert end_tid == z64, (ofs, self.f.tell(), oid)
             del self.current[oid]
-            # Same tid: the oid was stored twice in one transaction.
+            # Same tid: the oid was stored twice in one transaction, and a
+            # record cannot be current and invalid from the same tid.
             if tid is None or tid == saved_tid:
-                if tid is not None:
-                    logger.warning(
-                        "Ignoring invalidation with same tid as current")
                 self.f.seek(ofs)
                 self.f.write(b'f' + pack(">I", size))
                 # 0x1E = invalidate (hit, discarding current or non-current)
