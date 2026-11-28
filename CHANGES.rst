@@ -4,6 +4,10 @@ Changelog
 6.3 (unreleased)
 ----------------
 
+- Fix ``KeyError`` in ``ClientCache._makeroom`` after an invalidation with
+  the current tid
+  (`issue 254 <https://github.com/zopefoundation/ZEO/issues/254>`_).
+
 - Add support for Python 3.15.
 
 - Drop support for Python 3.10.

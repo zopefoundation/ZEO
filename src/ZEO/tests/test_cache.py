@@ -114,6 +114,30 @@ class CacheTests(ZODB.tests.util.TestCase):
         self.assertEqual(self.cache.loadBefore(n1, n4),
                          (data1, n3, n4))
 
+    def testInvalidateSameTid(self):
+        """Invalidating with the current tid drops the record (#254)."""
+        self.cache.store(n1, n3, None, b"first data for n1")
+        self.cache.invalidate(n1, n3)
+        self.assertEqual(self.cache.load(n1), None)
+        self.assertEqual(self.cache.loadBefore(n1, n5), None)
+        self.assertEqual(len(self.cache), 0)
+        # The next store with the same tid wins.
+        self.cache.store(n1, n3, None, b"second data for n1")
+        self.assertEqual(self.cache.load(n1), (b"second data for n1", n3))
+
+    def testInvalidateSameTidThenEvict(self):
+        """Evicting after an invalidation with the current tid works (#254)."""
+        cache = ZEO.cache.ClientCache(None, 200000)
+        self.addCleanup(cache.close)
+        cache.store(n1, n3, None, b"x" * 1000)
+        cache.setLastTid(n3)
+        cache.invalidate(n1, n3)
+        # Fill the cache until the first record is evicted.
+        for i in range(2, 2000):
+            cache.store(p64(i), n4, None, b"y" * 1000)
+        self.assertGreater(cache.getStats()[2], 0)  # evictions
+        self.assertEqual(cache.load(n1), None)
+
     def testNonCurrent(self):
         data1 = b"data for n1"
         data2 = b"data for n2"
@@ -1043,22 +1067,55 @@ Now try to do simulation:
     """
 
 
+def cache_tools_handle_invalidation_with_current_tid():
+    r"""
+    The trace tools handle the 0x1E record written when an object is stored
+    twice in one transaction.
+
+    >>> os.environ["ZEO_CACHE_TRACE"] = 'yes'
+    >>> cache = ZEO.cache.ClientCache('cache', 1<<21)
+    >>> cache.store(p64(1), p64(1), None, b'x' * 500)
+    >>> cache.invalidate(p64(1), p64(1))
+    >>> cache.store(p64(1), p64(1), None, b'x' * 600)
+    >>> cache.close()
+    >>> del os.environ["ZEO_CACHE_TRACE"]
+
+    >>> import ZEO.scripts.cache_simul, ZEO.scripts.cache_stats
+    >>> ZEO.scripts.cache_simul.main('-s 1 cache.trace'.split())
+    ... # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+    CircularCacheSimulation, cache size 1,048,576 bytes
+      START TIME   DUR.   LOADS    HITS INVALS WRITES HITRATE  EVICTS   INUSE
+    ...                0       0      1      2     n/a       0     0.1
+    --------------------------------------------------------------------------
+    ...                0       0      1      2     n/a       0     0.1
+    >>> ZEO.scripts.cache_stats.main('-q cache.trace'.split())
+    ... # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+                       loads    hits  inv(h)  writes hitrate
+    ...
+            Count Code Function (action)
+                1  00  _setup_trace (initialization)
+                1  1e  invalidate (hit, discarding current or non-current)
+                2  52  store (current, non-version)
+    """
+
+
 def invalidations_with_current_tid_dont_wreck_cache():
     """
+    An invalidation with the current tid drops the record, and the cache
+    can still evict and reopen afterwards.
+
     >>> cache = ZEO.cache.ClientCache('cache', 1000)
     >>> cache.store(p64(1), p64(1), None, b'data')
-    >>> import logging, sys
-    >>> handler = logging.StreamHandler(sys.stdout)
-    >>> logging.getLogger().addHandler(handler)
-    >>> old_level = logging.getLogger().getEffectiveLevel()
-    >>> logging.getLogger().setLevel(logging.WARNING)
     >>> cache.invalidate(p64(1), p64(1))
-    Ignoring invalidation with same tid as current
+    >>> cache.load(p64(1))
+    >>> len(cache)
+    0
+    >>> for i in range(2, 40):  # let the cache go around many times
+    ...     cache.store(p64(i), p64(1), None, b'x' * 100)
+    >>> cache.load(p64(1))
     >>> cache.close()
     >>> cache = ZEO.cache.ClientCache('cache', 1000)
     >>> cache.close()
-    >>> logging.getLogger().removeHandler(handler)
-    >>> logging.getLogger().setLevel(old_level)
     """
 
 

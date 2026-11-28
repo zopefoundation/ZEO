@@ -210,6 +210,19 @@ class MiscZEOTests:
         obj = MinPO("X" * (10 * 128 * 1024))
         self._dostore(data=obj)
 
+    def checkStoreTwiceInOneTransaction(self):
+        """The cache keeps the last data stored in a transaction (#254)."""
+        oid = self._storage.new_oid()
+        t = TransactionMetaData()
+        self._storage.tpc_begin(t)
+        self._storage.store(oid, z64, b'first', '', t)
+        self._storage.store(oid, z64, b'second', '', t)
+        self._storage.tpc_vote(t)
+        tid = self._storage.tpc_finish(t)
+        cache = self._storage._cache
+        self.assertEqual(len(cache), 1)
+        self.assertEqual(cache.load(oid), (b'second', tid))
+
     def checkZEOInvalidation(self):
         storage2 = self._new_storage_client()
         try:
