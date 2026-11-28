@@ -2,7 +2,7 @@
 # https://github.com/zopefoundation/meta/tree/master/src/zope/meta/pure-python
 [meta]
 template = "pure-python"
-commit-id = "f63da99d"
+commit-id = "eceed68f"
 
 [python]
 with-windows = false
@@ -71,3 +71,6 @@ additional-config = [
     "- [\"3.15\",  \"py315-zodbmaster\"]",
     "- [\"pypy-3.11\", \"pypy3-msgpack1\"]",
     ]
+
+[pypi]
+trusted-publishing = true

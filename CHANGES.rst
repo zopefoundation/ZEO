@@ -4,6 +4,8 @@ Changelog
 6.3 (unreleased)
 ----------------
 
+- Switch to PyPI Trusted Publishing.
+
 - Fix ``KeyError`` in ``ClientCache._makeroom`` after an invalidation with
   the current tid
   (`issue 254 <https://github.com/zopefoundation/ZEO/issues/254>`_).
